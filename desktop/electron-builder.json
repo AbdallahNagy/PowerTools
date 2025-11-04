@@ -1,0 +1,15 @@
+{
+    "appId": "com.abdalla-nagy.power-tools",
+    "files": ["dist-electron", "dist-react"],
+    "icon": "./power-tools.png",
+    "mac": {
+        "target": "dmg"
+    },
+    "linux": {
+        "target": "AppImage",
+        "category": "Utility"
+    },
+    "win": {
+        "target": ["portable", "msi"]
+    }
+}
