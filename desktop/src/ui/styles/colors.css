@@ -1,0 +1,20 @@
+:root {
+  /* Primary colors */
+  --color-primary: #007acc;
+  
+  /* Background colors */
+  --color-bg-dark: #1e1e1e;
+  --color-bg-darker: #252526;
+  --color-bg-light: #2d2d2d;
+  
+  /* Text colors */
+  --color-text-white: #ffffff;
+  --color-text-gray: #cccccc;
+  --color-text-dark-gray: #808080;
+  
+  /* Border colors */
+  --color-border-dark: #1e1e1e;
+  
+  /* Hover states */
+  --color-hover-bg: #363636;
+}
