@@ -17,7 +17,7 @@ const Tab = ({ title, active = false, onClick, onClose }: TabProps) => {
         ${
           active
             ? "border-[#007acc] bg-[#1e1e1e] text-white"
-            : "border-transparent bg-[#2d2d2d] text-gray-400 hover:text-white"
+            : "border-transparent bg-[#2d2d2d] text-(--color-gray) hover:text-white"
         }
         cursor-pointer select-none
       `}
