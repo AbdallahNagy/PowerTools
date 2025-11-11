@@ -4,16 +4,16 @@ export const TABS: TabData[] = [
   {
     id: "1",
     title: "Welcome",
-    content: "<div className=\"p-4\">Welcome Content</div>",
+    content: "Welcome Content",
   },
   {
     id: "2",
     title: "Tool 1",
-    content: "<div className=\"p-4\">Tool 1 Content</div>",
+    content: "Tool 1 Content",
   },
   {
     id: "3",
     title: "Tool 2",
-    content: "<div className=\"p-4\">Tool 2 Content</div>",
+    content: "Tool 2 Content",
   },
 ];

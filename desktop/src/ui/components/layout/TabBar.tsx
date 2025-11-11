@@ -10,19 +10,19 @@ function TabBar() {
 
   const closeTab = (tabId: string) => {
     setTabs(tabs.filter((tab) => tab.id !== tabId));
-    
+
     if (activeTabId === tabId) {
       // Switch to the previous tab or the first available tab
       const index = tabs.findIndex((tab) => tab.id === tabId);
       const newActiveTab = tabs[index - 1] || tabs[index + 1];
-      
+
       if (newActiveTab) setActiveTabId(newActiveTab.id);
     }
   };
 
   return (
     <>
-      <div className="flex bg-[#252526] border-b border-[#1e1e1e]">
+      <div className="flex bg-(--gray-color)">
         {tabs.map((tab) => (
           <Tab
             key={tab.id}
