@@ -1,6 +1,0 @@
-@PowerTools.API_HostAddress = http://localhost:5179
-
-GET {{PowerTools.API_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
