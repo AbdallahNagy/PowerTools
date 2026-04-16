@@ -1,2 +1,2 @@
 export const AZURE_CLIENT_ID =
-  process.env.AZURE_CLIENT_ID ?? "2c44ae0f-5f4b-4740-88d8-2d22d414f6f1";
+  process.env.AZURE_CLIENT_ID ?? "51f81489-12ee-4a9e-aaae-a2591f45987d";
