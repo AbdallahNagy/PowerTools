@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Vite (React)",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:react"],
+      "cwd": "desktop",
+      "port": 5123
+    },
+    {
+      "name": ".NET API (HTTPS)",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--launch-profile", "https"],
+      "cwd": "api/PowerTools/PowerTools.API",
+      "port": 7258
+    }
+  ]
+}

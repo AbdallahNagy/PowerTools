@@ -17,6 +17,7 @@
     "dist:win": "npm run transpile:electron && npm run build && electron-builder --win --x64"
   },
   "dependencies": {
+    "@azure/msal-node": "^2.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.9.6"

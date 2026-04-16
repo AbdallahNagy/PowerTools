@@ -8,19 +8,32 @@ const ConnectionWindow = () => {
     password: "",
     domain: "",
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    console.log("formData", formData);
+    setError(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    window.electron.saveConnectionData(formData);
+    setLoading(true);
+    setError(null);
+
+    const result = await window.electron.saveConnectionData(formData);
+
+    if (!result.success) {
+      setLoading(false);
+      setError(result.error ?? "Authentication failed.");
+    }
+    // On success, main process closes this window — no further action needed.
   };
+
+  const isOnline = formData.crmType === "online";
 
   return (
     <div className="h-screen w-screen bg-[#1e1e1e] text-[#cccccc] flex flex-col p-6 box-border overflow-y-auto">
@@ -71,55 +84,71 @@ const ConnectionWindow = () => {
             placeholder="org.crm.dynamics.com"
             className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
           />
+          {isOnline && (
+            <span className="text-xs text-[#858585]">
+              A browser window will open for Microsoft login.
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="username" className="text-xs">
-            Username
-          </label>
-          <input
-            type="text"
-            name="username"
-            id="username"
-            value={formData.username}
-            onChange={handleChange}
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
-          />
-        </div>
+        {!isOnline && (
+          <>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="username" className="text-xs">
+                Username
+              </label>
+              <input
+                type="text"
+                name="username"
+                id="username"
+                value={formData.username}
+                onChange={handleChange}
+                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+              />
+            </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="password" className="text-xs">
-            Password
-          </label>
-          <input
-            type="password"
-            name="password"
-            id="password"
-            value={formData.password}
-            onChange={handleChange}
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
-          />
-        </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="password" className="text-xs">
+                Password
+              </label>
+              <input
+                type="password"
+                name="password"
+                id="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+              />
+            </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="domain" className="text-xs">
-            Domain
-          </label>
-          <input
-            type="text"
-            name="domain"
-            id="domain"
-            value={formData.domain}
-            onChange={handleChange}
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
-          />
-        </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="domain" className="text-xs">
+                Domain
+              </label>
+              <input
+                type="text"
+                name="domain"
+                id="domain"
+                value={formData.domain}
+                onChange={handleChange}
+                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+              />
+            </div>
+          </>
+        )}
+
+        {error && (
+          <p className="text-sm text-[#f48771] bg-[#3c3c3c] px-3 py-2 rounded-sm">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
-          className="mt-4 bg-[#007fd4] hover:bg-[#0069b4] text-white py-2 px-4 rounded-sm font-thin transition-colors"
+          disabled={loading}
+          className="mt-4 bg-[#007fd4] hover:bg-[#0069b4] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 px-4 rounded-sm font-thin transition-colors"
         >
-          Connect
+          {loading ? "Authenticating…" : "Connect"}
         </button>
       </form>
     </div>
