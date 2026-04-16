@@ -14,4 +14,6 @@ electron.contextBridge.exposeInMainWorld("electron", {
       (_: any, name: string) => callback(name)
     );
   },
+  callApi: (endpoint: string) =>
+    electron.ipcRenderer.invoke("call-api", endpoint),
 });
