@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.Xrm.Sdk.Query;
+using PowerTools.API.Filters;
 using PowerTools.API.Services;
+using PowerTools.API.Tools.Connection;
+using PowerTools.API.Tools.DataMigration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,13 +20,11 @@ builder.Services.AddCors(opt =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        // "common" endpoint covers tokens from any AAD tenant
         options.Authority = "https://login.microsoftonline.com/common/v2.0";
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateAudience = false,
             ValidateIssuer   = true,
-            // Accept any Microsoft STS issuer (multi-tenant)
             IssuerValidator  = (issuer, _, _) =>
             {
                 if (issuer.StartsWith("https://sts.windows.net/") ||
@@ -37,12 +37,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// ── Dataverse factory – creates ServiceClient per-request using user token ────
+// ── App services ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<DataverseClientFactory>();
+builder.Services.AddScoped<DataverseContextFilter>();
 
 var app = builder.Build();
 
-// ── Middleware pipeline ───────────────────────────────────────────────────────
+// ── Middleware pipeline ──────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 
@@ -51,54 +52,8 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ── Helper: extract Bearer token + environment URL from the request ───────────
-static (string? token, string? envUrl) ExtractContext(HttpContext ctx)
-{
-    var auth   = ctx.Request.Headers.Authorization.FirstOrDefault();
-    var token  = auth?.StartsWith("Bearer ") == true ? auth["Bearer ".Length..] : null;
-    var envUrl = ctx.Request.Headers["X-Environment-Url"].FirstOrDefault();
-    return (token, envUrl);
-}
-
-// ── Endpoints ─────────────────────────────────────────────────────────────────
-
-// Health-check / connection test
-app.MapGet("/api/connect", (HttpContext ctx, DataverseClientFactory factory) =>
-{
-    var (token, envUrl) = ExtractContext(ctx);
-    if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(envUrl))
-        return Results.BadRequest("Missing Authorization header or X-Environment-Url header.");
-
-    return Results.Ok(new { connected = true, environment = envUrl });
-})
-.WithName("Connect")
-.RequireAuthorization();
-
-// Retrieve top 10 accounts
-app.MapGet("/api/accounts", async (HttpContext ctx, DataverseClientFactory factory) =>
-{
-    var (token, envUrl) = ExtractContext(ctx);
-    if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(envUrl))
-        return Results.BadRequest("Missing Authorization header or X-Environment-Url header.");
-
-    var svc   = factory.Create(token, envUrl);
-    var query = new QueryExpression("account")
-    {
-        ColumnSet = new ColumnSet("name", "emailaddress1"),
-        TopCount  = 10
-    };
-
-    var results  = await svc.RetrieveMultipleAsync(query);
-    var accounts = results.Entities.Select(e => new
-    {
-        Id    = e.Id,
-        Name  = e.GetAttributeValue<string>("name"),
-        Email = e.GetAttributeValue<string>("emailaddress1")
-    });
-
-    return Results.Ok(accounts);
-})
-.WithName("GetAccounts")
-.RequireAuthorization();
+// ── Endpoint groups — one per tool ───────────────────────────────────────────
+app.MapConnectionEndpoints();
+app.MapDataMigrationEndpoints();
 
 app.Run();

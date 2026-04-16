@@ -1,14 +1,17 @@
-import { app, BrowserWindow, ipcMain, net } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
+import { AccountInfo } from "@azure/msal-node";
 import { isDev } from "./utils.js";
 import { getPreloadPath } from "./pathResolver.js";
-import { acquireTokenInteractive } from "./auth.js";
-import { AZURE_CLIENT_ID } from "./config.js";
+import {
+  acquireTokenInteractive,
+  acquireTokenSilentOrInteractive,
+} from "./auth.js";
 
 interface ActiveConnection {
   name: string;
   envUrl: string;
-  token: string;
   crmType: string;
+  account: AccountInfo | null;
 }
 
 app.whenReady().then(() => {
@@ -57,24 +60,28 @@ app.whenReady().then(() => {
     });
   });
 
-  let tempConnectionData: any = null;
+  let tempConnectionData: Partial<ActiveConnection> | null = null;
   let activeConnection: ActiveConnection | null = null;
 
   ipcMain.handle("save-connection-data", async (event, data) => {
     if (data.crmType === "online") {
-      // Normalize URL: ensure it has https://
       const envUrl = data.serverUrl.startsWith("http")
         ? data.serverUrl
         : `https://${data.serverUrl}`;
 
       try {
-        const token = await acquireTokenInteractive(envUrl, AZURE_CLIENT_ID);
-        tempConnectionData = { ...data, envUrl, token };
+        const { account } = await acquireTokenInteractive(envUrl);
+        tempConnectionData = {
+          name: undefined,
+          envUrl,
+          crmType: data.crmType,
+          account,
+        };
       } catch (err) {
         return { success: false, error: (err as Error).message };
       }
     } else {
-      tempConnectionData = data;
+      tempConnectionData = { ...data };
     }
 
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
@@ -100,46 +107,39 @@ app.whenReady().then(() => {
     return { success: true };
   });
 
-  ipcMain.handle("save-connection-name", (event, name) => {
-    activeConnection = { ...tempConnectionData, name };
+  ipcMain.handle("save-connection-name", (event, name: string) => {
+    if (!tempConnectionData) return;
+    activeConnection = {
+      name,
+      envUrl: tempConnectionData.envUrl ?? "",
+      crmType: tempConnectionData.crmType ?? "",
+      account: tempConnectionData.account ?? null,
+    };
+    tempConnectionData = null;
+
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
     senderWindow?.close();
 
     mainWindow.webContents.send("connection-status-update", name);
   });
 
-  // Proxy API calls from the renderer, injecting the stored Bearer token.
-  ipcMain.handle("call-api", (_event, endpoint: string) => {
-    if (!activeConnection) {
-      return Promise.resolve({ error: "Not connected." });
+  // Hand the renderer a fresh token + environment URL. Silently refreshes
+  // via the cached MSAL account; falls back to interactive only if needed.
+  async function getConnectionForRenderer() {
+    if (!activeConnection) return { error: "Not connected." };
+
+    const { name, envUrl, crmType, account } = activeConnection;
+    try {
+      const { accessToken, account: refreshedAccount } =
+        await acquireTokenSilentOrInteractive(envUrl, account);
+      // Persist any refreshed account reference
+      activeConnection = { ...activeConnection, account: refreshedAccount };
+      return { name, envUrl, crmType, token: accessToken };
+    } catch (err) {
+      return { error: (err as Error).message };
     }
+  }
 
-    const { token, envUrl } = activeConnection;
-
-    return new Promise((resolve) => {
-      const request = net.request({
-        method: "GET",
-        url: `https://localhost:7258${endpoint}`,
-      });
-
-      request.setHeader("Authorization", `Bearer ${token}`);
-      request.setHeader("X-Environment-Url", envUrl);
-
-      let body = "";
-      request.on("response", (response) => {
-        response.on("data", (chunk) => {
-          body += chunk.toString();
-        });
-        response.on("end", () => {
-          resolve({ status: response.statusCode, data: body });
-        });
-      });
-
-      request.on("error", (err) => {
-        resolve({ error: err.message });
-      });
-
-      request.end();
-    });
-  });
+  ipcMain.handle("get-active-connection", () => getConnectionForRenderer());
+  ipcMain.handle("refresh-token", () => getConnectionForRenderer());
 });

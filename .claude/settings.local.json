@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(dotnet build *)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(echo \"Exit: $?\")"
+    ]
+  }
+}

@@ -1,7 +1,6 @@
 const electron = require("electron");
 
 electron.contextBridge.exposeInMainWorld("electron", {
-  getStaticData: () => console.log("This is static data from preload script"),
   createConnectionWindow: () =>
     electron.ipcRenderer.invoke("create-connection-window"),
   saveConnectionData: (data: any) =>
@@ -14,6 +13,7 @@ electron.contextBridge.exposeInMainWorld("electron", {
       (_: any, name: string) => callback(name)
     );
   },
-  callApi: (endpoint: string) =>
-    electron.ipcRenderer.invoke("call-api", endpoint),
+  getActiveConnection: () =>
+    electron.ipcRenderer.invoke("get-active-connection"),
+  refreshToken: () => electron.ipcRenderer.invoke("refresh-token"),
 });

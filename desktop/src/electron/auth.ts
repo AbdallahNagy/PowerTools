@@ -1,21 +1,18 @@
-import { PublicClientApplication, LogLevel } from "@azure/msal-node";
+import {
+  PublicClientApplication,
+  LogLevel,
+  AccountInfo,
+} from "@azure/msal-node";
 import { shell } from "electron";
+import { AZURE_CLIENT_ID } from "./config.js";
 
-/**
- * Acquires a Dataverse access token via interactive browser login.
- * Opens the system browser for the user to authenticate with Azure AD,
- * then captures the token via a loopback redirect on http://localhost.
- */
-export async function acquireTokenInteractive(
-  envUrl: string,
-  clientId: string
-): Promise<string> {
-  const normalizedUrl = envUrl.replace(/\/$/, "");
+let pca: PublicClientApplication | null = null;
 
-  const pca = new PublicClientApplication({
+function getPca(): PublicClientApplication {
+  if (pca) return pca;
+  pca = new PublicClientApplication({
     auth: {
-      clientId,
-      // "common" accepts tokens from any AAD tenant (multi-tenant)
+      clientId: AZURE_CLIENT_ID,
       authority: "https://login.microsoftonline.com/common",
     },
     system: {
@@ -25,9 +22,22 @@ export async function acquireTokenInteractive(
       },
     },
   });
+  return pca;
+}
 
-  const result = await pca.acquireTokenInteractive({
-    scopes: [`${normalizedUrl}/.default`],
+function scopesFor(envUrl: string): string[] {
+  return [`${envUrl.replace(/\/$/, "")}/.default`];
+}
+
+/**
+ * Interactive login via the system browser. Use when no account exists yet
+ * (first-time connect) or when silent refresh fails.
+ */
+export async function acquireTokenInteractive(
+  envUrl: string
+): Promise<{ accessToken: string; account: AccountInfo | null }> {
+  const result = await getPca().acquireTokenInteractive({
+    scopes: scopesFor(envUrl),
     openBrowser: (url) => shell.openExternal(url),
     successTemplate: `
       <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#1e1e1e;color:#cccccc">
@@ -41,9 +51,30 @@ export async function acquireTokenInteractive(
       </body></html>`,
   });
 
-  if (!result?.accessToken) {
-    throw new Error("No access token received.");
-  }
+  if (!result?.accessToken) throw new Error("No access token received.");
+  return { accessToken: result.accessToken, account: result.account };
+}
 
-  return result.accessToken;
+/**
+ * Returns a fresh token for the given account, prompting interactively
+ * only if the cached refresh token is gone or consent is needed.
+ */
+export async function acquireTokenSilentOrInteractive(
+  envUrl: string,
+  account: AccountInfo | null
+): Promise<{ accessToken: string; account: AccountInfo | null }> {
+  if (account) {
+    try {
+      const result = await getPca().acquireTokenSilent({
+        scopes: scopesFor(envUrl),
+        account,
+      });
+      if (result?.accessToken) {
+        return { accessToken: result.accessToken, account: result.account };
+      }
+    } catch {
+      // fall through to interactive
+    }
+  }
+  return acquireTokenInteractive(envUrl);
 }
