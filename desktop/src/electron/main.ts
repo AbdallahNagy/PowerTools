@@ -7,7 +7,7 @@ import {
   acquireTokenSilentOrInteractive,
 } from "./auth.js";
 
-interface ActiveConnection {
+interface StoredConnection {
   name: string;
   envUrl: string;
   crmType: string;
@@ -31,6 +31,13 @@ app.whenReady().then(() => {
   }
 
   let connectionWindow: BrowserWindow | null = null;
+
+  // Named connection store — key is connection name
+  const connections: Record<string, StoredConnection> = {};
+  let activeConnectionName: string | null = null;
+
+  // Temp state shared between connection + naming windows
+  let tempConnectionData: Partial<StoredConnection> | null = null;
 
   ipcMain.handle("create-connection-window", () => {
     if (connectionWindow && !connectionWindow.isDestroyed()) {
@@ -59,9 +66,6 @@ app.whenReady().then(() => {
       connectionWindow = null;
     });
   });
-
-  let tempConnectionData: Partial<ActiveConnection> | null = null;
-  let activeConnection: ActiveConnection | null = null;
 
   ipcMain.handle("save-connection-data", async (event, data) => {
     if (data.crmType === "online") {
@@ -109,37 +113,75 @@ app.whenReady().then(() => {
 
   ipcMain.handle("save-connection-name", (event, name: string) => {
     if (!tempConnectionData) return;
-    activeConnection = {
+    const conn: StoredConnection = {
       name,
       envUrl: tempConnectionData.envUrl ?? "",
       crmType: tempConnectionData.crmType ?? "",
       account: tempConnectionData.account ?? null,
     };
+    connections[name] = conn;
+
+    // First connection becomes active automatically
+    if (activeConnectionName === null) {
+      activeConnectionName = name;
+    }
+
     tempConnectionData = null;
 
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
     senderWindow?.close();
 
     mainWindow.webContents.send("connection-status-update", name);
+    mainWindow.webContents.send("connections-updated", Object.values(connections).map(c => ({
+      name: c.name,
+      envUrl: c.envUrl,
+      crmType: c.crmType,
+    })));
   });
 
-  // Hand the renderer a fresh token + environment URL. Silently refreshes
-  // via the cached MSAL account; falls back to interactive only if needed.
-  async function getConnectionForRenderer() {
-    if (!activeConnection) return { error: "Not connected." };
+  ipcMain.handle("list-connections", () =>
+    Object.values(connections).map((c) => ({
+      name: c.name,
+      envUrl: c.envUrl,
+      crmType: c.crmType,
+    }))
+  );
 
-    const { name, envUrl, crmType, account } = activeConnection;
+  ipcMain.handle("set-active-connection", (_event, name: string) => {
+    if (connections[name]) {
+      activeConnectionName = name;
+      mainWindow.webContents.send("connection-status-update", name);
+      return { success: true };
+    }
+    return { success: false, error: `Connection "${name}" not found.` };
+  });
+
+  async function getConnectionForRenderer(name: string) {
+    const conn = connections[name];
+    if (!conn) return { error: `Connection "${name}" not found.` };
+
     try {
       const { accessToken, account: refreshedAccount } =
-        await acquireTokenSilentOrInteractive(envUrl, account);
-      // Persist any refreshed account reference
-      activeConnection = { ...activeConnection, account: refreshedAccount };
-      return { name, envUrl, crmType, token: accessToken };
+        await acquireTokenSilentOrInteractive(conn.envUrl, conn.account);
+      connections[name] = { ...conn, account: refreshedAccount };
+      return { name: conn.name, envUrl: conn.envUrl, crmType: conn.crmType, token: accessToken };
     } catch (err) {
       return { error: (err as Error).message };
     }
   }
 
-  ipcMain.handle("get-active-connection", () => getConnectionForRenderer());
-  ipcMain.handle("refresh-token", () => getConnectionForRenderer());
+  ipcMain.handle("get-connection", (_event, name: string) =>
+    getConnectionForRenderer(name)
+  );
+
+  // Back-compat: uses whichever connection is currently active
+  ipcMain.handle("get-active-connection", () => {
+    if (!activeConnectionName) return { error: "Not connected." };
+    return getConnectionForRenderer(activeConnectionName);
+  });
+
+  ipcMain.handle("refresh-token", () => {
+    if (!activeConnectionName) return { error: "Not connected." };
+    return getConnectionForRenderer(activeConnectionName);
+  });
 });

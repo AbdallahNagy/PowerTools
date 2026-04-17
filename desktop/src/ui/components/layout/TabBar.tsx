@@ -17,7 +17,7 @@ function TabBar() {
           />
         ))}
       </div>
-      <div className="flex-1 bg-[#1e1e1e]">
+      <div className="flex-1 flex flex-col overflow-hidden bg-[#1e1e1e]">
         {tabs.find((tab) => tab.id === activeTabId)?.content}
       </div>
     </>

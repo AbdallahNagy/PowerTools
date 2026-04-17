@@ -12,7 +12,7 @@ function App() {
         <Routes>
           <Route
             path="/"
-            element={<Layout>{/* Tools will be rendered here */}</Layout>}
+            element={<Layout />}
           />
           <Route path="/connection" element={<ConnectionWindow />} />
           <Route

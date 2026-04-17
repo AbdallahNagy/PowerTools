@@ -1,7 +1,7 @@
 import ConnectIcon from "../../assets/icons/connect-icon.svg";
 import DataMigrationIcon from "../../assets/icons/data-migration-icon.svg";
 import { useTabs } from "../../context/TabContext";
-import DataMigration from "../tools/DataMigration";
+import DataMigration from "../tools/DataMigration/index";
 
 const ActivityBar = () => {
   const { addTab } = useTabs();

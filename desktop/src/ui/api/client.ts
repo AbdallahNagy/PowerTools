@@ -9,6 +9,7 @@ interface CachedAuth {
 }
 
 let cached: CachedAuth | null = null;
+const targetCache: Record<string, CachedAuth> = {};
 
 async function loadAuth(forceRefresh = false): Promise<CachedAuth> {
   if (!forceRefresh && cached) return cached;
@@ -23,8 +24,28 @@ async function loadAuth(forceRefresh = false): Promise<CachedAuth> {
   return cached;
 }
 
+async function loadTargetAuth(name: string, forceRefresh = false): Promise<CachedAuth> {
+  if (!forceRefresh && targetCache[name]) return targetCache[name];
+
+  const result = await window.electron.getConnection(name);
+  if ("error" in result) throw new Error(result.error);
+
+  targetCache[name] = { token: result.token, envUrl: result.envUrl };
+  return targetCache[name];
+}
+
 export function clearAuthCache() {
   cached = null;
+}
+
+export function clearTargetAuthCache(name: string) {
+  delete targetCache[name];
+}
+
+declare module "axios" {
+  interface AxiosRequestConfig {
+    meta?: { targetConnectionName?: string };
+  }
 }
 
 export const api = axios.create({
@@ -35,6 +56,13 @@ api.interceptors.request.use(async (config) => {
   const { token, envUrl } = await loadAuth();
   config.headers.set("Authorization", `Bearer ${token}`);
   config.headers.set("X-Environment-Url", envUrl);
+
+  if (config.meta?.targetConnectionName) {
+    const target = await loadTargetAuth(config.meta.targetConnectionName);
+    config.headers.set("X-Target-Authorization", `Bearer ${target.token}`);
+    config.headers.set("X-Target-Environment-Url", target.envUrl);
+  }
+
   return config;
 });
 
@@ -48,6 +76,9 @@ api.interceptors.response.use(
       original._retry = true;
       try {
         await loadAuth(true);
+        if (original.meta?.targetConnectionName) {
+          await loadTargetAuth(original.meta.targetConnectionName, true);
+        }
         return api.request(original);
       } catch (refreshErr) {
         clearAuthCache();

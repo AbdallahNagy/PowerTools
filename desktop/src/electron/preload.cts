@@ -13,6 +13,19 @@ electron.contextBridge.exposeInMainWorld("electron", {
       (_: any, name: string) => callback(name)
     );
   },
+  onConnectionsUpdated: (callback: (connections: any[]) => void) => {
+    electron.ipcRenderer.on(
+      "connections-updated",
+      (_: any, connections: any[]) => callback(connections)
+    );
+  },
+  listConnections: () =>
+    electron.ipcRenderer.invoke("list-connections"),
+  getConnection: (name: string) =>
+    electron.ipcRenderer.invoke("get-connection", name),
+  setActiveConnection: (name: string) =>
+    electron.ipcRenderer.invoke("set-active-connection", name),
+  // Back-compat
   getActiveConnection: () =>
     electron.ipcRenderer.invoke("get-active-connection"),
   refreshToken: () => electron.ipcRenderer.invoke("refresh-token"),

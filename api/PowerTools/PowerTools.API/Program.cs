@@ -15,8 +15,6 @@ builder.Services.AddCors(opt =>
     opt.AddDefaultPolicy(p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 // ── JWT Bearer – validates Microsoft-issued tokens (any AAD tenant) ──────────
-//    The token audience is the D365 environment URL (dynamic), so we skip
-//    audience validation here; Dataverse itself enforces it.
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -38,8 +36,11 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // ── App services ─────────────────────────────────────────────────────────────
-builder.Services.AddScoped<DataverseClientFactory>();
+builder.Services.AddSingleton<DataverseClientFactory>();
 builder.Services.AddScoped<DataverseContextFilter>();
+builder.Services.AddScoped<DataverseTargetContextFilter>();
+builder.Services.AddSingleton<IMigrationJobStore, InMemoryMigrationJobStore>();
+builder.Services.AddHostedService<MigrationJobRunner>();
 
 var app = builder.Build();
 
@@ -55,5 +56,8 @@ app.UseAuthorization();
 // ── Endpoint groups — one per tool ───────────────────────────────────────────
 app.MapConnectionEndpoints();
 app.MapDataMigrationEndpoints();
+app.MapMetadataEndpoints();
+app.MapPreviewEndpoints();
+app.MapMigrationEndpoints();
 
 app.Run();
