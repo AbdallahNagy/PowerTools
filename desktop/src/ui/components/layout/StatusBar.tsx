@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ConnectionInfo } from "../../vite-env";
+import { useStatusBar } from "../../context/StatusBarContext";
 
 const StatusBar = () => {
   const [connections, setConnections] = useState<ConnectionInfo[]>([]);
@@ -7,6 +8,7 @@ const StatusBar = () => {
   const [open, setOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { items } = useStatusBar();
 
   useEffect(() => {
     window.electron.listConnections().then(setConnections);
@@ -134,6 +136,11 @@ const StatusBar = () => {
       </div>
 
       <div className="flex items-center space-x-4">
+        {items.map((item) => (
+          <div key={item.id} className="flex items-center">
+            {item.content}
+          </div>
+        ))}
         <span>v1.0.0</span>
       </div>
       
