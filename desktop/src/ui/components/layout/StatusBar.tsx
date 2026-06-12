@@ -136,6 +136,7 @@ const StatusBar = () => {
       <div className="flex items-center space-x-4">
         <span>v1.0.0</span>
       </div>
+      
     </div>
   );
 };
