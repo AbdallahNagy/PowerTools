@@ -138,7 +138,7 @@ export function FieldsPanel({
                         : "cursor-pointer hover:bg-[#2a2d2e]"
                     } ${isChecked ? "bg-[#1e2530]" : ""}`}
                   >
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={isChecked}
                         onChange={() => !isLocked && toggle(attr.logicalName)}
