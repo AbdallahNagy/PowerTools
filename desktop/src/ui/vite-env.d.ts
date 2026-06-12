@@ -27,11 +27,12 @@ declare global {
         data: unknown
       ) => Promise<{ success: boolean; error?: string }>;
       saveConnectionName: (name: string) => Promise<void>;
-      onConnectionStatusUpdate: (callback: (name: string) => void) => void;
+      onConnectionStatusUpdate: (callback: (name: string | null) => void) => void;
       onConnectionsUpdated: (callback: (connections: ConnectionInfo[]) => void) => void;
       listConnections: () => Promise<ConnectionInfo[]>;
       getConnection: (name: string) => Promise<ConnectionResult>;
       setActiveConnection: (name: string) => Promise<{ success: boolean; error?: string }>;
+      deleteConnection: (name: string) => Promise<{ success: boolean; error?: string }>;
       getActiveConnection: () => Promise<ConnectionResult>;
       refreshToken: () => Promise<ConnectionResult>;
     };

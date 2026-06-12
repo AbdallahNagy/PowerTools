@@ -25,6 +25,8 @@ electron.contextBridge.exposeInMainWorld("electron", {
     electron.ipcRenderer.invoke("get-connection", name),
   setActiveConnection: (name: string) =>
     electron.ipcRenderer.invoke("set-active-connection", name),
+  deleteConnection: (name: string) =>
+    electron.ipcRenderer.invoke("delete-connection", name),
   // Back-compat
   getActiveConnection: () =>
     electron.ipcRenderer.invoke("get-active-connection"),

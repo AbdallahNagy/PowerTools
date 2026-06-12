@@ -5,12 +5,16 @@ import { getPreloadPath } from "./pathResolver.js";
 import {
   acquireTokenInteractive,
   acquireTokenSilentOrInteractive,
+  getAccountByHomeId,
+  removeAccount,
 } from "./auth.js";
+import { loadState, saveState } from "./storage.js";
 
 interface StoredConnection {
   name: string;
   envUrl: string;
   crmType: string;
+  homeAccountId: string | null;
   account: AccountInfo | null;
 }
 
@@ -35,6 +39,43 @@ app.whenReady().then(() => {
   // Named connection store — key is connection name
   const connections: Record<string, StoredConnection> = {};
   let activeConnectionName: string | null = null;
+
+  // Restore persisted connections (accounts are lazily rehydrated from the
+  // MSAL cache on first use).
+  const persisted = loadState();
+  for (const c of persisted.connections) {
+    connections[c.name] = {
+      name: c.name,
+      envUrl: c.envUrl,
+      crmType: c.crmType,
+      homeAccountId: c.homeAccountId,
+      account: null,
+    };
+  }
+  activeConnectionName = persisted.activeConnectionName;
+
+  function persist() {
+    saveState({
+      connections: Object.values(connections).map((c) => ({
+        name: c.name,
+        envUrl: c.envUrl,
+        crmType: c.crmType,
+        homeAccountId: c.homeAccountId,
+      })),
+      activeConnectionName,
+    });
+  }
+
+  function broadcastConnections() {
+    mainWindow.webContents.send(
+      "connections-updated",
+      Object.values(connections).map((c) => ({
+        name: c.name,
+        envUrl: c.envUrl,
+        crmType: c.crmType,
+      }))
+    );
+  }
 
   // Temp state shared between connection + naming windows
   let tempConnectionData: Partial<StoredConnection> | null = null;
@@ -117,6 +158,7 @@ app.whenReady().then(() => {
       name,
       envUrl: tempConnectionData.envUrl ?? "",
       crmType: tempConnectionData.crmType ?? "",
+      homeAccountId: tempConnectionData.account?.homeAccountId ?? null,
       account: tempConnectionData.account ?? null,
     };
     connections[name] = conn;
@@ -127,16 +169,13 @@ app.whenReady().then(() => {
     }
 
     tempConnectionData = null;
+    persist();
 
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
     senderWindow?.close();
 
     mainWindow.webContents.send("connection-status-update", name);
-    mainWindow.webContents.send("connections-updated", Object.values(connections).map(c => ({
-      name: c.name,
-      envUrl: c.envUrl,
-      crmType: c.crmType,
-    })));
+    broadcastConnections();
   });
 
   ipcMain.handle("list-connections", () =>
@@ -150,10 +189,42 @@ app.whenReady().then(() => {
   ipcMain.handle("set-active-connection", (_event, name: string) => {
     if (connections[name]) {
       activeConnectionName = name;
+      persist();
       mainWindow.webContents.send("connection-status-update", name);
       return { success: true };
     }
     return { success: false, error: `Connection "${name}" not found.` };
+  });
+
+  ipcMain.handle("delete-connection", async (_event, name: string) => {
+    const conn = connections[name];
+    if (!conn) return { success: false, error: `Connection "${name}" not found.` };
+
+    // Purge the account (and its refresh token) from the MSAL cache.
+    if (conn.homeAccountId) {
+      try {
+        const account = await getAccountByHomeId(conn.homeAccountId);
+        if (account) await removeAccount(account);
+      } catch (err) {
+        console.error("Failed to remove MSAL account:", err);
+      }
+    }
+
+    delete connections[name];
+
+    // If the deleted connection was active, fall back to the first remaining.
+    if (activeConnectionName === name) {
+      const remaining = Object.keys(connections);
+      activeConnectionName = remaining.length > 0 ? remaining[0] : null;
+      mainWindow.webContents.send(
+        "connection-status-update",
+        activeConnectionName
+      );
+    }
+
+    persist();
+    broadcastConnections();
+    return { success: true };
   });
 
   async function getConnectionForRenderer(name: string) {
@@ -161,9 +232,20 @@ app.whenReady().then(() => {
     if (!conn) return { error: `Connection "${name}" not found.` };
 
     try {
+      // Rehydrate the account from the persisted MSAL cache if needed.
+      let account = conn.account;
+      if (!account && conn.homeAccountId) {
+        account = await getAccountByHomeId(conn.homeAccountId);
+      }
+
       const { accessToken, account: refreshedAccount } =
-        await acquireTokenSilentOrInteractive(conn.envUrl, conn.account);
-      connections[name] = { ...conn, account: refreshedAccount };
+        await acquireTokenSilentOrInteractive(conn.envUrl, account);
+      connections[name] = {
+        ...conn,
+        account: refreshedAccount,
+        homeAccountId: refreshedAccount?.homeAccountId ?? conn.homeAccountId,
+      };
+      persist();
       return { name: conn.name, envUrl: conn.envUrl, crmType: conn.crmType, token: accessToken };
     } catch (err) {
       return { error: (err as Error).message };

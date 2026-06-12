@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ProgressBar } from "../../../ui/ProgressBar";
 import { Spinner } from "../../../ui/Spinner";
 import { Button } from "../../../ui/Button";

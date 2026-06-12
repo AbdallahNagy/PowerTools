@@ -3,7 +3,7 @@ import { Checkbox } from "../../../ui/Checkbox";
 import { SearchInput } from "../../../ui/SearchInput";
 import { Spinner } from "../../../ui/Spinner";
 import { Button } from "../../../ui/Button";
-import { useEntityAttributes, type AttributeInfo } from "../../../../api/hooks/useEntityAttributes";
+import { useEntityAttributes } from "../../../../api/hooks/useEntityAttributes";
 
 interface AttributeSelectStepProps {
   entityLogicalName: string;

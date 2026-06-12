@@ -2,11 +2,52 @@ import {
   PublicClientApplication,
   LogLevel,
   AccountInfo,
+  ICachePlugin,
+  TokenCacheContext,
 } from "@azure/msal-node";
-import { shell } from "electron";
+import { shell, app, safeStorage } from "electron";
+import { readFileSync, writeFileSync, existsSync } from "fs";
+import { join } from "path";
 import { AZURE_CLIENT_ID } from "./config.js";
 
 let pca: PublicClientApplication | null = null;
+
+function cacheFilePath(): string {
+  return join(app.getPath("userData"), "msal-cache.bin");
+}
+
+// Persists the MSAL token cache to disk, encrypted with the OS keychain
+// (DPAPI on Windows) when available, plaintext otherwise (dev fallback).
+const cachePlugin: ICachePlugin = {
+  async beforeCacheAccess(ctx: TokenCacheContext) {
+    const path = cacheFilePath();
+    if (!existsSync(path)) return;
+    try {
+      const buf = readFileSync(path);
+      let data: string;
+      if (safeStorage.isEncryptionAvailable()) {
+        data = safeStorage.decryptString(buf);
+      } else {
+        data = buf.toString("utf-8");
+      }
+      ctx.tokenCache.deserialize(data);
+    } catch (err) {
+      console.error("Failed to load MSAL cache:", err);
+    }
+  },
+  async afterCacheAccess(ctx: TokenCacheContext) {
+    if (!ctx.cacheHasChanged) return;
+    try {
+      const data = ctx.tokenCache.serialize();
+      const buf = safeStorage.isEncryptionAvailable()
+        ? safeStorage.encryptString(data)
+        : Buffer.from(data, "utf-8");
+      writeFileSync(cacheFilePath(), buf);
+    } catch (err) {
+      console.error("Failed to persist MSAL cache:", err);
+    }
+  },
+};
 
 function getPca(): PublicClientApplication {
   if (pca) return pca;
@@ -14,6 +55,9 @@ function getPca(): PublicClientApplication {
     auth: {
       clientId: AZURE_CLIENT_ID,
       authority: "https://login.microsoftonline.com/common",
+    },
+    cache: {
+      cachePlugin,
     },
     system: {
       loggerOptions: {
@@ -23,6 +67,18 @@ function getPca(): PublicClientApplication {
     },
   });
   return pca;
+}
+
+/** Restore a previously persisted account from the token cache. */
+export async function getAccountByHomeId(
+  homeAccountId: string
+): Promise<AccountInfo | null> {
+  return getPca().getTokenCache().getAccountByHomeId(homeAccountId);
+}
+
+/** Purge an account (and its refresh token) from the token cache. */
+export async function removeAccount(account: AccountInfo): Promise<void> {
+  await getPca().getTokenCache().removeAccount(account);
 }
 
 function scopesFor(envUrl: string): string[] {

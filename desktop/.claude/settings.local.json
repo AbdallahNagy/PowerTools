@@ -4,7 +4,8 @@
       "Bash(xargs grep *)",
       "Bash(find *)",
       "Bash(npx tsc *)",
-      "Bash(dotnet build *)"
+      "Bash(dotnet build *)",
+      "Bash(npm run *)"
     ]
   }
 }
