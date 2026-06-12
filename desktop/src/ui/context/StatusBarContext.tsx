@@ -2,18 +2,21 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
 
-interface StatusItem {
+export interface StatusItem {
   id: string;
   content: ReactNode;
 }
 
 interface StatusBarContextType {
   items: StatusItem[];
+  /** Register or update a status bar item. Call clearStatus on unmount. */
   setStatus: (id: string, content: ReactNode) => void;
+  /** Remove the item registered under `id`. Call this on component unmount. */
   clearStatus: (id: string) => void;
 }
 
@@ -38,8 +41,13 @@ export function StatusBarProvider({ children }: { children: ReactNode }) {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
+  const value = useMemo(
+    () => ({ items, setStatus, clearStatus }),
+    [items, setStatus, clearStatus]
+  );
+
   return (
-    <StatusBarContext.Provider value={{ items, setStatus, clearStatus }}>
+    <StatusBarContext.Provider value={value}>
       {children}
     </StatusBarContext.Provider>
   );

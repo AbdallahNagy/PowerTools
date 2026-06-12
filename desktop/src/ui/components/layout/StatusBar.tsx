@@ -143,7 +143,6 @@ const StatusBar = () => {
         ))}
         <span>v1.0.0</span>
       </div>
-      
     </div>
   );
 };
