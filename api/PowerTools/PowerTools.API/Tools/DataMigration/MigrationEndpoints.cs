@@ -7,8 +7,7 @@ public record RunMigrationRequest(
     string EntityLogicalName,
     List<string> Attributes,
     string? FetchXmlFilter,
-    string Mode,
-    string? MatchAttribute = null);
+    string Mode);
 
 public static class MigrationEndpoints
 {
@@ -33,8 +32,7 @@ public static class MigrationEndpoints
                 EntityLogicalName = req.EntityLogicalName,
                 Attributes = req.Attributes,
                 FetchXmlFilter = req.FetchXmlFilter,
-                Mode = req.Mode,
-                MatchAttribute = req.MatchAttribute
+                Mode = req.Mode
             };
 
             store.Enqueue(job);

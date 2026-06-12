@@ -27,7 +27,6 @@ public class MigrationJob
     public required List<string> Attributes { get; init; }
     public string? FetchXmlFilter { get; init; }
     public required string Mode { get; init; } // "create" | "update" | "upsert"
-    public string? MatchAttribute { get; init; }
 }
 
 public interface IMigrationJobStore
