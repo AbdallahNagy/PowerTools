@@ -18,7 +18,10 @@ const StatusBar = () => {
     });
 
     window.electron.onConnectionStatusUpdate((name) => setActiveName(name));
-    window.electron.onConnectionsUpdated((list) => setConnections(list));
+    const unsubscribe = window.electron.onConnectionsUpdated((list) =>
+      setConnections(list)
+    );
+    return unsubscribe;
   }, []);
 
   // Close popover on outside click.
