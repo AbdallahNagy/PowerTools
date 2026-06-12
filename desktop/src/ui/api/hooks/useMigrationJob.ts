@@ -15,7 +15,6 @@ export interface RunMigrationArgs {
   attributes: string[];
   fetchXmlFilter?: string;
   mode: "create" | "update" | "upsert";
-  matchAttribute?: string;
   targetConnectionName: string;
 }
 
