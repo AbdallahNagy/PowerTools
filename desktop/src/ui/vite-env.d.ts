@@ -28,7 +28,7 @@ declare global {
       ) => Promise<{ success: boolean; error?: string }>;
       saveConnectionName: (name: string) => Promise<void>;
       onConnectionStatusUpdate: (callback: (name: string | null) => void) => void;
-      onConnectionsUpdated: (callback: (connections: ConnectionInfo[]) => void) => void;
+      onConnectionsUpdated: (callback: (connections: ConnectionInfo[]) => void) => () => void;
       listConnections: () => Promise<ConnectionInfo[]>;
       getConnection: (name: string) => Promise<ConnectionResult>;
       setActiveConnection: (name: string) => Promise<{ success: boolean; error?: string }>;

@@ -18,7 +18,8 @@ export function ConnectionsBar({
 
   useEffect(() => {
     window.electron.listConnections().then(setConnections);
-    window.electron.onConnectionsUpdated(setConnections);
+    const unsubscribe = window.electron.onConnectionsUpdated(setConnections);
+    return unsubscribe;
   }, []);
 
   return (

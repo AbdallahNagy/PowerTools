@@ -12,12 +12,15 @@ export interface AttributeInfo {
   isValidForUpdate: boolean;
 }
 
-export function useEntityAttributes(logicalName: string | null) {
+export function useEntityAttributes(
+  logicalName: string | null,
+  connectionName: string | null
+) {
   return useQuery({
-    queryKey: ["migration", "attributes", logicalName],
+    queryKey: ["migration", "attributes", connectionName, logicalName],
     queryFn: () =>
       apiGet<AttributeInfo[]>(`/api/migration/entities/${logicalName}/attributes`),
-    enabled: !!logicalName,
+    enabled: !!logicalName && !!connectionName,
     staleTime: 5 * 60 * 1000,
   });
 }

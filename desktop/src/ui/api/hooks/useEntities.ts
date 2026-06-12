@@ -9,11 +9,11 @@ export interface EntityInfo {
   isCustom: boolean;
 }
 
-export function useEntities(enabled = false) {
+export function useEntities(connectionName: string | null) {
   return useQuery({
-    queryKey: ["migration", "entities"],
+    queryKey: ["migration", "entities", connectionName],
     queryFn: () => apiGet<EntityInfo[]>("/api/migration/entities"),
-    enabled,
+    enabled: !!connectionName,
     staleTime: 5 * 60 * 1000,
   });
 }

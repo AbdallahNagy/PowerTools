@@ -14,10 +14,9 @@ electron.contextBridge.exposeInMainWorld("electron", {
     );
   },
   onConnectionsUpdated: (callback: (connections: any[]) => void) => {
-    electron.ipcRenderer.on(
-      "connections-updated",
-      (_: any, connections: any[]) => callback(connections)
-    );
+    const listener = (_: any, connections: any[]) => callback(connections);
+    electron.ipcRenderer.on("connections-updated", listener);
+    return () => electron.ipcRenderer.removeListener("connections-updated", listener);
   },
   listConnections: () =>
     electron.ipcRenderer.invoke("list-connections"),

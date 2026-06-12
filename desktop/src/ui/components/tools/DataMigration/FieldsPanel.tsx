@@ -6,6 +6,7 @@ import { useEntityAttributes } from "../../../api/hooks/useEntityAttributes";
 
 interface FieldsPanelProps {
   entityLogicalName: string | null;
+  connectionName: string | null;
   selected: string[];
   onChange: (attributes: string[]) => void;
 }
@@ -19,11 +20,12 @@ const reqColors: Record<string, string> = {
 
 export function FieldsPanel({
   entityLogicalName,
+  connectionName,
   selected,
   onChange,
 }: FieldsPanelProps) {
   const [search, setSearch] = useState("");
-  const { data, isLoading, error } = useEntityAttributes(entityLogicalName);
+  const { data, isLoading, error } = useEntityAttributes(entityLogicalName, connectionName);
 
   const usable = (data ?? []).filter(
     (a) => a.isValidForCreate || a.isValidForUpdate

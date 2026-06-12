@@ -135,7 +135,7 @@ function DataMigrationPage() {
       <div className="flex flex-1 min-h-0 gap-4">
         <div className="w-1/3 min-w-64 flex flex-col min-h-0">
           <EntityListPanel
-            enabled={!!sourceName}
+            connectionName={sourceName || null}
             selected={entity}
             onSelect={selectEntity}
           />
@@ -143,6 +143,7 @@ function DataMigrationPage() {
         <div className="flex-1 flex flex-col min-h-0">
           <FieldsPanel
             entityLogicalName={entity?.logicalName ?? null}
+            connectionName={sourceName || null}
             selected={attributes}
             onChange={setAttributes}
           />

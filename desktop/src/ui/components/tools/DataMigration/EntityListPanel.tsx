@@ -4,18 +4,18 @@ import { Spinner } from "../../ui/Spinner";
 import { useEntities, type EntityInfo } from "../../../api/hooks/useEntities";
 
 interface EntityListPanelProps {
-  enabled: boolean;
+  connectionName: string | null;
   selected: EntityInfo | null;
   onSelect: (entity: EntityInfo) => void;
 }
 
 export function EntityListPanel({
-  enabled,
+  connectionName,
   selected,
   onSelect,
 }: EntityListPanelProps) {
   const [search, setSearch] = useState("");
-  const { data, isLoading, error } = useEntities(enabled);
+  const { data, isLoading, error } = useEntities(connectionName);
 
   const filtered = (data ?? []).filter(
     (e) =>
@@ -42,7 +42,7 @@ export function EntityListPanel({
         </p>
       )}
 
-      {!enabled ? (
+      {!connectionName ? (
         <p className="text-xs text-[#858585] italic mt-2">
           Select a source connection.
         </p>
