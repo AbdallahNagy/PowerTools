@@ -6,6 +6,7 @@ import { usePreviewRecords } from "../../../api/hooks/usePreviewRecords";
 interface PreviewModalProps {
   open: boolean;
   onClose: () => void;
+  connectionName: string;
   entityLogicalName: string;
   attributes: string[];
   fetchXmlFilter: string;
@@ -16,6 +17,7 @@ const PAGE_SIZE = 50;
 export function PreviewModal({
   open,
   onClose,
+  connectionName,
   entityLogicalName,
   attributes,
   fetchXmlFilter,
@@ -38,6 +40,7 @@ export function PreviewModal({
   const { data, isLoading, error } = usePreviewRecords(
     open
       ? {
+          connectionName,
           entityLogicalName,
           attributes,
           fetchXmlFilter: fetchXmlFilter || undefined,

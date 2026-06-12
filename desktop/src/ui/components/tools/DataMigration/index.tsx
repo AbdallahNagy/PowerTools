@@ -168,6 +168,7 @@ function DataMigrationPage() {
         <PreviewModal
           open={previewOpen}
           onClose={() => setPreviewOpen(false)}
+          connectionName={sourceName}
           entityLogicalName={entity.logicalName}
           attributes={attributes}
           fetchXmlFilter={fetchFilter}

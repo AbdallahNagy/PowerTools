@@ -5,7 +5,8 @@
       "Bash(find *)",
       "Bash(npx tsc *)",
       "Bash(dotnet build *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "PowerShell(Stop-Process *)"
     ]
   }
 }
