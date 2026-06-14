@@ -39,7 +39,7 @@ public interface IMigrationJobStore
 public class InMemoryMigrationJobStore : IMigrationJobStore
 {
     private readonly ConcurrentDictionary<Guid, MigrationJob> _jobs = new();
-    private readonly System.Collections.Concurrent.ConcurrentQueue<Guid> _queue = new();
+    private readonly ConcurrentQueue<Guid> _queue = new();
 
     public MigrationJob Enqueue(MigrationJob job)
     {
@@ -49,7 +49,7 @@ public class InMemoryMigrationJobStore : IMigrationJobStore
     }
 
     public MigrationJob? Get(Guid id) =>
-        _jobs.TryGetValue(id, out var job) ? job : null;
+        _jobs.GetValueOrDefault(id);
 
     public MigrationJob? DequeueNext()
     {

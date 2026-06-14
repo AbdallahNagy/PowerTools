@@ -1,16 +1,10 @@
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
+using PowerTools.API.Tools.DataMigration.Dtos;
+using PowerTools.API.Utils;
 
 namespace PowerTools.API.Tools.DataMigration;
-
-public record PreviewRequest(
-    string EntityLogicalName,
-    List<string> Attributes,
-    string? FetchXmlFilter = null,
-    int PageSize = 50,
-    string? PagingCookie = null,
-    int Page = 1);
 
 public static class PreviewEndpoints
 {

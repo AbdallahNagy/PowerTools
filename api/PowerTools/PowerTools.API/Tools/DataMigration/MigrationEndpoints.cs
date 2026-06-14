@@ -1,13 +1,9 @@
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
+using PowerTools.API.Tools.DataMigration.Dtos;
+using PowerTools.API.Utils;
 
 namespace PowerTools.API.Tools.DataMigration;
-
-public record RunMigrationRequest(
-    string EntityLogicalName,
-    List<string> Attributes,
-    string? FetchXmlFilter,
-    string Mode);
 
 public static class MigrationEndpoints
 {
