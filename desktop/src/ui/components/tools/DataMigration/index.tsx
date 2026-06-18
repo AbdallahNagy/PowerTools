@@ -127,11 +127,11 @@ function DataMigrationPage() {
       </div>
 
       <Group className="flex flex-1 min-h-0">
-        <Panel defaultSize='35%' minSize='15%' className="flex flex-col min-h-0">
+        <Panel defaultSize="35%" minSize="15%" className="flex flex-col min-h-0">
           <EntityListPanel connectionName={sourceName || null} selected={entity} onSelect={selectEntity} />
         </Panel>
-        <Separator className="w-1 mx-1 cursor-col-resize hover:bg-[#0078d4] active:bg-[#0078d4] transition-colors" />
-        <Panel minSize='15%' className="flex flex-col min-h-0">
+        <Separator className="w-1 mx-1 cursor-col-resize bg-(--color-bg-light) hover:bg-(--color-primary) active:bg-(--color-primary) transition-colors" />
+        <Panel minSize="15%" className="flex flex-col min-h-0">
           <FieldsPanel
             entityLogicalName={entity?.logicalName ?? null}
             connectionName={sourceName || null}
