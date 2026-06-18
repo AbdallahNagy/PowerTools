@@ -59,3 +59,19 @@ button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
+
+/* Dark scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg-light);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-text-dark-gray);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-corner {
+  background: var(--color-bg-light);
+}
