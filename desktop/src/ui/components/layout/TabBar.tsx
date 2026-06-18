@@ -6,7 +6,7 @@ function TabBar() {
 
   return (
     <>
-      <div className="flex bg-(--gray-color)">
+      <div className="flex bg-(--color-bg-darker)">
         {tabs.map((tab) => (
           <Tab
             key={tab.id}
@@ -17,7 +17,7 @@ function TabBar() {
           />
         ))}
       </div>
-      <div className="flex-1 flex flex-col overflow-hidden bg-[#1e1e1e]">
+      <div className="flex-1 flex flex-col overflow-hidden bg-(--color-bg-dark)">
         {tabs.find((tab) => tab.id === activeTabId)?.content}
       </div>
     </>

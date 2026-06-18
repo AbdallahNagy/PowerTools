@@ -8,8 +8,8 @@ function Tab({ title, active = false, onClick, onClose }: TabProps) {
         group flex items-center h-9 px-4 border-t-2 border-transparent cursor-pointer select-none
         ${
           active
-            ? "bg-(--dark-gray-color) text-white"
-            : "bg-(--light-gray-color) text-(--text-gray-color) hover:text-white"
+            ? "bg-(--color-bg-dark) text-white"
+            : "bg-(--color-bg-light) text-(--color-text-gray) hover:text-white"
         }
       `}
     >
@@ -20,7 +20,7 @@ function Tab({ title, active = false, onClick, onClose }: TabProps) {
             e.stopPropagation();
             onClose();
           }}
-          className="invisible group-hover:visible border-0 w-4 h-4 flex items-center hover:bg-[#2d2d2d] justify-center ml-2"
+          className="invisible group-hover:visible border-0 w-4 h-4 flex items-center hover:bg-(--color-bg-light) justify-center ml-2"
         >
           <span>
             <svg

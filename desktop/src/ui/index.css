@@ -1,3 +1,5 @@
+@import "./styles/colors.css";
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
@@ -11,12 +13,6 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  --blue-color: #007acc;
-  --dark-gray-color: #1e1e1e;
-  --gray-color: #252526;
-  --light-gray-color: #2d2d2d;
-  --text-gray-color: #BDBDBD;
 }
 
 a {

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ToastProvider, useToast } from "../../ui/Toast";
+import { Group, Panel, Separator } from "react-resizable-panels";
 import { useStatusBar } from "../../../context/StatusBarContext";
 import { ConnectionsBar } from "./ConnectionsBar";
 import { MigrationOptions, type MigrationMode } from "./MigrationOptions";
@@ -8,10 +9,7 @@ import { FieldsPanel } from "./FieldsPanel";
 import { FilterModal } from "./FilterModal";
 import { PreviewModal } from "./PreviewModal";
 import { MigrationStatusItem } from "./MigrationStatusItem";
-import {
-  useStartMigration,
-  useMigrationJob,
-} from "../../../api/hooks/useMigrationJob";
+import { useStartMigration, useMigrationJob } from "../../../api/hooks/useMigrationJob";
 import type { EntityInfo } from "../../../api/hooks/useEntities";
 
 export default function DataMigration() {
@@ -66,16 +64,12 @@ function DataMigrationPage() {
   // Mirror job progress into the status bar.
   useEffect(() => {
     if (!job) return;
-    setStatus(
-      "data-migration",
-      <MigrationStatusItem entityLogicalName={runningEntity} job={job} />
-    );
+    setStatus("data-migration", <MigrationStatusItem entityLogicalName={runningEntity} job={job} />);
   }, [job, runningEntity, setStatus]);
 
   useEffect(() => () => clearStatus("data-migration"), [clearStatus]);
 
-  const mode: MigrationMode =
-    doCreate && doUpdate ? "upsert" : doUpdate ? "update" : "create";
+  const mode: MigrationMode = doCreate && doUpdate ? "upsert" : doUpdate ? "update" : "create";
   const isRunning = job?.status === "queued" || job?.status === "running";
   const canStart =
     !!sourceName &&
@@ -103,7 +97,7 @@ function DataMigrationPage() {
           setJobId(res.jobId);
         },
         onError: (err) => showToast((err as Error).message, "error"),
-      }
+      },
     );
   };
 
@@ -132,23 +126,20 @@ function DataMigrationPage() {
         />
       </div>
 
-      <div className="flex flex-1 min-h-0 gap-4">
-        <div className="w-1/3 min-w-64 flex flex-col min-h-0">
-          <EntityListPanel
-            connectionName={sourceName || null}
-            selected={entity}
-            onSelect={selectEntity}
-          />
-        </div>
-        <div className="flex-1 flex flex-col min-h-0">
+      <Group className="flex flex-1 min-h-0">
+        <Panel defaultSize='35%' minSize='15%' className="flex flex-col min-h-0">
+          <EntityListPanel connectionName={sourceName || null} selected={entity} onSelect={selectEntity} />
+        </Panel>
+        <Separator className="w-1 mx-1 cursor-col-resize hover:bg-[#0078d4] active:bg-[#0078d4] transition-colors" />
+        <Panel minSize='15%' className="flex flex-col min-h-0">
           <FieldsPanel
             entityLogicalName={entity?.logicalName ?? null}
             connectionName={sourceName || null}
             selected={attributes}
             onChange={setAttributes}
           />
-        </div>
-      </div>
+        </Panel>
+      </Group>
 
       {entity && (
         <FilterModal

@@ -57,7 +57,7 @@ const StatusBar = () => {
   };
 
   return (
-    <div className="h-6 bg-(--blue-color) flex items-center justify-between px-2 text-white text-xs select-none">
+    <div className="h-6 bg-(--color-primary) flex items-center justify-between px-2 text-white text-xs select-none">
       <div className="relative flex items-center space-x-2" ref={containerRef}>
         <button
           type="button"
