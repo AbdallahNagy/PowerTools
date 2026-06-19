@@ -97,6 +97,11 @@ public class MigrationJobRunner(
             var recordId = source.Id.ToString();
             recordMap[i] = recordId;
 
+            if (job.Mode is "update" or "upsert")
+            {
+                target.Id = source.Id;
+            }
+
             OrganizationRequest req = job.Mode switch
             {
                 "update" => new UpdateRequest { Target = target },

@@ -1,6 +1,6 @@
 namespace PowerTools.API.Tools.DataMigration.Dtos;
 
-public abstract record PreviewRequest(
+public record PreviewRequest(
     string EntityLogicalName,
     List<string> Attributes,
     string? FetchXmlFilter = null,
