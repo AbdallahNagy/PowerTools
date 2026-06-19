@@ -51,13 +51,26 @@ button {
   font-family: inherit;
   /* background-color: #1a1a1a; */
   cursor: pointer;
-  transition: border-color 0.25s;
+  outline: none;
 }
 
 
 button:focus,
 button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+  outline: none;
+}
+
+.connection-select {
+  color-scheme: dark;
+}
+
+.connection-select option {
+  background: var(--color-bg-darker);
+  color: var(--color-text-white);
+}
+
+.connection-select option:disabled {
+  color: var(--color-text-dark-gray);
 }
 
 /* Dark scrollbar */
