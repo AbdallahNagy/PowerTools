@@ -45,14 +45,14 @@ function DataMigrationPage() {
     });
   }, []);
 
-  // Metadata hooks authenticate as the active connection; keep it in
-  // sync with the chosen source so entities/fields come from the right org.
-  const changeSource = async (name: string) => {
+  // Metadata hooks now sign each request with the chosen source connection
+  // via `meta.connectionName`, so we just reset dependent local state here
+  // without mutating the global active connection.
+  const changeSource = (name: string) => {
     setSourceName(name);
     setEntity(null);
     setAttributes([]);
     setFetchFilter("");
-    if (name) await window.electron.setActiveConnection(name);
   };
 
   const selectEntity = (e: EntityInfo) => {
@@ -89,6 +89,7 @@ function DataMigrationPage() {
         attributes,
         fetchXmlFilter: fetchFilter || undefined,
         mode,
+        sourceConnectionName: sourceName,
         targetConnectionName: targetName,
       },
       {

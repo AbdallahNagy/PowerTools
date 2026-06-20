@@ -12,7 +12,10 @@ export interface EntityInfo {
 export function useEntities(connectionName: string | null) {
   return useQuery({
     queryKey: ["migration", "entities", connectionName],
-    queryFn: () => apiGet<EntityInfo[]>("/api/migration/entities"),
+    queryFn: () =>
+      apiGet<EntityInfo[]>("/api/migration/entities", {
+        meta: { connectionName: connectionName ?? undefined },
+      }),
     enabled: !!connectionName,
     staleTime: 5 * 60 * 1000,
   });

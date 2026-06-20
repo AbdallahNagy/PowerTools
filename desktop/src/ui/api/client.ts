@@ -44,7 +44,12 @@ export function clearTargetAuthCache(name: string) {
 
 declare module "axios" {
   interface AxiosRequestConfig {
-    meta?: { targetConnectionName?: string };
+    meta?: {
+      /** Override the primary connection used for this request. Defaults to the active connection. */
+      connectionName?: string;
+      /** Optional second connection sent via X-Target-* headers. */
+      targetConnectionName?: string;
+    };
   }
 }
 
@@ -53,7 +58,9 @@ export const api = axios.create({
 });
 
 api.interceptors.request.use(async (config) => {
-  const { token, envUrl } = await loadAuth();
+  const { token, envUrl } = config.meta?.connectionName
+    ? await loadTargetAuth(config.meta.connectionName)
+    : await loadAuth();
   config.headers.set("Authorization", `Bearer ${token}`);
   config.headers.set("X-Environment-Url", envUrl);
 
@@ -75,7 +82,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && original && !original._retry) {
       original._retry = true;
       try {
-        await loadAuth(true);
+        if (original.meta?.connectionName) {
+          await loadTargetAuth(original.meta.connectionName, true);
+        } else {
+          await loadAuth(true);
+        }
         if (original.meta?.targetConnectionName) {
           await loadTargetAuth(original.meta.targetConnectionName, true);
         }

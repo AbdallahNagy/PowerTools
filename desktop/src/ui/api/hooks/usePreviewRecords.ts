@@ -23,8 +23,9 @@ export function usePreviewRecords(args: PreviewArgs | null) {
     queryKey: ["migration", "preview", args],
     queryFn: () => {
       const { connectionName, ...body } = args!;
-      void connectionName;
-      return apiPost<PreviewResult>("/api/migration/preview", body);
+      return apiPost<PreviewResult>("/api/migration/preview", body, {
+        meta: { connectionName },
+      });
     },
     enabled: !!args,
   });
