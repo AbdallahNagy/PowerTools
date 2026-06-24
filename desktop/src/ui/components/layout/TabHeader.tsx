@@ -20,11 +20,10 @@ function Tab({ title, active = false, onClick, onClose }: TabProps) {
             e.stopPropagation();
             onClose();
           }}
-          className="invisible group-hover:visible border-0 w-4 h-4 flex items-center hover:bg-(--color-bg-light) justify-center ml-2"
+          className="invisible group-hover:visible rounded-sm p-0.5 flex items-center justify-center ml-2 cursor-pointer hover:bg-(--color-hover-bg) hover:text-white transition-colors"
         >
-          <span>
             <svg
-              className="w-4 h-4 text-gray-800 dark:text-white"
+              className="w-3.5 h-3.5 text-(--color-text-dark-gray)"
               aria-hidden="true"
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -40,7 +39,6 @@ function Tab({ title, active = false, onClick, onClose }: TabProps) {
                 d="M6 18 17.94 6M18 18 6.06 6"
               />
             </svg>
-          </span>
         </button>
       )}
     </div>
