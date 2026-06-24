@@ -96,7 +96,7 @@ export function PreviewModal({
               {displayAttrs.map((a) => (
                 <th
                   key={a}
-                  className="text-left px-3 py-2 text-xs font-medium text-[#858585] uppercase border-b border-[#3c3c3c]"
+                  className="text-left px-3 py-2 text-xs font-medium text-[#858585] border-b border-[#3c3c3c]"
                 >
                   {a}
                 </th>

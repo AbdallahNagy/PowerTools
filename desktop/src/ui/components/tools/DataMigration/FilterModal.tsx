@@ -66,7 +66,7 @@ export function FilterModal({
   return (
     <Modal open={open} onClose={onClose} title="FetchXML Filter">
       <div>
-        <label className="text-xs text-[#858585] uppercase tracking-wider block mb-1.5">
+        <label className="text-xs text-[#858585] tracking-wider block mb-1.5">
           Filter <span className="normal-case text-[#555]">(optional)</span>
         </label>
         <textarea
@@ -87,7 +87,7 @@ export function FilterModal({
       </div>
 
       <div>
-        <p className="text-xs text-[#858585] uppercase tracking-wider mb-1.5">
+        <p className="text-xs text-[#858585] tracking-wider mb-1.5">
           Composed FetchXML
         </p>
         <pre className="text-xs font-mono bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm p-3 overflow-auto max-h-40 text-[#858585] whitespace-pre-wrap">
