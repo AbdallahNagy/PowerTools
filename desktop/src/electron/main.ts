@@ -136,9 +136,10 @@ app.whenReady().then(() => {
       webPreferences: {
         preload: getPreloadPath(),
       },
-      width: 400,
+      width: 450,
       height: 300,
       autoHideMenuBar: true,
+      resizable: false,
     });
 
     if (isDev()) {

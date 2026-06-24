@@ -11,16 +11,15 @@ const ConnectionNamingWindow = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#1e1e1e] text-[#cccccc] flex flex-col p-6 box-border">
-      <h3 className="font-bold mb-6 text-white">Name this Connection</h3>
-      <p className="text-sm mb-4 text-gray-400">
-        Give this connection a friendly name (e.g. "Contoso Prod").
-      </p>
+    <div className="h-screen w-screen bg-[#1e1e1e] text-[#cccccc] flex flex-col justify-center px-6 py-4 box-border gap-3">
+      <div>
+        <h3 className="font-bold text-white mb-1">Name this Connection</h3>
+        <p className="text-xs text-gray-400">
+          Give this connection a friendly name (e.g. "Contoso Prod").
+        </p>
+      </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-4 max-w-md w-full mx-auto"
-      >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-3 w-full">
         <div className="flex flex-col gap-1">
           <label htmlFor="connectionName" className="text-xs">
             Connection Name
@@ -38,7 +37,7 @@ const ConnectionNamingWindow = () => {
         <button
           type="submit"
           disabled={!connectionName.trim()}
-          className="mt-4 bg-[#007fd4] hover:bg-[#0069b4] text-white py-2 px-4 rounded-sm font-thin transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-[#007fd4] hover:bg-[#0069b4] text-white py-2 px-4 rounded-sm font-thin transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Save
         </button>
