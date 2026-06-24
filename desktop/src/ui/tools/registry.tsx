@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import DataMigrationIcon from "../assets/icons/data-migration-icon.svg";
 import DataMigration from "../components/tools/DataMigration";
+import WelcomeTab from "../components/tools/Welcome";
 
 export interface ToolDefinition {
   toolId: string;
@@ -12,6 +13,13 @@ export interface ToolDefinition {
 }
 
 export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
+  welcome: {
+    toolId: "welcome",
+    title: "Welcome",
+    icon: "",
+    component: WelcomeTab,
+    allowMultipleInstances: false,
+  },
   "data-migration": {
     toolId: "data-migration",
     title: "Data Migration",
