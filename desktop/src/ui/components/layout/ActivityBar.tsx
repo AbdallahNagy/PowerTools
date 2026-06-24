@@ -1,10 +1,9 @@
 import ConnectIcon from "../../assets/icons/connect-icon.svg";
-import DataMigrationIcon from "../../assets/icons/data-migration-icon.svg";
 import { useTabs } from "../../context/TabContext";
-import DataMigration from "../tools/DataMigration/index";
+import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 
 const ActivityBar = () => {
-  const { addTab } = useTabs();
+  const { openTool } = useTabs();
 
   return (
     <div className="w-12 bg-[#252526] flex flex-col items-center py-2 select-none">
@@ -17,20 +16,17 @@ const ActivityBar = () => {
         <img src={ConnectIcon} alt="" className="w-full h-full object-cover" />
       </button>
 
-      <button
-        title="Data Migration"
-        aria-label="Data Migration"
-        className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white focus:outline-none mb-2"
-        onClick={() =>
-          addTab({
-            id: "data-migration",
-            title: "Data Migration",
-            content: <DataMigration />,
-          })
-        }
-      >
-        <img src={DataMigrationIcon} alt="" />
-      </button>
+      {ACTIVITY_BAR_TOOLS.map((tool) => (
+        <button
+          key={tool.toolId}
+          title={tool.title}
+          aria-label={tool.title}
+          className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white focus:outline-none mb-2"
+          onClick={() => openTool(tool.toolId)}
+        >
+          <img src={tool.icon} alt="" />
+        </button>
+      ))}
     </div>
   );
 };

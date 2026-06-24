@@ -1,5 +1,15 @@
+import { memo } from "react";
 import Tab from "./TabHeader";
 import { useTabs } from "../../context/TabContext";
+import { TOOL_REGISTRY } from "../../tools/registry";
+import type { TabData } from "../../common/types/tab-data.interface";
+
+const TabContent = memo(({ tab }: { tab: TabData }) => {
+  const def = TOOL_REGISTRY[tab.toolId];
+  const Tool = def?.component;
+  return Tool ? <Tool /> : <>{tab.content}</>;
+});
+TabContent.displayName = "TabContent";
 
 function TabBar() {
   const { tabs, activeTabId, setActiveTab, closeTab } = useTabs();
@@ -18,7 +28,19 @@ function TabBar() {
         ))}
       </div>
       <div className="flex-1 flex flex-col overflow-hidden bg-(--color-bg-dark)">
-        {tabs.find((tab) => tab.id === activeTabId)?.content}
+        {tabs.map((tab) => {
+          const isActive = tab.id === activeTabId;
+          return (
+            <div
+              key={tab.id}
+              className={
+                isActive ? "flex flex-1 flex-col min-h-0" : "hidden"
+              }
+            >
+              <TabContent tab={tab} />
+            </div>
+          );
+        })}
       </div>
     </>
   );
