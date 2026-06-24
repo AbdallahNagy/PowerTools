@@ -31,21 +31,19 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    setTabs((prev) => {
-      const sameTool = prev.filter((t) => t.toolId === toolId);
+    const sameTool = tabs.filter((t) => t.toolId === toolId);
 
-      if (def.allowMultipleInstances === false && sameTool.length > 0) {
-        setActiveTabId(sameTool[0].id);
-        return prev;
-      }
+    if (def.allowMultipleInstances === false && sameTool.length > 0) {
+      setActiveTabId(sameTool[0].id);
+      return;
+    }
 
-      const instanceId = `${toolId}-${Date.now()}`;
-      const title =
-        sameTool.length === 0 ? def.title : `${def.title} ${sameTool.length + 1}`;
+    const instanceId = `${toolId}-${Date.now()}`;
+    const title =
+      sameTool.length === 0 ? def.title : `${def.title} ${sameTool.length + 1}`;
 
-      setActiveTabId(instanceId);
-      return [...prev, { id: instanceId, toolId, title }];
-    });
+    setTabs((prev) => [...prev, { id: instanceId, toolId, title }]);
+    setActiveTabId(instanceId);
   };
 
   const addTab = (tab: TabData) => {
