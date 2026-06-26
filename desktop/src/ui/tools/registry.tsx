@@ -6,6 +6,7 @@ import WelcomeTab from "../components/tools/Welcome";
 export interface ToolDefinition {
   toolId: string;
   title: string;
+  tooltip?: string;
   icon: string;
   component: ComponentType;
   /** Allow opening more than one tab of this tool. Defaults to true. */
@@ -23,6 +24,7 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
   "data-migration": {
     toolId: "data-migration",
     title: "Data Migration",
+    tooltip: "data migration",
     icon: DataMigrationIcon,
     component: DataMigration,
     allowMultipleInstances: true,
