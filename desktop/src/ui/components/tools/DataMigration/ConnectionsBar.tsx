@@ -60,7 +60,7 @@ function ConnectionSelect({
 }: ConnectionSelectProps) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs text-[#858585] uppercase tracking-wider">
+      <label className="text-xs text-[#858585] tracking-wider">
         {label}
       </label>
       <select
