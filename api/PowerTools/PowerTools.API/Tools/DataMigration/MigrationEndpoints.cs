@@ -10,7 +10,6 @@ public static class MigrationEndpoints
     public static IEndpointRouteBuilder MapMigrationEndpoints(this IEndpointRouteBuilder app)
     {
         var runGroup = app.MapGroup("/api/migration")
-            .RequireAuthorization()
             .AddEndpointFilter<DataverseContextFilter>()
             .AddEndpointFilter<DataverseTargetContextFilter>();
 
@@ -35,8 +34,7 @@ public static class MigrationEndpoints
             return Results.Ok(new { jobId = job.Id });
         });
 
-        var statusGroup = app.MapGroup("/api/migration")
-            .RequireAuthorization();
+        var statusGroup = app.MapGroup("/api/migration");
 
         statusGroup.MapGet("/jobs/{jobId:guid}", (Guid jobId, IMigrationJobStore store) =>
         {

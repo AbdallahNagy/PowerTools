@@ -12,9 +12,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "transpile:electron": "tsc --project src/electron/tsconfig.json",
-    "dist:mac": "npm run transpile:electron && npm run build && electron-builder --mac --arm64",
-    "dist:linux": "npm run transpile:electron && npm run build && electron-builder --linux --x64",
-    "dist:win": "npm run transpile:electron && npm run build && electron-builder --win --x64"
+    "publish:api:win": "dotnet publish ../api/PowerTools/PowerTools.API -c Release -r win-x64 -p:PublishingForSidecar=true",
+    "publish:api:mac": "dotnet publish ../api/PowerTools/PowerTools.API -c Release -r osx-arm64 -p:PublishingForSidecar=true",
+    "publish:api:linux": "dotnet publish ../api/PowerTools/PowerTools.API -c Release -r linux-x64 -p:PublishingForSidecar=true",
+    "dist:mac": "npm run publish:api:mac && npm run transpile:electron && npm run build && electron-builder --mac --arm64",
+    "dist:linux": "npm run publish:api:linux && npm run transpile:electron && npm run build && electron-builder --linux --x64",
+    "dist:win": "npm run publish:api:win && npm run transpile:electron && npm run build && electron-builder --win --x64"
   },
   "dependencies": {
     "@azure/msal-node": "^2.0.0",

@@ -10,7 +10,6 @@ public static class DataMigrationEndpoints
     public static IEndpointRouteBuilder MapDataMigrationEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api")
-            .RequireAuthorization()
             .AddEndpointFilter<DataverseContextFilter>();
 
         group.MapGet("/accounts", async (HttpContext ctx, DataverseClientFactory factory) =>

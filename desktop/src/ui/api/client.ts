@@ -1,11 +1,19 @@
 import axios, { AxiosError } from "axios";
 import type { AxiosRequestConfig } from "axios";
 
-const API_BASE_URL = "https://localhost:7258";
-
 interface CachedAuth {
   token: string;
   envUrl: string;
+}
+
+// Local sidecar URL + per-launch secret. Both are resolved once from the
+// Electron main process and reused for the lifetime of the renderer.
+let bootstrapPromise: Promise<{ baseUrl: string; secret: string }> | null = null;
+function bootstrap() {
+  return bootstrapPromise ??= Promise.all([
+    window.electron.getApiBaseUrl(),
+    window.electron.getLocalSecret(),
+  ]).then(([baseUrl, secret]) => ({ baseUrl, secret }));
 }
 
 let cached: CachedAuth | null = null;
@@ -53,11 +61,13 @@ declare module "axios" {
   }
 }
 
-export const api = axios.create({
-  baseURL: API_BASE_URL,
-});
+export const api = axios.create();
 
 api.interceptors.request.use(async (config) => {
+  const { baseUrl, secret } = await bootstrap();
+  config.baseURL = baseUrl;
+  config.headers.set("X-Local-Secret", secret);
+
   const { token, envUrl } = config.meta?.connectionName
     ? await loadTargetAuth(config.meta.connectionName)
     : await loadAuth();

@@ -4,13 +4,31 @@
     "icon": "./power-tools.png",
     "extraResources": ["dist-electron/preload.cjs"],
     "mac": {
-        "target": "dmg"
+        "target": "dmg",
+        "extraResources": [
+            {
+                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/osx-arm64/publish",
+                "to": "api"
+            }
+        ]
     },
     "linux": {
         "target": "AppImage",
-        "category": "Utility"
+        "category": "Utility",
+        "extraResources": [
+            {
+                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/linux-x64/publish",
+                "to": "api"
+            }
+        ]
     },
     "win": {
-        "target": ["portable", "msi"]
+        "target": ["portable", "msi"],
+        "extraResources": [
+            {
+                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/win-x64/publish",
+                "to": "api"
+            }
+        ]
     }
 }

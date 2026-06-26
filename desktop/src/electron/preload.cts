@@ -30,4 +30,9 @@ electron.contextBridge.exposeInMainWorld("electron", {
   getActiveConnection: () =>
     electron.ipcRenderer.invoke("get-active-connection"),
   refreshToken: () => electron.ipcRenderer.invoke("refresh-token"),
+
+  // Local sidecar API bootstrap. Both values are resolved once per renderer
+  // load and cached in the api/client module.
+  getApiBaseUrl: () => electron.ipcRenderer.invoke("get-api-base-url"),
+  getLocalSecret: () => electron.ipcRenderer.invoke("get-local-secret"),
 });

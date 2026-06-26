@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { AccountInfo } from "@azure/msal-node";
 import { isDev } from "./utils.js";
 import { getPreloadPath } from "./pathResolver.js";
@@ -9,6 +9,7 @@ import {
   removeAccount,
 } from "./auth.js";
 import { loadState, saveState } from "./storage.js";
+import * as sidecar from "./sidecar.js";
 
 interface StoredConnection {
   name: string;
@@ -18,7 +19,28 @@ interface StoredConnection {
   account: AccountInfo | null;
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Start the local API process before any window opens. The renderer
+  // assumes a working sidecar; if it fails to come up, the app cannot
+  // function — surface the error and quit cleanly.
+  let sidecarHandle: { baseUrl: string; secret: string };
+  try {
+    sidecarHandle = await sidecar.start();
+  } catch (err) {
+    dialog.showErrorBox(
+      "PowerTools failed to start",
+      `The local API process did not start.\n\n${(err as Error).message}`
+    );
+    app.quit();
+    return;
+  }
+
+  app.on("before-quit", sidecar.stop);
+  process.on("exit", sidecar.stop);
+
+  ipcMain.handle("get-api-base-url", () => sidecarHandle.baseUrl);
+  ipcMain.handle("get-local-secret", () => sidecarHandle.secret);
+
   const mainWindow = new BrowserWindow({
     webPreferences: {
       preload: getPreloadPath(),

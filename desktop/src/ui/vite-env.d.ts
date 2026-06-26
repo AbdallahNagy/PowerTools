@@ -35,6 +35,8 @@ declare global {
       deleteConnection: (name: string) => Promise<{ success: boolean; error?: string }>;
       getActiveConnection: () => Promise<ConnectionResult>;
       refreshToken: () => Promise<ConnectionResult>;
+      getApiBaseUrl: () => Promise<string>;
+      getLocalSecret: () => Promise<string>;
     };
   }
 }

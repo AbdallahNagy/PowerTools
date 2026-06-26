@@ -4,11 +4,23 @@
         <TargetFramework>net9.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>PowerTools.API</RootNamespace>
+        <AssemblyName>PowerTools.API</AssemblyName>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+
+    <!-- Self-contained, single-file publish for sidecar distribution.
+         Activate with: dotnet publish -c Release -r <rid> -p:PublishingForSidecar=true -->
+    <PropertyGroup Condition="'$(PublishingForSidecar)' == 'true'">
+        <PublishSingleFile>true</PublishSingleFile>
+        <SelfContained>true</SelfContained>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <DebugType>embedded</DebugType>
+        <!-- Dataverse SDK is not trim-safe. Do not enable PublishTrimmed. -->
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.14" />
-        <PackageReference Include="Microsoft.Identity.Web" Version="4.7.0" />
         <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" Version="1.2.10" />
     </ItemGroup>
 

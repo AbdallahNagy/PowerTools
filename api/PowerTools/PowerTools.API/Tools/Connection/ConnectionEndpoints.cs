@@ -10,7 +10,6 @@ public static class ConnectionEndpoints
     public static IEndpointRouteBuilder MapConnectionEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api")
-            .RequireAuthorization()
             .AddEndpointFilter<DataverseContextFilter>();
 
         group.MapGet("/connect",

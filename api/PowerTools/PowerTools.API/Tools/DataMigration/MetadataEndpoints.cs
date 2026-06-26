@@ -11,7 +11,6 @@ public static class MetadataEndpoints
     public static IEndpointRouteBuilder MapMetadataEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/migration")
-            .RequireAuthorization()
             .AddEndpointFilter<DataverseContextFilter>();
 
         group.MapGet("/entities", async (HttpContext ctx, DataverseClientFactory factory) =>

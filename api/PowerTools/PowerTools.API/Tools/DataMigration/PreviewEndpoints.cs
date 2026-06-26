@@ -11,7 +11,6 @@ public static class PreviewEndpoints
     public static IEndpointRouteBuilder MapPreviewEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/migration")
-            .RequireAuthorization()
             .AddEndpointFilter<DataverseContextFilter>();
 
         group.MapPost("/preview", async (

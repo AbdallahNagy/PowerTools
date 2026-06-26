@@ -56,7 +56,7 @@ Changes are surgical. No endpoint files are touched.
 - **`Program.cs`**
   - Read `port` and `localSecret` from `args[0]` / `args[1]`. Fail fast if missing.
   - `builder.WebHost.UseUrls($"http://127.0.0.1:{port}")`.
-  - Remove `AddAuthentication` / `AddJwtBearer` / `AddAuthorization` and the corresponding `UseAuthentication`/`UseAuthorization` middleware. Remove `UseHttpsRedirection`. Remove `AddCors` and `UseCors` (loopback + single origin, not needed).
+  - Remove `AddAuthentication` / `AddJwtBearer` / `AddAuthorization` and the corresponding `UseAuthentication`/`UseAuthorization` middleware. Remove `UseHttpsRedirection`. **Keep `AddCors` / `UseCors`** with a permissive policy (`SetIsOriginAllowed(_ => true)`) — the renderer's origin (`http://localhost:5123` in dev, `file://` in prod) differs from the sidecar's, so browsers send a preflight `OPTIONS` that must be answered before the secret middleware runs. CORS is safe to leave wide-open here because the loopback bind plus per-launch secret are the real authorization boundary.
   - Add a tiny middleware that 401s any request missing or mismatching `X-Local-Secret`.
   - Emit `Console.WriteLine($"LISTENING {port}")` after `app.Start()` (use the explicit start pattern so the line is printed only when the kestrel server is bound), then `app.WaitForShutdown()`.
 - **`PowerTools.API.csproj`**
