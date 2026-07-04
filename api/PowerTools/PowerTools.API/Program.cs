@@ -3,6 +3,8 @@ using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.Connection;
 using PowerTools.API.Tools.DataMigration;
+using PowerTools.API.Tools.Fetch;
+using PowerTools.API.Tools.Metadata;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,8 +69,9 @@ app.Use(async (ctx, next) =>
 
 // ── Endpoint groups — one per tool ───────────────────────────────────────────
 app.MapConnectionEndpoints();
-app.MapDataMigrationEndpoints();
 app.MapMetadataEndpoints();
+app.MapFetchEndpoints();
+app.MapDataMigrationEndpoints();
 app.MapPreviewEndpoints();
 app.MapMigrationEndpoints();
 

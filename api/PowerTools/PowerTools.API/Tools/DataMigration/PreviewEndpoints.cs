@@ -3,6 +3,7 @@ using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.DataMigration.Dtos;
 using PowerTools.API.Utils;
+using static PowerTools.API.Utils.DataverseValueFormatter;
 
 namespace PowerTools.API.Tools.DataMigration;
 
@@ -29,7 +30,7 @@ public static class PreviewEndpoints
                 {
                     var dict = new Dictionary<string, object?> { ["id"] = e.Id.ToString() };
                     foreach (var attr in req.Attributes)
-                        dict[attr] = e.Contains(attr) ? FormatValue(e[attr]) : null;
+                        dict[attr] = e.Contains(attr) ? Format(e[attr]) : null;
                     return dict;
                 }).ToList();
 
@@ -63,11 +64,5 @@ public static class PreviewEndpoints
                $"<entity name=\"{req.EntityLogicalName}\">{attrs}{filter}</entity></fetch>";
     }
 
-    private static object? FormatValue(object val) => val switch
-    {
-        Microsoft.Xrm.Sdk.EntityReference er => er.Name ?? er.Id.ToString(),
-        Microsoft.Xrm.Sdk.OptionSetValue osv => osv.Value.ToString(),
-        Microsoft.Xrm.Sdk.Money money => money.Value.ToString("F2"),
-        _ => val?.ToString()
-    };
+    private static object? FormatValue(object val) => DataverseValueFormatter.Format(val);
 }
