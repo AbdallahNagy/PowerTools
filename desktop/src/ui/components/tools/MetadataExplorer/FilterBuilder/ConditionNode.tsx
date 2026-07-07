@@ -1,9 +1,11 @@
+import { useRef } from "react";
 import type { FilterCondition, FieldMetadata, Operator } from "../model/types";
 import type { ValidationError } from "../model/validation";
 import type { useFilterTree } from "../hooks/useFilterTree";
 import { FieldPicker } from "./FieldPicker";
 import { OperatorPicker } from "./OperatorPicker";
 import { ValueInput } from "./ValueInput";
+import { useDrag } from "./DragContext";
 
 type TreeActions = ReturnType<typeof useFilterTree>;
 
@@ -18,12 +20,44 @@ interface ConditionNodeProps {
 export function ConditionNode({ condition, fields, errors, canRemove, actions }: ConditionNodeProps) {
   const field = fields.find((f) => f.logicalName === condition.field) ?? null;
   const nodeErrors = errors.filter((e) => e.nodeId === condition.id);
+  const { dragId, beginDrag, endDrag } = useDrag();
+  const isDragging = dragId === condition.id;
+  const handleArmed = useRef(false);
 
   return (
-    <div className="group flex flex-col gap-1">
+    <div
+      className={`group flex flex-col gap-1 ${isDragging ? "opacity-40" : ""}`}
+      draggable
+      onDragStart={(e) => {
+        if (!handleArmed.current) {
+          e.preventDefault();
+          return;
+        }
+        handleArmed.current = false;
+        e.stopPropagation();
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", condition.id);
+        beginDrag(condition.id);
+      }}
+      onDragEnd={() => {
+        handleArmed.current = false;
+        endDrag();
+      }}
+    >
       <div className="flex items-center gap-2">
-        {/* Drag handle placeholder */}
-        <span className="text-[#555] cursor-grab select-none text-sm leading-none">⠿</span>
+        <span
+          data-drag-handle
+          title="Drag to reorder"
+          onMouseDown={() => {
+            handleArmed.current = true;
+          }}
+          onMouseUp={() => {
+            handleArmed.current = false;
+          }}
+          className="text-[#858585] hover:text-white cursor-grab active:cursor-grabbing select-none text-sm leading-none px-0.5"
+        >
+          ⠿
+        </span>
 
         <FieldPicker
           value={condition.field}

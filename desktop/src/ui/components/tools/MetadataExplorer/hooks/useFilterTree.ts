@@ -91,7 +91,7 @@ function moveNode(root: FilterGroup, id: string, targetParentId: string, targetI
   if (!node) return root;
 
   // Remove from current position
-  let updated = removeNode(root, id);
+  const updated = removeNode(root, id);
 
   // Insert at target
   const targetGroup = findGroup(updated, targetParentId);
