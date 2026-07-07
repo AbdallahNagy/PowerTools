@@ -7,6 +7,15 @@ export interface ValidationError {
 }
 
 export function validateTree(root: FilterGroup): ValidationError[] {
+  console.log("Validating tree", root);
+  if (
+    root.children.length <= 1 &&
+    root.children[0].kind === "condition" &&
+    !root.children[0].field &&
+    !root.children[0].operator
+  )
+    return [];
+
   const errors: ValidationError[] = [];
 
   function walk(node: FilterNode) {
@@ -24,10 +33,7 @@ export function validateTree(root: FilterGroup): ValidationError[] {
       }
       if (node.operator && !NO_VALUE_OPERATORS.includes(node.operator)) {
         const empty =
-          node.value == null ||
-          (Array.isArray(node.value)
-            ? node.value.length === 0
-            : node.value.trim() === "");
+          node.value == null || (Array.isArray(node.value) ? node.value.length === 0 : node.value.trim() === "");
         if (empty) {
           errors.push({ nodeId: node.id, message: "Enter a value" });
         }
