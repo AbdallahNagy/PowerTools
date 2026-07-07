@@ -37,7 +37,7 @@ function MetadataExplorerPage() {
   const tree = useFilterTree();
   const { data: fields, isLoading: fieldsLoading } = useTableMetadata(
     selectedEntity?.logicalName ?? null,
-    connectionName || null
+    connectionName || null,
   );
   const { mutate: runFetch, data: result, isPending, reset: resetResult } = useRunFetch(connectionName || null);
 
@@ -45,8 +45,14 @@ function MetadataExplorerPage() {
   useEffect(() => {
     window.electron.listConnections().then((list) => {
       setConnections(list);
-      if (list.length > 0) setConnectionName((prev) => prev || list[0].name);
     });
+
+    window.electron.getActiveConnection().then((activeConnection) => {
+      if (activeConnection && "name" in activeConnection) {
+        setConnectionName(activeConnection.name);
+      }
+    });
+
     const unsubscribe = window.electron.onConnectionsUpdated((list) => {
       setConnections(list);
     });
@@ -90,7 +96,7 @@ function MetadataExplorerPage() {
           }
         },
         onError: (err) => showToast((err as Error).message, "error"),
-      }
+      },
     );
   };
 
@@ -128,7 +134,9 @@ function MetadataExplorerPage() {
           >
             <option value="">— select —</option>
             {connections.map((c) => (
-              <option key={c.name} value={c.name}>{c.name}</option>
+              <option key={c.name} value={c.name}>
+                {c.name}
+              </option>
             ))}
           </select>
         </div>
@@ -145,12 +153,7 @@ function MetadataExplorerPage() {
           <Button variant="ghost" onClick={handleClearAll} className="text-sm py-1.5">
             Clear all
           </Button>
-          <Button
-            variant="primary"
-            onClick={() => handleRun(1)}
-            disabled={!canRun}
-            className="text-sm py-1.5"
-          >
+          <Button variant="primary" onClick={() => handleRun(1)} disabled={!canRun} className="text-sm py-1.5">
             {isPending ? "Running…" : "Run"}
           </Button>
         </div>
@@ -175,9 +178,7 @@ function MetadataExplorerPage() {
           <div className="flex flex-col gap-2 shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-xs text-[#858585] uppercase tracking-wider">Filters</span>
-              {fieldsLoading && (
-                <span className="text-xs text-[#858585]">Loading fields…</span>
-              )}
+              {fieldsLoading && <span className="text-xs text-[#858585]">Loading fields…</span>}
               {validationErrors.length > 0 && (
                 <span className="text-xs text-[#f48771]">
                   {validationErrors.length} error{validationErrors.length > 1 ? "s" : ""}
@@ -186,12 +187,7 @@ function MetadataExplorerPage() {
             </div>
 
             {selectedEntity ? (
-              <FilterTree
-                root={tree.root}
-                fields={fields ?? []}
-                errors={validationErrors}
-                actions={tree}
-              />
+              <FilterTree root={tree.root} fields={fields ?? []} errors={validationErrors} actions={tree} />
             ) : (
               <p className="text-xs text-[#858585] italic">Select a table to build filters.</p>
             )}
@@ -213,11 +209,7 @@ function MetadataExplorerPage() {
         </Panel>
       </Group>
 
-      <FetchXmlModal
-        open={fetchXmlOpen}
-        fetchXml={lastFetchXml}
-        onClose={() => setFetchXmlOpen(false)}
-      />
+      <FetchXmlModal open={fetchXmlOpen} fetchXml={lastFetchXml} onClose={() => setFetchXmlOpen(false)} />
     </div>
   );
 }

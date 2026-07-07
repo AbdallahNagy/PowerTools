@@ -20,7 +20,7 @@ export function useEntityAttributes(
     queryKey: ["migration", "attributes", connectionName, logicalName],
     queryFn: () =>
       apiGet<AttributeInfo[]>(
-        `/api/migration/entities/${logicalName}/attributes`,
+        `/api/metadata/entities/${logicalName}/attributes`,
         { meta: { connectionName: connectionName ?? undefined } }
       ),
     enabled: !!logicalName && !!connectionName,

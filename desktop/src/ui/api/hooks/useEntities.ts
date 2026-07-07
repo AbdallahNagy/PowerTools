@@ -13,7 +13,7 @@ export function useEntities(connectionName: string | null) {
   return useQuery({
     queryKey: ["migration", "entities", connectionName],
     queryFn: () =>
-      apiGet<EntityInfo[]>("/api/migration/entities", {
+      apiGet<EntityInfo[]>("/api/metadata/entities", {
         meta: { connectionName: connectionName ?? undefined },
       }),
     enabled: !!connectionName,
