@@ -53,9 +53,7 @@ function findGroup(root: FilterGroup, id: string): FilterGroup | null {
 function removeNode(group: FilterGroup, id: string): FilterGroup {
   return {
     ...group,
-    children: group.children
-      .filter((c) => c.id !== id)
-      .map((c) => (c.kind === "group" ? removeNode(c, id) : c)),
+    children: group.children.filter((c) => c.id !== id).map((c) => (c.kind === "group" ? removeNode(c, id) : c)),
   };
 }
 
@@ -74,9 +72,7 @@ function toggleLogic(group: FilterGroup, id: string): FilterGroup {
   if (group.id === id) return { ...group, logic: group.logic === "and" ? "or" : "and" };
   return {
     ...group,
-    children: group.children.map((c) =>
-      c.kind === "group" ? toggleLogic(c, id) : c
-    ),
+    children: group.children.map((c) => (c.kind === "group" ? toggleLogic(c, id) : c)),
   };
 }
 
@@ -84,9 +80,7 @@ function addToGroup(group: FilterGroup, parentId: string, node: FilterNode): Fil
   if (group.id === parentId) return { ...group, children: [...group.children, node] };
   return {
     ...group,
-    children: group.children.map((c) =>
-      c.kind === "group" ? addToGroup(c, parentId, node) : c
-    ),
+    children: group.children.map((c) => (c.kind === "group" ? addToGroup(c, parentId, node) : c)),
   };
 }
 
@@ -141,7 +135,8 @@ function reducer(state: FilterGroup, action: Action): FilterGroup {
 
     case "remove": {
       const parent = findParent(state, action.id);
-      if (!parent || parent.children.length <= 1) return state;
+      if (!parent) return state;
+      if (parent.children.length <= 1) return makeInitialRoot();
       return removeNode(state, action.id);
     }
 
@@ -194,7 +189,7 @@ export function useFilterTree() {
   const updateCondition = useCallback(
     (id: string, patch: Partial<Omit<FilterCondition, "id" | "kind">>) =>
       dispatch({ type: "update-condition", id, patch }),
-    []
+    [],
   );
   const toggleLogicFn = useCallback((id: string) => dispatch({ type: "toggle-logic", id }), []);
   const remove = useCallback((id: string) => dispatch({ type: "remove", id }), []);
@@ -202,7 +197,7 @@ export function useFilterTree() {
   const move = useCallback(
     (id: string, targetParentId: string, targetIndex: number) =>
       dispatch({ type: "move", id, targetParentId, targetIndex }),
-    []
+    [],
   );
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
 
