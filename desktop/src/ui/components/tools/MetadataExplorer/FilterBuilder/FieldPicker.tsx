@@ -11,7 +11,7 @@ export function FieldPicker({ value, fields, onChange }: FieldPickerProps) {
     <select
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value)}
-      className="flex-1 min-w-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+      className="w-44 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
     >
       <option value="" disabled>
         Select field…

@@ -13,11 +13,11 @@ export function ValueInput({ operator, field, value, onChange }: ValueInputProps
   const [multiRaw, setMultiRaw] = useState("");
 
   if (!operator || !field) {
-    return <div className="flex-1" />;
+    return <div className="w-40 shrink-0" />;
   }
 
   if (NO_VALUE_OPERATORS.includes(operator)) {
-    return <div className="flex-1 text-xs text-[#858585] italic flex items-center px-2">no value required</div>;
+    return null;
   }
 
   if (MULTI_VALUE_OPERATORS.includes(operator)) {
@@ -31,7 +31,7 @@ export function ValueInput({ operator, field, value, onChange }: ValueInputProps
           onChange={(e) =>
             onChange(Array.from(e.target.selectedOptions, (o) => o.value))
           }
-          className="flex-1 min-w-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4] h-20"
+          className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4] h-20"
         >
           {field.optionSet.map((o) => (
             <option key={o.value} value={String(o.value)}>
@@ -43,7 +43,7 @@ export function ValueInput({ operator, field, value, onChange }: ValueInputProps
     }
 
     return (
-      <div className="flex-1 flex flex-col gap-1">
+      <div className="w-40 shrink-0 flex flex-col gap-1">
         <div className="flex gap-1">
           <input
             type="text"
@@ -90,7 +90,7 @@ export function ValueInput({ operator, field, value, onChange }: ValueInputProps
       <select
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
-        className="flex-1 min-w-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
       >
         <option value="" disabled>Select…</option>
         {field.optionSet.map((o) => (
@@ -109,7 +109,7 @@ export function ValueInput({ operator, field, value, onChange }: ValueInputProps
         type="date"
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
-        className="flex-1 min-w-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
       />
     );
   }
@@ -121,7 +121,7 @@ export function ValueInput({ operator, field, value, onChange }: ValueInputProps
         type="number"
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
-        className="flex-1 min-w-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
       />
     );
   }
@@ -133,7 +133,7 @@ export function ValueInput({ operator, field, value, onChange }: ValueInputProps
       value={strValue}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Value…"
-      className="flex-1 min-w-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+      className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
     />
   );
 }

@@ -44,7 +44,7 @@ export function ConditionNode({ condition, fields, errors, canRemove, actions }:
         endDrag();
       }}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 w-max">
         <span
           data-drag-handle
           title="Drag to reorder"

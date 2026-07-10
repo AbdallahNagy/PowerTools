@@ -11,10 +11,9 @@ interface ResultsGridProps {
   error: string | null;
   page: number;
   onPageChange: (page: number) => void;
-  onViewFetchXml: () => void;
 }
 
-export function ResultsGrid({ result, isLoading, error, page, onPageChange, onViewFetchXml }: ResultsGridProps) {
+export function ResultsGrid({ result, isLoading, error, page, onPageChange }: ResultsGridProps) {
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDesc, setSortDesc] = useState(false);
 
@@ -66,11 +65,6 @@ export function ResultsGrid({ result, isLoading, error, page, onPageChange, onVi
           {result.totalEstimate != null && ` (est. total: ${result.totalEstimate})`}
           {result.moreRecords && " — more available"}
         </span>
-        {result && (
-          <Button variant="secondary" className="text-xs py-1 px-2" onClick={onViewFetchXml}>
-            View FetchXML
-          </Button>
-        )}
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto border border-[#3c3c3c] rounded-sm">
