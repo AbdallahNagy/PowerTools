@@ -1,5 +1,5 @@
-import { useState } from "react";
-import type { FetchResult } from "./model/types";
+import { useMemo, useState } from "react";
+import type { FetchResult, FieldMetadata } from "./model/types";
 import { Spinner } from "../../ui/Spinner";
 import { Button } from "../../ui/Button";
 
@@ -11,11 +11,20 @@ interface ResultsGridProps {
   error: string | null;
   page: number;
   onPageChange: (page: number) => void;
+  fieldMeta?: FieldMetadata[];
 }
 
-export function ResultsGrid({ result, isLoading, error, page, onPageChange }: ResultsGridProps) {
+export function ResultsGrid({ result, isLoading, error, page, onPageChange, fieldMeta }: ResultsGridProps) {
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDesc, setSortDesc] = useState(false);
+
+  const displayNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const f of fieldMeta ?? []) map[f.logicalName] = f.displayName;
+    return map;
+  }, [fieldMeta]);
+
+  const columns = result.columns;
 
   if (isLoading) {
     return (
@@ -75,9 +84,9 @@ export function ResultsGrid({ result, isLoading, error, page, onPageChange }: Re
                 <th
                   key={col}
                   onClick={() => handleSort(col)}
-                  className="text-left px-3 py-2 font-medium text-[#858585] text-xs uppercase tracking-wider border-b border-[#3c3c3c] cursor-pointer hover:text-[#cccccc] whitespace-nowrap select-none"
+                  className="text-left px-3 py-2 font-medium text-[#858585] text-xs tracking-wider border-b border-[#3c3c3c] cursor-pointer hover:text-[#cccccc] whitespace-nowrap select-none"
                 >
-                  {col}
+                  {displayNames[col] ?? col}
                   {sortCol === col && (
                     <span className="ml-1">{sortDesc ? "↓" : "↑"}</span>
                   )}
@@ -96,8 +105,8 @@ export function ResultsGrid({ result, isLoading, error, page, onPageChange }: Re
               rows.map((row) => (
                 <tr key={String(row.id)} className="border-b border-[#3c3c3c] last:border-0 hover:bg-[#2a2d2e]">
                   {columns.map((col) => (
-                    <td key={col} className="px-3 py-1.5 text-xs max-w-xs truncate" title={String(row[col] ?? "")}>
-                      {formatCell(row[col])}
+                    <td key={col} className="px-3 py-1.5 text-xs max-w-xs truncate" title={formatCell(row[col], result.columnTypes[col])}>
+                      {formatCell(row[col], result.columnTypes[col])}
                     </td>
                   ))}
                 </tr>
@@ -122,8 +131,16 @@ export function ResultsGrid({ result, isLoading, error, page, onPageChange }: Re
   );
 }
 
-function formatCell(v: unknown): string {
+function formatCell(v: unknown, typeTag?: string): string {
   if (v == null) return "";
+  if (typeTag === "lookup") {
+    const ref = v as { id: string; name: string | null };
+    return ref.name ?? ref.id;
+  }
+  if (typeTag === "datetime" && typeof v === "string") {
+    const d = new Date(v);
+    return isNaN(d.getTime()) ? v : d.toLocaleString();
+  }
   if (typeof v === "object") return JSON.stringify(v);
   return String(v);
 }

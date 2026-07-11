@@ -1,6 +1,7 @@
 using System.Security;
 using System.Xml;
 using System.Xml.Linq;
+using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
@@ -74,12 +75,31 @@ public static class FetchEndpoints
                     .OrderBy(k => k)
                     .ToList();
 
+                // Derive the type tag for each column from the first non-null value seen
+                var columnTypes = columns.ToDictionary(
+                    col => col,
+                    col =>
+                    {
+                        var firstNonNull = result.Entities
+                            .Select(e => e.Attributes.TryGetValue(col, out var v) ? v : null)
+                            .FirstOrDefault(v => v != null);
+                        return DataverseValueFormatter.GetTypeTag(firstNonNull);
+                    });
+
                 var records = result.Entities
                     .Select(e =>
                     {
                         var dict = new Dictionary<string, object?> { ["id"] = e.Id.ToString() };
                         foreach (var key in e.Attributes.Keys)
-                            dict[key] = DataverseValueFormatter.Format(e[key]);
+                        {
+                            // For option sets and booleans, Dataverse already provides a
+                            // human-readable label in FormattedValues (e.g. "Active", "Yes").
+                            if (e[key] is OptionSetValue or bool
+                                && e.FormattedValues.TryGetValue(key, out var label))
+                                dict[key] = label;
+                            else
+                                dict[key] = DataverseValueFormatter.Format(e[key]);
+                        }
                         return dict;
                     })
                     .ToList();
@@ -88,6 +108,7 @@ public static class FetchEndpoints
                 {
                     records,
                     columns,
+                    columnTypes,
                     moreRecords = result.MoreRecords,
                     pagingCookie = result.PagingCookie,
                     totalEstimate = result.TotalRecordCount >= 0 ? result.TotalRecordCount : (int?)null

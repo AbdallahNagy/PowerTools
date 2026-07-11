@@ -240,6 +240,7 @@ function MetadataExplorerPage() {
                 error={null}
                 page={page}
                 onPageChange={handlePageChange}
+                fieldMeta={fields ?? []}
               />
             ) : (
               <FetchXmlView fetchXml={lastFetchXml} />

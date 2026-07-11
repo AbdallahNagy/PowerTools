@@ -84,6 +84,7 @@ export type FilterNode = FilterCondition | FilterGroup;
 export interface FetchResult {
   records: Record<string, unknown>[];
   columns: string[];
+  columnTypes: Record<string, string>;
   moreRecords: boolean;
   pagingCookie: string | null;
   totalEstimate: number | null;

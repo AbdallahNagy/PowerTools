@@ -12,4 +12,15 @@ public static class DataverseValueFormatter
         AliasedValue av     => Format(av.Value),
         _                   => val
     };
+
+    public static string GetTypeTag(object? val) => val switch
+    {
+        EntityReference   => "lookup",
+        OptionSetValue    => "optionset",
+        Money             => "money",
+        bool              => "boolean",
+        DateTime          => "datetime",
+        AliasedValue av   => GetTypeTag(av.Value),
+        _                 => "value"
+    };
 }
