@@ -24,8 +24,6 @@ export function ResultsGrid({ result, isLoading, error, page, onPageChange, fiel
     return map;
   }, [fieldMeta]);
 
-  const columns = result.columns;
-
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-[#858585] text-sm p-4">

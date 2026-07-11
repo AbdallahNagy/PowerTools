@@ -55,7 +55,7 @@ export function ValueInput({ operator, field, value, onChange }: ValueInputProps
                 setMultiRaw("");
               }
             }}
-            placeholder="Type and press Enter to add…"
+            placeholder="Enter value..."
             className="flex-1 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
           />
         </div>
