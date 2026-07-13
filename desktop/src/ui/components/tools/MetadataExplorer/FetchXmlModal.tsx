@@ -1,5 +1,6 @@
 import { Modal } from "../../ui/Modal";
 import { Button } from "../../ui/Button";
+import { formatFetchXml } from "./model/fetchxmlFormat";
 
 interface FetchXmlModalProps {
   open: boolean;
@@ -12,7 +13,7 @@ export function FetchXmlModal({ open, fetchXml, onClose }: FetchXmlModalProps) {
     await navigator.clipboard.writeText(fetchXml);
   };
 
-  const pretty = prettify(fetchXml);
+  const pretty = formatFetchXml(fetchXml);
 
   return (
     <Modal open={open} title="FetchXML" onClose={onClose} widthClass="max-w-3xl">
@@ -26,30 +27,4 @@ export function FetchXmlModal({ open, fetchXml, onClose }: FetchXmlModalProps) {
       </pre>
     </Modal>
   );
-}
-
-function prettify(xml: string): string {
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml, "application/xml");
-    const serializer = new XMLSerializer();
-    const raw = serializer.serializeToString(doc);
-    // Basic indent via regex
-    return raw
-      .replace(/></g, ">\n<")
-      .split("\n")
-      .reduce<{ out: string[]; depth: number }>(
-        (acc, line) => {
-          const isClose = /^<\//.test(line.trim());
-          const isSelf = /\/>$/.test(line.trim());
-          if (isClose && acc.depth > 0) acc.depth--;
-          acc.out.push("  ".repeat(acc.depth) + line.trim());
-          if (!isClose && !isSelf && /<[^/]/.test(line.trim())) acc.depth++;
-          return acc;
-        },
-        { out: [], depth: 0 }
-      ).out.join("\n");
-  } catch {
-    return xml;
-  }
 }

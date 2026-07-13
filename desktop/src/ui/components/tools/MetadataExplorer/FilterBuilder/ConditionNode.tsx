@@ -17,7 +17,13 @@ interface ConditionNodeProps {
   actions: Pick<TreeActions, "updateCondition" | "remove" | "duplicate">;
 }
 
-export function ConditionNode({ condition, fields, errors, canRemove, actions }: ConditionNodeProps) {
+export function ConditionNode({
+  condition,
+  fields,
+  errors,
+  canRemove,
+  actions,
+}: ConditionNodeProps) {
   const field = fields.find((f) => f.logicalName === condition.field) ?? null;
   const nodeErrors = errors.filter((e) => e.nodeId === condition.id);
   const { dragId, beginDrag, endDrag } = useDrag();
@@ -75,7 +81,10 @@ export function ConditionNode({ condition, fields, errors, canRemove, actions }:
           operator={condition.operator}
           field={field}
           value={condition.value}
+          valueLabels={condition.valueLabels}
+          lookupTarget={condition.lookupTarget}
           onChange={(v) => actions.updateCondition(condition.id, { value: v })}
+          onConditionChange={(patch) => actions.updateCondition(condition.id, patch)}
         />
 
         {/* Row actions */}

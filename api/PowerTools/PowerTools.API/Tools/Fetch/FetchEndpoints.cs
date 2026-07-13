@@ -1,4 +1,3 @@
-using System.Security;
 using System.Xml;
 using System.Xml.Linq;
 using Microsoft.Xrm.Sdk;
@@ -53,13 +52,7 @@ public static class FetchEndpoints
                 return Results.BadRequest(new { error = "<fetch> must contain an <entity> element" });
 
             // ── Inject paging attributes ──────────────────────────────────────
-            fetchEl.SetAttributeValue("page", req.Page);
-            fetchEl.SetAttributeValue("count", pageSize);
-
-            if (req.PagingCookie is not null)
-                fetchEl.SetAttributeValue("paging-cookie", SecurityElement.Escape(req.PagingCookie));
-
-            var finalXml = fetchEl.ToString(SaveOptions.DisableFormatting);
+            var finalXml = FetchXmlPaging.Apply(doc, req.Page, pageSize, req.PagingCookie);
 
             // ── Execute ───────────────────────────────────────────────────────
             var svc = ctx.CreateDataverseClient(factory);

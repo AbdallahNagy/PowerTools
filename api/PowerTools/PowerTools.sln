@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerTools.API", "PowerTools.API\PowerTools.API.csproj", "{E89F6519-E914-4B50-B012-39B769535B90}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerTools.API.Tests", "PowerTools.API.Tests\PowerTools.API.Tests.csproj", "{3E08C7F9-D5CC-4FB1-9070-92152E583EB9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +14,12 @@ Global
 		{E89F6519-E914-4B50-B012-39B769535B90}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E89F6519-E914-4B50-B012-39B769535B90}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E89F6519-E914-4B50-B012-39B769535B90}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3E08C7F9-D5CC-4FB1-9070-92152E583EB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E08C7F9-D5CC-4FB1-9070-92152E583EB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E08C7F9-D5CC-4FB1-9070-92152E583EB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E08C7F9-D5CC-4FB1-9070-92152E583EB9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

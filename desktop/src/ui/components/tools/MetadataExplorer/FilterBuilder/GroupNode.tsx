@@ -24,7 +24,14 @@ const DEPTH_COLORS = [
   "border-[#3a1e3a]",
 ];
 
-export function GroupNode({ group, fields, errors, depth, isRoot, actions }: GroupNodeProps) {
+export function GroupNode({
+  group,
+  fields,
+  errors,
+  depth,
+  isRoot,
+  actions,
+}: GroupNodeProps) {
   const borderColor = DEPTH_COLORS[depth % DEPTH_COLORS.length];
   const groupErrors = errors.filter((e) => e.nodeId === group.id);
   const { dragId, beginDrag, endDrag } = useDrag();

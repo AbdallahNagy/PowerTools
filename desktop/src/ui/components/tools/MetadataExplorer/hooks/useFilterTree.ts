@@ -122,10 +122,13 @@ function reducer(state: FilterGroup, action: Action): FilterGroup {
       if (patch.field !== undefined) {
         patch.operator = null as unknown as Operator;
         patch.value = undefined;
+        patch.valueLabels = undefined;
+        patch.lookupTarget = undefined;
       }
       // When operator changes to a no-value operator, clear value
       if (patch.operator !== undefined) {
         patch.value = undefined;
+        patch.valueLabels = undefined;
       }
       return updateNode(state, action.id, patch);
     }

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "../../ui/Button";
+import { formatFetchXml } from "./model/fetchxmlFormat";
 
 interface FetchXmlViewProps {
   fetchXml: string;
@@ -8,7 +9,7 @@ interface FetchXmlViewProps {
 export function FetchXmlView({ fetchXml }: FetchXmlViewProps) {
   const [copied, setCopied] = useState(false);
 
-  const pretty = prettify(fetchXml);
+  const pretty = formatFetchXml(fetchXml);
 
   const handleCopy = async () => {
     if (!fetchXml) return;
@@ -41,30 +42,4 @@ export function FetchXmlView({ fetchXml }: FetchXmlViewProps) {
       )}
     </div>
   );
-}
-
-function prettify(xml: string): string {
-  if (!xml) return "";
-  try {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(xml, "application/xml");
-    const serializer = new XMLSerializer();
-    const raw = serializer.serializeToString(doc);
-    return raw
-      .replace(/></g, ">\n<")
-      .split("\n")
-      .reduce<{ out: string[]; depth: number }>(
-        (acc, line) => {
-          const isClose = /^<\//.test(line.trim());
-          const isSelf = /\/>$/.test(line.trim());
-          if (isClose && acc.depth > 0) acc.depth--;
-          acc.out.push("  ".repeat(acc.depth) + line.trim());
-          if (!isClose && !isSelf && /<[^/]/.test(line.trim())) acc.depth++;
-          return acc;
-        },
-        { out: [], depth: 0 }
-      ).out.join("\n");
-  } catch {
-    return xml;
-  }
 }

@@ -8,6 +8,7 @@ import { ResultsGrid } from "./ResultsGrid";
 import { FetchXmlView } from "./FetchXmlView";
 import { Button } from "../../ui/Button";
 import { Spinner } from "../../ui/Spinner";
+import { MetadataExplorerProvider } from "./MetadataExplorerContext";
 import { useFilterTree } from "./hooks/useFilterTree";
 import { useTables } from "./hooks/useTables";
 import { useTableMetadata } from "./hooks/useTableMetadata";
@@ -131,7 +132,8 @@ function MetadataExplorerPage() {
   const resultData: FetchResult | null = result ?? null;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[#cccccc] overflow-hidden">
+    <MetadataExplorerProvider connectionName={connectionName || null} tables={tables ?? []}>
+      <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[#cccccc] overflow-hidden">
       {/* Top bar */}
       <div className="flex items-end gap-4 flex-wrap">
         <div className="flex flex-col gap-1">
@@ -211,7 +213,12 @@ function MetadataExplorerPage() {
 
             <div className="flex-1 min-h-0 overflow-auto">
               {selectedEntity ? (
-                <FilterTree root={tree.root} fields={fields ?? []} errors={validationErrors} actions={tree} />
+                <FilterTree
+                  root={tree.root}
+                  fields={fields ?? []}
+                  errors={validationErrors}
+                  actions={tree}
+                />
               ) : (
                 <p className="text-xs text-[#858585] italic">Select a table to build filters.</p>
               )}
@@ -248,7 +255,8 @@ function MetadataExplorerPage() {
           </div>
         </Panel>
       </Group>
-    </div>
+      </div>
+    </MetadataExplorerProvider>
   );
 }
 

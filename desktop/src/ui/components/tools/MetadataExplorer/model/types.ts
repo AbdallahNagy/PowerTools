@@ -70,6 +70,8 @@ export interface FilterCondition {
   field: string | null;
   operator: Operator | null;
   value?: string | string[];
+  valueLabels?: Record<string, string>;
+  lookupTarget?: string;
 }
 
 export interface FilterGroup {
