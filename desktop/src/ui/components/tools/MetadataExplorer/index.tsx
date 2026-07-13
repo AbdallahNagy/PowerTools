@@ -68,6 +68,11 @@ function MetadataExplorerPage() {
     [tables],
   );
 
+  const defaultViewFields = useMemo(
+    () => (fields ?? []).filter((field) => field.isInDefaultView).map((field) => field.logicalName),
+    [fields],
+  );
+
   const handleSelectEntity = (entity: EntityInfo | null) => {
     setSelectedEntity(entity);
     tree.reset();
@@ -92,7 +97,7 @@ function MetadataExplorerPage() {
     }
     if (!selectedEntity) return;
 
-    const fetchXml = buildFetchXml(selectedEntity.logicalName, tree.root);
+    const fetchXml = buildFetchXml(selectedEntity.logicalName, tree.root, defaultViewFields);
     setLastFetchXml(fetchXml);
     setPage(targetPage);
 
@@ -128,7 +133,7 @@ function MetadataExplorerPage() {
     setLastFetchXml("");
   };
 
-  const canRun = !!selectedEntity && !!connectionName && !isPending;
+  const canRun = !!selectedEntity && !!connectionName && !fieldsLoading && !isPending;
   const resultData: FetchResult | null = result ?? null;
 
   return (
@@ -168,7 +173,7 @@ function MetadataExplorerPage() {
         <Panel defaultSize="50%" minSize="30%" className="flex flex-col min-h-0 min-w-0 gap-3 overflow-hidden">
           {/* Entity selection */}
           <div className="flex flex-col gap-1 shrink-0 min-w-0">
-            <label className="text-xs text-[#858585] tracking-wider uppercase">Table</label>
+            <label className="text-xs text-[#858585] tracking-wider">Table</label>
             <div className="flex items-center gap-2 min-w-0">
               <select
                 value={selectedEntity?.logicalName ?? ""}
@@ -185,7 +190,7 @@ function MetadataExplorerPage() {
                 </option>
                 {sortedTables.map((e) => (
                   <option key={e.logicalName} value={e.logicalName}>
-                    {e.displayName} ({e.logicalName}){e.isCustom ? " • custom" : ""}
+                    {e.displayName} ({e.logicalName})
                   </option>
                 ))}
               </select>
@@ -202,7 +207,7 @@ function MetadataExplorerPage() {
           {/* Filters */}
           <div className="flex flex-col gap-2 flex-1 min-h-0">
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-[#858585] uppercase tracking-wider">Filters</span>
+              <span className="text-xs text-[#858585] tracking-wider">Filters</span>
               {fieldsLoading && <span className="text-xs text-[#858585]">Loading fields…</span>}
               {validationErrors.length > 0 && (
                 <span className="text-xs text-[#f48771]">
@@ -271,7 +276,7 @@ function ViewTab({ active, onClick, children }: ViewTabProps) {
     <button
       type="button"
       onClick={onClick}
-      className={`text-xs uppercase tracking-wider px-3 py-1.5 border-b-2 transition-colors -mb-px ${
+      className={`text tracking-wider px-3 py-1.5 border-b-2 transition-colors -mb-px ${
         active
           ? "border-[#007fd4] text-[#cccccc]"
           : "border-transparent text-[#858585] hover:text-[#cccccc]"

@@ -57,6 +57,7 @@ public static class MetadataEndpoints
             try
             {
                 var response = (RetrieveEntityResponse)await svc.ExecuteAsync(request);
+                var defaultViewColumns = await DefaultViewColumns.RetrieveAsync(svc, logicalName);
                 var attrs = response.EntityMetadata.Attributes
                     .Where(a => a.AttributeOf is null)
                     .OrderBy(a => a.DisplayName?.UserLocalizedLabel?.Label ?? a.LogicalName)
@@ -67,6 +68,7 @@ public static class MetadataEndpoints
                         attributeType = a.AttributeType?.ToString() ?? "Unknown",
                         isPrimaryId = a.IsPrimaryId == true,
                         isCustomAttribute = a.IsCustomAttribute == true,
+                        isInDefaultView = defaultViewColumns.Contains(a.LogicalName),
                         requiredLevel = a.RequiredLevel?.Value.ToString() ?? "None",
                         isValidForCreate = a.IsValidForCreate == true,
                         isValidForUpdate = a.IsValidForUpdate == true,

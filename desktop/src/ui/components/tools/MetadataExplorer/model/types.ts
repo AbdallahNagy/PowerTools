@@ -29,6 +29,7 @@ export interface FieldMetadata {
   attributeType: FieldType;
   isPrimaryId: boolean;
   isCustomAttribute: boolean;
+  isInDefaultView: boolean;
   requiredLevel: string;
   isValidForCreate: boolean;
   isValidForUpdate: boolean;
