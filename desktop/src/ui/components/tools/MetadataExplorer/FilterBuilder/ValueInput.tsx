@@ -92,10 +92,11 @@ export function ValueInput({
             selectedRecords={selectedRecords}
             onClose={() => setLookupOpen(false)}
             onApply={(records) => {
+              const lastRecord = records[records.length - 1];
               onConditionChange({
                 value: records.map((record) => record.id),
                 valueLabels: Object.fromEntries(records.map((record) => [record.id, record.name])),
-                lookupTarget: records.at(-1)?.target ?? lookupTarget,
+                lookupTarget: lastRecord?.target ?? lookupTarget,
               });
               setLookupOpen(false);
             }}
