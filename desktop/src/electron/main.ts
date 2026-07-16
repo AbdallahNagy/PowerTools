@@ -10,6 +10,7 @@ import {
 } from "./auth.js";
 import { loadState, saveState } from "./storage.js";
 import * as sidecar from "./sidecar.js";
+import { validateDataverseConnection } from "./connectionValidation.js";
 
 interface StoredConnection {
   name: string;
@@ -137,7 +138,13 @@ app.whenReady().then(async () => {
         : `https://${data.serverUrl}`;
 
       try {
-        const { account } = await acquireTokenInteractive(envUrl);
+        const { accessToken, account } = await acquireTokenInteractive(envUrl);
+        await validateDataverseConnection({
+          apiBaseUrl: sidecarHandle.baseUrl,
+          localSecret: sidecarHandle.secret,
+          envUrl,
+          accessToken,
+        });
         tempConnectionData = {
           name: undefined,
           envUrl,

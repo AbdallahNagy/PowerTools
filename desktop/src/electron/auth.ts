@@ -5,12 +5,13 @@ import {
   ICachePlugin,
   TokenCacheContext,
 } from "@azure/msal-node";
-import { shell, app, safeStorage } from "electron";
+import { app, BrowserWindow, safeStorage } from "electron";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { AZURE_CLIENT_ID } from "./config.js";
 
 let pca: PublicClientApplication | null = null;
+let interactiveAuthWindow: BrowserWindow | null = null;
 
 function cacheFilePath(): string {
   return join(app.getPath("userData"), "msal-cache.bin");
@@ -85,6 +86,31 @@ function scopesFor(envUrl: string): string[] {
   return [`${envUrl.replace(/\/$/, "")}/.default`];
 }
 
+async function openAuthBrowserWindow(url: string): Promise<void> {
+  if (interactiveAuthWindow && !interactiveAuthWindow.isDestroyed()) {
+    interactiveAuthWindow.close();
+  }
+
+  interactiveAuthWindow = new BrowserWindow({
+    width: 980,
+    height: 720,
+    title: "PowerTools sign in",
+    autoHideMenuBar: true,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true,
+    },
+  });
+
+  interactiveAuthWindow.on("closed", () => {
+    interactiveAuthWindow = null;
+  });
+
+  await interactiveAuthWindow.loadURL(url);
+  interactiveAuthWindow.show();
+}
+
 /**
  * Interactive login via the system browser. Use when no account exists yet
  * (first-time connect) or when silent refresh fails.
@@ -94,11 +120,11 @@ export async function acquireTokenInteractive(
 ): Promise<{ accessToken: string; account: AccountInfo | null }> {
   const result = await getPca().acquireTokenInteractive({
     scopes: scopesFor(envUrl),
-    openBrowser: (url) => shell.openExternal(url),
+    openBrowser: openAuthBrowserWindow,
     successTemplate: `
       <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#1e1e1e;color:#cccccc">
-        <h2 style="color:#4ec9b0">&#10003; Authentication successful</h2>
-        <p>You can close this tab and return to PowerTools.</p>
+        <h2 style="color:#4ec9b0">&#10003; Microsoft sign-in complete</h2>
+        <p>PowerTools is validating access to Dataverse. You can close this tab and return to PowerTools.</p>
       </body></html>`,
     errorTemplate: `
       <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#1e1e1e;color:#cccccc">
@@ -108,6 +134,9 @@ export async function acquireTokenInteractive(
   });
 
   if (!result?.accessToken) throw new Error("No access token received.");
+  if (interactiveAuthWindow && !interactiveAuthWindow.isDestroyed()) {
+    setTimeout(() => interactiveAuthWindow?.close(), 1200);
+  }
   return { accessToken: result.accessToken, account: result.account };
 }
 

@@ -1,4 +1,5 @@
 using Microsoft.PowerPlatform.Dataverse.Client;
+using Microsoft.PowerPlatform.Dataverse.Client.Model;
 
 namespace PowerTools.API.Services;
 
@@ -15,11 +16,18 @@ public class DataverseClientFactory
     /// <param name="environmentUrl">The Dynamics 365 environment URL, e.g. https://yourorg.crm.dynamics.com</param>
     public ServiceClient Create(string accessToken, string environmentUrl)
     {
-        return new ServiceClient(
-            instanceUrl: new Uri(environmentUrl),
-            tokenProviderFunction: _ => Task.FromResult(accessToken),
-            useUniqueInstance: true
-        );
+        var serviceUri = new Uri(environmentUrl.EndsWith('/')
+            ? environmentUrl
+            : $"{environmentUrl}/");
+
+        return new ServiceClient(new ConnectionOptions
+        {
+            AuthenticationType = AuthenticationType.ExternalTokenManagement,
+            AccessTokenProviderFunctionAsync = _ => Task.FromResult(accessToken),
+            ServiceUri = serviceUri,
+            RequireNewInstance = true,
+            SkipDiscovery = true,
+        });
     }
 }
 
