@@ -26,6 +26,7 @@ builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
 // ── App services ─────────────────────────────────────────────────────────────
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<DataverseClientFactory>();
+builder.Services.AddSingleton<IConnectionStore, InMemoryConnectionStore>();
 builder.Services.AddScoped<ICurrentConnection, HttpContextCurrentConnection>();
 builder.Services.AddScoped<DataverseContextFilter>();
 builder.Services.AddScoped<DataverseTargetContextFilter>();

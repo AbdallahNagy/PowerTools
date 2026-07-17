@@ -14,7 +14,7 @@ namespace PowerTools.API.Services;
 /// </summary>
 public interface ICurrentConnection
 {
-    string AccessToken { get; }
+    DataverseConnectionContext Context { get; }
     string EnvironmentUrl { get; }
     ServiceClient CreateClient();
 }
@@ -27,7 +27,7 @@ internal sealed class HttpContextCurrentConnection(
         ?? throw new InvalidOperationException(
             "ICurrentConnection resolved outside of an HTTP request scope.");
 
-    public string AccessToken    => Http.GetDataverseToken();
+    public DataverseConnectionContext Context => Http.GetDataverseConnectionContext();
     public string EnvironmentUrl => Http.GetEnvironmentUrl();
     public ServiceClient CreateClient() => Http.CreateDataverseClient(factory);
 }

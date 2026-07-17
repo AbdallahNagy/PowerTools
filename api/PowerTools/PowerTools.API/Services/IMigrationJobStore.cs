@@ -16,11 +16,9 @@ public class MigrationJob
     public int Failed { get; set; }
     public List<MigrationJobError> Errors { get; set; } = [];
 
-    // Captured auth context so the background runner can make requests
-    public required string SourceToken { get; init; }
-    public required string SourceEnvUrl { get; init; }
-    public required string TargetToken { get; init; }
-    public required string TargetEnvUrl { get; init; }
+    // Captured auth context so the background runner can make requests.
+    public required DataverseConnectionContext SourceConnection { get; init; }
+    public required DataverseConnectionContext TargetConnection { get; init; }
 
     // Migration parameters
     public required string EntityLogicalName { get; init; }

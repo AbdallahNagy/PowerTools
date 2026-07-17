@@ -1,3 +1,5 @@
+using PowerTools.API.Services;
+
 namespace PowerTools.API.Filters;
 
 /// <summary>
@@ -5,10 +7,11 @@ namespace PowerTools.API.Filters;
 /// Dataverse environment URL from request headers, validates them, and
 /// stashes them on HttpContext.Items for downstream handlers.
 /// </summary>
-public class DataverseContextFilter : IEndpointFilter
+public class DataverseContextFilter(IConnectionStore connectionStore) : IEndpointFilter
 {
     public const string TokenKey = "DataverseToken";
     public const string EnvUrlKey = "DataverseEnvUrl";
+    public const string ConnectionContextKey = "DataverseConnectionContext";
 
     public async ValueTask<object?> InvokeAsync(
         EndpointFilterInvocationContext ctx,
@@ -22,13 +25,29 @@ public class DataverseContextFilter : IEndpointFilter
             : null;
         var envUrl = http.Request.Headers["X-Environment-Url"].FirstOrDefault();
 
-        if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(envUrl))
-            return Results.BadRequest(
-                "Missing Authorization header or X-Environment-Url header.");
+        if (!string.IsNullOrEmpty(token) && !string.IsNullOrEmpty(envUrl))
+        {
+            http.Items[TokenKey] = token;
+            http.Items[EnvUrlKey] = envUrl;
+            http.Items[ConnectionContextKey] = new OnlineConnectionContext(envUrl, token);
 
-        http.Items[TokenKey] = token;
-        http.Items[EnvUrlKey] = envUrl;
+            return await next(ctx);
+        }
 
-        return await next(ctx);
+        var connectionName = http.Request.Headers["X-Connection-Name"].FirstOrDefault();
+        if (!string.IsNullOrEmpty(connectionName))
+        {
+            var connection = connectionStore.Get(connectionName);
+            if (connection is null)
+                return Results.BadRequest($"Connection \"{connectionName}\" was not registered.");
+
+            http.Items[ConnectionContextKey] = connection;
+            http.Items[EnvUrlKey] = connection.EnvironmentUrl;
+
+            return await next(ctx);
+        }
+
+        return Results.BadRequest(
+            "Missing Authorization/X-Environment-Url headers or X-Connection-Name header.");
     }
 }

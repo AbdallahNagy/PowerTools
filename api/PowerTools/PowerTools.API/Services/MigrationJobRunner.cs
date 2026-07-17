@@ -39,8 +39,8 @@ public class MigrationJobRunner(
 
     private async Task RunJob(MigrationJob job, CancellationToken ct)
     {
-        using var sourceSvc = factory.Create(job.SourceToken, job.SourceEnvUrl);
-        using var targetSvc = factory.Create(job.TargetToken, job.TargetEnvUrl);
+        using var sourceSvc = factory.Create(job.SourceConnection);
+        using var targetSvc = factory.Create(job.TargetConnection);
 
         var fetchXml = BuildFetchXml(job);
         string? pagingCookie = null;

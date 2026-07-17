@@ -1,8 +1,18 @@
 import React, { useState } from "react";
 
+type ConnectionFormData = {
+  crmType: "online" | "onpremise";
+  authMode: "ad" | "ifd";
+  serverUrl: string;
+  username: string;
+  password: string;
+  domain: string;
+};
+
 const ConnectionWindow = () => {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ConnectionFormData>({
     crmType: "online",
+    authMode: "ad",
     serverUrl: "",
     username: "",
     password: "",
@@ -24,7 +34,18 @@ const ConnectionWindow = () => {
     setLoading(true);
     setError(null);
 
-    const result = await window.electron.saveConnectionData(formData);
+    const result = await window.electron.saveConnectionData(
+      formData.crmType === "online"
+        ? { crmType: "online", serverUrl: formData.serverUrl }
+        : {
+            crmType: "onpremise",
+            serverUrl: formData.serverUrl,
+            authMode: formData.authMode,
+            username: formData.username,
+            password: formData.password,
+            domain: formData.authMode === "ad" ? formData.domain : "",
+          }
+    );
 
     if (!result.success) {
       setLoading(false);
@@ -93,9 +114,37 @@ const ConnectionWindow = () => {
 
         {!isOnline && (
           <>
+            <div className="flex flex-col gap-2">
+              <label className="text-xs">Authentication</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="authMode"
+                    value="ad"
+                    checked={formData.authMode === "ad"}
+                    onChange={handleChange}
+                    className="accent-[#007fd4]"
+                  />
+                  <span className="text-sm">Active Directory</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="authMode"
+                    value="ifd"
+                    checked={formData.authMode === "ifd"}
+                    onChange={handleChange}
+                    className="accent-[#007fd4]"
+                  />
+                  <span className="text-sm">IFD</span>
+                </label>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-1">
               <label htmlFor="username" className="text-xs">
-                Username
+                {formData.authMode === "ifd" ? "Username / Email" : "Username"}
               </label>
               <input
                 type="text"
@@ -121,19 +170,21 @@ const ConnectionWindow = () => {
               />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="domain" className="text-xs">
-                Domain
-              </label>
-              <input
-                type="text"
-                name="domain"
-                id="domain"
-                value={formData.domain}
-                onChange={handleChange}
-                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
-              />
-            </div>
+            {formData.authMode === "ad" && (
+              <div className="flex flex-col gap-1">
+                <label htmlFor="domain" className="text-xs">
+                  Domain
+                </label>
+                <input
+                  type="text"
+                  name="domain"
+                  id="domain"
+                  value={formData.domain}
+                  onChange={handleChange}
+                  className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+                />
+              </div>
+            )}
           </>
         )}
 

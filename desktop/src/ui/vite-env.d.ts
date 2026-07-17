@@ -3,8 +3,8 @@
 export interface ActiveConnection {
   name: string;
   envUrl: string;
-  crmType: string;
-  token: string;
+  crmType: "online" | "onpremise";
+  token?: string;
 }
 
 export interface ConnectionError {
@@ -16,16 +16,30 @@ export type ConnectionResult = ActiveConnection | ConnectionError;
 export interface ConnectionInfo {
   name: string;
   envUrl: string;
-  crmType: string;
+  crmType: "online" | "onpremise";
 }
+
+type OnPremisesAuthMode = "ad" | "ifd";
+
+type ConnectionInput =
+  | {
+      crmType: "online";
+      serverUrl: string;
+    }
+  | {
+      crmType: "onpremise";
+      serverUrl: string;
+      authMode: OnPremisesAuthMode;
+      username: string;
+      password: string;
+      domain: string;
+    };
 
 declare global {
   interface Window {
     electron: {
       createConnectionWindow: () => Promise<void>;
-      saveConnectionData: (
-        data: unknown
-      ) => Promise<{ success: boolean; error?: string }>;
+      saveConnectionData: (data: ConnectionInput) => Promise<{ success: boolean; error?: string }>;
       saveConnectionName: (name: string) => Promise<void>;
       onConnectionStatusUpdate: (callback: (name: string | null) => void) => void;
       onConnectionsUpdated: (callback: (connections: ConnectionInfo[]) => void) => () => void;

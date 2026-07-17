@@ -7,22 +7,32 @@ namespace PowerTools.API.Utils;
 public static class DataverseContextExtensions
 {
     public static string GetDataverseToken(this HttpContext ctx) =>
-        (string)ctx.Items[DataverseContextFilter.TokenKey]!;
+        ctx.GetDataverseConnectionContext() is OnlineConnectionContext online
+            ? online.AccessToken
+            : throw new InvalidOperationException("The current Dataverse connection does not use an online bearer token.");
 
     public static string GetEnvironmentUrl(this HttpContext ctx) =>
-        (string)ctx.Items[DataverseContextFilter.EnvUrlKey]!;
+        ctx.GetDataverseConnectionContext().EnvironmentUrl;
 
     public static string? GetTargetDataverseToken(this HttpContext ctx) =>
-        ctx.Items[DataverseTargetContextFilter.TargetTokenKey] as string;
+        ctx.GetTargetDataverseConnectionContext() is OnlineConnectionContext online
+            ? online.AccessToken
+            : null;
 
     public static string? GetTargetEnvironmentUrl(this HttpContext ctx) =>
-        ctx.Items[DataverseTargetContextFilter.TargetEnvUrlKey] as string;
+        ctx.GetTargetDataverseConnectionContext()?.EnvironmentUrl;
+
+    public static DataverseConnectionContext GetDataverseConnectionContext(this HttpContext ctx) =>
+        (DataverseConnectionContext)ctx.Items[DataverseContextFilter.ConnectionContextKey]!;
+
+    public static DataverseConnectionContext? GetTargetDataverseConnectionContext(this HttpContext ctx) =>
+        ctx.Items[DataverseTargetContextFilter.TargetConnectionContextKey] as DataverseConnectionContext;
 
     public static ServiceClient CreateDataverseClient(
         this HttpContext ctx,
         DataverseClientFactory factory)
     {
-        var client = factory.Create(ctx.GetDataverseToken(), ctx.GetEnvironmentUrl());
+        var client = factory.Create(ctx.GetDataverseConnectionContext());
         ctx.Response.RegisterForDispose(client);
         return client;
     }
@@ -31,10 +41,9 @@ public static class DataverseContextExtensions
         this HttpContext ctx,
         DataverseClientFactory factory)
     {
-        var token = ctx.GetTargetDataverseToken();
-        var envUrl = ctx.GetTargetEnvironmentUrl();
-        if (token is null || envUrl is null) return null;
-        var client = factory.Create(token, envUrl);
+        var connection = ctx.GetTargetDataverseConnectionContext();
+        if (connection is null) return null;
+        var client = factory.Create(connection);
         ctx.Response.RegisterForDispose(client);
         return client;
     }

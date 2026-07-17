@@ -2,12 +2,22 @@ import { app } from "electron";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 
-export interface PersistedConnection {
-  name: string;
-  envUrl: string;
-  crmType: string;
-  homeAccountId: string | null;
-}
+export type PersistedConnection =
+  | {
+      name: string;
+      envUrl: string;
+      crmType: "online";
+      homeAccountId: string | null;
+    }
+  | {
+      name: string;
+      envUrl: string;
+      crmType: "onpremise";
+      authMode: "ad" | "ifd";
+      username: string;
+      domain: string;
+      encryptedPassword: string;
+    };
 
 export interface PersistedState {
   connections: PersistedConnection[];

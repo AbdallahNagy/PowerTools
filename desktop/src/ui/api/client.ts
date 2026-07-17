@@ -2,8 +2,10 @@ import axios, { AxiosError } from "axios";
 import type { AxiosRequestConfig } from "axios";
 
 interface CachedAuth {
-  token: string;
+  name: string;
+  token?: string;
   envUrl: string;
+  crmType: "online" | "onpremise";
 }
 
 // Local sidecar URL + per-launch secret. Both are resolved once from the
@@ -28,7 +30,12 @@ async function loadAuth(forceRefresh = false): Promise<CachedAuth> {
 
   if ("error" in result) throw new Error(result.error);
 
-  cached = { token: result.token, envUrl: result.envUrl };
+  cached = {
+    name: result.name,
+    token: result.token,
+    envUrl: result.envUrl,
+    crmType: result.crmType,
+  };
   return cached;
 }
 
@@ -38,7 +45,12 @@ async function loadTargetAuth(name: string, forceRefresh = false): Promise<Cache
   const result = await window.electron.getConnection(name);
   if ("error" in result) throw new Error(result.error);
 
-  targetCache[name] = { token: result.token, envUrl: result.envUrl };
+  targetCache[name] = {
+    name: result.name,
+    token: result.token,
+    envUrl: result.envUrl,
+    crmType: result.crmType,
+  };
   return targetCache[name];
 }
 
@@ -68,16 +80,25 @@ api.interceptors.request.use(async (config) => {
   config.baseURL = baseUrl;
   config.headers.set("X-Local-Secret", secret);
 
-  const { token, envUrl } = config.meta?.connectionName
+  const auth = config.meta?.connectionName
     ? await loadTargetAuth(config.meta.connectionName)
     : await loadAuth();
-  config.headers.set("Authorization", `Bearer ${token}`);
-  config.headers.set("X-Environment-Url", envUrl);
+
+  if (auth.crmType === "online") {
+    config.headers.set("Authorization", `Bearer ${auth.token}`);
+    config.headers.set("X-Environment-Url", auth.envUrl);
+  } else {
+    config.headers.set("X-Connection-Name", auth.name);
+  }
 
   if (config.meta?.targetConnectionName) {
     const target = await loadTargetAuth(config.meta.targetConnectionName);
-    config.headers.set("X-Target-Authorization", `Bearer ${target.token}`);
-    config.headers.set("X-Target-Environment-Url", target.envUrl);
+    if (target.crmType === "online") {
+      config.headers.set("X-Target-Authorization", `Bearer ${target.token}`);
+      config.headers.set("X-Target-Environment-Url", target.envUrl);
+    } else {
+      config.headers.set("X-Target-Connection-Name", target.name);
+    }
   }
 
   return config;

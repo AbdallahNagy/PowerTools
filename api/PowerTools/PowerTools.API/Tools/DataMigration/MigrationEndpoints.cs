@@ -20,10 +20,9 @@ public static class MigrationEndpoints
         {
             var job = new MigrationJob
             {
-                SourceToken = ctx.GetDataverseToken(),
-                SourceEnvUrl = ctx.GetEnvironmentUrl(),
-                TargetToken = ctx.GetTargetDataverseToken()!,
-                TargetEnvUrl = ctx.GetTargetEnvironmentUrl()!,
+                SourceConnection = ctx.GetDataverseConnectionContext(),
+                TargetConnection = ctx.GetTargetDataverseConnectionContext()
+                    ?? throw new InvalidOperationException("Target connection was not provided."),
                 EntityLogicalName = req.EntityLogicalName,
                 Attributes = req.Attributes,
                 FetchXmlFilter = req.FetchXmlFilter,
