@@ -1,5 +1,5 @@
 import { Fragment, useRef } from "react";
-import type { FilterGroup, FieldMetadata } from "../model/types";
+import type { EntityInfo, FilterGroup, FieldMetadata, RelationshipMetadata } from "../model/types";
 import type { ValidationError } from "../model/validation";
 import type { useFilterTree } from "../hooks/useFilterTree";
 import { ConditionNode } from "./ConditionNode";
@@ -11,6 +11,10 @@ type TreeActions = ReturnType<typeof useFilterTree>;
 interface GroupNodeProps {
   group: FilterGroup;
   fields: FieldMetadata[];
+  rootEntity: EntityInfo;
+  connectionName: string | null;
+  tables: EntityInfo[];
+  relationships: RelationshipMetadata[];
   errors: ValidationError[];
   depth: number;
   isRoot: boolean;
@@ -27,6 +31,10 @@ const DEPTH_COLORS = [
 export function GroupNode({
   group,
   fields,
+  rootEntity,
+  connectionName,
+  tables,
+  relationships,
   errors,
   depth,
   isRoot,
@@ -111,6 +119,10 @@ export function GroupNode({
               <GroupNode
                 group={child}
                 fields={fields}
+                rootEntity={rootEntity}
+                connectionName={connectionName}
+                tables={tables}
+                relationships={relationships}
                 errors={errors}
                 depth={depth + 1}
                 isRoot={false}
@@ -120,6 +132,10 @@ export function GroupNode({
               <ConditionNode
                 condition={child}
                 fields={fields}
+                rootEntity={rootEntity}
+                connectionName={connectionName}
+                tables={tables}
+                relationships={relationships}
                 errors={errors}
                 canRemove={group.children.length > 1}
                 actions={actions}

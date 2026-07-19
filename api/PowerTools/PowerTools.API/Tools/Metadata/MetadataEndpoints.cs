@@ -85,6 +85,66 @@ public static class MetadataEndpoints
             }
         });
 
+        group.MapGet("/entities/{logicalName}/relationships", async (
+            string logicalName,
+            HttpContext ctx,
+            DataverseClientFactory factory) =>
+        {
+            var svc = ctx.CreateDataverseClient(factory);
+
+            var request = new RetrieveEntityRequest
+            {
+                LogicalName = logicalName,
+                EntityFilters = EntityFilters.Relationships,
+                RetrieveAsIfPublished = false
+            };
+
+            try
+            {
+                var response = (RetrieveEntityResponse)await svc.ExecuteAsync(request);
+                var manyToOne = response.EntityMetadata.ManyToOneRelationships
+                    .Where(r => string.Equals(r.ReferencingEntity, logicalName, StringComparison.OrdinalIgnoreCase))
+                    .Select(r => new
+                    {
+                        schemaName = r.SchemaName,
+                        relationshipType = "many-to-one",
+                        sourceEntity = r.ReferencingEntity,
+                        targetEntity = r.ReferencedEntity,
+                        sourceAttribute = r.ReferencingAttribute,
+                        targetAttribute = r.ReferencedAttribute,
+                        displayName = r.SchemaName,
+                        isCustomRelationship = r.IsCustomRelationship == true
+                    });
+
+                var oneToMany = response.EntityMetadata.OneToManyRelationships
+                    .Where(r => string.Equals(r.ReferencedEntity, logicalName, StringComparison.OrdinalIgnoreCase))
+                    .Select(r => new
+                    {
+                        schemaName = r.SchemaName,
+                        relationshipType = "one-to-many",
+                        sourceEntity = r.ReferencedEntity,
+                        targetEntity = r.ReferencingEntity,
+                        sourceAttribute = r.ReferencedAttribute,
+                        targetAttribute = r.ReferencingAttribute,
+                        displayName = r.SchemaName,
+                        isCustomRelationship = r.IsCustomRelationship == true
+                    });
+
+                return Results.Ok(manyToOne.Concat(oneToMany)
+                    .Where(r =>
+                        !string.IsNullOrWhiteSpace(r.schemaName) &&
+                        !string.IsNullOrWhiteSpace(r.sourceEntity) &&
+                        !string.IsNullOrWhiteSpace(r.targetEntity) &&
+                        !string.IsNullOrWhiteSpace(r.sourceAttribute) &&
+                        !string.IsNullOrWhiteSpace(r.targetAttribute))
+                    .OrderBy(r => r.displayName));
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(DataverseErrorFormatter.Format(ex));
+            }
+        });
+
         return app;
     }
 

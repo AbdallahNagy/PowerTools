@@ -1,5 +1,6 @@
-import type { FilterGroup, FilterNode } from "./types";
-import { NO_VALUE_OPERATORS } from "./operators";
+import type { FilterGroup, FilterNode } from "./types.ts";
+import { NO_VALUE_OPERATORS } from "./operators.ts";
+import { getConditionScope, getFieldReference } from "./fetchxml.ts";
 
 export interface ValidationError {
   nodeId: string;
@@ -7,11 +8,11 @@ export interface ValidationError {
 }
 
 export function validateTree(root: FilterGroup): ValidationError[] {
-  console.log("Validating tree", root);
   if (
     root.children.length <= 1 &&
     root.children[0].kind === "condition" &&
     !root.children[0].field &&
+    !root.children[0].fieldRef &&
     !root.children[0].operator
   )
     return [];
@@ -23,10 +24,28 @@ export function validateTree(root: FilterGroup): ValidationError[] {
       if (node.children.length === 0) {
         errors.push({ nodeId: node.id, message: "Group is empty" });
       }
+      if (node.logic === "or") {
+        const scopes = new Set<string>();
+        for (const child of node.children) {
+          if (child.kind === "condition") {
+            scopes.add(getConditionScope(child));
+          }
+        }
+        if (scopes.size > 1) {
+          errors.push({
+            nodeId: node.id,
+            message: "OR groups can only combine conditions from the same table path.",
+          });
+        }
+      }
       for (const child of node.children) walk(child);
     } else {
-      if (!node.field) {
+      const fieldRef = getFieldReference(node);
+      if (!fieldRef) {
         errors.push({ nodeId: node.id, message: "Select a field" });
+      }
+      if (fieldRef?.kind === "related" && fieldRef.path.length === 0) {
+        errors.push({ nodeId: node.id, message: "Select a relationship path" });
       }
       if (!node.operator) {
         errors.push({ nodeId: node.id, message: "Select an operator" });

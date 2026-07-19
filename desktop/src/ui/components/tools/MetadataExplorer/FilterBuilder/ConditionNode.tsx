@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import type { FilterCondition, FieldMetadata, Operator } from "../model/types";
+import type { EntityInfo, FilterCondition, FieldMetadata, Operator, RelationshipMetadata } from "../model/types";
 import type { ValidationError } from "../model/validation";
 import type { useFilterTree } from "../hooks/useFilterTree";
 import { FieldPicker } from "./FieldPicker";
@@ -12,6 +12,10 @@ type TreeActions = ReturnType<typeof useFilterTree>;
 interface ConditionNodeProps {
   condition: FilterCondition;
   fields: FieldMetadata[];
+  rootEntity: EntityInfo;
+  connectionName: string | null;
+  tables: EntityInfo[];
+  relationships: RelationshipMetadata[];
   errors: ValidationError[];
   canRemove: boolean;
   actions: Pick<TreeActions, "updateCondition" | "remove" | "duplicate">;
@@ -20,11 +24,18 @@ interface ConditionNodeProps {
 export function ConditionNode({
   condition,
   fields,
+  rootEntity,
+  connectionName,
+  tables,
+  relationships,
   errors,
   canRemove,
   actions,
 }: ConditionNodeProps) {
-  const field = fields.find((f) => f.logicalName === condition.field) ?? null;
+  const field =
+    condition.fieldRef?.kind === "related"
+      ? condition.fieldRef.fieldMetadata ?? null
+      : fields.find((f) => f.logicalName === (condition.fieldRef?.kind === "root" ? condition.fieldRef.field : condition.field)) ?? null;
   const nodeErrors = errors.filter((e) => e.nodeId === condition.id);
   const { dragId, beginDrag, endDrag } = useDrag();
   const isDragging = dragId === condition.id;
@@ -66,9 +77,13 @@ export function ConditionNode({
         </span>
 
         <FieldPicker
-          value={condition.field}
+          value={condition.fieldRef}
           fields={fields}
-          onChange={(f) => actions.updateCondition(condition.id, { field: f })}
+          rootEntity={rootEntity}
+          connectionName={connectionName}
+          tables={tables}
+          relationships={relationships}
+          onChange={(fieldRef) => actions.updateCondition(condition.id, { fieldRef })}
         />
 
         <OperatorPicker

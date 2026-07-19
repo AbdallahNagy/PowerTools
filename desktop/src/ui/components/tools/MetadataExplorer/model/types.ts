@@ -46,6 +46,20 @@ export interface EntityInfo {
   isCustom: boolean;
 }
 
+export type RelationshipType = "many-to-one" | "one-to-many";
+
+export interface RelationshipMetadata {
+  schemaName: string;
+  relationshipType: RelationshipType;
+  sourceEntity: string;
+  targetEntity: string;
+  sourceAttribute: string;
+  targetAttribute: string;
+  displayName: string;
+  isCustomRelationship: boolean;
+  targets?: string[];
+}
+
 export type Operator =
   | "eq"
   | "ne"
@@ -65,10 +79,36 @@ export type Operator =
   | "on-or-before"
   | "on-or-after";
 
+export type FieldReference =
+  | {
+      kind: "root";
+      field: string;
+    }
+  | {
+      kind: "related";
+      path: RelationshipPathSegment[];
+      field: string;
+      fieldMetadata?: FieldMetadata;
+    };
+
+export interface RelationshipPathSegment {
+  relationshipSchemaName: string;
+  relationshipType: RelationshipType;
+  sourceEntity: string;
+  targetEntity: string;
+  sourceAttribute: string;
+  targetAttribute: string;
+  linkFromAttribute: string;
+  linkToAttribute: string;
+  alias: string;
+  label?: string;
+}
+
 export interface FilterCondition {
   id: string;
   kind: "condition";
   field: string | null;
+  fieldRef?: FieldReference | null;
   operator: Operator | null;
   value?: string | string[];
   valueLabels?: Record<string, string>;

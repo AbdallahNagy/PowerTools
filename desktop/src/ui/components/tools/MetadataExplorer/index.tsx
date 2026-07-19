@@ -12,6 +12,7 @@ import { MetadataExplorerProvider } from "./MetadataExplorerContext";
 import { useFilterTree } from "./hooks/useFilterTree";
 import { useTables } from "./hooks/useTables";
 import { useTableMetadata } from "./hooks/useTableMetadata";
+import { useEntityRelationships } from "./hooks/useEntityRelationships";
 import { useRunFetch } from "./hooks/useRunFetch";
 import { buildFetchXml } from "./model/fetchxml";
 import { validateTree } from "./model/validation";
@@ -40,6 +41,10 @@ function MetadataExplorerPage() {
   const tree = useFilterTree();
   const { data: tables, isLoading: tablesLoading, error: tablesError } = useTables(connectionName || null);
   const { data: fields, isLoading: fieldsLoading } = useTableMetadata(
+    selectedEntity?.logicalName ?? null,
+    connectionName || null,
+  );
+  const { data: relationships } = useEntityRelationships(
     selectedEntity?.logicalName ?? null,
     connectionName || null,
   );
@@ -225,6 +230,10 @@ function MetadataExplorerPage() {
                 <FilterTree
                   root={tree.root}
                   fields={fields ?? []}
+                  rootEntity={selectedEntity}
+                  connectionName={connectionName || null}
+                  tables={tables ?? []}
+                  relationships={relationships ?? []}
                   errors={validationErrors}
                   actions={tree}
                 />

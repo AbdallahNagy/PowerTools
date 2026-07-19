@@ -1,5 +1,5 @@
 import { useCallback, useReducer } from "react";
-import type { FilterCondition, FilterGroup, FilterNode, Operator } from "../model/types";
+import type { FieldReference, FilterCondition, FilterGroup, FilterNode, Operator } from "../model/types";
 
 type Action =
   | { type: "add-condition"; parentId: string }
@@ -16,7 +16,7 @@ function uid(): string {
 }
 
 function makeCondition(): FilterCondition {
-  return { id: uid(), kind: "condition", field: null, operator: null };
+  return { id: uid(), kind: "condition", field: null, fieldRef: null, operator: null };
 }
 
 function makeGroup(): FilterGroup {
@@ -120,6 +120,14 @@ function reducer(state: FilterGroup, action: Action): FilterGroup {
       const patch = action.patch as Partial<FilterCondition>;
       // When field changes, reset operator and value
       if (patch.field !== undefined) {
+        patch.fieldRef = patch.field ? { kind: "root", field: patch.field } : null;
+        patch.operator = null as unknown as Operator;
+        patch.value = undefined;
+        patch.valueLabels = undefined;
+        patch.lookupTarget = undefined;
+      }
+      if (patch.fieldRef !== undefined) {
+        patch.field = patch.fieldRef?.kind === "root" ? patch.fieldRef.field : null;
         patch.operator = null as unknown as Operator;
         patch.value = undefined;
         patch.valueLabels = undefined;
@@ -190,7 +198,7 @@ export function useFilterTree() {
   const addCondition = useCallback((parentId: string) => dispatch({ type: "add-condition", parentId }), []);
   const addGroup = useCallback((parentId: string) => dispatch({ type: "add-group", parentId }), []);
   const updateCondition = useCallback(
-    (id: string, patch: Partial<Omit<FilterCondition, "id" | "kind">>) =>
+    (id: string, patch: Partial<Omit<FilterCondition, "id" | "kind">> & { fieldRef?: FieldReference | null }) =>
       dispatch({ type: "update-condition", id, patch }),
     [],
   );
