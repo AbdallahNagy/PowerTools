@@ -5,6 +5,7 @@ export interface ActiveConnection {
   envUrl: string;
   crmType: "online" | "onpremise";
   token?: string;
+  expiresOn?: string | null;
 }
 
 export interface ConnectionError {

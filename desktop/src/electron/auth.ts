@@ -117,7 +117,7 @@ async function openAuthBrowserWindow(url: string): Promise<void> {
  */
 export async function acquireTokenInteractive(
   envUrl: string
-): Promise<{ accessToken: string; account: AccountInfo | null }> {
+): Promise<{ accessToken: string; account: AccountInfo | null; expiresOn: Date | null }> {
   const result = await getPca().acquireTokenInteractive({
     scopes: scopesFor(envUrl),
     openBrowser: openAuthBrowserWindow,
@@ -137,7 +137,11 @@ export async function acquireTokenInteractive(
   if (interactiveAuthWindow && !interactiveAuthWindow.isDestroyed()) {
     setTimeout(() => interactiveAuthWindow?.close(), 1200);
   }
-  return { accessToken: result.accessToken, account: result.account };
+  return {
+    accessToken: result.accessToken,
+    account: result.account,
+    expiresOn: result.expiresOn ?? null,
+  };
 }
 
 /**
@@ -147,7 +151,7 @@ export async function acquireTokenInteractive(
 export async function acquireTokenSilentOrInteractive(
   envUrl: string,
   account: AccountInfo | null
-): Promise<{ accessToken: string; account: AccountInfo | null }> {
+): Promise<{ accessToken: string; account: AccountInfo | null; expiresOn: Date | null }> {
   if (account) {
     try {
       const result = await getPca().acquireTokenSilent({
@@ -155,7 +159,11 @@ export async function acquireTokenSilentOrInteractive(
         account,
       });
       if (result?.accessToken) {
-        return { accessToken: result.accessToken, account: result.account };
+        return {
+          accessToken: result.accessToken,
+          account: result.account,
+          expiresOn: result.expiresOn ?? null,
+        };
       }
     } catch {
       // fall through to interactive

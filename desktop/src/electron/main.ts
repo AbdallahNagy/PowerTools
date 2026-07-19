@@ -383,7 +383,7 @@ app.whenReady().then(async () => {
         account = await getAccountByHomeId(conn.homeAccountId);
       }
 
-      const { accessToken, account: refreshedAccount } =
+      const { accessToken, account: refreshedAccount, expiresOn } =
         await acquireTokenSilentOrInteractive(conn.envUrl, account);
       connections[name] = {
         ...conn,
@@ -391,7 +391,13 @@ app.whenReady().then(async () => {
         homeAccountId: refreshedAccount?.homeAccountId ?? conn.homeAccountId,
       };
       persist();
-      return { name: conn.name, envUrl: conn.envUrl, crmType: conn.crmType, token: accessToken };
+      return {
+        name: conn.name,
+        envUrl: conn.envUrl,
+        crmType: conn.crmType,
+        token: accessToken,
+        expiresOn: expiresOn?.toISOString() ?? null,
+      };
     } catch (err) {
       return { error: (err as Error).message };
     }

@@ -27,7 +27,7 @@ function DataMigrationPage() {
   const [attributes, setAttributes] = useState<string[]>([]);
   const [fetchFilter, setFetchFilter] = useState("");
   const [doCreate, setDoCreate] = useState(true);
-  const [doUpdate, setDoUpdate] = useState(false);
+  const [doUpdate, setDoUpdate] = useState(true);
   const [filterOpen, setFilterOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);

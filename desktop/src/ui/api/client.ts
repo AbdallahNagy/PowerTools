@@ -6,6 +6,23 @@ interface CachedAuth {
   token?: string;
   envUrl: string;
   crmType: "online" | "onpremise";
+  expiresOn?: string | null;
+}
+
+type RefreshableAuth = Pick<CachedAuth, "crmType" | "expiresOn">;
+
+const TOKEN_REFRESH_BUFFER_MS = 5 * 60_000;
+
+export function shouldRefreshAuth(
+  auth: RefreshableAuth,
+  now = Date.now()
+): boolean {
+  if (auth.crmType !== "online" || !auth.expiresOn) return false;
+
+  const expiresAt = Date.parse(auth.expiresOn);
+  if (Number.isNaN(expiresAt)) return true;
+
+  return expiresAt - now <= TOKEN_REFRESH_BUFFER_MS;
 }
 
 // Local sidecar URL + per-launch secret. Both are resolved once from the
@@ -22,7 +39,7 @@ let cached: CachedAuth | null = null;
 const targetCache: Record<string, CachedAuth> = {};
 
 async function loadAuth(forceRefresh = false): Promise<CachedAuth> {
-  if (!forceRefresh && cached) return cached;
+  if (!forceRefresh && cached && !shouldRefreshAuth(cached)) return cached;
 
   const result = forceRefresh
     ? await window.electron.refreshToken()
@@ -35,12 +52,15 @@ async function loadAuth(forceRefresh = false): Promise<CachedAuth> {
     token: result.token,
     envUrl: result.envUrl,
     crmType: result.crmType,
+    expiresOn: result.expiresOn,
   };
   return cached;
 }
 
 async function loadTargetAuth(name: string, forceRefresh = false): Promise<CachedAuth> {
-  if (!forceRefresh && targetCache[name]) return targetCache[name];
+  if (!forceRefresh && targetCache[name] && !shouldRefreshAuth(targetCache[name])) {
+    return targetCache[name];
+  }
 
   const result = await window.electron.getConnection(name);
   if ("error" in result) throw new Error(result.error);
@@ -50,6 +70,7 @@ async function loadTargetAuth(name: string, forceRefresh = false): Promise<Cache
     token: result.token,
     envUrl: result.envUrl,
     crmType: result.crmType,
+    expiresOn: result.expiresOn,
   };
   return targetCache[name];
 }
