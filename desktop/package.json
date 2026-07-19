@@ -1,5 +1,6 @@
 {
   "name": "power-tools",
+  "productName": "Power Tools",
   "author": "Abdallah Nagy",
   "private": true,
   "version": "0.1.0-beta.0",
