@@ -9,6 +9,7 @@ import { app, BrowserWindow, safeStorage } from "electron";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { AZURE_CLIENT_ID } from "./config.js";
+import { renderAuthenticationErrorTemplate } from "./authTemplates.js";
 
 let pca: PublicClientApplication | null = null;
 let interactiveAuthWindow: BrowserWindow | null = null;
@@ -126,11 +127,7 @@ export async function acquireTokenInteractive(
         <h2 style="color:#4ec9b0">&#10003; Microsoft sign-in complete</h2>
         <p>PowerTools is validating access to Dataverse. You can close this tab and return to PowerTools.</p>
       </body></html>`,
-    errorTemplate: `
-      <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#1e1e1e;color:#cccccc">
-        <h2 style="color:#f48771">&#10007; Authentication failed</h2>
-        <p>{errorMessage}</p>
-      </body></html>`,
+    errorTemplate: renderAuthenticationErrorTemplate(),
   });
 
   if (!result?.accessToken) throw new Error("No access token received.");
