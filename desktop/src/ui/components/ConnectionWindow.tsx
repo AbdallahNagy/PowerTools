@@ -21,9 +21,7 @@ const ConnectionWindow = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setError(null);
@@ -44,7 +42,7 @@ const ConnectionWindow = () => {
             username: formData.username,
             password: formData.password,
             domain: formData.domain,
-          }
+          },
     );
 
     if (!result.success) {
@@ -58,10 +56,7 @@ const ConnectionWindow = () => {
 
   return (
     <div className="h-screen w-screen bg-[#1e1e1e] text-[#cccccc] flex flex-col p-6 box-border overflow-y-auto">
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-4 max-w-md w-full mx-auto"
-      >
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-md w-full mx-auto">
         <h3 className="font-bold mb-6 text-white">Connect to Dynamics 365</h3>
 
         <div className="flex flex-col gap-2">
@@ -105,11 +100,7 @@ const ConnectionWindow = () => {
             placeholder="org.crm.dynamics.com"
             className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
           />
-          {isOnline && (
-            <span className="text-xs text-[#858585]">
-              A browser window will open for Microsoft login.
-            </span>
-          )}
+          {isOnline && <span className="text-xs text-[#858585]">A browser window will open for Microsoft login.</span>}
         </div>
 
         {!isOnline && (
@@ -186,11 +177,7 @@ const ConnectionWindow = () => {
           </>
         )}
 
-        {error && (
-          <p className="text-sm text-[#f48771] bg-[#3c3c3c] px-3 py-2 rounded-sm">
-            {error}
-          </p>
-        )}
+        {error && <p className="text-sm text-[#f48771] bg-[#3c3c3c] px-3 py-2 rounded-sm">{error}</p>}
 
         <button
           type="submit"
