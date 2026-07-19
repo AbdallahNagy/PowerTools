@@ -1,16 +1,17 @@
+using Data8.PowerPlatform.Dataverse.Client;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.PowerPlatform.Dataverse.Client.Model;
-using System.Data.Common;
+using Microsoft.Xrm.Sdk;
 
 namespace PowerTools.API.Services;
 
 /// <summary>
-/// Creates a per-request Dataverse ServiceClient using the user's OAuth access token
-/// (acquired by the Electron frontend via MSAL). No client secret is stored on the server.
+/// Creates per-request Dataverse clients. Online connections use the user's OAuth
+/// token from Electron; on-premises connections use the SOAP organization service.
 /// </summary>
 public class DataverseClientFactory
 {
-    public ServiceClient Create(DataverseConnectionContext context) =>
+    public IOrganizationServiceAsync2 Create(DataverseConnectionContext context) =>
         context switch
         {
             OnlineConnectionContext online => CreateOnline(online.AccessToken, online.EnvironmentUrl),
@@ -23,7 +24,7 @@ public class DataverseClientFactory
     /// </summary>
     /// <param name="accessToken">Bearer token acquired by MSAL in Electron for the D365 environment.</param>
     /// <param name="environmentUrl">The Dynamics 365 environment URL, e.g. https://yourorg.crm.dynamics.com</param>
-    public ServiceClient Create(string accessToken, string environmentUrl) =>
+    public IOrganizationServiceAsync2 Create(string accessToken, string environmentUrl) =>
         CreateOnline(accessToken, environmentUrl);
 
     public ServiceClient CreateOnline(string accessToken, string environmentUrl)
@@ -32,7 +33,7 @@ public class DataverseClientFactory
 
         return new ServiceClient(new ConnectionOptions
         {
-            AuthenticationType = AuthenticationType.ExternalTokenManagement,
+            AuthenticationType = Microsoft.PowerPlatform.Dataverse.Client.AuthenticationType.ExternalTokenManagement,
             AccessTokenProviderFunctionAsync = _ => Task.FromResult(accessToken),
             ServiceUri = serviceUri,
             RequireNewInstance = true,
@@ -40,31 +41,57 @@ public class DataverseClientFactory
         });
     }
 
-    public ServiceClient CreateOnPremises(OnPremisesConnectionContext connection)
+    public IOrganizationServiceAsync2 CreateOnPremises(OnPremisesConnectionContext connection)
     {
-        var authType = connection.AuthMode.Equals("ifd", StringComparison.OrdinalIgnoreCase)
-            ? "IFD"
-            : "AD";
-
-        var builder = new DbConnectionStringBuilder
-        {
-            ["AuthType"] = authType,
-            ["Url"] = NormalizeServiceUri(connection.EnvironmentUrl).ToString(),
-            ["Username"] = connection.Username,
-            ["Password"] = connection.Password,
-            ["RequireNewInstance"] = true,
-        };
-
-        if (!string.IsNullOrWhiteSpace(connection.Domain))
-        {
-            builder["Domain"] = connection.Domain;
-        }
-
-        return new ServiceClient(builder.ConnectionString);
+        var serviceUrl = NormalizeOnPremisesServiceUrl(connection.EnvironmentUrl);
+        var username = NormalizeOnPremisesUsername(
+            connection.AuthMode,
+            connection.Domain,
+            connection.Username);
+        return new OnPremiseClient(serviceUrl, username, connection.Password);
     }
 
     private static Uri NormalizeServiceUri(string environmentUrl) =>
         new(environmentUrl.EndsWith('/') ? environmentUrl : $"{environmentUrl}/");
+
+    public static string NormalizeOnPremisesServiceUrl(string environmentUrl)
+    {
+        var trimmed = environmentUrl.Trim().TrimEnd('/');
+        if (!trimmed.Contains("://", StringComparison.Ordinal))
+        {
+            trimmed = $"https://{trimmed}";
+        }
+
+        var serviceSuffix = "/XRMServices/2011/Organization.svc";
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri))
+        {
+            throw new InvalidOperationException("On-premises connections require a valid server or organization URL.");
+        }
+
+        if (!uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "HTTP on-premises URLs are not supported. Enter the server or organization URL without a scheme, or use an HTTPS URL.");
+        }
+
+        if (trimmed.EndsWith(serviceSuffix, StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        return $"{trimmed}{serviceSuffix}";
+    }
+
+    public static string NormalizeOnPremisesUsername(string _, string domain, string username)
+    {
+        var trimmedUsername = username.Trim();
+        if (string.IsNullOrWhiteSpace(domain)
+            || trimmedUsername.Contains('\\', StringComparison.Ordinal)
+            || trimmedUsername.Contains('@', StringComparison.Ordinal))
+        {
+            return trimmedUsername;
+        }
+
+        return $@"{domain.Trim()}\{trimmedUsername}";
+    }
 }
-
-

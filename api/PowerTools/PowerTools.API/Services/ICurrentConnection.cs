@@ -16,7 +16,7 @@ public interface ICurrentConnection
 {
     DataverseConnectionContext Context { get; }
     string EnvironmentUrl { get; }
-    ServiceClient CreateClient();
+    IOrganizationServiceAsync2 CreateClient();
 }
 
 internal sealed class HttpContextCurrentConnection(
@@ -29,5 +29,5 @@ internal sealed class HttpContextCurrentConnection(
 
     public DataverseConnectionContext Context => Http.GetDataverseConnectionContext();
     public string EnvironmentUrl => Http.GetEnvironmentUrl();
-    public ServiceClient CreateClient() => Http.CreateDataverseClient(factory);
+    public IOrganizationServiceAsync2 CreateClient() => Http.CreateDataverseClient(factory);
 }

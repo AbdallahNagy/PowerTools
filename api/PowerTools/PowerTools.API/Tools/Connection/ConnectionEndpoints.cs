@@ -24,45 +24,71 @@ public static class ConnectionEndpoints
                 catch (Exception ex)
                 {
                     return Results.Json(
-                        new { connected = false, environment = ctx.GetEnvironmentUrl(), error = ex.Message },
+                        new { connected = false, environment = ctx.GetEnvironmentUrl(), error = DataverseErrorFormatter.Format(ex) },
                         statusCode: StatusCodes.Status502BadGateway);
                 }
             }).AddEndpointFilter<DataverseContextFilter>()
             .WithName("Connect");
 
         group.MapPost("/connections/validate-onpremise",
-            (OnPremisesConnectionRequest request, DataverseClientFactory factory) =>
+            (OnPremisesConnectionRequest request, DataverseClientFactory factory, ILoggerFactory loggerFactory) =>
             {
                 try
                 {
                     var context = request.ToContext();
-                    using var svc = factory.Create(context);
-                    var who = (WhoAmIResponse)svc.Execute(new WhoAmIRequest());
-                    return Results.Ok(new
-                        { connected = true, environment = request.EnvironmentUrl, userId = who.UserId });
+                    var svc = factory.Create(context);
+                    try
+                    {
+                        var who = (WhoAmIResponse)svc.Execute(new WhoAmIRequest());
+                        return Results.Ok(new
+                            { connected = true, environment = request.EnvironmentUrl, userId = who.UserId });
+                    }
+                    finally
+                    {
+                        (svc as IDisposable)?.Dispose();
+                    }
                 }
                 catch (Exception ex)
                 {
+                    loggerFactory.CreateLogger("PowerTools.API.Connection")
+                        .LogError(
+                            ex,
+                            "On-premises connection validation failed for {EnvironmentUrl} using {AuthMode}",
+                            request.EnvironmentUrl,
+                            request.AuthMode);
                     return Results.Json(
-                        new { connected = false, environment = request.EnvironmentUrl, error = ex.Message },
+                        new { connected = false, environment = request.EnvironmentUrl, error = DataverseErrorFormatter.Format(ex) },
                         statusCode: StatusCodes.Status502BadGateway);
                 }
             });
 
         group.MapPost("/connections/register-onpremise",
-            (OnPremisesConnectionRequest request, DataverseClientFactory factory, IConnectionStore store) =>
+            (OnPremisesConnectionRequest request, DataverseClientFactory factory, IConnectionStore store, ILoggerFactory loggerFactory) =>
             {
                 try
                 {
                     var context = request.ToContext();
-                    using var svc = factory.Create(context);
-                    svc.Execute(new WhoAmIRequest());
-                    store.Upsert(request.Name, context);
-                    return Results.Ok(new { success = true });
+                    var svc = factory.Create(context);
+                    try
+                    {
+                        svc.Execute(new WhoAmIRequest());
+                        store.Upsert(request.Name, context);
+                        return Results.Ok(new { success = true });
+                    }
+                    finally
+                    {
+                        (svc as IDisposable)?.Dispose();
+                    }
                 }
                 catch (Exception ex)
                 {
-                    return Results.BadRequest(new { success = false, error = ex.Message });
+                    loggerFactory.CreateLogger("PowerTools.API.Connection")
+                        .LogError(
+                            ex,
+                            "On-premises connection registration failed for {EnvironmentUrl} using {AuthMode}",
+                            request.EnvironmentUrl,
+                            request.AuthMode);
+                    return Results.BadRequest(new { success = false, error = DataverseErrorFormatter.Format(ex) });
                 }
             });
 

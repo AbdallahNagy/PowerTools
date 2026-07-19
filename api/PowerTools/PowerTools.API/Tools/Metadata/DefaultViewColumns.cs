@@ -8,7 +8,7 @@ namespace PowerTools.API.Tools.Metadata;
 
 public static class DefaultViewColumns
 {
-    public static async Task<IReadOnlySet<string>> RetrieveAsync(ServiceClient svc, string logicalName)
+    public static async Task<IReadOnlySet<string>> RetrieveAsync(IOrganizationServiceAsync2 svc, string logicalName)
     {
         var query = new QueryExpression("savedquery")
         {

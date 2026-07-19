@@ -43,7 +43,7 @@ const ConnectionWindow = () => {
             authMode: formData.authMode,
             username: formData.username,
             password: formData.password,
-            domain: formData.authMode === "ad" ? formData.domain : "",
+            domain: formData.domain,
           }
     );
 
@@ -144,7 +144,7 @@ const ConnectionWindow = () => {
 
             <div className="flex flex-col gap-1">
               <label htmlFor="username" className="text-xs">
-                {formData.authMode === "ifd" ? "Username / Email" : "Username"}
+                Username / Email
               </label>
               <input
                 type="text"
@@ -170,21 +170,19 @@ const ConnectionWindow = () => {
               />
             </div>
 
-            {formData.authMode === "ad" && (
-              <div className="flex flex-col gap-1">
-                <label htmlFor="domain" className="text-xs">
-                  Domain
-                </label>
-                <input
-                  type="text"
-                  name="domain"
-                  id="domain"
-                  value={formData.domain}
-                  onChange={handleChange}
-                  className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
-                />
-              </div>
-            )}
+            <div className="flex flex-col gap-1">
+              <label htmlFor="domain" className="text-xs">
+                Domain
+              </label>
+              <input
+                type="text"
+                name="domain"
+                id="domain"
+                value={formData.domain}
+                onChange={handleChange}
+                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+              />
+            </div>
           </>
         )}
 

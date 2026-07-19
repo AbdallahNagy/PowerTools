@@ -1,4 +1,5 @@
 using Microsoft.Xrm.Sdk;
+using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 
@@ -39,37 +40,44 @@ public class MigrationJobRunner(
 
     private async Task RunJob(MigrationJob job, CancellationToken ct)
     {
-        using var sourceSvc = factory.Create(job.SourceConnection);
-        using var targetSvc = factory.Create(job.TargetConnection);
-
-        var fetchXml = BuildFetchXml(job);
-        string? pagingCookie = null;
-        int page = 1;
-
-        while (true)
+        var sourceSvc = factory.Create(job.SourceConnection);
+        var targetSvc = factory.Create(job.TargetConnection);
+        try
         {
-            ct.ThrowIfCancellationRequested();
+            var fetchXml = BuildFetchXml(job);
+            string? pagingCookie = null;
+            int page = 1;
 
-            var fetch = BuildPagedFetchXml(fetchXml, page, BatchSize, pagingCookie);
-            var result = await sourceSvc.RetrieveMultipleAsync(new FetchExpression(fetch));
+            while (true)
+            {
+                ct.ThrowIfCancellationRequested();
 
-            if (job.Total == 0)
-                job.Total = result.TotalRecordCount > 0 ? result.TotalRecordCount : result.Entities.Count;
+                var fetch = BuildPagedFetchXml(fetchXml, page, BatchSize, pagingCookie);
+                var result = await sourceSvc.RetrieveMultipleAsync(new FetchExpression(fetch));
 
-            if (result.Entities.Count == 0) break;
+                if (job.Total == 0)
+                    job.Total = result.TotalRecordCount > 0 ? result.TotalRecordCount : result.Entities.Count;
 
-            await ProcessBatch(job, result.Entities, targetSvc);
+                if (result.Entities.Count == 0) break;
 
-            if (!result.MoreRecords) break;
-            pagingCookie = result.PagingCookie;
-            page++;
+                await ProcessBatch(job, result.Entities, targetSvc);
+
+                if (!result.MoreRecords) break;
+                pagingCookie = result.PagingCookie;
+                page++;
+            }
+        }
+        finally
+        {
+            (sourceSvc as IDisposable)?.Dispose();
+            (targetSvc as IDisposable)?.Dispose();
         }
     }
 
     private static async Task ProcessBatch(
         MigrationJob job,
         DataCollection<Entity> entities,
-        Microsoft.PowerPlatform.Dataverse.Client.ServiceClient targetSvc)
+        IOrganizationServiceAsync2 targetSvc)
     {
         var request = new ExecuteMultipleRequest
         {

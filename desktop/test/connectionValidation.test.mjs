@@ -36,7 +36,7 @@ test("validateDataverseConnection resolves when the API confirms the token works
   assert.equal(calls[0].options.headers["X-Local-Secret"], "secret-1");
 });
 
-test("validateOnPremisesConnection posts credentials to the validation endpoint", async () => {
+test("validateOnPremisesConnection preserves the domain for IFD", async () => {
   const calls = [];
   const fetchImpl = async (url, options) => {
     calls.push({ url, options });
@@ -51,7 +51,7 @@ test("validateOnPremisesConnection posts credentials to the validation endpoint"
     localSecret: "secret-1",
     name: "__validation__",
     envUrl: "https://crm.local/Org",
-    authMode: "ad",
+    authMode: "ifd",
     username: "user",
     password: "pass",
     domain: "CONTOSO",
@@ -64,7 +64,7 @@ test("validateOnPremisesConnection posts credentials to the validation endpoint"
   assert.deepEqual(JSON.parse(calls[0].options.body), {
     name: "__validation__",
     environmentUrl: "https://crm.local/Org",
-    authMode: "ad",
+    authMode: "ifd",
     username: "user",
     password: "pass",
     domain: "CONTOSO",

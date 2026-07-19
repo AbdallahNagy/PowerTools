@@ -24,4 +24,8 @@
         <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" Version="1.2.10" />
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\ThirdParty\Data8.PowerPlatform.Dataverse.Client\Data8.PowerPlatform.Dataverse.Client.csproj" />
+    </ItemGroup>
+
 </Project>

@@ -28,23 +28,29 @@ public static class DataverseContextExtensions
     public static DataverseConnectionContext? GetTargetDataverseConnectionContext(this HttpContext ctx) =>
         ctx.Items[DataverseTargetContextFilter.TargetConnectionContextKey] as DataverseConnectionContext;
 
-    public static ServiceClient CreateDataverseClient(
+    public static IOrganizationServiceAsync2 CreateDataverseClient(
         this HttpContext ctx,
         DataverseClientFactory factory)
     {
         var client = factory.Create(ctx.GetDataverseConnectionContext());
-        ctx.Response.RegisterForDispose(client);
+        if (client is IDisposable disposable)
+        {
+            ctx.Response.RegisterForDispose(disposable);
+        }
         return client;
     }
 
-    public static ServiceClient? CreateTargetDataverseClient(
+    public static IOrganizationServiceAsync2? CreateTargetDataverseClient(
         this HttpContext ctx,
         DataverseClientFactory factory)
     {
         var connection = ctx.GetTargetDataverseConnectionContext();
         if (connection is null) return null;
         var client = factory.Create(connection);
-        ctx.Response.RegisterForDispose(client);
+        if (client is IDisposable disposable)
+        {
+            ctx.Response.RegisterForDispose(disposable);
+        }
         return client;
     }
 }

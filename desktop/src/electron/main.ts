@@ -118,7 +118,8 @@ app.whenReady().then(async () => {
   let tempConnectionData: PendingConnection | null = null;
 
   function normalizeEnvUrl(serverUrl: string) {
-    return serverUrl.startsWith("http") ? serverUrl : `https://${serverUrl}`;
+    const trimmed = serverUrl.trim();
+    return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
   }
 
   async function registerStoredOnPremisesConnection(conn: StoredOnPremisesConnection) {
