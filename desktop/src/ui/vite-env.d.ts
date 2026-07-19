@@ -52,6 +52,7 @@ declare global {
       refreshToken: () => Promise<ConnectionResult>;
       getApiBaseUrl: () => Promise<string>;
       getLocalSecret: () => Promise<string>;
+      openExternalUrl: (url: string) => Promise<void>;
     };
   }
 }

@@ -72,6 +72,10 @@ function MetadataExplorerPage() {
     () => (fields ?? []).filter((field) => field.isInDefaultView).map((field) => field.logicalName),
     [fields],
   );
+  const selectedConnection = useMemo(
+    () => connections.find((connection) => connection.name === connectionName) ?? null,
+    [connections, connectionName],
+  );
 
   const handleSelectEntity = (entity: EntityInfo | null) => {
     setSelectedEntity(entity);
@@ -253,6 +257,8 @@ function MetadataExplorerPage() {
                 page={page}
                 onPageChange={handlePageChange}
                 fieldMeta={fields ?? []}
+                entityLogicalName={selectedEntity?.logicalName ?? null}
+                envUrl={selectedConnection?.envUrl ?? null}
               />
             ) : (
               <FetchXmlView fetchXml={lastFetchXml} />

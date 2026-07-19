@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { FetchResult, FieldMetadata } from "./model/types";
 import { Spinner } from "../../ui/Spinner";
 import { Button } from "../../ui/Button";
+import { buildDynamicsRecordUrl } from "./model/dynamicsRecordUrl";
 
 const PAGE_SIZE = 50;
 
@@ -12,9 +13,20 @@ interface ResultsGridProps {
   page: number;
   onPageChange: (page: number) => void;
   fieldMeta?: FieldMetadata[];
+  entityLogicalName?: string | null;
+  envUrl?: string | null;
 }
 
-export function ResultsGrid({ result, isLoading, error, page, onPageChange, fieldMeta }: ResultsGridProps) {
+export function ResultsGrid({
+  result,
+  isLoading,
+  error,
+  page,
+  onPageChange,
+  fieldMeta,
+  entityLogicalName,
+  envUrl,
+}: ResultsGridProps) {
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDesc, setSortDesc] = useState(false);
 
@@ -64,6 +76,18 @@ export function ResultsGrid({ result, isLoading, error, page, onPageChange, fiel
     else { setSortCol(col); setSortDesc(false); }
   };
 
+  const handleOpenRecord = (row: Record<string, unknown>) => {
+    if (!envUrl || !entityLogicalName || typeof row.id !== "string" || row.id.length === 0) return;
+
+    void window.electron.openExternalUrl(
+      buildDynamicsRecordUrl({
+        envUrl,
+        entityLogicalName,
+        recordId: row.id,
+      }),
+    );
+  };
+
   return (
     <div className="flex flex-col gap-2 flex-1 min-h-0">
       <div className="flex items-center justify-between gap-2">
@@ -100,15 +124,25 @@ export function ResultsGrid({ result, isLoading, error, page, onPageChange, fiel
                 </td>
               </tr>
             ) : (
-              rows.map((row) => (
-                <tr key={String(row.id)} className="border-b border-[#3c3c3c] last:border-0 hover:bg-[#2a2d2e]">
+              rows.map((row) => {
+                const canOpenRecord = !!envUrl && !!entityLogicalName && typeof row.id === "string" && row.id.length > 0;
+                return (
+                <tr
+                  key={String(row.id)}
+                  onClick={() => handleOpenRecord(row)}
+                  title={canOpenRecord ? "Open record in Dynamics CRM" : undefined}
+                  className={`border-b border-[#3c3c3c] last:border-0 hover:bg-[#2a2d2e] ${
+                    canOpenRecord ? "cursor-pointer" : ""
+                  }`}
+                >
                   {columns.map((col) => (
                     <td key={col} className="px-3 py-1.5 text-xs max-w-xs truncate" title={formatCell(row[col], result.columnTypes[col])}>
                       {formatCell(row[col], result.columnTypes[col])}
                     </td>
                   ))}
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>

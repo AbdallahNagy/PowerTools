@@ -35,4 +35,6 @@ electron.contextBridge.exposeInMainWorld("electron", {
   // load and cached in the api/client module.
   getApiBaseUrl: () => electron.ipcRenderer.invoke("get-api-base-url"),
   getLocalSecret: () => electron.ipcRenderer.invoke("get-local-secret"),
+  openExternalUrl: (url: string) =>
+    electron.ipcRenderer.invoke("open-external-url", url),
 });

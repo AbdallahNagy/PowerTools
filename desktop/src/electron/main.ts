@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { isDev } from "./utils.js";
 import { getPreloadPath } from "./pathResolver.js";
 import {
@@ -48,6 +48,13 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("get-api-base-url", () => sidecarHandle.baseUrl);
   ipcMain.handle("get-local-secret", () => sidecarHandle.secret);
+  ipcMain.handle("open-external-url", async (_event, url: string) => {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+      throw new Error("Only HTTP and HTTPS URLs can be opened.");
+    }
+    await shell.openExternal(parsed.toString());
+  });
 
   let connectionWindow: BrowserWindow | null = null;
 
