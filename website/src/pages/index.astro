@@ -1,0 +1,147 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+---
+
+<BaseLayout
+  title="PowerTools for Dataverse Developers"
+  description="A modern open-source desktop toolkit for everyday Dataverse work."
+>
+  <section class="hero">
+    <div>
+      <p class="eyebrow">Open-source desktop toolkit</p>
+      <h1>PowerTools for Dataverse Developers</h1>
+      <p class="lead">
+        A modern open-source desktop toolkit for everyday Dataverse work. Start
+        with smoother data migration and faster FetchXML workflows, all in a
+        friendly local desktop app.
+      </p>
+      <div class="hero-actions">
+        <a class="button primary" href="/download">Download for Windows</a>
+        <a class="button secondary" href={githubUrl}>View on GitHub</a>
+      </div>
+    </div>
+
+    <aside class="product-panel" aria-label="PowerTools preview">
+      <div class="panel-top">
+        <span class="panel-dot"></span>
+        <span class="panel-dot"></span>
+        <span class="panel-dot"></span>
+      </div>
+      <div class="panel-body">
+        <ul class="tool-list">
+          <li>
+            <span>Current tool</span>
+            <h3>Data Migration</h3>
+            <p>Move data between Dataverse environments with a clearer workflow.</p>
+          </li>
+          <li>
+            <span>Current tool</span>
+            <h3>FetchXML Builder</h3>
+            <p>Build, test, and refine FetchXML queries in a cleaner workspace.</p>
+          </li>
+          <li>
+            <span>Security</span>
+            <h3>Local by default</h3>
+            <p>Your data never leaves your machine.</p>
+          </li>
+        </ul>
+      </div>
+    </aside>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">Why PowerTools</p>
+        <h2>Dataverse tooling that feels easier to use.</h2>
+      </div>
+      <p>
+        PowerTools focuses on developer flow: clear screens, discoverable
+        actions, and less friction around the tasks you repeat every day.
+      </p>
+    </div>
+
+    <div class="feature-grid">
+      <article class="feature-card">
+        <h3>Modern UI</h3>
+        <p>A cleaner interface for Dataverse work, designed for daily use.</p>
+      </article>
+      <article class="feature-card">
+        <h3>Friendly UX</h3>
+        <p>Tools are easier to figure out without digging through old dialogs.</p>
+      </article>
+      <article class="feature-card">
+        <h3>Local and secure</h3>
+        <p>The app runs on your machine and connects directly to Dataverse.</p>
+      </article>
+      <article class="feature-card">
+        <h3>Open source</h3>
+        <p>Inspect the code, suggest improvements, and contribute on GitHub.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section split-section">
+    <div>
+      <p class="eyebrow">Current tools</p>
+      <h2>A toolkit, starting with the workflows developers need often.</h2>
+      <p class="lead">
+        PowerTools is not a single-purpose utility. It is a desktop workspace
+        for Dataverse developer tools, beginning with Data Migration and
+        FetchXML Builder.
+      </p>
+    </div>
+
+    <div class="stack">
+      <article class="feature-card">
+        <span class="meta-label">First tool</span>
+        <h3>Data Migration</h3>
+        <p>
+          Move data between Dataverse environments with a guided,
+          developer-friendly workflow that is easier to understand and control.
+        </p>
+      </article>
+      <article class="feature-card">
+        <span class="meta-label">Second tool</span>
+        <h3>FetchXML Builder</h3>
+        <p>
+          Build, test, and refine FetchXML queries in a cleaner workspace built
+          for fast iteration.
+        </p>
+      </article>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="security-band">
+      <p class="eyebrow">Secure by design</p>
+      <h2>Your data never leaves your machine.</h2>
+      <p class="lead">
+        PowerTools runs locally and connects directly from the desktop app to
+        your Dataverse environments. The website introduces the tool; it does
+        not host or process your Dataverse data.
+      </p>
+    </div>
+  </section>
+
+  <section class="section split-section">
+    <div>
+      <p class="eyebrow">Open source</p>
+      <h2>Built in the open for developers.</h2>
+      <p class="lead">
+        PowerTools is open source, so developers can inspect how it works,
+        report issues, suggest improvements, and contribute.
+      </p>
+      <div class="action-row">
+        <a class="button primary" href="/download">Download for Windows</a>
+        <a class="button secondary" href={githubUrl}>View on GitHub</a>
+        <a class="button secondary" href="/contact">Contact the author</a>
+      </div>
+    </div>
+    <div class="code-card" aria-label="GitHub repository">
+      <span>git clone</span> https://github.com/AbdallahNagy/PowerTools.git
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,68 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+const releasesUrl = `${githubUrl}/releases`;
+---
+
+<BaseLayout
+  title="Download PowerTools"
+  description="Download the latest Windows build of PowerTools for Dataverse developers."
+>
+  <section class="page-hero">
+    <p class="eyebrow">Download</p>
+    <h1>Download PowerTools</h1>
+    <p class="lead">
+      Get the latest Windows build of the open-source Dataverse developer
+      toolkit.
+    </p>
+    <div class="hero-actions">
+      <a class="button primary" href={releasesUrl}>Download for Windows</a>
+      <a class="button secondary" href={releasesUrl}>View GitHub Releases</a>
+    </div>
+  </section>
+
+  <section class="section content-grid">
+    <article class="download-card">
+      <span class="meta-label">Latest build</span>
+      <h2>Windows desktop app</h2>
+      <p>
+        The first public download path is GitHub Releases. Use the latest
+        release when it is available, and check the release notes before
+        updating.
+      </p>
+      <div class="action-row">
+        <a class="button primary" href={releasesUrl}>Open releases</a>
+        <a class="button secondary" href={githubUrl}>Source code</a>
+      </div>
+    </article>
+
+    <div class="stack">
+      <article class="download-card">
+        <h3>Requirements</h3>
+        <ul class="detail-list">
+          <li>Windows desktop environment.</li>
+          <li>Access to the Dataverse environments you want to work with.</li>
+          <li>Permission to connect using your organization account.</li>
+        </ul>
+      </article>
+
+      <article class="download-card">
+        <h3>Install notes</h3>
+        <ul class="detail-list">
+          <li>Download the latest installer from GitHub Releases.</li>
+          <li>Run the installer locally on your machine.</li>
+          <li>Open PowerTools and connect to your Dataverse environment.</li>
+        </ul>
+      </article>
+
+      <article class="download-card">
+        <h3>Security reminder</h3>
+        <p>
+          PowerTools runs locally. Your Dataverse data never leaves your
+          machine.
+        </p>
+      </article>
+    </div>
+  </section>
+</BaseLayout>

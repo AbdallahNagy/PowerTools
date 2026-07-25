@@ -1,0 +1,62 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const email = "abdallahnagy773@gmail.com";
+const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+const issuesUrl = `${githubUrl}/issues`;
+---
+
+<BaseLayout
+  title="Contact the PowerTools Author"
+  description="Contact the author of PowerTools with feedback, bugs, and contribution ideas."
+>
+  <section class="page-hero">
+    <p class="eyebrow">Contact</p>
+    <h1>Contact the Author</h1>
+    <p class="lead">
+      Have feedback, a bug report, or an idea for the toolkit? Send it over.
+      Developer feedback shapes PowerTools.
+    </p>
+  </section>
+
+  <section class="section content-grid">
+    <article class="contact-card">
+      <span class="meta-label">Direct contact</span>
+      <h2>Reach Abdallah Nagy</h2>
+      <p>
+        Email is the simplest way to share feedback, discuss contribution ideas,
+        or talk about real Dataverse workflows that PowerTools should support
+        better.
+      </p>
+      <div class="action-row">
+        <a class="button primary" href={`mailto:${email}`}>Email the author</a>
+        <a class="button secondary" href={githubUrl}>View GitHub</a>
+      </div>
+    </article>
+
+    <div class="stack">
+      <article class="contact-card">
+        <h3>Email</h3>
+        <p><a href={`mailto:${email}`}>{email}</a></p>
+      </article>
+
+      <article class="contact-card">
+        <h3>GitHub</h3>
+        <p><a href={githubUrl}>AbdallahNagy/PowerTools</a></p>
+      </article>
+
+      <article class="contact-card">
+        <h3>Good reasons to reach out</h3>
+        <ul class="detail-list">
+          <li>Report a bug.</li>
+          <li>Suggest an improvement.</li>
+          <li>Share feedback from real Dataverse work.</li>
+          <li>Discuss contribution ideas.</li>
+        </ul>
+        <div class="action-row">
+          <a class="button secondary" href={issuesUrl}>Open GitHub issues</a>
+        </div>
+      </article>
+    </div>
+  </section>
+</BaseLayout>
