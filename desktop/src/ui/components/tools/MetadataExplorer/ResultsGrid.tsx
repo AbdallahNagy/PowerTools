@@ -3,6 +3,7 @@ import type { FetchResult, FieldMetadata } from "./model/types";
 import { Spinner } from "../../ui/Spinner";
 import { Button } from "../../ui/Button";
 import { buildDynamicsRecordUrl } from "./model/dynamicsRecordUrl";
+import { formatFetchResultSummary } from "./model/resultSummary";
 
 const PAGE_SIZE = 50;
 
@@ -92,9 +93,11 @@ export function ResultsGrid({
     <div className="flex flex-col gap-2 flex-1 min-h-0">
       <div className="flex items-center justify-between gap-2">
         <span className="text-xs text-[#858585]">
-          {result.records.length} records
-          {result.totalEstimate != null && ` (est. total: ${result.totalEstimate})`}
-          {result.moreRecords && " — more available"}
+          {formatFetchResultSummary({
+            fetchedCount: result.records.length,
+            totalEstimate: result.totalEstimate,
+            moreRecords: result.moreRecords,
+          })}
         </span>
       </div>
 

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
 import { isDev } from "./utils.js";
 import { getPreloadPath } from "./pathResolver.js";
+import { createStartupSplashWindow } from "./startupSplash.js";
 import {
   acquireTokenInteractive,
   acquireTokenSilentOrInteractive,
@@ -28,6 +29,8 @@ type PendingConnection =
   | Omit<StoredOnPremisesConnection, "name">;
 
 app.whenReady().then(async () => {
+  const splashWindow = createStartupSplashWindow();
+
   // Start the local API process before any window opens. The renderer
   // assumes a working sidecar; if it fails to come up, the app cannot
   // function — surface the error and quit cleanly.
@@ -35,6 +38,9 @@ app.whenReady().then(async () => {
   try {
     sidecarHandle = await sidecar.start();
   } catch (err) {
+    if (!splashWindow.isDestroyed()) {
+      splashWindow.close();
+    }
     dialog.showErrorBox(
       "PowerTools failed to start",
       `The local API process did not start.\n\n${(err as Error).message}`
@@ -431,8 +437,15 @@ app.whenReady().then(async () => {
     },
     width: 800,
     height: 600,
+    show: false,
   });
   mainWindow.maximize();
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+    if (!splashWindow.isDestroyed()) {
+      splashWindow.close();
+    }
+  });
 
   if (isDev()) {
     mainWindow.loadURL("http://localhost:5123");

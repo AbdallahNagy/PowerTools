@@ -4,4 +4,5 @@ public record ExecuteFetchRequest(
     string FetchXml,
     int Page = 1,
     int PageSize = 50,
-    string? PagingCookie = null);
+    string? PagingCookie = null,
+    bool ReturnTotalRecordCount = false);

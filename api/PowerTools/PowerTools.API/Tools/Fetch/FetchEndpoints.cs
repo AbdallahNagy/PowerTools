@@ -52,7 +52,7 @@ public static class FetchEndpoints
                 return Results.BadRequest(new { error = "<fetch> must contain an <entity> element" });
 
             // ── Inject paging attributes ──────────────────────────────────────
-            var finalXml = FetchXmlPaging.Apply(doc, req.Page, pageSize, req.PagingCookie);
+            var finalXml = FetchXmlPaging.Apply(doc, req.Page, pageSize, req.PagingCookie, req.ReturnTotalRecordCount);
 
             // ── Execute ───────────────────────────────────────────────────────
             var svc = ctx.CreateDataverseClient(factory);

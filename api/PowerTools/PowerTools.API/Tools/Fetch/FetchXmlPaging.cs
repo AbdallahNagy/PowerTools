@@ -5,7 +5,7 @@ namespace PowerTools.API.Tools.Fetch;
 
 public static class FetchXmlPaging
 {
-    public static string Apply(string fetchXml, int page, int count, string? pagingCookie)
+    public static string Apply(string fetchXml, int page, int count, string? pagingCookie, bool returnTotalRecordCount = false)
     {
         var settings = new XmlReaderSettings
         {
@@ -16,15 +16,16 @@ public static class FetchXmlPaging
         using var reader = XmlReader.Create(new StringReader(fetchXml), settings);
         var doc = XDocument.Load(reader);
 
-        return Apply(doc, page, count, pagingCookie);
+        return Apply(doc, page, count, pagingCookie, returnTotalRecordCount);
     }
 
-    public static string Apply(XDocument doc, int page, int count, string? pagingCookie)
+    public static string Apply(XDocument doc, int page, int count, string? pagingCookie, bool returnTotalRecordCount = false)
     {
         var fetchEl = doc.Root ?? throw new ArgumentException("FetchXML must have a root element.", nameof(doc));
 
         fetchEl.SetAttributeValue("page", page);
         fetchEl.SetAttributeValue("count", count);
+        fetchEl.SetAttributeValue("returntotalrecordcount", returnTotalRecordCount ? "true" : null);
 
         if (pagingCookie is not null)
             fetchEl.SetAttributeValue("paging-cookie", pagingCookie);

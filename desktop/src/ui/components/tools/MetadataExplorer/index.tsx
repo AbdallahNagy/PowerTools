@@ -116,6 +116,7 @@ function MetadataExplorerPage() {
         page: targetPage,
         pageSize: 50,
         pagingCookie: pagingCookies[targetPage - 1],
+        returnTotalRecordCount: true,
       },
       {
         onSuccess: (res: FetchResult) => {

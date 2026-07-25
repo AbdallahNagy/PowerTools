@@ -21,6 +21,9 @@ AssertContains("paging-cookie=\"&lt;cookie page=&quot;1&quot;&gt;", pagedFetch);
 AssertDoesNotContain("&amp;lt;cookie", pagedFetch);
 AssertDoesNotContain("&amp;quot;1&amp;quot;", pagedFetch);
 
+var countedFetch = FetchXmlPaging.Apply(fetchXml, page: 1, count: 50, pagingCookie: null, returnTotalRecordCount: true);
+AssertContains("returntotalrecordcount=\"true\"", countedFetch);
+
 var defaultViewColumns = DefaultViewColumns.ParseLayoutXml(
     "<grid><row name=\"account\" id=\"accountid\">" +
     "<cell name=\"name\" width=\"300\" />" +

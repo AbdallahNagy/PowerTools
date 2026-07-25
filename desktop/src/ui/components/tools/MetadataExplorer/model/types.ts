@@ -145,4 +145,5 @@ export interface ExecuteFetchRequest {
   page: number;
   pageSize: number;
   pagingCookie?: string;
+  returnTotalRecordCount?: boolean;
 }
