@@ -1,5 +1,12 @@
 import { useRef } from "react";
-import type { EntityInfo, FilterCondition, FieldMetadata, Operator, RelationshipMetadata } from "../model/types";
+import type {
+  EntityInfo,
+  FilterCondition,
+  FieldMetadata,
+  Operator,
+  RelationshipMetadata,
+  RelationshipPathSegment,
+} from "../model/types";
 import type { ValidationError } from "../model/validation";
 import type { useFilterTree } from "../hooks/useFilterTree";
 import { FieldPicker } from "./FieldPicker";
@@ -12,22 +19,25 @@ type TreeActions = ReturnType<typeof useFilterTree>;
 interface ConditionNodeProps {
   condition: FilterCondition;
   fields: FieldMetadata[];
-  rootEntity: EntityInfo;
-  connectionName: string | null;
   tables: EntityInfo[];
   relationships: RelationshipMetadata[];
+  path: RelationshipPathSegment[];
+  allowRelationships: boolean;
   errors: ValidationError[];
   canRemove: boolean;
-  actions: Pick<TreeActions, "updateCondition" | "remove" | "duplicate">;
+  actions: Pick<
+    TreeActions,
+    "updateCondition" | "replaceConditionWithRelationship" | "remove" | "duplicate"
+  >;
 }
 
 export function ConditionNode({
   condition,
   fields,
-  rootEntity,
-  connectionName,
   tables,
   relationships,
+  path,
+  allowRelationships,
   errors,
   canRemove,
   actions,
@@ -79,11 +89,14 @@ export function ConditionNode({
         <FieldPicker
           value={condition.fieldRef}
           fields={fields}
-          rootEntity={rootEntity}
-          connectionName={connectionName}
           tables={tables}
           relationships={relationships}
+          path={path}
+          allowRelationships={allowRelationships}
           onChange={(fieldRef) => actions.updateCondition(condition.id, { fieldRef })}
+          onSelectRelationship={(relationship) =>
+            actions.replaceConditionWithRelationship(condition.id, relationship)
+          }
         />
 
         <OperatorPicker

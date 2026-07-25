@@ -19,12 +19,24 @@ export function validateTree(root: FilterGroup): ValidationError[] {
 
   const errors: ValidationError[] = [];
 
+  function containsRelationship(node: FilterNode): boolean {
+    if (node.kind === "relationship") return true;
+    if (node.kind === "condition") return false;
+    return node.children.some(containsRelationship);
+  }
+
   function walk(node: FilterNode) {
     if (node.kind === "group") {
       if (node.children.length === 0) {
         errors.push({ nodeId: node.id, message: "Group is empty" });
       }
       if (node.logic === "or") {
+        if (node.children.some(containsRelationship)) {
+          errors.push({
+            nodeId: node.id,
+            message: "Related table filters can only be added to AND groups.",
+          });
+        }
         const scopes = new Set<string>();
         for (const child of node.children) {
           if (child.kind === "condition") {
@@ -39,6 +51,8 @@ export function validateTree(root: FilterGroup): ValidationError[] {
         }
       }
       for (const child of node.children) walk(child);
+    } else if (node.kind === "relationship") {
+      walk(node.group);
     } else {
       const fieldRef = getFieldReference(node);
       if (!fieldRef) {

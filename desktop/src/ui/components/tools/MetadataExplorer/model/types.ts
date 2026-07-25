@@ -122,7 +122,14 @@ export interface FilterGroup {
   children: FilterNode[];
 }
 
-export type FilterNode = FilterCondition | FilterGroup;
+export interface FilterRelationship {
+  id: string;
+  kind: "relationship";
+  relationship: RelationshipPathSegment;
+  group: FilterGroup;
+}
+
+export type FilterNode = FilterCondition | FilterGroup | FilterRelationship;
 
 export interface FetchResult {
   records: Record<string, unknown>[];

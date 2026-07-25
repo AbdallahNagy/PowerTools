@@ -2,6 +2,8 @@
 
 Date: 2026-07-20
 
+> Superseded by `2026-07-25-relationship-scope-filters-design.md`.
+
 ## Goal
 
 Let users build FetchXML filters against fields on related Dataverse tables,
@@ -58,20 +60,25 @@ conditions are grouped by their relationship path and rendered inside generated
 
 ## User Experience
 
-The current field picker gains two sections:
+Replace the modal path picker with one Advanced Find-style field dropdown. At
+every table level, the dropdown renders:
 
-- Root fields: the existing list of attributes on the selected root table.
-- Related fields: an entry point that opens a compact path picker.
+1. The table's fields, sorted by display name.
+2. A `Related tables` divider.
+3. The table's many-to-one and one-to-many relationships, sorted by related
+   table display name.
 
-The related-field picker flow:
+Selecting a field closes the dropdown and writes the complete field reference
+back to the condition. Selecting a related table expands that table inline,
+indented one level beneath the relationship row. The expanded level follows the
+same structure: fields first, then its related tables. Users can continue
+expanding relationships without an artificial depth limit.
 
-1. User chooses a relationship from the current table. This may be a lookup from
-   the current table to a parent record, or a one-to-many relationship from the
-   current table to child records.
-2. If the relationship is polymorphic, user chooses the concrete target table.
-3. User either selects a field from that related table or continues to another
-   lookup relationship, up to the supported depth.
-4. The selected field path is written back to the condition row.
+Each relationship row has an expand/collapse chevron and remains visibly
+distinct from selectable field rows. Metadata for an expanded table is loaded
+only when that relationship is opened. Loading and error states appear directly
+under that relationship and do not prevent users from selecting fields already
+loaded elsewhere in the tree.
 
 The condition row still uses the existing operator picker and value input. The
 operator list and value editor are based on the final selected field metadata,
@@ -79,10 +86,10 @@ not the root lookup field. For example, selecting related `account.name` shows
 string operators, while selecting related `account.ownerid` uses lookup
 operators and lookup record picking.
 
-The first version should support a maximum path depth of two relationship hops.
-That covers common Advanced Find workflows while keeping the metadata loading,
-UI, and FetchXML generation understandable. The model should not hard-code the
-depth so it can be raised later.
+There is no fixed relationship depth. Recursive levels are user-expanded and
+loaded lazily, so only paths the user opens incur metadata requests. Cyclic and
+self-referencing relationships remain expandable because each expansion is an
+explicit user action; React Query caches metadata per connection and table.
 
 ## Metadata API
 
@@ -276,11 +283,14 @@ advanced FetchXML expression model.
 
 ### Filter UI
 
-- Replace `FieldPicker` internals with a picker that can select root fields or
-  launch the related-field path picker.
-- Add `RelatedFieldPickerModal`.
+- Replace `FieldPicker` internals with an anchored custom dropdown.
+- Add a recursive related-table branch component that loads each expanded
+  table's fields and relationships on demand.
+- Render fields before related tables at every level and indent each nested
+  branch consistently.
 - Keep condition rows compact by displaying the selected path as a single
   truncated label with a tooltip.
+- Close on field selection, outside click, or Escape.
 - Continue passing resolved field metadata to `OperatorPicker` and `ValueInput`.
 
 ### FetchXML Renderer
@@ -292,10 +302,10 @@ advanced FetchXML expression model.
 
 ## Error Handling
 
-- If relationship metadata fails to load, show a toast and keep root-field
-  filtering available.
-- If target table attributes fail to load while picking a path, show the failure
-  inside the modal and let the user back out.
+- If relationship metadata fails to load, show the failure within that tree
+  level and keep already-loaded field filtering available.
+- If target table attributes fail to load, show the failure beneath the
+  expanded relationship and let the user collapse it or choose another path.
 - If a saved or duplicated condition references unavailable metadata, show a
   validation error on that row.
 - If the user creates an unsupported mixed-scope `or`, show:
@@ -310,7 +320,9 @@ Add focused unit tests around the pure model where possible:
 - One-to-many child filters render the correct `from` and `to` join direction.
 - Multiple conditions on the same path share one `link-entity`.
 - Conditions on different paths render separate links.
-- Nested paths render nested links.
+- Paths of at least three hops render nested links.
+- Relationship path segments use deterministic aliases derived from depth and
+  relationship schema name.
 - Polymorphic lookup path includes the selected concrete target entity.
 - Mixed-scope `and` groups are accepted.
 - Mixed-scope `or` groups are rejected.
@@ -325,9 +337,9 @@ Run existing project checks after implementation:
 ## Rollout
 
 Implement behind normal UI controls rather than a hidden flag. The first version
-can launch with depth-two relationship paths and conservative `or` validation.
-This gives users meaningful Advanced Find-style filtering immediately while
-keeping behavior predictable.
+uses lazy recursive metadata loading and conservative `or` validation. This
+gives users Advanced Find-style filtering while keeping generated FetchXML
+predictable.
 
 Future enhancements:
 
@@ -335,4 +347,3 @@ Future enhancements:
 - Outer joins and "no related record" filters.
 - Related result columns.
 - Import existing FetchXML into the visual model.
-- Deeper relationship paths if users need them and performance remains good.

@@ -15,6 +15,8 @@ function collectIds(node: FilterNode, out: Set<string>): void {
   out.add(node.id);
   if (node.kind === "group") {
     for (const c of node.children) collectIds(c, out);
+  } else if (node.kind === "relationship") {
+    collectIds(node.group, out);
   }
 }
 
@@ -24,6 +26,9 @@ function findNode(root: FilterGroup, id: string): FilterNode | null {
     if (c.id === id) return c;
     if (c.kind === "group") {
       const f = findNode(c, id);
+      if (f) return f;
+    } else if (c.kind === "relationship") {
+      const f = findNode(c.group, id);
       if (f) return f;
     }
   }
@@ -38,8 +43,8 @@ export function DragProvider({ root, children }: { root: FilterGroup; children: 
       if (!dragId) return true;
       const dragged = findNode(root, dragId);
       if (!dragged) return true;
-      if (dragged.kind !== "group") return true;
-      // Cannot drop a group into itself or any descendant.
+      if (dragged.kind === "condition") return true;
+      // Cannot drop a container into itself or any descendant.
       const forbidden = new Set<string>();
       collectIds(dragged, forbidden);
       return !forbidden.has(parentId);

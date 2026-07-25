@@ -1,10 +1,12 @@
 # Relationship Filters Implementation Plan
 
+> Superseded by `2026-07-25-relationship-scope-filters.md`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Let Fetch Builder users filter records by fields on related Dataverse tables, including regarding/polymorphic lookup targets.
 
-**Architecture:** Add a small relationship metadata endpoint, represent condition fields as root or related field references, and render related conditions as deterministic FetchXML `link-entity` joins. Keep the existing filter tree UI shape and add a modal path picker for related fields.
+**Architecture:** Keep the relationship metadata endpoint and tested FetchXML path model, but replace the modal path browser with an anchored recursive field tree. Each expanded related table lazily loads its own fields and relationships and uses the same fields-first, related-tables-second layout.
 
 **Tech Stack:** ASP.NET Core minimal APIs, Microsoft Dataverse SDK metadata, React 19, TypeScript, TanStack Query, existing Node test runner.
 
@@ -13,7 +15,7 @@
 - Preserve existing root-field filter behavior and generated FetchXML.
 - Support many-to-one lookup paths and one-to-many child relationship paths.
 - Support polymorphic lookup targets by letting the user choose a concrete target table.
-- Limit UI path selection to two relationship hops in the first version.
+- Allow user-driven recursive relationship navigation without a fixed depth.
 - Reject mixed-scope `or` groups that cannot be represented safely.
 - Do not implement many-to-many relationships, outer joins, related result columns, or FetchXML import.
 
@@ -53,11 +55,12 @@
 - [ ] Add validation for missing field references and mixed-scope `or` groups.
 - [ ] Run `npm test -- fetchxmlRelationship.test.mjs` and existing FetchXML tests.
 
-### Task 3: Related Field Picker UI
+### Task 3: Recursive Advanced Find Field Picker
 
 **Files:**
 - Modify: `desktop/src/ui/components/tools/MetadataExplorer/FilterBuilder/FieldPicker.tsx`
-- Create: `desktop/src/ui/components/tools/MetadataExplorer/FilterBuilder/RelatedFieldPickerModal.tsx`
+- Delete: `desktop/src/ui/components/tools/MetadataExplorer/FilterBuilder/RelatedFieldPickerModal.tsx`
+- Create: `desktop/src/ui/components/tools/MetadataExplorer/FilterBuilder/FieldPickerBranch.tsx`
 - Modify: `desktop/src/ui/components/tools/MetadataExplorer/FilterBuilder/ConditionNode.tsx`
 - Modify: `desktop/src/ui/components/tools/MetadataExplorer/FilterBuilder/GroupNode.tsx`
 - Modify: `desktop/src/ui/components/tools/MetadataExplorer/FilterBuilder/FilterTree.tsx`
@@ -68,21 +71,25 @@
 - Produces: condition rows that can select root fields or related field paths.
 
 - [ ] Pass connection name and tables into the filter builder.
-- [ ] Replace the field select with a compact button/select hybrid that can choose root fields or open related-field modal.
-- [ ] In the modal, browse up to two relationship hops and select a final field.
+- [ ] Replace the native field select and modal with an anchored custom dropdown.
+- [ ] Render the root table's fields first and related tables below them.
+- [ ] Expand related tables inline with one indentation level per relationship hop.
+- [ ] Lazily load fields and relationships for every expanded table.
+- [ ] Support arbitrary user-driven depth, including cyclic relationships.
+- [ ] Close the dropdown after field selection, outside click, or Escape.
 - [ ] Resolve final field metadata for `OperatorPicker` and `ValueInput`.
 - [ ] Reset operator/value state when `fieldRef` changes.
 - [ ] Run `npm run build`.
 
-### Task 4: Verification and Commit
+### Task 4: Verification
 
 **Files:**
 - Review changed files only.
 
 **Interfaces:**
-- Produces: verified implementation commit.
+- Produces: a verified, uncommitted implementation for user review.
 
 - [ ] Run `npm test` from `desktop`.
 - [ ] Run `npm run build` from `desktop`.
 - [ ] Run `git diff --stat` and inspect key diffs.
-- [ ] Commit implementation with `feat: add relationship filters to fetch builder`.
+- [ ] Leave all changes uncommitted until the user explicitly requests a commit.

@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildFetchXml } from "../src/ui/components/tools/MetadataExplorer/model/fetchxml.ts";
+import * as fetchxmlModel from "../src/ui/components/tools/MetadataExplorer/model/fetchxml.ts";
 import { validateTree } from "../src/ui/components/tools/MetadataExplorer/model/validation.ts";
+
+const { buildFetchXml } = fetchxmlModel;
 
 const accountPath = [
   {
@@ -39,6 +41,15 @@ function condition(id, fieldRef, operator = "eq", value = "x") {
   return { id, kind: "condition", fieldRef, field: null, operator, value };
 }
 
+function relationshipNode(id, relationship, children, logic = "and") {
+  return {
+    id,
+    kind: "relationship",
+    relationship,
+    group: { id: `${id}-group`, kind: "group", logic, children },
+  };
+}
+
 test("renders existing root field conditions unchanged through fieldRef", () => {
   const xml = buildFetchXml(
     "account",
@@ -74,6 +85,221 @@ test("renders one-to-many child relationship filters with child join direction",
     xml,
     '<fetch><entity name="account"><link-entity name="contact" from="parentcustomerid" to="accountid" alias="rel_contact_parentcustomerid" link-type="inner"><filter type="and"><condition attribute="statecode" operator="eq" value="0" /></filter></link-entity></entity></fetch>',
   );
+});
+
+test("creates deterministic path segments from relationship schema names", () => {
+  const segment = fetchxmlModel.createRelationshipPathSegment(
+    {
+      schemaName: "contact_customer_accounts",
+      relationshipType: "many-to-one",
+      sourceEntity: "contact",
+      targetEntity: "account",
+      sourceAttribute: "parentcustomerid",
+      targetAttribute: "accountid",
+      displayName: "Parent customer",
+      isCustomRelationship: false,
+    },
+    [],
+    "Accounts (Parent customer)",
+  );
+
+  assert.deepEqual({ ...segment, alias: undefined }, {
+    relationshipSchemaName: "contact_customer_accounts",
+    relationshipType: "many-to-one",
+    sourceEntity: "contact",
+    targetEntity: "account",
+    sourceAttribute: "parentcustomerid",
+    targetAttribute: "accountid",
+    linkFromAttribute: "accountid",
+    linkToAttribute: "parentcustomerid",
+    alias: undefined,
+    label: "Accounts (Parent customer)",
+  });
+  assert.match(segment.alias, /^rel_0_account_[a-f0-9]{8}$/);
+});
+
+test("creates unique aliases for the same relationship reached through different paths", () => {
+  const relationship = {
+    schemaName: "contact_parent_contact",
+    relationshipType: "many-to-one",
+    sourceEntity: "contact",
+    targetEntity: "contact",
+    sourceAttribute: "parentcontactid",
+    targetAttribute: "contactid",
+    displayName: "Parent contact",
+    isCustomRelationship: false,
+  };
+  const first = fetchxmlModel.createRelationshipPathSegment(relationship, accountPath);
+  const second = fetchxmlModel.createRelationshipPathSegment(relationship, contactChildPath);
+
+  assert.notEqual(first.alias, second.alias);
+});
+
+test("renders relationship filters nested three levels deep", () => {
+  const threeHopPath = [
+    accountPath[0],
+    {
+      relationshipSchemaName: "account_primary_contact",
+      relationshipType: "many-to-one",
+      sourceEntity: "account",
+      targetEntity: "contact",
+      sourceAttribute: "primarycontactid",
+      targetAttribute: "contactid",
+      linkFromAttribute: "contactid",
+      linkToAttribute: "primarycontactid",
+      alias: "rel_1_account_primary_contact",
+    },
+    {
+      relationshipSchemaName: "contact_parent_contact",
+      relationshipType: "many-to-one",
+      sourceEntity: "contact",
+      targetEntity: "contact",
+      sourceAttribute: "parentcontactid",
+      targetAttribute: "contactid",
+      linkFromAttribute: "contactid",
+      linkToAttribute: "parentcontactid",
+      alias: "rel_2_contact_parent_contact",
+    },
+  ];
+
+  const xml = buildFetchXml(
+    "contact",
+    group([condition("c1", { kind: "related", path: threeHopPath, field: "lastname" }, "eq", "Smith")]),
+  );
+
+  assert.equal(
+    xml,
+    '<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><link-entity name="contact" from="contactid" to="primarycontactid" alias="rel_1_account_primary_contact" link-type="inner"><link-entity name="contact" from="contactid" to="parentcontactid" alias="rel_2_contact_parent_contact" link-type="inner"><filter type="and"><condition attribute="lastname" operator="eq" value="Smith" /></filter></link-entity></link-entity></link-entity></entity></fetch>',
+  );
+});
+
+test("renders an explicit relationship scope with local field conditions", () => {
+  const xml = buildFetchXml(
+    "contact",
+    group([
+      relationshipNode(
+        "r1",
+        accountPath[0],
+        [condition("c1", { kind: "root", field: "name" }, "like", "Contoso")],
+      ),
+    ]),
+  );
+
+  assert.equal(
+    xml,
+    '<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /></filter></link-entity></entity></fetch>',
+  );
+});
+
+test("renders recursively nested explicit relationship scopes", () => {
+  const primaryContact = {
+    relationshipSchemaName: "account_primary_contact",
+    relationshipType: "many-to-one",
+    sourceEntity: "account",
+    targetEntity: "contact",
+    sourceAttribute: "primarycontactid",
+    targetAttribute: "contactid",
+    linkFromAttribute: "contactid",
+    linkToAttribute: "primarycontactid",
+    alias: "rel_account_primary_contact",
+  };
+  const xml = buildFetchXml(
+    "contact",
+    group([
+      relationshipNode("r1", accountPath[0], [
+        relationshipNode(
+          "r2",
+          primaryContact,
+          [condition("c1", { kind: "root", field: "lastname" }, "eq", "Smith")],
+        ),
+      ]),
+    ]),
+  );
+
+  assert.equal(
+    xml,
+    '<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><link-entity name="contact" from="contactid" to="primarycontactid" alias="rel_account_primary_contact" link-type="inner"><filter type="and"><condition attribute="lastname" operator="eq" value="Smith" /></filter></link-entity></link-entity></entity></fetch>',
+  );
+});
+
+test("lists only many-to-one lookup relationships", () => {
+  const relationships = [
+    {
+      schemaName: "contact_customer_accounts",
+      relationshipType: "many-to-one",
+      sourceEntity: "contact",
+      targetEntity: "account",
+      sourceAttribute: "parentcustomerid",
+      targetAttribute: "accountid",
+    },
+    {
+      schemaName: "account_contacts",
+      relationshipType: "one-to-many",
+      sourceEntity: "account",
+      targetEntity: "contact",
+      sourceAttribute: "accountid",
+      targetAttribute: "parentcustomerid",
+    },
+  ];
+
+  assert.deepEqual(
+    fetchxmlModel.selectLookupRelationships(relationships).map((relationship) => relationship.schemaName),
+    ["contact_customer_accounts"],
+  );
+});
+
+test("rejects explicit relationship scopes directly inside OR groups", () => {
+  const errors = validateTree(
+    group(
+      [
+        condition("c1", { kind: "root", field: "lastname" }, "eq", "Smith"),
+        relationshipNode(
+          "r1",
+          accountPath[0],
+          [condition("c2", { kind: "root", field: "name" }, "like", "Contoso")],
+        ),
+      ],
+      "or",
+    ),
+  );
+
+  assert.deepEqual(errors, [
+    {
+      nodeId: "root",
+      message: "Related table filters can only be added to AND groups.",
+    },
+  ]);
+});
+
+test("rejects relationship scopes nested anywhere inside OR groups", () => {
+  const nestedGroup = {
+    id: "nested",
+    kind: "group",
+    logic: "and",
+    children: [
+      relationshipNode(
+        "r1",
+        accountPath[0],
+        [condition("c2", { kind: "root", field: "name" }, "like", "Contoso")],
+      ),
+    ],
+  };
+  const errors = validateTree(
+    group(
+      [
+        condition("c1", { kind: "root", field: "lastname" }, "eq", "Smith"),
+        nestedGroup,
+      ],
+      "or",
+    ),
+  );
+
+  assert.deepEqual(errors, [
+    {
+      nodeId: "root",
+      message: "Related table filters can only be added to AND groups.",
+    },
+  ]);
 });
 
 test("shares one link-entity for multiple conditions on the same relationship path", () => {

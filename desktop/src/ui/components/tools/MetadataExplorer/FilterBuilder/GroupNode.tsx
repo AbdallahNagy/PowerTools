@@ -1,10 +1,17 @@
 import { Fragment, useRef } from "react";
-import type { EntityInfo, FilterGroup, FieldMetadata, RelationshipMetadata } from "../model/types";
+import type {
+  EntityInfo,
+  FilterGroup,
+  FieldMetadata,
+  RelationshipMetadata,
+  RelationshipPathSegment,
+} from "../model/types";
 import type { ValidationError } from "../model/validation";
 import type { useFilterTree } from "../hooks/useFilterTree";
 import { ConditionNode } from "./ConditionNode";
 import { DropSlot } from "./DropSlot";
 import { useDrag } from "./DragContext";
+import { RelationshipNode } from "./RelationshipNode";
 
 type TreeActions = ReturnType<typeof useFilterTree>;
 
@@ -17,6 +24,7 @@ interface GroupNodeProps {
   relationships: RelationshipMetadata[];
   errors: ValidationError[];
   depth: number;
+  path: RelationshipPathSegment[];
   isRoot: boolean;
   actions: TreeActions;
 }
@@ -37,6 +45,7 @@ export function GroupNode({
   relationships,
   errors,
   depth,
+  path,
   isRoot,
   actions,
 }: GroupNodeProps) {
@@ -125,17 +134,28 @@ export function GroupNode({
                 relationships={relationships}
                 errors={errors}
                 depth={depth + 1}
+                path={path}
                 isRoot={false}
+                actions={actions}
+              />
+            ) : child.kind === "relationship" ? (
+              <RelationshipNode
+                node={child}
+                connectionName={connectionName}
+                tables={tables}
+                errors={errors}
+                depth={depth + 1}
+                path={path}
                 actions={actions}
               />
             ) : (
               <ConditionNode
                 condition={child}
                 fields={fields}
-                rootEntity={rootEntity}
-                connectionName={connectionName}
                 tables={tables}
                 relationships={relationships}
+                path={path}
+                allowRelationships={group.logic === "and"}
                 errors={errors}
                 canRemove={group.children.length > 1}
                 actions={actions}

@@ -1,4 +1,12 @@
-import type { FieldReference, FilterCondition, FilterGroup, FilterNode, RelationshipPathSegment } from "./types.ts";
+import type {
+  FieldReference,
+  FilterCondition,
+  FilterGroup,
+  FilterNode,
+  FilterRelationship,
+  RelationshipMetadata,
+  RelationshipPathSegment,
+} from "./types.ts";
 import { NO_VALUE_OPERATORS, MULTI_VALUE_OPERATORS } from "./operators.ts";
 
 function esc(v: string): string {
@@ -7,6 +15,46 @@ function esc(v: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+export function createRelationshipPathSegment(
+  relationship: RelationshipMetadata,
+  parentPath: RelationshipPathSegment[],
+  label?: string,
+): RelationshipPathSegment {
+  const pathKey = [
+    ...parentPath.map((segment) => segment.relationshipSchemaName),
+    relationship.schemaName,
+  ].join("/");
+  const target = relationship.targetEntity.replace(/[^a-zA-Z0-9_]/g, "_");
+  const alias = `rel_${parentPath.length}_${target}_${stableHash(pathKey)}`;
+  return {
+    relationshipSchemaName: relationship.schemaName,
+    relationshipType: relationship.relationshipType,
+    sourceEntity: relationship.sourceEntity,
+    targetEntity: relationship.targetEntity,
+    sourceAttribute: relationship.sourceAttribute,
+    targetAttribute: relationship.targetAttribute,
+    linkFromAttribute: relationship.targetAttribute,
+    linkToAttribute: relationship.sourceAttribute,
+    alias,
+    label,
+  };
+}
+
+export function selectLookupRelationships(
+  relationships: RelationshipMetadata[],
+): RelationshipMetadata[] {
+  return relationships.filter((relationship) => relationship.relationshipType === "many-to-one");
+}
+
+function stableHash(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 export function getFieldReference(condition: FilterCondition): FieldReference | null {
@@ -65,6 +113,7 @@ function renderGroup(g: FilterGroup, scope = "root"): string {
 
 function renderNode(n: FilterNode, scope: string): string {
   if (n.kind === "group") return renderGroup(n, scope);
+  if (n.kind === "relationship") return "";
   return getConditionScope(n) === scope ? renderCondition(n) : "";
 }
 
@@ -120,6 +169,8 @@ function collectRelatedLinks(root: FilterGroup): Map<string, LinkNode> {
       return;
     }
 
+    if (node.kind === "relationship") return;
+
     const ref = getFieldReference(node);
     if (!ref || ref.kind !== "related" || ref.path.length === 0) return;
 
@@ -129,6 +180,34 @@ function collectRelatedLinks(root: FilterGroup): Map<string, LinkNode> {
 
   walk(root);
   return links;
+}
+
+function renderExplicitRelationship(node: FilterRelationship): string {
+  const segment = node.relationship;
+  const filter = renderGroup(node.group);
+  const legacyLinks = renderLinks(collectRelatedLinks(node.group));
+  const nestedLinks = renderExplicitRelationships(node.group);
+  return (
+    `<link-entity name="${esc(segment.targetEntity)}"` +
+    ` from="${esc(segment.linkFromAttribute)}"` +
+    ` to="${esc(segment.linkToAttribute)}"` +
+    ` alias="${esc(segment.alias)}"` +
+    ` link-type="inner">` +
+    filter +
+    legacyLinks +
+    nestedLinks +
+    `</link-entity>`
+  );
+}
+
+function renderExplicitRelationships(group: FilterGroup): string {
+  return group.children
+    .map((child) => {
+      if (child.kind === "relationship") return renderExplicitRelationship(child);
+      if (child.kind === "group") return renderExplicitRelationships(child);
+      return "";
+    })
+    .join("");
 }
 
 function renderLinks(links: Map<string, LinkNode>, parentPath: RelationshipPathSegment[] = []): string {
@@ -162,6 +241,6 @@ export function buildFetchXml(
     ? attributes.map((a) => `<attribute name="${esc(a)}" />`).join("")
     : "";
   const filter = renderGroup(root);
-  const links = renderLinks(collectRelatedLinks(root));
+  const links = renderLinks(collectRelatedLinks(root)) + renderExplicitRelationships(root);
   return `<fetch><entity name="${esc(entityLogicalName)}">${attrs}${filter}${links}</entity></fetch>`;
 }

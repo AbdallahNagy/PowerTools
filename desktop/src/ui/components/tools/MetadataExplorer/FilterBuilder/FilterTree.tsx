@@ -39,6 +39,7 @@ export function FilterTree({
           relationships={relationships}
           errors={errors}
           depth={0}
+          path={[]}
           isRoot
           actions={actions}
         />
