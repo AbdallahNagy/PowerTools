@@ -75,7 +75,7 @@ a {
 
 .site-header {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 24px;
   min-height: 76px;
@@ -104,6 +104,59 @@ a {
   display: flex;
   justify-content: center;
   gap: 6px;
+}
+
+.site-menu {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 24px;
+}
+
+.menu-toggle {
+  display: none;
+  position: relative;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  justify-self: end;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.menu-toggle span {
+  position: absolute;
+  width: 18px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--ink);
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
+}
+
+.menu-toggle span:nth-child(1) {
+  transform: translateY(-6px);
+}
+
+.menu-toggle span:nth-child(3) {
+  transform: translateY(6px);
+}
+
+.menu-toggle[aria-expanded="true"] span:nth-child(1) {
+  transform: rotate(45deg);
+}
+
+.menu-toggle[aria-expanded="true"] span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-toggle[aria-expanded="true"] span:nth-child(3) {
+  transform: rotate(-45deg);
 }
 
 .site-nav a,
@@ -194,6 +247,10 @@ h3 {
   flex-wrap: wrap;
   gap: 12px;
   margin-top: 28px;
+}
+
+.centered-actions {
+  justify-content: center;
 }
 
 .button {
@@ -542,6 +599,12 @@ h3 {
   margin-inline: auto;
 }
 
+.single-line-title {
+  max-width: none;
+  white-space: nowrap;
+  font-size: clamp(1.8rem, 8vw, 5.4rem);
+}
+
 .page-hero .lead {
   margin-inline: auto;
 }
@@ -594,18 +657,49 @@ h3 {
 
 @media (max-width: 860px) {
   .site-header {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr auto;
     gap: 12px;
-    padding: 18px 0;
+    min-height: auto;
+    padding: 16px 0;
+  }
+
+  .menu-toggle {
+    display: inline-flex;
+  }
+
+  .site-menu {
+    grid-column: 1 / -1;
+    display: none;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .site-menu.is-open {
+    display: grid;
   }
 
   .site-nav {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .site-nav a {
+    min-height: 42px;
     justify-content: start;
-    overflow-x: auto;
+    padding-inline: 12px;
   }
 
   .header-action {
-    justify-self: start;
+    width: 100%;
+    justify-self: stretch;
   }
 
   .hero,
@@ -639,6 +733,16 @@ h3 {
 
   .feature-grid {
     grid-template-columns: 1fr;
+  }
+
+  .site-header {
+    width: min(100% - 28px, 1120px);
+    padding: 14px 0;
+  }
+
+  .brand-mark {
+    width: 32px;
+    height: 32px;
   }
 
   .security-band {

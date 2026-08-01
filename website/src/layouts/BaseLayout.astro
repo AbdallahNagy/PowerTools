@@ -46,16 +46,29 @@ const isActive = (href: string) => {
         <span class="brand-mark">P</span>
         <span>PowerTools</span>
       </a>
-      <nav class="site-nav" aria-label="Primary navigation">
-        {
-          navItems.map((item) => (
-            <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>
-              {item.label}
-            </a>
-          ))
-        }
-      </nav>
-      <a class="header-action" href="/download">Download</a>
+      <button
+        class="menu-toggle"
+        type="button"
+        aria-label="Open navigation menu"
+        aria-controls="site-menu"
+        aria-expanded="false"
+      >
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+      <div class="site-menu" id="site-menu">
+        <nav class="site-nav" aria-label="Primary navigation">
+          {
+            navItems.map((item) => (
+              <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>
+                {item.label}
+              </a>
+            ))
+          }
+        </nav>
+        <a class="header-action" href="/download">Download</a>
+      </div>
     </header>
     <main>
       <slot />
@@ -70,5 +83,15 @@ const isActive = (href: string) => {
         <a href="mailto:abdallahnagy773@gmail.com">Email</a>
       </div>
     </footer>
+    <script>
+      const menuButton = document.querySelector<HTMLButtonElement>(".menu-toggle");
+      const siteMenu = document.querySelector<HTMLElement>(".site-menu");
+
+      menuButton?.addEventListener("click", () => {
+        const isOpen = menuButton.getAttribute("aria-expanded") === "true";
+        menuButton.setAttribute("aria-expanded", String(!isOpen));
+        siteMenu?.classList.toggle("is-open", !isOpen);
+      });
+    </script>
   </body>
 </html>
