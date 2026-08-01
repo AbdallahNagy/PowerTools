@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import heroImage from "../assets/images/hero-image.png";
 
 const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
 ---
@@ -13,9 +14,9 @@ const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
       <p class="eyebrow">Open-source desktop toolkit</p>
       <h1>PowerTools for Dataverse Developers</h1>
       <p class="lead">
-        A modern open-source desktop toolkit for everyday Dataverse work. Start
-        with smoother data migration and faster FetchXML workflows, all in a
-        friendly local desktop app.
+        A modern open-source desktop toolkit for everyday Dataverse work, with
+        a friendly UI, secure local workflow, and tools that are easy to figure
+        out and use.
       </p>
       <div class="hero-actions">
         <a class="button primary" href="/download">Download for Windows</a>
@@ -29,24 +30,8 @@ const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
         <span class="panel-dot"></span>
         <span class="panel-dot"></span>
       </div>
-      <div class="panel-body">
-        <ul class="tool-list">
-          <li>
-            <span>Current tool</span>
-            <h3>Data Migration</h3>
-            <p>Move data between Dataverse environments with a clearer workflow.</p>
-          </li>
-          <li>
-            <span>Current tool</span>
-            <h3>FetchXML Builder</h3>
-            <p>Build, test, and refine FetchXML queries in a cleaner workspace.</p>
-          </li>
-          <li>
-            <span>Security</span>
-            <h3>Local by default</h3>
-            <p>Your data never leaves your machine.</p>
-          </li>
-        </ul>
+      <div class="panel-body app-mock">
+        <img src={heroImage.src} alt="PowerTools app mockup" />
       </div>
     </aside>
   </section>
@@ -96,16 +81,14 @@ const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
 
     <div class="stack">
       <article class="feature-card">
-        <span class="meta-label">First tool</span>
-        <h3>Data Migration</h3>
+        <h3 class="tool">Data Migration</h3>
         <p>
           Move data between Dataverse environments with a guided,
           developer-friendly workflow that is easier to understand and control.
         </p>
       </article>
       <article class="feature-card">
-        <span class="meta-label">Second tool</span>
-        <h3>FetchXML Builder</h3>
+        <h3 class="tool">FetchXML Builder</h3>
         <p>
           Build, test, and refine FetchXML queries in a cleaner workspace built
           for fast iteration.
@@ -126,7 +109,7 @@ const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
     </div>
   </section>
 
-  <section class="section split-section">
+  <section class="section">
     <div>
       <p class="eyebrow">Open source</p>
       <h2>Built in the open for developers.</h2>
@@ -140,8 +123,8 @@ const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
         <a class="button secondary" href="/contact">Contact the author</a>
       </div>
     </div>
-    <div class="code-card" aria-label="GitHub repository">
+    <!-- <div class="code-card" aria-label="GitHub repository">
       <span>git clone</span> https://github.com/AbdallahNagy/PowerTools.git
-    </div>
+    </div> -->
   </section>
 </BaseLayout>
