@@ -3,6 +3,10 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import heroImage from "../assets/images/hero-image.png";
 
 const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+const baseUrl = import.meta.env.BASE_URL;
+const basePath = baseUrl.replace(/\/$/, "");
+const localPath = (path: string) =>
+  `${basePath}${path === "/" ? "/" : path}`;
 ---
 
 <BaseLayout
@@ -19,7 +23,7 @@ const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
         out and use.
       </p>
       <div class="hero-actions">
-        <a class="button primary" href="/download">Download for Windows</a>
+        <a class="button primary" href={localPath("/download")}>Download for Windows</a>
         <a class="button secondary" href={githubUrl}>View on GitHub</a>
       </div>
     </div>
@@ -118,9 +122,9 @@ const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
         report issues, suggest improvements, and contribute.
       </p>
       <div class="action-row">
-        <a class="button primary" href="/download">Download for Windows</a>
+        <a class="button primary" href={localPath("/download")}>Download for Windows</a>
         <a class="button secondary" href={githubUrl}>View on GitHub</a>
-        <a class="button secondary" href="/contact">Contact the author</a>
+        <a class="button secondary" href={localPath("/contact")}>Contact the author</a>
       </div>
     </div>
     <!-- <div class="code-card" aria-label="GitHub repository">

@@ -14,6 +14,15 @@ const {
   currentPath = Astro.url.pathname
 } = Astro.props;
 
+const baseUrl = import.meta.env.BASE_URL;
+const basePath = baseUrl.replace(/\/$/, "");
+const localPath = (path: string) =>
+  `${basePath}${path === "/" ? "/" : path}`;
+const activePath =
+  basePath && currentPath.startsWith(basePath)
+    ? currentPath.slice(basePath.length) || "/"
+    : currentPath;
+
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/contact", label: "Contact" }
@@ -21,10 +30,10 @@ const navItems = [
 
 const isActive = (href: string) => {
   if (href === "/") {
-    return currentPath === "/";
+    return activePath === "/";
   }
 
-  return currentPath.startsWith(href);
+  return activePath.startsWith(href);
 };
 ---
 
@@ -46,7 +55,7 @@ const isActive = (href: string) => {
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href="/" aria-label="PowerTools home">
+      <a class="brand" href={localPath("/")} aria-label="PowerTools home">
         <img class="brand-mark" src={appIcon.src} alt="" width="34" height="34" />
         <span>PowerTools</span>
       </a>
@@ -65,13 +74,13 @@ const isActive = (href: string) => {
         <nav class="site-nav" aria-label="Primary navigation">
           {
             navItems.map((item) => (
-              <a href={item.href} aria-current={isActive(item.href) ? "page" : undefined}>
+              <a href={localPath(item.href)} aria-current={isActive(item.href) ? "page" : undefined}>
                 {item.label}
               </a>
             ))
           }
         </nav>
-        <a class="header-action" href="/download">Download</a>
+        <a class="header-action" href={localPath("/download")}>Download</a>
       </div>
     </header>
     <main>
