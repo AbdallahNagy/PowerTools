@@ -1,5 +1,6 @@
 ---
 import "../styles/global.css";
+import appIcon from "../assets/images/power-tools-icon.png";
 
 interface Props {
   title: string;
@@ -15,7 +16,6 @@ const {
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/download", label: "Download" },
   { href: "/contact", label: "Contact" }
 ];
 
@@ -37,13 +37,17 @@ const isActive = (href: string) => {
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
+    <meta property="og:image" content={appIcon.src} />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={appIcon.src} />
+    <link rel="icon" type="image/png" href={appIcon.src} />
+    <link rel="apple-touch-icon" href={appIcon.src} />
     <title>{title}</title>
   </head>
   <body>
     <header class="site-header">
       <a class="brand" href="/" aria-label="PowerTools home">
-        <span class="brand-mark">P</span>
+        <img class="brand-mark" src={appIcon.src} alt="" width="34" height="34" />
         <span>PowerTools</span>
       </a>
       <button

@@ -90,14 +90,12 @@ a {
 }
 
 .brand-mark {
-  display: grid;
-  place-items: center;
   width: 34px;
   height: 34px;
   border-radius: 8px;
-  color: var(--app-white);
-  background: var(--primary);
+  display: block;
   box-shadow: var(--brand-shadow);
+  object-fit: cover;
 }
 
 .site-nav {
@@ -620,6 +618,83 @@ h3 {
   gap: 16px;
 }
 
+.download-info-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.install-steps {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.install-steps li {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.install-steps span {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  color: var(--app-white);
+  background: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.install-steps p {
+  margin: 0;
+}
+
+.install-steps strong {
+  color: var(--ink);
+}
+
+.security-card {
+  position: relative;
+  overflow: hidden;
+  border-color: var(--security-line);
+  background: linear-gradient(135deg, var(--security-bg), var(--surface));
+}
+
+.security-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: var(--primary);
+}
+
+.security-icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 18px;
+  border-radius: 8px;
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.security-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
 .detail-list {
   margin: 0;
   padding-left: 20px;
@@ -729,6 +804,10 @@ h3 {
   .hero,
   .page-hero {
     width: min(100% - 28px, 1120px);
+  }
+
+  .download-info-grid {
+    grid-template-columns: 1fr;
   }
 
   .feature-grid {

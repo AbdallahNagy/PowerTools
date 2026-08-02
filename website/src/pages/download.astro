@@ -2,7 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
-const releasesUrl = `${githubUrl}/releases`;
+const windowsDownloadUrl = `${githubUrl}/releases/latest/download/PowerTools-Setup.exe`;
 ---
 
 <BaseLayout
@@ -14,45 +14,59 @@ const releasesUrl = `${githubUrl}/releases`;
     <h1>Download <br /> Power Tools</h1>
     <p class="lead">Get the latest Windows build of the open-source Dataverse developer toolkit.</p>
     <div class="hero-actions centered-actions">
-      <a class="button primary" href={releasesUrl}>Download for Windows</a>
+      <a class="button primary" href={windowsDownloadUrl}>Download for Windows</a>
     </div>
   </section>
 
-  <section class="section content-grid">
-    <article class="download-card">
-      <span class="meta-label">Latest build</span>
-      <h2>Windows desktop app</h2>
-      <p>
-        The first public download path is GitHub Releases. Use the latest release when it is available, and check the
-        release notes before updating.
-      </p>
-      <div class="action-row">
-        <a class="button secondary" href={releasesUrl}>Open releases</a>
-      </div>
-    </article>
-
-    <div class="stack">
+  <section class="section">
+    <div class="download-info-grid">
       <article class="download-card">
-        <h3>Requirements</h3>
-        <ul class="detail-list">
-          <li>Windows desktop environment.</li>
-          <li>Access to the Dataverse environments you want to work with.</li>
-          <li>Permission to connect using your organization account.</li>
-        </ul>
+        <span class="meta-label">Install notes</span>
+        <h3>From download to first connection</h3>
+        <ol class="install-steps">
+          <li>
+            <span>1</span>
+            <p>Click <strong>Download for Windows</strong>.</p>
+          </li>
+          <li>
+            <span>2</span>
+            <p>Run the installer locally on your machine.</p>
+          </li>
+          <li>
+            <span>3</span>
+            <p>Open PowerTools and connect to your Dataverse environment.</p>
+          </li>
+          <li>
+            <span>4</span>
+            <p>Future releases are checked automatically by the installed app.</p>
+          </li>
+        </ol>
       </article>
 
-      <article class="download-card">
-        <h3>Install notes</h3>
-        <ul class="detail-list">
-          <li>Download the latest installer from GitHub Releases.</li>
-          <li>Run the installer locally on your machine.</li>
-          <li>Open PowerTools and connect to your Dataverse environment.</li>
-        </ul>
-      </article>
-
-      <article class="download-card">
-        <h3>Security reminder</h3>
-        <p>PowerTools runs locally. Your Dataverse data never leaves your machine.</p>
+      <article class="download-card security-card">
+        <span class="security-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none">
+            <path
+              d="M12 3.75 5.25 6v5.25c0 4.2 2.7 7.95 6.75 9 4.05-1.05 6.75-4.8 6.75-9V6L12 3.75Z"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linejoin="round"
+            />
+            <path
+              d="m9.75 12.15 1.55 1.55 3.2-3.4"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+        </span>
+        <span class="meta-label">Security reminder</span>
+        <h3>Your data stays local</h3>
+        <p>
+          PowerTools runs on your machine and connects directly to Dataverse.
+          Your Dataverse data never leaves your machine.
+        </p>
       </article>
     </div>
   </section>

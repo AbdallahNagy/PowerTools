@@ -1,7 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
-import { getPreloadPath } from "./pathResolver.js";
+import { getAppIconPath, getPreloadPath } from "./pathResolver.js";
 import { createStartupSplashWindow } from "./startupSplash.js";
+import { configureAutoUpdates } from "./autoUpdate.js";
 import {
   acquireTokenInteractive,
   acquireTokenSilentOrInteractive,
@@ -23,6 +25,8 @@ import type {
   StoredOnPremisesConnection,
 } from "./connectionTypes.js";
 import { decryptCredential, encryptCredential } from "./secureCredentials.js";
+
+const { autoUpdater } = electronUpdater;
 
 type PendingConnection =
   | Omit<StoredOnlineConnection, "name">
@@ -192,6 +196,7 @@ app.whenReady().then(async () => {
       },
       width: 500,
       height: 600,
+      icon: getAppIconPath(),
       autoHideMenuBar: true,
     });
 
@@ -265,6 +270,7 @@ app.whenReady().then(async () => {
       },
       width: 450,
       height: 300,
+      icon: getAppIconPath(),
       autoHideMenuBar: true,
       resizable: false,
     });
@@ -437,6 +443,7 @@ app.whenReady().then(async () => {
     },
     width: 800,
     height: 600,
+    icon: getAppIconPath(),
     show: false,
   });
   mainWindow.maximize();
@@ -445,6 +452,11 @@ app.whenReady().then(async () => {
     if (!splashWindow.isDestroyed()) {
       splashWindow.close();
     }
+    configureAutoUpdates({
+      isPackaged: app.isPackaged,
+      isDevelopment: isDev(),
+      checkForUpdatesAndNotify: () => autoUpdater.checkForUpdatesAndNotify(),
+    });
   });
 
   if (isDev()) {

@@ -1,4 +1,8 @@
-export function buildStartupSplashHtml() {
+export function buildStartupSplashHtml(iconDataUrl?: string) {
+  const markHtml = iconDataUrl
+    ? `<img class="mark" src="${iconDataUrl}" alt="" />`
+    : `<div class="mark">PT</div>`;
+
   return `<!doctype html>
 <html lang="en">
   <head>
@@ -40,16 +44,10 @@ export function buildStartupSplashHtml() {
       }
 
       .mark {
-        align-items: center;
-        background: #007acc;
         border-radius: 8px;
         box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
-        display: flex;
-        font-size: 24px;
-        font-weight: 700;
         height: 64px;
-        justify-content: center;
-        letter-spacing: 0;
+        object-fit: cover;
         width: 64px;
       }
 
@@ -92,7 +90,7 @@ export function buildStartupSplashHtml() {
   </head>
   <body>
     <main class="shell" aria-live="polite">
-      <div class="mark">PT</div>
+      ${markHtml}
       <div>
         <h1>Power Tools</h1>
         <p>Starting local services...</p>

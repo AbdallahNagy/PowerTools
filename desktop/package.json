@@ -20,13 +20,15 @@
     "publish:api:linux": "dotnet publish ../api/PowerTools/PowerTools.API -c Release -r linux-x64 -p:PublishingForSidecar=true",
     "dist:mac": "npm run publish:api:mac && npm run transpile:electron && npm run build && electron-builder --mac --arm64",
     "dist:linux": "npm run publish:api:linux && npm run transpile:electron && npm run build && electron-builder --linux --x64",
-    "dist:win": "npm run publish:api:win && npm run transpile:electron && npm run build && electron-builder --win --x64"
+    "dist:win": "npm run publish:api:win && npm run transpile:electron && npm run build && electron-builder --win --x64 --publish never",
+    "release:win": "npm run publish:api:win && npm run transpile:electron && npm run build && electron-builder --win --x64 --publish always"
   },
   "dependencies": {
     "@azure/msal-node": "^2.0.0",
     "@tanstack/react-query": "^5.99.0",
     "@tanstack/react-query-devtools": "^5.99.0",
     "axios": "^1.15.0",
+    "electron-updater": "^6.8.9",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-resizable-panels": "^4.11.2",

@@ -6,36 +6,76 @@ const features: {
   description: string;
   highlight?: boolean;
 }[] = [
-    {
+  {
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.53 16.122a3 3 0 0 0-5.78 1.128 2.25 2.25 0 0 1-2.4 2.245 4.5 4.5 0 0 0 8.4-2.245c0-.399-.078-.78-.22-1.128Zm0 0a15.998 15.998 0 0 0 3.388-1.62m-5.043-.025a15.994 15.994 0 0 1 1.622-3.395m3.42 3.42a15.995 15.995 0 0 0 4.764-4.648l3.876-5.814a1.151 1.151 0 0 0-1.597-1.597L14.146 6.32a15.996 15.996 0 0 0-4.649 4.763m3.42 3.42a6.776 6.776 0 0 0-3.42-3.42" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.456-2.456L14.25 6l1.035-.259a3.375 3.375 0 0 0 2.456-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
+        />
       </svg>
     ),
-    title: "Beautiful Modern UI",
+    title: "Modern UI",
     description:
-      "A sleek, dark-theme interface with smooth interactions, crisp typography, and a VS Code-inspired layout that feels instantly familiar and delightful to use every day.",
-    // highlight: true,
+      "A clean desktop experience for Dataverse work, built to feel clear, focused, and comfortable for daily developer workflows.",
   },
   {
     icon: (
       <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M8.25 6.75h12M8.25 12h12M8.25 17.25h12M3.75 6.75h.008v.008H3.75V6.75ZM3.75 12h.008v.008H3.75V12ZM3.75 17.25h.008v.008H3.75v-.008Z"
+        />
       </svg>
     ),
+    title: "Friendly UX",
+    description:
+      "Tools are designed to be easy to discover, understand, and use without digging through confusing old dialogs.",
+  },
+  {
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth={1.5}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.75A11.959 11.959 0 0 1 12 2.714Z"
+        />
+      </svg>
+    ),
+    title: "Local and secure",
+    description:
+      "PowerTools runs on your machine and connects directly to Dataverse. Your data never leaves your machine.",
+  },
+  {
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth={1.5}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M17.25 6.75 21 12m0 0-3.75 5.25M21 12H3m3.75-5.25L3 12m0 0 3.75 5.25"
+        />
+      </svg>
+    ),
+    title: "Open source",
+    description:
+      "Built in the open so developers can inspect how it works, suggest improvements, and shape the toolkit over time.",
+  },
+];
+
+const tools: {
+  title: string;
+  description: string;
+}[] = [
+  {
     title: "Data Migration",
     description:
-      "Move records between Dataverse environments with field mapping, filter conditions, and real-time progress tracking.",
+      "Move data between Dataverse environments with a guided, developer-friendly workflow that is easier to understand and control.",
   },
   {
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3v11.25A2.25 2.25 0 0 0 6 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0 1 18 16.5h-2.25m-7.5 0h7.5m-7.5 0-1 3m8.5-3 1 3m0 0 .5 1.5m-.5-1.5h-9.5m0 0-.5 1.5M9 11.25v1.5M12 9v3.75m3-6.75v6.75" />
-      </svg>
-    ),
-    title: "Multi-Environment",
-    description:
-      "Connect to multiple Dynamics 365 / Dataverse environments at once and switch between them instantly.",
+    title: "FetchXML Builder",
+    description: "Build, test, and refine FetchXML queries in a cleaner workspace built for fast iteration.",
   },
 ];
 
@@ -48,8 +88,7 @@ export default function WelcomeTab() {
         <div
           className="pointer-events-none absolute inset-0"
           style={{
-            background:
-              "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,122,204,0.18) 0%, transparent 70%)",
+            background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,122,204,0.18) 0%, transparent 70%)",
           }}
         />
 
@@ -67,7 +106,7 @@ export default function WelcomeTab() {
               className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
               style={{ background: "var(--color-primary)" }}
             />
-            Power Platform · Next Generation
+            Open-source desktop toolkit
           </span>
 
           <h1
@@ -79,16 +118,12 @@ export default function WelcomeTab() {
               backgroundClip: "text",
             }}
           >
-            Power Tools
+            PowerTools
           </h1>
 
-          <p
-            className="text-base sm:text-lg leading-relaxed max-w-xl"
-            style={{ color: "var(--color-text-gray)" }}
-          >
-            The modern, open-source desktop toolbox for Microsoft Dynamics 365
-            and Dataverse — built for developers
-            who demand speed and precision.
+          <p className="text-base sm:text-lg leading-relaxed max-w-xl" style={{ color: "var(--color-text-gray)" }}>
+            A modern open-source desktop toolkit for everyday Dataverse work, with a friendly UI, secure local workflow,
+            and tools that are easy to figure out and use.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
@@ -103,10 +138,10 @@ export default function WelcomeTab() {
                 el?.scrollIntoView({ behavior: "smooth" });
               }}
             >
-              Explore features
+              Explore toolkit
             </button>
-            {/* <a
-              href="https://github.com/PowerTools"
+            <a
+              href="https://github.com/AbdallahNagy/PowerTools"
               target="_blank"
               rel="noopener noreferrer"
               className="px-5 py-2.5 rounded-md text-sm font-medium transition-colors"
@@ -115,9 +150,15 @@ export default function WelcomeTab() {
                 color: "var(--color-text-gray)",
                 border: "1px solid rgba(255,255,255,0.08)",
               }}
+              onClick={(event) => {
+                event.preventDefault();
+                void window.electron.openExternalUrl(
+                  "https://github.com/AbdallahNagy/PowerTools"
+                );
+              }}
             >
               View on GitHub
-            </a> */}
+            </a>
           </div>
         </div>
       </div>
@@ -157,18 +198,16 @@ export default function WelcomeTab() {
       {/* Features grid */}
       <div id="pt-features" className="px-6 py-14 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <h2
-            className="text-2xl sm:text-3xl font-semibold mb-3"
-            style={{ color: "var(--color-text-white)" }}
-          >
-            Everything you need
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ color: "var(--color-text-white)" }}>
+            Built for Dataverse developers
           </h2>
           <p className="text-sm" style={{ color: "var(--color-text-dark-gray)" }}>
-            A growing suite of tools designed around real-world Power Platform workflows.
+            A focused desktop workspace for developer flow: clear screens, discoverable actions, and less friction
+            around repeatable work.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {features.map((feature) => (
             <div
               key={feature.title}
@@ -176,8 +215,7 @@ export default function WelcomeTab() {
               style={
                 feature.highlight
                   ? {
-                      background:
-                        "linear-gradient(135deg, rgba(0,122,204,0.18) 0%, rgba(0,122,204,0.06) 100%)",
+                      background: "linear-gradient(135deg, rgba(0,122,204,0.18) 0%, rgba(0,122,204,0.06) 100%)",
                       border: "1px solid rgba(0,122,204,0.45)",
                       boxShadow: "0 0 24px rgba(0,122,204,0.12)",
                     }
@@ -187,20 +225,15 @@ export default function WelcomeTab() {
                     }
               }
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.borderColor =
-                  "rgba(0,122,204,0.45)";
-                (e.currentTarget as HTMLDivElement).style.boxShadow =
-                  "0 0 20px rgba(0,122,204,0.1)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(0,122,204,0.45)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 20px rgba(0,122,204,0.1)";
               }}
               onMouseLeave={(e) => {
                 if (feature.highlight) {
-                  (e.currentTarget as HTMLDivElement).style.borderColor =
-                    "rgba(0,122,204,0.45)";
-                  (e.currentTarget as HTMLDivElement).style.boxShadow =
-                    "0 0 24px rgba(0,122,204,0.12)";
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(0,122,204,0.45)";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 24px rgba(0,122,204,0.12)";
                 } else {
-                  (e.currentTarget as HTMLDivElement).style.borderColor =
-                    "rgba(255,255,255,0.06)";
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)";
                   (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
                 }
               }}
@@ -209,9 +242,7 @@ export default function WelcomeTab() {
                 <div
                   className="flex items-center justify-center w-11 h-11 rounded-md shrink-0"
                   style={{
-                    background: feature.highlight
-                      ? "rgba(0,122,204,0.2)"
-                      : "rgba(0,122,204,0.12)",
+                    background: feature.highlight ? "rgba(0,122,204,0.2)" : "rgba(0,122,204,0.12)",
                     color: "var(--color-primary)",
                   }}
                 >
@@ -231,19 +262,45 @@ export default function WelcomeTab() {
                 )}
               </div>
               <div>
-                <h3
-                  className="text-sm font-semibold mb-1"
-                  style={{ color: "var(--color-text-white)" }}
-                >
+                <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text-white)" }}>
                   {feature.title}
                 </h3>
-                <p
-                  className="text-xs leading-relaxed"
-                  style={{ color: "var(--color-text-dark-gray)" }}
-                >
+                <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-dark-gray)" }}>
                   {feature.description}
                 </p>
               </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Current tools */}
+      <div className="px-6 pb-14 max-w-5xl mx-auto">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ color: "var(--color-text-white)" }}>
+            Current tools
+          </h2>
+          <p className="text-sm" style={{ color: "var(--color-text-dark-gray)" }}>
+            PowerTools is a toolkit, starting with the workflows developers need often.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {tools.map((tool) => (
+            <div
+              key={tool.title}
+              className="rounded-lg p-5"
+              style={{
+                background: "var(--color-bg-darker)",
+                border: "1px solid rgba(0,122,204,0.22)",
+              }}
+            >
+              <h3 className="text-base font-semibold mt-4 mb-2" style={{ color: "var(--color-text-white)" }}>
+                {tool.title}
+              </h3>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-dark-gray)" }}>
+                {tool.description}
+              </p>
             </div>
           ))}
         </div>
@@ -253,24 +310,16 @@ export default function WelcomeTab() {
       <div
         className="mx-6 mb-12 rounded-xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6 max-w-5xl lg:mx-auto"
         style={{
-          background:
-            "linear-gradient(135deg, rgba(0,122,204,0.12) 0%, rgba(0,122,204,0.04) 100%)",
+          background: "linear-gradient(135deg, rgba(0,122,204,0.12) 0%, rgba(0,122,204,0.04) 100%)",
           border: "1px solid rgba(0,122,204,0.2)",
         }}
       >
         <div className="text-center sm:text-left">
-          <h3
-            className="text-lg font-semibold mb-1"
-            style={{ color: "var(--color-text-white)" }}
-          >
-            Ready to get started?
+          <h3 className="text-lg font-semibold mb-1" style={{ color: "var(--color-text-white)" }}>
+            Ready to start building?
           </h3>
-          <p
-            className="text-sm"
-            style={{ color: "var(--color-text-dark-gray)" }}
-          >
-            Open a connection from the status bar, then pick a tool from the
-            activity bar on the left.
+          <p className="text-sm" style={{ color: "var(--color-text-dark-gray)" }}>
+            Open a Dataverse connection, then pick a tool from the activity bar on the left.
           </p>
         </div>
         <div

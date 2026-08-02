@@ -2,7 +2,20 @@
     "appId": "com.abdalla-nagy.power-tools",
     "files": ["dist-electron", "dist-react"],
     "icon": "./power-tools.ico",
-    "extraResources": ["dist-electron/preload.cjs"],
+    "publish": [
+        {
+            "provider": "github",
+            "owner": "AbdallahNagy",
+            "repo": "PowerTools"
+        }
+    ],
+    "extraResources": [
+        "dist-electron/preload.cjs",
+        {
+            "from": "src/ui/assets/icons/power-tools-preview-256.png",
+            "to": "power-tools-preview-256.png"
+        }
+    ],
     "mac": {
         "target": "dmg",
         "extraResources": [
@@ -23,12 +36,18 @@
         ]
     },
     "win": {
-        "target": ["portable", "msi"],
+        "target": ["nsis"],
+        "artifactName": "PowerTools-Setup.${ext}",
         "extraResources": [
             {
                 "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/win-x64/publish",
                 "to": "api"
             }
         ]
+    },
+    "nsis": {
+        "oneClick": false,
+        "perMachine": false,
+        "allowToChangeInstallationDirectory": true
     }
 }
