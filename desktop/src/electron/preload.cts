@@ -35,6 +35,16 @@ electron.contextBridge.exposeInMainWorld("electron", {
   // load and cached in the api/client module.
   getApiBaseUrl: () => electron.ipcRenderer.invoke("get-api-base-url"),
   getLocalSecret: () => electron.ipcRenderer.invoke("get-local-secret"),
+  getAppVersion: () => electron.ipcRenderer.invoke("get-app-version"),
+  getUpdateStatus: () => electron.ipcRenderer.invoke("get-update-status"),
+  checkForUpdates: () => electron.ipcRenderer.invoke("check-for-updates"),
+  downloadUpdate: () => electron.ipcRenderer.invoke("download-update"),
+  installUpdate: () => electron.ipcRenderer.invoke("install-update"),
+  onUpdateStatusChanged: (callback: (status: any) => void) => {
+    const listener = (_: any, status: any) => callback(status);
+    electron.ipcRenderer.on("update-status-changed", listener);
+    return () => electron.ipcRenderer.removeListener("update-status-changed", listener);
+  },
   openExternalUrl: (url: string) =>
     electron.ipcRenderer.invoke("open-external-url", url),
 });

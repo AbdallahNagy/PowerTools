@@ -1,27 +1,42 @@
 import { useEffect, useRef, useState } from "react";
-import type { ConnectionInfo } from "../../vite-env";
+import type { ConnectionInfo, UpdateStatus } from "../../vite-env";
 import { useStatusBar } from "../../context/StatusBarContext";
+import {
+  formatAppVersion,
+  getUpdateActionLabel,
+  isUpdateActionDisabled,
+} from "./updateStatus";
 
 const StatusBar = () => {
   const [connections, setConnections] = useState<ConnectionInfo[]>([]);
   const [activeName, setActiveName] = useState<string | null>(null);
+  const [appVersion, setAppVersion] = useState("");
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: "idle" });
   const [open, setOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { items } = useStatusBar();
+  const updateActionLabel = getUpdateActionLabel(updateStatus);
 
   useEffect(() => {
     window.electron.listConnections().then(setConnections);
+    window.electron.getAppVersion().then(setAppVersion);
+    window.electron.getUpdateStatus().then(setUpdateStatus);
 
     window.electron.getActiveConnection().then((res) => {
       if ("name" in res) setActiveName(res.name);
     });
 
     window.electron.onConnectionStatusUpdate((name) => setActiveName(name));
-    const unsubscribe = window.electron.onConnectionsUpdated((list) =>
+    const unsubscribeConnections = window.electron.onConnectionsUpdated((list) =>
       setConnections(list)
     );
-    return unsubscribe;
+    const unsubscribeUpdateStatus =
+      window.electron.onUpdateStatusChanged(setUpdateStatus);
+    return () => {
+      unsubscribeConnections();
+      unsubscribeUpdateStatus();
+    };
   }, []);
 
   // Close popover on outside click.
@@ -54,6 +69,16 @@ const StatusBar = () => {
   const addConnection = () => {
     window.electron.createConnectionWindow();
     setOpen(false);
+  };
+
+  const runUpdateAction = () => {
+    if (updateStatus.state === "available") {
+      window.electron.downloadUpdate();
+    } else if (updateStatus.state === "downloaded") {
+      window.electron.installUpdate();
+    } else if (updateStatus.state === "error") {
+      window.electron.checkForUpdates();
+    }
   };
 
   return (
@@ -144,7 +169,22 @@ const StatusBar = () => {
             {item.content}
           </div>
         ))}
-        <span>v1.0.0</span>
+        {updateActionLabel && (
+          <button
+            type="button"
+            className="hover:bg-white/15 px-1 rounded cursor-pointer disabled:cursor-default disabled:opacity-80"
+            onClick={runUpdateAction}
+            disabled={isUpdateActionDisabled(updateStatus)}
+            title={
+              updateStatus.state === "error"
+                ? updateStatus.message
+                : undefined
+            }
+          >
+            {updateActionLabel}
+          </button>
+        )}
+        <span>{formatAppVersion(appVersion)}</span>
       </div>
     </div>
   );

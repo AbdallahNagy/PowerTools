@@ -3,7 +3,11 @@ import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
 import { getAppIconPath, getPreloadPath } from "./pathResolver.js";
 import { createStartupSplashWindow } from "./startupSplash.js";
-import { configureAutoUpdates } from "./autoUpdate.js";
+import {
+  configureAutoUpdates,
+  type AutoUpdateController,
+  type UpdateStatus,
+} from "./autoUpdate.js";
 import {
   acquireTokenInteractive,
   acquireTokenSilentOrInteractive,
@@ -34,6 +38,8 @@ type PendingConnection =
 
 app.whenReady().then(async () => {
   const splashWindow = createStartupSplashWindow();
+  let updateStatus: UpdateStatus = { state: "idle" };
+  let updateController: AutoUpdateController | null = null;
 
   // Start the local API process before any window opens. The renderer
   // assumes a working sidecar; if it fails to come up, the app cannot
@@ -58,6 +64,11 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("get-api-base-url", () => sidecarHandle.baseUrl);
   ipcMain.handle("get-local-secret", () => sidecarHandle.secret);
+  ipcMain.handle("get-app-version", () => app.getVersion());
+  ipcMain.handle("get-update-status", () => updateStatus);
+  ipcMain.handle("check-for-updates", () => updateController?.checkForUpdates());
+  ipcMain.handle("download-update", () => updateController?.downloadUpdate());
+  ipcMain.handle("install-update", () => updateController?.quitAndInstall());
   ipcMain.handle("open-external-url", async (_event, url: string) => {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
@@ -129,6 +140,11 @@ app.whenReady().then(async () => {
         crmType: c.crmType,
       }))
     );
+  }
+
+  function broadcastUpdateStatus(status: UpdateStatus) {
+    updateStatus = status;
+    mainWindow.webContents.send("update-status-changed", status);
   }
 
   // Temp state shared between connection + naming windows
@@ -452,10 +468,11 @@ app.whenReady().then(async () => {
     if (!splashWindow.isDestroyed()) {
       splashWindow.close();
     }
-    configureAutoUpdates({
+    updateController = configureAutoUpdates({
       isPackaged: app.isPackaged,
       isDevelopment: isDev(),
-      checkForUpdatesAndNotify: () => autoUpdater.checkForUpdatesAndNotify(),
+      updater: autoUpdater,
+      sendStatus: broadcastUpdateStatus,
     });
   });
 

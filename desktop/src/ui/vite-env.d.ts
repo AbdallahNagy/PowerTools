@@ -20,6 +20,14 @@ export interface ConnectionInfo {
   crmType: "online" | "onpremise";
 }
 
+export type UpdateStatus =
+  | { state: "idle" }
+  | { state: "checking" }
+  | { state: "available"; version?: string }
+  | { state: "downloading"; version?: string; percent?: number }
+  | { state: "downloaded"; version?: string }
+  | { state: "error"; message: string };
+
 type OnPremisesAuthMode = "ad" | "ifd";
 
 type ConnectionInput =
@@ -52,6 +60,12 @@ declare global {
       refreshToken: () => Promise<ConnectionResult>;
       getApiBaseUrl: () => Promise<string>;
       getLocalSecret: () => Promise<string>;
+      getAppVersion: () => Promise<string>;
+      getUpdateStatus: () => Promise<UpdateStatus>;
+      checkForUpdates: () => Promise<void>;
+      downloadUpdate: () => Promise<void>;
+      installUpdate: () => Promise<void>;
+      onUpdateStatusChanged: (callback: (status: UpdateStatus) => void) => () => void;
       openExternalUrl: (url: string) => Promise<void>;
     };
   }
