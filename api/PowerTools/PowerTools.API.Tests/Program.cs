@@ -7,6 +7,7 @@ using System.Text;
 using Data8.PowerPlatform.Dataverse.Client;
 using Data8.PowerPlatform.Dataverse.Client.Wsdl;
 using PowerTools.API.Services;
+using PowerTools.API.Tools.DataMigration;
 using PowerTools.API.Tools.Fetch;
 using PowerTools.API.Tools.Metadata;
 
@@ -104,6 +105,23 @@ var nestedConnectionMessage = DataverseErrorFormatter.Format(
         new InvalidOperationException("The provided URI scheme 'http' is invalid; expected 'https'.")));
 AssertContains("Failed to connect to Dataverse.", nestedConnectionMessage);
 AssertContains("The provided URI scheme 'http' is invalid; expected 'https'.", nestedConnectionMessage);
+
+var normalizedFullFetchFilter = DataMigrationFetchXml.NormalizeFilterFragment(
+    """
+    <fetch>
+      <entity name="account">
+        <attribute name="accountid" />
+        <attribute name="name" />
+        <filter type="and">
+          <condition attribute="name" operator="like" value="%Tesdt%" />
+        </filter>
+      </entity>
+    </fetch>
+    """,
+    "account");
+AssertEquals(
+    "<filter type=\"and\"><condition attribute=\"name\" operator=\"like\" value=\"%Tesdt%\" /></filter>",
+    normalizedFullFetchFilter!);
 
 await AssertFederatedMetadataPrefersHttpsMixedEndpoint();
 

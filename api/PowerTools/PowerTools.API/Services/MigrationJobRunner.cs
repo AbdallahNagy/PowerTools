@@ -2,6 +2,7 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
+using PowerTools.API.Tools.DataMigration;
 
 namespace PowerTools.API.Services;
 
@@ -143,9 +144,7 @@ public class MigrationJobRunner(
 
     private static string BuildFetchXml(MigrationJob job)
     {
-        var attrs = string.Join("", job.Attributes.Select(a => $"<attribute name=\"{a}\" />"));
-        var filter = string.IsNullOrWhiteSpace(job.FetchXmlFilter) ? "" : job.FetchXmlFilter;
-        return $"<fetch><entity name=\"{job.EntityLogicalName}\">{attrs}{filter}</entity></fetch>";
+        return DataMigrationFetchXml.Build(job.EntityLogicalName, job.Attributes, job.FetchXmlFilter);
     }
 
     private static string BuildPagedFetchXml(string baseFetch, int page, int count, string? pagingCookie)

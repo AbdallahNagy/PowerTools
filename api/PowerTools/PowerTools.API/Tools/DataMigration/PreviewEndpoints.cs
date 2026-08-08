@@ -53,15 +53,13 @@ public static class PreviewEndpoints
 
     private static string BuildFetchXml(PreviewRequest req)
     {
-        var cookie = req.PagingCookie is not null
-            ? $" paging-cookie=\"{System.Security.SecurityElement.Escape(req.PagingCookie)}\""
-            : "";
-
-        var attrs = string.Join("", req.Attributes.Select(a => $"<attribute name=\"{a}\" />"));
-        var filter = string.IsNullOrWhiteSpace(req.FetchXmlFilter) ? "" : req.FetchXmlFilter;
-
-        return $"<fetch page=\"{req.Page}\" count=\"{req.PageSize}\"{cookie}>" +
-               $"<entity name=\"{req.EntityLogicalName}\">{attrs}{filter}</entity></fetch>";
+        return DataMigrationFetchXml.Build(
+            req.EntityLogicalName,
+            req.Attributes,
+            req.FetchXmlFilter,
+            req.Page,
+            req.PageSize,
+            req.PagingCookie);
     }
 
     private static object? FormatValue(object val) => DataverseValueFormatter.Format(val);
