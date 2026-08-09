@@ -23,6 +23,11 @@ test("windows releases use the auto-updatable NSIS installer target", () => {
   assert.equal(builderConfig.win.artifactName, "PowerTools-Setup.${ext}");
 });
 
+test("windows update installs use one-click NSIS flow", () => {
+  assert.equal(builderConfig.nsis.oneClick, true);
+  assert.equal(builderConfig.nsis.perMachine, false);
+});
+
 test("windows release script publishes installer and update metadata", () => {
   assert.match(packageConfig.scripts["release:win"], /electron-builder --win --x64 --publish always/);
 });
