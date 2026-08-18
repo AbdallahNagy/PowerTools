@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useDrag } from "./DragContext";
+import { useDrag } from "./useDrag";
 
 interface DropSlotProps {
   parentId: string;

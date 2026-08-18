@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "vitest";
 import * as fetchxmlModel from "../src/ui/components/tools/MetadataExplorer/model/fetchxml.ts";
 import { validateTree } from "../src/ui/components/tools/MetadataExplorer/model/validation.ts";
 
@@ -57,10 +56,7 @@ test("renders existing root field conditions unchanged through fieldRef", () => 
     ["name"],
   );
 
-  assert.equal(
-    xml,
-    '<fetch><entity name="account"><attribute name="name" /><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /></filter></entity></fetch>',
-  );
+  expect(xml).toBe('<fetch><entity name="account"><attribute name="name" /><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /></filter></entity></fetch>');
 });
 
 test("renders one-hop many-to-one related field conditions as link-entity filters", () => {
@@ -69,10 +65,7 @@ test("renders one-hop many-to-one related field conditions as link-entity filter
     group([condition("c1", { kind: "related", path: accountPath, field: "name" }, "like", "Contoso")]),
   );
 
-  assert.equal(
-    xml,
-    '<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /></filter></link-entity></entity></fetch>',
-  );
+  expect(xml).toBe('<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /></filter></link-entity></entity></fetch>');
 });
 
 test("renders one-to-many child relationship filters with child join direction", () => {
@@ -81,10 +74,7 @@ test("renders one-to-many child relationship filters with child join direction",
     group([condition("c1", { kind: "related", path: contactChildPath, field: "statecode" }, "eq", "0")]),
   );
 
-  assert.equal(
-    xml,
-    '<fetch><entity name="account"><link-entity name="contact" from="parentcustomerid" to="accountid" alias="rel_contact_parentcustomerid" link-type="inner"><filter type="and"><condition attribute="statecode" operator="eq" value="0" /></filter></link-entity></entity></fetch>',
-  );
+  expect(xml).toBe('<fetch><entity name="account"><link-entity name="contact" from="parentcustomerid" to="accountid" alias="rel_contact_parentcustomerid" link-type="inner"><filter type="and"><condition attribute="statecode" operator="eq" value="0" /></filter></link-entity></entity></fetch>');
 });
 
 test("creates deterministic path segments from relationship schema names", () => {
@@ -103,7 +93,7 @@ test("creates deterministic path segments from relationship schema names", () =>
     "Accounts (Parent customer)",
   );
 
-  assert.deepEqual({ ...segment, alias: undefined }, {
+  expect({ ...segment, alias: undefined }).toEqual({
     relationshipSchemaName: "contact_customer_accounts",
     relationshipType: "many-to-one",
     sourceEntity: "contact",
@@ -115,7 +105,7 @@ test("creates deterministic path segments from relationship schema names", () =>
     alias: undefined,
     label: "Accounts (Parent customer)",
   });
-  assert.match(segment.alias, /^rel_0_account_[a-f0-9]{8}$/);
+  expect(segment.alias).toMatch(/^rel_0_account_[a-f0-9]{8}$/);
 });
 
 test("creates unique aliases for the same relationship reached through different paths", () => {
@@ -132,7 +122,7 @@ test("creates unique aliases for the same relationship reached through different
   const first = fetchxmlModel.createRelationshipPathSegment(relationship, accountPath);
   const second = fetchxmlModel.createRelationshipPathSegment(relationship, contactChildPath);
 
-  assert.notEqual(first.alias, second.alias);
+  expect(first.alias).not.toBe(second.alias);
 });
 
 test("renders relationship filters nested three levels deep", () => {
@@ -167,10 +157,7 @@ test("renders relationship filters nested three levels deep", () => {
     group([condition("c1", { kind: "related", path: threeHopPath, field: "lastname" }, "eq", "Smith")]),
   );
 
-  assert.equal(
-    xml,
-    '<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><link-entity name="contact" from="contactid" to="primarycontactid" alias="rel_1_account_primary_contact" link-type="inner"><link-entity name="contact" from="contactid" to="parentcontactid" alias="rel_2_contact_parent_contact" link-type="inner"><filter type="and"><condition attribute="lastname" operator="eq" value="Smith" /></filter></link-entity></link-entity></link-entity></entity></fetch>',
-  );
+  expect(xml).toBe('<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><link-entity name="contact" from="contactid" to="primarycontactid" alias="rel_1_account_primary_contact" link-type="inner"><link-entity name="contact" from="contactid" to="parentcontactid" alias="rel_2_contact_parent_contact" link-type="inner"><filter type="and"><condition attribute="lastname" operator="eq" value="Smith" /></filter></link-entity></link-entity></link-entity></entity></fetch>');
 });
 
 test("renders an explicit relationship scope with local field conditions", () => {
@@ -185,10 +172,7 @@ test("renders an explicit relationship scope with local field conditions", () =>
     ]),
   );
 
-  assert.equal(
-    xml,
-    '<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /></filter></link-entity></entity></fetch>',
-  );
+  expect(xml).toBe('<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /></filter></link-entity></entity></fetch>');
 });
 
 test("renders recursively nested explicit relationship scopes", () => {
@@ -216,10 +200,7 @@ test("renders recursively nested explicit relationship scopes", () => {
     ]),
   );
 
-  assert.equal(
-    xml,
-    '<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><link-entity name="contact" from="contactid" to="primarycontactid" alias="rel_account_primary_contact" link-type="inner"><filter type="and"><condition attribute="lastname" operator="eq" value="Smith" /></filter></link-entity></link-entity></entity></fetch>',
-  );
+  expect(xml).toBe('<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><link-entity name="contact" from="contactid" to="primarycontactid" alias="rel_account_primary_contact" link-type="inner"><filter type="and"><condition attribute="lastname" operator="eq" value="Smith" /></filter></link-entity></link-entity></entity></fetch>');
 });
 
 test("lists only many-to-one lookup relationships", () => {
@@ -242,10 +223,7 @@ test("lists only many-to-one lookup relationships", () => {
     },
   ];
 
-  assert.deepEqual(
-    fetchxmlModel.selectLookupRelationships(relationships).map((relationship) => relationship.schemaName),
-    ["contact_customer_accounts"],
-  );
+  expect(fetchxmlModel.selectLookupRelationships(relationships).map((relationship) => relationship.schemaName)).toEqual(["contact_customer_accounts"]);
 });
 
 test("rejects explicit relationship scopes directly inside OR groups", () => {
@@ -263,7 +241,7 @@ test("rejects explicit relationship scopes directly inside OR groups", () => {
     ),
   );
 
-  assert.deepEqual(errors, [
+  expect(errors).toEqual([
     {
       nodeId: "root",
       message: "Related table filters can only be added to AND groups.",
@@ -294,7 +272,7 @@ test("rejects relationship scopes nested anywhere inside OR groups", () => {
     ),
   );
 
-  assert.deepEqual(errors, [
+  expect(errors).toEqual([
     {
       nodeId: "root",
       message: "Related table filters can only be added to AND groups.",
@@ -311,10 +289,7 @@ test("shares one link-entity for multiple conditions on the same relationship pa
     ]),
   );
 
-  assert.equal(
-    xml,
-    '<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /><condition attribute="accountnumber" operator="eq" value="123" /></filter></link-entity></entity></fetch>',
-  );
+  expect(xml).toBe('<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /><condition attribute="accountnumber" operator="eq" value="123" /></filter></link-entity></entity></fetch>');
 });
 
 test("preserves OR groups when all related conditions use the same path", () => {
@@ -329,10 +304,7 @@ test("preserves OR groups when all related conditions use the same path", () => 
     ),
   );
 
-  assert.equal(
-    xml,
-    '<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><filter type="or"><condition attribute="name" operator="like" value="%Contoso%" /><condition attribute="accountnumber" operator="eq" value="123" /></filter></link-entity></entity></fetch>',
-  );
+  expect(xml).toBe('<fetch><entity name="contact"><link-entity name="account" from="accountid" to="parentcustomerid" alias="rel_parentcustomerid_account" link-type="inner"><filter type="or"><condition attribute="name" operator="like" value="%Contoso%" /><condition attribute="accountnumber" operator="eq" value="123" /></filter></link-entity></entity></fetch>');
 });
 
 test("rejects OR groups that mix root and related scopes", () => {
@@ -346,7 +318,7 @@ test("rejects OR groups that mix root and related scopes", () => {
     ),
   );
 
-  assert.deepEqual(errors, [
+  expect(errors).toEqual([
     {
       nodeId: "root",
       message: "OR groups can only combine conditions from the same table path.",

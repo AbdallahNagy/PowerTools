@@ -2,7 +2,7 @@ import type { EntityInfo, FilterGroup, FieldMetadata, RelationshipMetadata } fro
 import type { ValidationError } from "../model/validation";
 import type { useFilterTree } from "../hooks/useFilterTree";
 import { GroupNode } from "./GroupNode";
-import { DragProvider } from "./DragContext";
+import { DragProvider } from "./DragProvider";
 
 type TreeActions = ReturnType<typeof useFilterTree>;
 

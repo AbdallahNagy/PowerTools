@@ -5,7 +5,7 @@ import { SearchInput } from "../../../ui/SearchInput";
 import { Spinner } from "../../../ui/Spinner";
 import type { EntityInfo, FieldMetadata } from "../model/types";
 import { useLookupRecords, type LookupRecord } from "../hooks/useLookupRecords";
-import { useMetadataExplorer } from "../MetadataExplorerContext";
+import { useMetadataExplorer } from "../useMetadataExplorer";
 
 export type SelectedLookupRecord = LookupRecord & { target: string };
 

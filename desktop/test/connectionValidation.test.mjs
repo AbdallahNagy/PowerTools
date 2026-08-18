@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "vitest";
 
 import {
   registerOnPremisesConnection,
@@ -26,14 +25,11 @@ test("validateDataverseConnection resolves when the API confirms the token works
     fetchImpl,
   });
 
-  assert.deepEqual(result, { connected: true, userId: "user-1" });
-  assert.equal(calls[0].url, "https://localhost:7258/api/connect");
-  assert.equal(calls[0].options.headers.Authorization, "Bearer token-1");
-  assert.equal(
-    calls[0].options.headers["X-Environment-Url"],
-    "https://contoso.crm.dynamics.com"
-  );
-  assert.equal(calls[0].options.headers["X-Local-Secret"], "secret-1");
+  expect(result).toEqual({ connected: true, userId: "user-1" });
+  expect(calls[0].url).toBe("https://localhost:7258/api/connect");
+  expect(calls[0].options.headers.Authorization).toBe("Bearer token-1");
+  expect(calls[0].options.headers["X-Environment-Url"]).toBe("https://contoso.crm.dynamics.com");
+  expect(calls[0].options.headers["X-Local-Secret"]).toBe("secret-1");
 });
 
 test("validateOnPremisesConnection preserves the domain for IFD", async () => {
@@ -58,10 +54,10 @@ test("validateOnPremisesConnection preserves the domain for IFD", async () => {
     fetchImpl,
   });
 
-  assert.deepEqual(result, { connected: true, userId: "user-2" });
-  assert.equal(calls[0].url, "http://127.0.0.1:5000/api/connections/validate-onpremise");
-  assert.equal(calls[0].options.headers["X-Local-Secret"], "secret-1");
-  assert.deepEqual(JSON.parse(calls[0].options.body), {
+  expect(result).toEqual({ connected: true, userId: "user-2" });
+  expect(calls[0].url).toBe("http://127.0.0.1:5000/api/connections/validate-onpremise");
+  expect(calls[0].options.headers["X-Local-Secret"]).toBe("secret-1");
+  expect(JSON.parse(calls[0].options.body)).toEqual({
     name: "__validation__",
     environmentUrl: "https://crm.local/Org",
     authMode: "ifd",
@@ -77,8 +73,7 @@ test("registerOnPremisesConnection throws when registration fails", async () => 
     json: async () => ({ success: false, error: "invalid registration" }),
   });
 
-  await assert.rejects(
-    registerOnPremisesConnection({
+  await expect(registerOnPremisesConnection({
       apiBaseUrl: "http://127.0.0.1:5000",
       localSecret: "secret-1",
       name: "Contoso",
@@ -88,9 +83,7 @@ test("registerOnPremisesConnection throws when registration fails", async () => 
       password: "pass",
       domain: "",
       fetchImpl,
-    }),
-    /invalid registration/
-  );
+    })).rejects.toThrow(/invalid registration/);
 });
 
 test("unregisterOnPremisesConnection deletes the named sidecar connection", async () => {
@@ -110,9 +103,9 @@ test("unregisterOnPremisesConnection deletes the named sidecar connection", asyn
     fetchImpl,
   });
 
-  assert.equal(calls[0].url, "http://127.0.0.1:5000/api/connections/Contoso%20Prod");
-  assert.equal(calls[0].options.method, "DELETE");
-  assert.equal(calls[0].options.headers["X-Local-Secret"], "secret-1");
+  expect(calls[0].url).toBe("http://127.0.0.1:5000/api/connections/Contoso%20Prod");
+  expect(calls[0].options.method).toBe("DELETE");
+  expect(calls[0].options.headers["X-Local-Secret"]).toBe("secret-1");
 });
 
 test("validateDataverseConnection rejects when the API cannot use the token", async () => {
@@ -121,14 +114,11 @@ test("validateDataverseConnection rejects when the API cannot use the token", as
     json: async () => ({ connected: false, error: "principal is not a member" }),
   });
 
-  await assert.rejects(
-    validateDataverseConnection({
+  await expect(validateDataverseConnection({
       apiBaseUrl: "https://localhost:7258",
       localSecret: "secret-1",
       envUrl: "https://contoso.crm.dynamics.com",
       accessToken: "token-1",
       fetchImpl,
-    }),
-    /principal is not a member/
-  );
+    })).rejects.toThrow(/principal is not a member/);
 });

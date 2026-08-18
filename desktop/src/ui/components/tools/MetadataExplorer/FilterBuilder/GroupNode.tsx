@@ -10,7 +10,7 @@ import type { ValidationError } from "../model/validation";
 import type { useFilterTree } from "../hooks/useFilterTree";
 import { ConditionNode } from "./ConditionNode";
 import { DropSlot } from "./DropSlot";
-import { useDrag } from "./DragContext";
+import { useDrag } from "./useDrag";
 import { RelationshipNode } from "./RelationshipNode";
 
 type TreeActions = ReturnType<typeof useFilterTree>;

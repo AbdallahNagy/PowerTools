@@ -12,7 +12,7 @@ import type { useFilterTree } from "../hooks/useFilterTree";
 import { FieldPicker } from "./FieldPicker";
 import { OperatorPicker } from "./OperatorPicker";
 import { ValueInput } from "./ValueInput";
-import { useDrag } from "./DragContext";
+import { useDrag } from "./useDrag";
 
 type TreeActions = ReturnType<typeof useFilterTree>;
 

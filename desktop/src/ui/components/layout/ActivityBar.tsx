@@ -1,5 +1,5 @@
 import ConnectIcon from "../../assets/icons/connect-icon.svg";
-import { useTabs } from "../../context/TabContext";
+import { useTabs } from "../../context/useTabs";
 import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 
 const ActivityBar = () => {

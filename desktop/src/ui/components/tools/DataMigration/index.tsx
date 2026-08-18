@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { ToastProvider, useToast } from "../../ui/Toast";
+import { ToastProvider } from "../../ui/Toast";
+import { useToast } from "../../ui/useToast";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { useStatusBar } from "../../../context/StatusBarContext";
+import { useStatusBar } from "../../../context/useStatusBar";
 import { ConnectionsBar } from "./ConnectionsBar";
 import { MigrationOptions, type MigrationMode } from "./MigrationOptions";
 import { EntityListPanel } from "./EntityListPanel";

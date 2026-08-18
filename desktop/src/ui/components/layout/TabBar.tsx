@@ -1,6 +1,6 @@
 import { memo } from "react";
 import Tab from "./TabHeader";
-import { useTabs } from "../../context/TabContext";
+import { useTabs } from "../../context/useTabs";
 import { TOOL_REGISTRY } from "../../tools/registry";
 import type { TabData } from "../../common/types/tab-data.interface";
 

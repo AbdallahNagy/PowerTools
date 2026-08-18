@@ -1,20 +1,12 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
+
 import type { FilterGroup, FilterNode } from "../model/types";
-
-interface DragContextValue {
-  dragId: string | null;
-  beginDrag: (id: string) => void;
-  endDrag: () => void;
-  /** Returns true if a node being dragged could legally be dropped into `parentId`. */
-  canDropInto: (parentId: string) => boolean;
-}
-
-const DragCtx = createContext<DragContextValue | null>(null);
+import { DragContext, type DragContextValue } from "./DragContext";
 
 function collectIds(node: FilterNode, out: Set<string>): void {
   out.add(node.id);
   if (node.kind === "group") {
-    for (const c of node.children) collectIds(c, out);
+    for (const child of node.children) collectIds(child, out);
   } else if (node.kind === "relationship") {
     collectIds(node.group, out);
   }
@@ -22,14 +14,14 @@ function collectIds(node: FilterNode, out: Set<string>): void {
 
 function findNode(root: FilterGroup, id: string): FilterNode | null {
   if (root.id === id) return root;
-  for (const c of root.children) {
-    if (c.id === id) return c;
-    if (c.kind === "group") {
-      const f = findNode(c, id);
-      if (f) return f;
-    } else if (c.kind === "relationship") {
-      const f = findNode(c.group, id);
-      if (f) return f;
+  for (const child of root.children) {
+    if (child.id === id) return child;
+    if (child.kind === "group") {
+      const found = findNode(child, id);
+      if (found) return found;
+    } else if (child.kind === "relationship") {
+      const found = findNode(child.group, id);
+      if (found) return found;
     }
   }
   return null;
@@ -44,7 +36,6 @@ export function DragProvider({ root, children }: { root: FilterGroup; children: 
       const dragged = findNode(root, dragId);
       if (!dragged) return true;
       if (dragged.kind === "condition") return true;
-      // Cannot drop a container into itself or any descendant.
       const forbidden = new Set<string>();
       collectIds(dragged, forbidden);
       return !forbidden.has(parentId);
@@ -62,11 +53,5 @@ export function DragProvider({ root, children }: { root: FilterGroup; children: 
     [dragId, canDropInto],
   );
 
-  return <DragCtx.Provider value={value}>{children}</DragCtx.Provider>;
-}
-
-export function useDrag() {
-  const ctx = useContext(DragCtx);
-  if (!ctx) throw new Error("useDrag must be used inside DragProvider");
-  return ctx;
+  return <DragContext.Provider value={value}>{children}</DragContext.Provider>;
 }

@@ -1,28 +1,6 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 
-export interface StatusItem {
-  id: string;
-  content: ReactNode;
-}
-
-interface StatusBarContextType {
-  items: StatusItem[];
-  /** Register or update a status bar item. Call clearStatus on unmount. */
-  setStatus: (id: string, content: ReactNode) => void;
-  /** Remove the item registered under `id`. Call this on component unmount. */
-  clearStatus: (id: string) => void;
-}
-
-const StatusBarContext = createContext<StatusBarContextType | undefined>(
-  undefined
-);
+import { StatusBarProviderContext, type StatusItem } from "./StatusBarProviderContext";
 
 export function StatusBarProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<StatusItem[]>([]);
@@ -47,15 +25,8 @@ export function StatusBarProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <StatusBarContext.Provider value={value}>
+    <StatusBarProviderContext.Provider value={value}>
       {children}
-    </StatusBarContext.Provider>
+    </StatusBarProviderContext.Provider>
   );
-}
-
-export function useStatusBar() {
-  const ctx = useContext(StatusBarContext);
-  if (!ctx)
-    throw new Error("useStatusBar must be used within StatusBarProvider");
-  return ctx;
 }

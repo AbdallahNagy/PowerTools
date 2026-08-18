@@ -11,6 +11,9 @@ node_modules
 dist
 dist-react
 dist-electron
+coverage
+playwright-report
+test-results
 *.local
 
 # Editor directories and files

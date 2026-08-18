@@ -1,31 +1,21 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "vitest";
 
 import { shouldRefreshAuth } from "../src/ui/api/client.ts";
 
 test("shouldRefreshAuth refreshes cached online tokens before they expire", () => {
-  assert.equal(
-    shouldRefreshAuth({
+  expect(shouldRefreshAuth({
       crmType: "online",
       expiresOn: new Date(Date.now() + 30_000).toISOString(),
-    }),
-    true
-  );
+    })).toBe(true);
 });
 
 test("shouldRefreshAuth keeps fresh online tokens and on-premises connections", () => {
-  assert.equal(
-    shouldRefreshAuth({
+  expect(shouldRefreshAuth({
       crmType: "online",
       expiresOn: new Date(Date.now() + 15 * 60_000).toISOString(),
-    }),
-    false
-  );
+    })).toBe(false);
 
-  assert.equal(
-    shouldRefreshAuth({
+  expect(shouldRefreshAuth({
       crmType: "onpremise",
-    }),
-    false
-  );
+    })).toBe(false);
 });
