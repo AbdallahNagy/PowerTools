@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "vitest";
 import * as filterTree from "../src/ui/components/tools/MetadataExplorer/hooks/useFilterTree.ts";
 
 const accountRelationship = {
@@ -33,14 +32,14 @@ test("replaces a condition with a relationship scope at the same position", () =
     accountRelationship,
   );
 
-  assert.equal(result.children[0].id, "before");
-  assert.equal(result.children[2].id, "after");
-  assert.equal(result.children[1].kind, "relationship");
-  assert.match(result.children[1].relationship.alias, /^rel_parentcustomerid_account_[a-zA-Z0-9]{8}$/);
-  assert.equal(result.children[1].group.logic, "and");
-  assert.equal(result.children[1].group.children.length, 1);
-  assert.equal(result.children[1].group.children[0].kind, "condition");
-  assert.equal(result.children[1].group.children[0].field, null);
+  expect(result.children[0].id).toBe("before");
+  expect(result.children[2].id).toBe("after");
+  expect(result.children[1].kind).toBe("relationship");
+  expect(result.children[1].relationship.alias).toMatch(/^rel_parentcustomerid_account_[a-zA-Z0-9]{8}$/);
+  expect(result.children[1].group.logic).toBe("and");
+  expect(result.children[1].group.children.length).toBe(1);
+  expect(result.children[1].group.children[0].kind).toBe("condition");
+  expect(result.children[1].group.children[0].field).toBe(null);
 });
 
 test("creates unique aliases for separate scopes using the same relationship", () => {
@@ -65,8 +64,7 @@ test("creates unique aliases for separate scopes using the same relationship", (
     accountRelationship,
   );
 
-  assert.notEqual(
-    result.children[0].relationship.alias,
+  expect(result.children[0].relationship.alias).not.toBe(
     result.children[1].relationship.alias,
   );
 });

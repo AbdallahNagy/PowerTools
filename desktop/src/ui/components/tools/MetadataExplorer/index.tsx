@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { ToastProvider, useToast } from "../../ui/Toast";
+import { ToastProvider } from "../../ui/Toast";
+import { useToast } from "../../ui/useToast";
 import type { ConnectionInfo } from "../../../vite-env";
 import type { EntityInfo, FetchResult } from "./model/types";
 import { FilterTree } from "./FilterBuilder/FilterTree";
@@ -8,7 +9,7 @@ import { ResultsGrid } from "./ResultsGrid";
 import { FetchXmlView } from "./FetchXmlView";
 import { Button } from "../../ui/Button";
 import { Spinner } from "../../ui/Spinner";
-import { MetadataExplorerProvider } from "./MetadataExplorerContext";
+import { MetadataExplorerProvider } from "./MetadataExplorerProvider";
 import { useFilterTree } from "./hooks/useFilterTree";
 import { useTables } from "./hooks/useTables";
 import { useTableMetadata } from "./hooks/useTableMetadata";

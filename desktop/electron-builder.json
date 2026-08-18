@@ -10,7 +10,7 @@
         }
     ],
     "extraResources": [
-        "dist-electron/preload.cjs",
+        "dist-electron/preload.bundle.cjs",
         {
             "from": "src/ui/assets/icons/power-tools-preview-256.png",
             "to": "power-tools-preview-256.png"

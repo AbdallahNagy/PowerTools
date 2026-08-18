@@ -9,7 +9,7 @@ import type {
 import type { ValidationError } from "../model/validation";
 import type { useFilterTree } from "../hooks/useFilterTree";
 import { GroupNode } from "./GroupNode";
-import { useDrag } from "./DragContext";
+import { useDrag } from "./useDrag";
 
 type TreeActions = ReturnType<typeof useFilterTree>;
 

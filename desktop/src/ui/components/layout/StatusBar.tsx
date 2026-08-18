@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ConnectionInfo, UpdateStatus } from "../../vite-env";
-import { useStatusBar } from "../../context/StatusBarContext";
+import { useStatusBar } from "../../context/useStatusBar";
 import {
   formatAppVersion,
   getUpdateActionLabel,

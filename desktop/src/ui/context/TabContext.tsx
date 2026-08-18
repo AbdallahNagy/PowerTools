@@ -1,24 +1,8 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
-import type { TabData } from "../common/types/tab-data.interface";
+import { useState, type ReactNode } from "react";
 import { TABS } from "../common/fake data/tabs";
+import type { TabData } from "../common/types/tab-data.interface";
 import { TOOL_REGISTRY } from "../tools/registry";
-
-interface TabContextType {
-  tabs: TabData[];
-  activeTabId: string;
-  /**
-   * Open a tool from the registry as a new tab. Honors
-   * `allowMultipleInstances`: when false, activates the existing tab
-   * instead of creating another.
-   */
-  openTool: (toolId: string) => void;
-  /** Add a pre-built tab (used for static tabs like Welcome). */
-  addTab: (tab: TabData) => void;
-  closeTab: (tabId: string) => void;
-  setActiveTab: (tabId: string) => void;
-}
-
-const TabContext = createContext<TabContextType | undefined>(undefined);
+import { TabProviderContext } from "./TabProviderContext";
 
 export const TabProvider = ({ children }: { children: ReactNode }) => {
   const [tabs, setTabs] = useState<TabData[]>(TABS);
@@ -73,18 +57,10 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <TabContext.Provider
+    <TabProviderContext.Provider
       value={{ tabs, activeTabId, openTool, addTab, closeTab, setActiveTab }}
     >
       {children}
-    </TabContext.Provider>
+    </TabProviderContext.Provider>
   );
-};
-
-export const useTabs = () => {
-  const context = useContext(TabContext);
-  if (context === undefined) {
-    throw new Error("useTabs must be used within a TabProvider");
-  }
-  return context;
 };

@@ -1,5 +1,4 @@
-import test from "node:test";
-import assert from "node:assert/strict";
+import { expect, test } from "vitest";
 
 import { createCredentialProtector } from "../dist-electron/secureCredentials.js";
 
@@ -14,8 +13,8 @@ test("credential protector encrypts and decrypts with safeStorage when available
 
   const encrypted = protector.encryptCredential("secret-password");
 
-  assert.notEqual(encrypted, "secret-password");
-  assert.equal(protector.decryptCredential(encrypted), "secret-password");
+  expect(encrypted).not.toBe("secret-password");
+  expect(protector.decryptCredential(encrypted)).toBe("secret-password");
 });
 
 test("credential protector refuses plaintext fallback when encryption is unavailable", () => {
@@ -30,12 +29,10 @@ test("credential protector refuses plaintext fallback when encryption is unavail
   };
   const protector = createCredentialProtector(storage);
 
-  assert.throws(
-    () => protector.encryptCredential("secret-password"),
+  expect(() => protector.encryptCredential("secret-password")).toThrow(
     /Secure credential storage is not available/
   );
-  assert.throws(
-    () => protector.decryptCredential("abc"),
+  expect(() => protector.decryptCredential("abc")).toThrow(
     /Secure credential storage is not available/
   );
 });
