@@ -23,6 +23,7 @@ function TabState() {
         Close active tab
       </button>
       <output aria-label="open tab titles">{tabs.map((tab) => tab.title).join(" | ")}</output>
+      <output aria-label="open tab IDs">{tabs.map((tab) => tab.id).join(" | ")}</output>
       <output aria-label="active tab">{activeTabId}</output>
     </>
   );
@@ -107,6 +108,29 @@ describe("renderer shell", () => {
     );
     expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe(
       "fetchxml-builder-301",
+    );
+  });
+
+  it("keeps instance IDs unique when two tools open in the same millisecond", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(303);
+
+    renderWithProviders(
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+          <TabState />
+        </TabProvider>
+      </ConnectionsProvider>,
+    );
+
+    const fetchXmlBuilder = await screen.findByRole("button", {
+      name: "Build, run, and refine FetchXML queries",
+    });
+    fireEvent.click(fetchXmlBuilder);
+    fireEvent.click(fetchXmlBuilder);
+
+    expect(screen.getByRole("status", { name: "open tab IDs" })).toHaveTextContent(
+      "welcome | fetchxml-builder-303 | fetchxml-builder-303-2",
     );
   });
 
