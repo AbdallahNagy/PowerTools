@@ -3,9 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { ToastProvider } from "../../src/ui/components/ui/Toast";
 import { useToast } from "../../src/ui/components/ui/useToast";
-import { StatusBarProvider } from "../../src/ui/context/StatusBarContext";
+import { StatusBarProvider, useStatusBar } from "../../src/ui/shared/status";
 import { TabProvider } from "../../src/ui/context/TabContext";
-import { useStatusBar } from "../../src/ui/context/useStatusBar";
 import { useTabs } from "../../src/ui/context/useTabs";
 
 function ToastControls() {

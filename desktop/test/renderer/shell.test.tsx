@@ -4,12 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import ActivityBar from "../../src/ui/components/layout/ActivityBar";
 import StatusBar from "../../src/ui/components/layout/StatusBar";
-import { StatusBarProvider } from "../../src/ui/context/StatusBarContext";
 import { TabProvider } from "../../src/ui/context/TabContext";
-import { useStatusBar } from "../../src/ui/context/useStatusBar";
 import { useTabs } from "../../src/ui/context/useTabs";
 import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { ConnectionsProvider } from "../../src/ui/shared/connections";
+import { StatusBarProvider, useStatusBar } from "../../src/ui/shared/status";
 import { renderWithProviders } from "../support/render";
 
 function TabState() {

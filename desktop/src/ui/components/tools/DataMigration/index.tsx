@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { ToastProvider } from "../../ui/Toast";
 import { useToast } from "../../ui/useToast";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { useStatusBar } from "../../../context/useStatusBar";
 import { ConnectionsBar } from "./ConnectionsBar";
 import { MigrationOptions, type MigrationMode } from "./MigrationOptions";
 import { EntityListPanel } from "./EntityListPanel";
@@ -13,6 +12,7 @@ import { MigrationStatusItem } from "./MigrationStatusItem";
 import { useStartMigration, useMigrationJob } from "../../../api/hooks/useMigrationJob";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 import { useConnectionSelection } from "../../../shared/connections";
+import { useStatusBar } from "../../../shared/status";
 
 export default function DataMigration() {
   return (

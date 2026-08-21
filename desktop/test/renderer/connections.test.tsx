@@ -8,7 +8,7 @@ import {
   useConnectionSelection,
   useConnections,
 } from "../../src/ui/shared/connections";
-import { StatusBarProvider } from "../../src/ui/context/StatusBarContext";
+import { StatusBarProvider } from "../../src/ui/shared/status";
 import DataMigration from "../../src/ui/components/tools/DataMigration";
 import FetchXmlBuilder from "../../src/ui/tools/fetchxml-builder";
 import { renderWithProviders } from "../support/render";

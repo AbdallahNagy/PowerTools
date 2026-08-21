@@ -1,8 +1,8 @@
 import ActivityBar from './ActivityBar';
 import TabBar from './TabBar';
 import StatusBar from './StatusBar';
-import { StatusBarProvider } from '../../context/StatusBarContext';
 import { ConnectionsProvider } from '../../shared/connections';
+import { StatusBarProvider } from '../../shared/status';
 
 const Layout = () => {
   return (

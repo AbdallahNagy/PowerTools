@@ -13,4 +13,4 @@ export interface StatusBarContextValue {
   clearStatus: (id: string) => void;
 }
 
-export const StatusBarProviderContext = createContext<StatusBarContextValue | undefined>(undefined);
+export const StatusContext = createContext<StatusBarContextValue | undefined>(undefined);

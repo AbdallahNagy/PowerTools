@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { useStatusBar } from "../../context/useStatusBar";
 import {
   desktopBridge,
   type UpdateStatus,
 } from "../../platform/desktopBridge";
 import { useConnections } from "../../shared/connections";
+import { useStatusBar } from "../../shared/status";
 import {
   formatAppVersion,
   getUpdateActionLabel,
