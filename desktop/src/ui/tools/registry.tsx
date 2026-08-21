@@ -1,9 +1,8 @@
 import type { ComponentType } from "react";
 import DataMigrationIcon from "../assets/icons/data-migration-icon.svg";
-import MetadataExplorerIcon from "../assets/icons/metadata-explorer-icon.svg";
 import DataMigration from "../components/tools/DataMigration";
-import MetadataExplorer from "../components/tools/MetadataExplorer";
 import WelcomeTab from "../components/tools/Welcome";
+import FetchXmlBuilder, { FetchXmlBuilderIcon } from "./fetchxml-builder";
 
 export interface ToolDefinition {
   toolId: string;
@@ -31,12 +30,12 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
     component: DataMigration,
     allowMultipleInstances: true,
   },
-  "metadata-explorer": {
-    toolId: "metadata-explorer",
-    title: "Metadata Explorer",
-    tooltip: "Browse tables and build FetchXML filters",
-    icon: MetadataExplorerIcon,
-    component: MetadataExplorer,
+  "fetchxml-builder": {
+    toolId: "fetchxml-builder",
+    title: "FetchXML Builder",
+    tooltip: "Build, run, and refine FetchXML queries",
+    icon: FetchXmlBuilderIcon,
+    component: FetchXmlBuilder,
     allowMultipleInstances: true,
   },
 };
@@ -44,5 +43,5 @@ export const TOOL_REGISTRY: Record<string, ToolDefinition> = {
 /** Tools listed in the activity bar, in display order. */
 export const ACTIVITY_BAR_TOOLS: ToolDefinition[] = [
   TOOL_REGISTRY["data-migration"],
-  TOOL_REGISTRY["metadata-explorer"],
+  TOOL_REGISTRY["fetchxml-builder"],
 ];

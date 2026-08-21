@@ -15,7 +15,12 @@ export default defineConfig({
         test: {
           name: "node",
           environment: "node",
-          include: ["test/*.test.{mjs,ts}", "test/electron/**/*.test.ts"],
+          include: [
+            "test/*.test.{mjs,ts}",
+            "test/electron/**/*.test.ts",
+            "src/ui/shared/**/*.test.ts",
+            "src/ui/tools/**/tests/node/**/*.test.{mjs,ts}",
+          ],
           setupFiles: ["test/setup/node.ts"],
           clearMocks: true,
           restoreMocks: true,
@@ -26,7 +31,10 @@ export default defineConfig({
         test: {
           name: "renderer",
           environment: "jsdom",
-          include: ["test/renderer/**/*.test.{ts,tsx}"],
+          include: [
+            "test/renderer/**/*.test.{ts,tsx}",
+            "src/ui/tools/**/tests/renderer/**/*.test.{ts,tsx}",
+          ],
           setupFiles: ["test/setup/renderer.ts"],
           clearMocks: true,
           restoreMocks: true,

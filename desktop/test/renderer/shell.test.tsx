@@ -8,6 +8,7 @@ import { StatusBarProvider } from "../../src/ui/context/StatusBarContext";
 import { TabProvider } from "../../src/ui/context/TabContext";
 import { useStatusBar } from "../../src/ui/context/useStatusBar";
 import { useTabs } from "../../src/ui/context/useTabs";
+import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { renderWithProviders } from "../support/render";
 
 function TabState() {
@@ -43,7 +44,7 @@ afterEach(() => {
 });
 
 describe("renderer shell", () => {
-  it("projects activity tools in order and opens named Metadata Explorer instances", () => {
+  it("projects activity tools in order and opens named FetchXML Builder instances", () => {
     const now = vi.spyOn(Date, "now");
 
     renderWithProviders(
@@ -54,25 +55,27 @@ describe("renderer shell", () => {
     );
 
     const dataMigration = screen.getByRole("button", { name: "data migration" });
-    const metadataExplorer = screen.getByRole("button", {
-      name: "Browse tables and build FetchXML filters",
+    const fetchXmlBuilder = screen.getByRole("button", {
+      name: "Build, run, and refine FetchXML queries",
     });
 
     expect(
-      dataMigration.compareDocumentPosition(metadataExplorer) & Node.DOCUMENT_POSITION_FOLLOWING,
+      dataMigration.compareDocumentPosition(fetchXmlBuilder) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(screen.queryByRole("button", { name: "Welcome" })).not.toBeInTheDocument();
+    expect(TOOL_REGISTRY["metadata-explorer"]).toBeUndefined();
+    expect(TOOL_REGISTRY["fetchxml-builder"].component.name).toBe("FetchXmlBuilder");
 
     now.mockReturnValue(101);
-    fireEvent.click(metadataExplorer);
+    fireEvent.click(fetchXmlBuilder);
     now.mockReturnValue(202);
-    fireEvent.click(metadataExplorer);
+    fireEvent.click(fetchXmlBuilder);
 
     expect(screen.getByRole("status", { name: "open tab titles" }).textContent).toBe(
-      "Welcome | Metadata Explorer | Metadata Explorer 2",
+      "Welcome | FetchXML Builder | FetchXML Builder 2",
     );
     expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe(
-      "metadata-explorer-202",
+      "fetchxml-builder-202",
     );
   });
 
@@ -86,20 +89,20 @@ describe("renderer shell", () => {
       </TabProvider>,
     );
 
-    const metadataExplorer = screen.getByRole("button", {
-      name: "Browse tables and build FetchXML filters",
+    const fetchXmlBuilder = screen.getByRole("button", {
+      name: "Build, run, and refine FetchXML queries",
     });
     now.mockReturnValue(301);
-    fireEvent.click(metadataExplorer);
+    fireEvent.click(fetchXmlBuilder);
     now.mockReturnValue(302);
-    fireEvent.click(metadataExplorer);
+    fireEvent.click(fetchXmlBuilder);
     fireEvent.click(screen.getByRole("button", { name: "Close active tab" }));
 
     expect(screen.getByRole("status", { name: "open tab titles" }).textContent).toBe(
-      "Welcome | Metadata Explorer",
+      "Welcome | FetchXML Builder",
     );
     expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe(
-      "metadata-explorer-301",
+      "fetchxml-builder-301",
     );
   });
 

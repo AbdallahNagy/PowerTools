@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { SearchInput } from "../../ui/SearchInput";
 import { Spinner } from "../../ui/Spinner";
-import { useEntities, type EntityInfo } from "../../../api/hooks/useEntities";
+import { useEntities } from "../../../api/hooks/useEntities";
+import type { EntityInfo } from "../../../shared/contracts/dataverse";
 
 interface EntityListPanelProps {
   connectionName: string | null;

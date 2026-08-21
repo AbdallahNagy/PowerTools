@@ -4,5 +4,6 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
     "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["test/**/*.ts", "test/**/*.tsx"]
+  "include": ["test/**/*.ts", "test/**/*.tsx", "src/**/*.test.ts", "src/**/*.test.tsx"],
+  "exclude": ["src/electron"]
 }

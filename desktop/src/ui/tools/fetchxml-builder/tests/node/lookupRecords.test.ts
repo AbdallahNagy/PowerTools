@@ -1,0 +1,15 @@
+import { expect, test } from "vitest";
+import { buildLookupFetchXml } from "../../model/lookupFetchXml.ts";
+import type { EntityInfo } from "../../../../shared/contracts/dataverse.ts";
+
+const account: EntityInfo = {
+  logicalName: "account",
+  displayName: "Account",
+  primaryIdAttribute: "accountid",
+  primaryNameAttribute: "name",
+  isCustom: false,
+};
+
+test("lookup record fetch xml retrieves created on and orders by latest records", () => {
+  expect(buildLookupFetchXml(account, "")).toBe('<fetch><entity name="account"><attribute name="accountid" /><attribute name="name" /><attribute name="createdon" /><order attribute="createdon" descending="true" /></entity></fetch>');
+});

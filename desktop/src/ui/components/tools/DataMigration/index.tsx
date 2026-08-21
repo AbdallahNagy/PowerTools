@@ -11,7 +11,7 @@ import { FilterModal } from "./FilterModal";
 import { PreviewModal } from "./PreviewModal";
 import { MigrationStatusItem } from "./MigrationStatusItem";
 import { useStartMigration, useMigrationJob } from "../../../api/hooks/useMigrationJob";
-import type { EntityInfo } from "../../../api/hooks/useEntities";
+import type { EntityInfo } from "../../../shared/contracts/dataverse";
 
 export default function DataMigration() {
   return (

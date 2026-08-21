@@ -1,13 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "../client";
-
-export interface EntityInfo {
-  logicalName: string;
-  displayName: string;
-  primaryIdAttribute: string;
-  primaryNameAttribute: string;
-  isCustom: boolean;
-}
+import type { EntityInfo } from "../../shared/contracts/dataverse";
 
 export function useEntities(connectionName: string | null) {
   return useQuery({
