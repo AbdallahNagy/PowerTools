@@ -1,6 +1,5 @@
-import type {} from "../../src/ui/vite-env";
+import type { DesktopBridge } from "../../src/ui/platform/desktopBridge";
 
-type DesktopBridge = Window["electron"];
 type ConnectionStatusListener = Parameters<DesktopBridge["onConnectionStatusUpdate"]>[0];
 type ConnectionsUpdatedListener = Parameters<DesktopBridge["onConnectionsUpdated"]>[0];
 type UpdateStatusChangedListener = Parameters<DesktopBridge["onUpdateStatusChanged"]>[0];

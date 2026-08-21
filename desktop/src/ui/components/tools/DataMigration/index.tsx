@@ -12,6 +12,7 @@ import { PreviewModal } from "./PreviewModal";
 import { MigrationStatusItem } from "./MigrationStatusItem";
 import { useStartMigration, useMigrationJob } from "../../../api/hooks/useMigrationJob";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
+import { desktopBridge } from "../../../platform/desktopBridge";
 
 export default function DataMigration() {
   return (
@@ -41,7 +42,7 @@ function DataMigrationPage() {
 
   // Autofill source from the active connection on first open.
   useEffect(() => {
-    window.electron.getActiveConnection().then((res) => {
+    desktopBridge.getActiveConnection().then((res) => {
       if ("name" in res) setSourceName((prev) => prev || res.name);
     });
   }, []);

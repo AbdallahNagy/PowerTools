@@ -1,7 +1,10 @@
 import { http, HttpResponse } from "msw";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { ActiveConnection } from "../../src/ui/vite-env";
+import type {
+  ActiveConnection,
+  DesktopBridge,
+} from "../../src/ui/platform/desktopBridge";
 import {
   createFakeDesktopBridge,
   installDesktopBridge,
@@ -181,7 +184,7 @@ describe("Axios API client", () => {
   });
 
   it("caches primary auth until clearAuthCache is called", async () => {
-    const getActiveConnection = vi.fn<Window["electron"]["getActiveConnection"]>(
+    const getActiveConnection = vi.fn<DesktopBridge["getActiveConnection"]>(
       async () => ONLINE_PRIMARY,
     );
     installDesktopBridge(createFakeDesktopBridge({
@@ -214,7 +217,7 @@ describe("Axios API client", () => {
       token: "refreshed-token",
       expiresOn: "2099-01-01T00:00:00.000Z",
     } satisfies ActiveConnection;
-    const refreshToken = vi.fn<Window["electron"]["refreshToken"]>(
+    const refreshToken = vi.fn<DesktopBridge["refreshToken"]>(
       async () => refreshedPrimary,
     );
     installDesktopBridge(createFakeDesktopBridge({
@@ -255,7 +258,7 @@ describe("Axios API client", () => {
       token: "refreshed-token",
       expiresOn: "2099-01-01T00:00:00.000Z",
     } satisfies ActiveConnection;
-    const refreshToken = vi.fn<Window["electron"]["refreshToken"]>(
+    const refreshToken = vi.fn<DesktopBridge["refreshToken"]>(
       async () => refreshedPrimary,
     );
     installDesktopBridge(createFakeDesktopBridge({
@@ -280,5 +283,53 @@ describe("Axios API client", () => {
     });
     expect(attempts).toBe(2);
     expect(refreshToken).toHaveBeenCalledTimes(1);
+  });
+
+  it("dedupes concurrent primary refreshes into one main-process call", async () => {
+    const refreshedPrimary = {
+      name: "Primary Online",
+      envUrl: "https://primary.crm.dynamics.com",
+      crmType: "online",
+      token: "refreshed-token",
+      expiresOn: "2099-01-01T00:00:00.000Z",
+    } satisfies ActiveConnection;
+    let releaseRefresh: (value: ActiveConnection) => void = () => {};
+    const refreshToken = vi.fn<DesktopBridge["refreshToken"]>(
+      () =>
+        new Promise<ActiveConnection>((resolve) => {
+          releaseRefresh = resolve;
+        }),
+    );
+    installDesktopBridge(createFakeDesktopBridge({
+      getApiBaseUrl: async () => SIDECAR_BASE_URL,
+      getLocalSecret: async () => "local-secret",
+      getActiveConnection: async () => ONLINE_PRIMARY,
+      refreshToken,
+    }));
+
+    let attempts = 0;
+    httpServer.use(
+      http.get(`${SIDECAR_BASE_URL}/concurrent-refresh`, ({ request }) => {
+        attempts += 1;
+        return request.headers.get("Authorization") === "Bearer refreshed-token"
+          ? HttpResponse.json({ ok: true })
+          : HttpResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }),
+    );
+
+    const { api } = await import("../../src/ui/api/client");
+    const first = api.get("/concurrent-refresh");
+    const second = api.get("/concurrent-refresh");
+    const third = api.get("/concurrent-refresh");
+
+    // Let the first-attempt 401s land and enter the refresh path before releasing.
+    await new Promise((r) => setTimeout(r, 20));
+    releaseRefresh(refreshedPrimary);
+
+    await Promise.all([first, second, third]);
+
+    expect(refreshToken).toHaveBeenCalledTimes(1);
+    // 3 initial 401s + 3 retries with the refreshed token.
+    expect(attempts).toBe(6);
   });
 });

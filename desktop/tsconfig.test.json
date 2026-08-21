@@ -4,6 +4,12 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
     "types": ["node", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["test/**/*.ts", "test/**/*.tsx", "src/**/*.test.ts", "src/**/*.test.tsx"],
+  "include": [
+    "test/**/*.ts",
+    "test/**/*.tsx",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/ui/vite-env.d.ts"
+  ],
   "exclude": ["src/electron"]
 }

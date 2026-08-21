@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { ConnectionInfo, UpdateStatus } from "../../vite-env";
 import { useStatusBar } from "../../context/useStatusBar";
+import {
+  desktopBridge,
+  type ConnectionInfo,
+  type UpdateStatus,
+} from "../../platform/desktopBridge";
 import {
   formatAppVersion,
   getUpdateActionLabel,
@@ -19,20 +23,20 @@ const StatusBar = () => {
   const updateActionLabel = getUpdateActionLabel(updateStatus);
 
   useEffect(() => {
-    window.electron.listConnections().then(setConnections);
-    window.electron.getAppVersion().then(setAppVersion);
-    window.electron.getUpdateStatus().then(setUpdateStatus);
+    desktopBridge.listConnections().then(setConnections);
+    desktopBridge.getAppVersion().then(setAppVersion);
+    desktopBridge.getUpdateStatus().then(setUpdateStatus);
 
-    window.electron.getActiveConnection().then((res) => {
+    desktopBridge.getActiveConnection().then((res) => {
       if ("name" in res) setActiveName(res.name);
     });
 
-    window.electron.onConnectionStatusUpdate((name) => setActiveName(name));
-    const unsubscribeConnections = window.electron.onConnectionsUpdated((list) =>
+    desktopBridge.onConnectionStatusUpdate((name) => setActiveName(name));
+    const unsubscribeConnections = desktopBridge.onConnectionsUpdated((list) =>
       setConnections(list)
     );
     const unsubscribeUpdateStatus =
-      window.electron.onUpdateStatusChanged(setUpdateStatus);
+      desktopBridge.onUpdateStatusChanged(setUpdateStatus);
     return () => {
       unsubscribeConnections();
       unsubscribeUpdateStatus();
@@ -56,28 +60,28 @@ const StatusBar = () => {
   }, [open]);
 
   const selectConnection = async (name: string) => {
-    await window.electron.setActiveConnection(name);
+    await desktopBridge.setActiveConnection(name);
     setActiveName(name);
     setOpen(false);
   };
 
   const deleteConnection = async (name: string) => {
-    await window.electron.deleteConnection(name);
+    await desktopBridge.deleteConnection(name);
     setConfirmingDelete(null);
   };
 
   const addConnection = () => {
-    window.electron.createConnectionWindow();
+    desktopBridge.createConnectionWindow();
     setOpen(false);
   };
 
   const runUpdateAction = () => {
     if (updateStatus.state === "available") {
-      window.electron.downloadUpdate();
+      desktopBridge.downloadUpdate();
     } else if (updateStatus.state === "downloaded") {
-      window.electron.installUpdate();
+      desktopBridge.installUpdate();
     } else if (updateStatus.state === "error") {
-      window.electron.checkForUpdates();
+      desktopBridge.checkForUpdates();
     }
   };
 

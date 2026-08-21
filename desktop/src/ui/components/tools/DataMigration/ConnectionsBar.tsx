@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import type { ConnectionInfo } from "../../../vite-env";
+import {
+  desktopBridge,
+  type ConnectionInfo,
+} from "../../../platform/desktopBridge";
 
 interface ConnectionsBarProps {
   sourceName: string;
@@ -17,8 +20,8 @@ export function ConnectionsBar({
   const [connections, setConnections] = useState<ConnectionInfo[]>([]);
 
   useEffect(() => {
-    window.electron.listConnections().then(setConnections);
-    const unsubscribe = window.electron.onConnectionsUpdated(setConnections);
+    desktopBridge.listConnections().then(setConnections);
+    const unsubscribe = desktopBridge.onConnectionsUpdated(setConnections);
     return unsubscribe;
   }, []);
 

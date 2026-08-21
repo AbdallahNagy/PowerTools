@@ -105,7 +105,6 @@ app.whenReady().then(async () => {
           encryptedPassword: c.encryptedPassword,
         };
   }
-  activeConnectionName = persisted.activeConnectionName;
 
   function persist() {
     saveState({

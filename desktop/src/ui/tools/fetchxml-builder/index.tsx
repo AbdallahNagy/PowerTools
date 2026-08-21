@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { ToastProvider } from "../../components/ui/Toast";
 import { useToast } from "../../components/ui/useToast";
-import type { ConnectionInfo } from "../../vite-env";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
+import {
+  desktopBridge,
+  type ConnectionInfo,
+} from "../../platform/desktopBridge";
 import type { FetchResult } from "./model/types";
 import { FilterTree } from "./components/filter-builder/FilterTree";
 import { ResultsGrid } from "./components/ResultsGrid";
@@ -56,17 +59,17 @@ function FetchXmlBuilderPage() {
 
   // Load connections from Electron
   useEffect(() => {
-    window.electron.listConnections().then((list) => {
+    desktopBridge.listConnections().then((list) => {
       setConnections(list);
     });
 
-    window.electron.getActiveConnection().then((activeConnection) => {
+    desktopBridge.getActiveConnection().then((activeConnection) => {
       if (activeConnection && "name" in activeConnection) {
         setConnectionName(activeConnection.name);
       }
     });
 
-    const unsubscribe = window.electron.onConnectionsUpdated((list) => {
+    const unsubscribe = desktopBridge.onConnectionsUpdated((list) => {
       setConnections(list);
     });
     return unsubscribe;

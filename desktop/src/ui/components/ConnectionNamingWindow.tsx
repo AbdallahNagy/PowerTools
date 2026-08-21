@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { desktopBridge } from "../platform/desktopBridge";
 
 const ConnectionNamingWindow = () => {
   const [connectionName, setConnectionName] = useState("");
@@ -6,7 +7,7 @@ const ConnectionNamingWindow = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (connectionName.trim()) {
-      window.electron.saveConnectionName(connectionName);
+      desktopBridge.saveConnectionName(connectionName);
     }
   };
 

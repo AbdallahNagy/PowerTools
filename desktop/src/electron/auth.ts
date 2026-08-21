@@ -1,6 +1,9 @@
 import {
   PublicClientApplication,
   LogLevel,
+  InteractionRequiredAuthError,
+} from "@azure/msal-node";
+import type {
   AccountInfo,
   ICachePlugin,
   TokenCacheContext,
@@ -162,8 +165,13 @@ export async function acquireTokenSilentOrInteractive(
           expiresOn: result.expiresOn ?? null,
         };
       }
-    } catch {
-      // fall through to interactive
+    } catch (err) {
+      // Only reauth interactively when MSAL says user interaction is required
+      // (revoked refresh token, expired session, new consent, MFA, etc.).
+      // Every other error — transient network, AAD 5xx, cache read glitch —
+      // must propagate so the caller can retry silently instead of popping
+      // a browser window that will likely fail the same way.
+      if (!(err instanceof InteractionRequiredAuthError)) throw err;
     }
   }
   return acquireTokenInteractive(envUrl);

@@ -1,4 +1,4 @@
-import type { UpdateStatus } from "../../vite-env";
+import type { UpdateStatus } from "../../platform/desktopBridge";
 
 export function formatAppVersion(version: string) {
   return version ? `v${version}` : "";

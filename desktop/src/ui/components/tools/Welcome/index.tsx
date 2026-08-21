@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { desktopBridge } from "../../../platform/desktopBridge";
 
 const features: {
   icon: ReactElement;
@@ -152,7 +153,7 @@ export default function WelcomeTab() {
               }}
               onClick={(event) => {
                 event.preventDefault();
-                void window.electron.openExternalUrl(
+                void desktopBridge.openExternalUrl(
                   "https://github.com/AbdallahNagy/PowerTools"
                 );
               }}

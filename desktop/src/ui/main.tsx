@@ -7,10 +7,11 @@ import "./index.css";
 import App from "./App.tsx";
 import { queryClient } from "./api/queryClient.ts";
 import { clearAuthCache } from "./api/client.ts";
+import { getDesktopBridge } from "./platform/desktopBridge.ts";
 
 // When the active connection changes, drop cached auth and any server data
 // from the previous org so the next query fetches fresh.
-window.electron?.onConnectionStatusUpdate(() => {
+getDesktopBridge()?.onConnectionStatusUpdate(() => {
   clearAuthCache();
   queryClient.invalidateQueries();
 });

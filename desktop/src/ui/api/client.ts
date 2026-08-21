@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import type { AxiosRequestConfig } from "axios";
+import { desktopBridge } from "../platform/desktopBridge";
 
 interface CachedAuth {
   name: string;
@@ -30,57 +31,84 @@ export function shouldRefreshAuth(
 let bootstrapPromise: Promise<{ baseUrl: string; secret: string }> | null = null;
 function bootstrap() {
   return bootstrapPromise ??= Promise.all([
-    window.electron.getApiBaseUrl(),
-    window.electron.getLocalSecret(),
+    desktopBridge.getApiBaseUrl(),
+    desktopBridge.getLocalSecret(),
   ]).then(([baseUrl, secret]) => ({ baseUrl, secret }));
 }
 
 let cached: CachedAuth | null = null;
 const targetCache: Record<string, CachedAuth> = {};
 
+// Dedupes concurrent refresh calls so N queries that fire together against an
+// expired token trigger exactly one main-process refresh, not N racing ones.
+let inFlightPrimary: Promise<CachedAuth> | null = null;
+const inFlightTargets = new Map<string, Promise<CachedAuth>>();
+
 async function loadAuth(forceRefresh = false): Promise<CachedAuth> {
   if (!forceRefresh && cached && !shouldRefreshAuth(cached)) return cached;
+  if (inFlightPrimary) return inFlightPrimary;
 
-  const result = forceRefresh
-    ? await window.electron.refreshToken()
-    : await window.electron.getActiveConnection();
+  inFlightPrimary = (async () => {
+    const result = forceRefresh
+      ? await desktopBridge.refreshToken()
+      : await desktopBridge.getActiveConnection();
 
-  if ("error" in result) throw new Error(result.error);
+    if ("error" in result) throw new Error(result.error);
 
-  cached = {
-    name: result.name,
-    token: result.token,
-    envUrl: result.envUrl,
-    crmType: result.crmType,
-    expiresOn: result.expiresOn,
-  };
-  return cached;
+    cached = {
+      name: result.name,
+      token: result.token,
+      envUrl: result.envUrl,
+      crmType: result.crmType,
+      expiresOn: result.expiresOn,
+    };
+    return cached;
+  })();
+
+  try {
+    return await inFlightPrimary;
+  } finally {
+    inFlightPrimary = null;
+  }
 }
 
 async function loadTargetAuth(name: string, forceRefresh = false): Promise<CachedAuth> {
   if (!forceRefresh && targetCache[name] && !shouldRefreshAuth(targetCache[name])) {
     return targetCache[name];
   }
+  const existing = inFlightTargets.get(name);
+  if (existing) return existing;
 
-  const result = await window.electron.getConnection(name);
-  if ("error" in result) throw new Error(result.error);
+  const promise = (async () => {
+    const result = await desktopBridge.getConnection(name);
+    if ("error" in result) throw new Error(result.error);
 
-  targetCache[name] = {
-    name: result.name,
-    token: result.token,
-    envUrl: result.envUrl,
-    crmType: result.crmType,
-    expiresOn: result.expiresOn,
-  };
-  return targetCache[name];
+    targetCache[name] = {
+      name: result.name,
+      token: result.token,
+      envUrl: result.envUrl,
+      crmType: result.crmType,
+      expiresOn: result.expiresOn,
+    };
+    return targetCache[name];
+  })();
+
+  inFlightTargets.set(name, promise);
+  try {
+    return await promise;
+  } finally {
+    inFlightTargets.delete(name);
+  }
 }
 
 export function clearAuthCache() {
   cached = null;
+  inFlightPrimary = null;
 }
 
 export function clearTargetAuthCache(name: string) {
   delete targetCache[name];
+  inFlightTargets.delete(name);
 }
 
 declare module "axios" {

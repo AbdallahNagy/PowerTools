@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { desktopBridge } from "../platform/desktopBridge";
 
 type ConnectionFormData = {
   crmType: "online" | "onpremise";
@@ -32,7 +33,7 @@ const ConnectionWindow = () => {
     setLoading(true);
     setError(null);
 
-    const result = await window.electron.saveConnectionData(
+    const result = await desktopBridge.saveConnectionData(
       formData.crmType === "online"
         ? { crmType: "online", serverUrl: formData.serverUrl }
         : {
