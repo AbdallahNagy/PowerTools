@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { apiPost } from "../../../api/client";
+import { apiPost } from "../../../shared/api/client";
 import type { ExecuteFetchRequest, FetchResult } from "../model/types";
 
 export function useRunFetch(connectionName: string | null) {

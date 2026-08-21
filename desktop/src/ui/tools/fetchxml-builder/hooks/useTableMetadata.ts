@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "../../../api/client";
+import { apiGet } from "../../../shared/api/client";
 import type { FieldMetadata } from "../model/types";
 
 export function useTableMetadata(

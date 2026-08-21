@@ -5,8 +5,8 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 import "./index.css";
 import App from "./App.tsx";
-import { queryClient } from "./api/queryClient.ts";
-import { clearAuthCache } from "./api/client.ts";
+import { queryClient } from "./shared/api/queryClient.ts";
+import { clearAuthCache } from "./shared/api/client.ts";
 import { getDesktopBridge } from "./platform/desktopBridge.ts";
 
 // When the active connection changes, drop cached auth and any server data

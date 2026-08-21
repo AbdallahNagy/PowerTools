@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { apiPost } from "../../../api/client";
+import { apiPost } from "../../../shared/api/client";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 import type { FetchResult } from "../model/types";
 import { buildLookupFetchXml } from "../model/lookupFetchXml";

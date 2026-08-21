@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 
-import { shouldRefreshAuth } from "../src/ui/api/client.ts";
+import { shouldRefreshAuth } from "../src/ui/shared/api/client.ts";
 
 test("shouldRefreshAuth refreshes cached online tokens before they expire", () => {
   expect(shouldRefreshAuth({

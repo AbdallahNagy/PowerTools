@@ -89,7 +89,7 @@ describe("Axios API client", () => {
       }),
     );
 
-    const { api } = await import("../../src/ui/api/client");
+    const { api } = await import("../../src/ui/shared/api/client");
     await api.get("/online-primary");
 
     expect(observed).toEqual({
@@ -119,7 +119,7 @@ describe("Axios API client", () => {
       }),
     );
 
-    const { api } = await import("../../src/ui/api/client");
+    const { api } = await import("../../src/ui/shared/api/client");
     await api.get("/on-premises-primary");
 
     expect(observed?.connectionName).toBe("Primary On Premises");
@@ -145,7 +145,7 @@ describe("Axios API client", () => {
       }),
     );
 
-    const { api } = await import("../../src/ui/api/client");
+    const { api } = await import("../../src/ui/shared/api/client");
     await api.get("/online-target", {
       meta: { targetConnectionName: "Target Online" },
     });
@@ -173,7 +173,7 @@ describe("Axios API client", () => {
       }),
     );
 
-    const { api } = await import("../../src/ui/api/client");
+    const { api } = await import("../../src/ui/shared/api/client");
     await api.get("/on-premises-target", {
       meta: { targetConnectionName: "Target On Premises" },
     });
@@ -197,7 +197,7 @@ describe("Axios API client", () => {
       http.get(`${SIDECAR_BASE_URL}/cached-auth`, () => HttpResponse.json({ ok: true })),
     );
 
-    const { api, clearAuthCache } = await import("../../src/ui/api/client");
+    const { api, clearAuthCache } = await import("../../src/ui/shared/api/client");
     await api.get("/cached-auth");
     await api.get("/cached-auth");
 
@@ -239,7 +239,7 @@ describe("Axios API client", () => {
       }),
     );
 
-    const { api } = await import("../../src/ui/api/client");
+    const { api } = await import("../../src/ui/shared/api/client");
     await api.get("/refresh-once");
 
     expect(authorizationHeaders).toEqual([
@@ -276,7 +276,7 @@ describe("Axios API client", () => {
       }),
     );
 
-    const { api } = await import("../../src/ui/api/client");
+    const { api } = await import("../../src/ui/shared/api/client");
 
     await expect(api.get("/always-unauthorized")).rejects.toMatchObject({
       response: { status: 401 },
@@ -317,7 +317,7 @@ describe("Axios API client", () => {
       }),
     );
 
-    const { api } = await import("../../src/ui/api/client");
+    const { api } = await import("../../src/ui/shared/api/client");
     const first = api.get("/concurrent-refresh");
     const second = api.get("/concurrent-refresh");
     const third = api.get("/concurrent-refresh");
@@ -331,5 +331,32 @@ describe("Axios API client", () => {
     expect(refreshToken).toHaveBeenCalledTimes(1);
     // 3 initial 401s + 3 retries with the refreshed token.
     expect(attempts).toBe(6);
+  });
+
+  it("shares one transport and query cache across canonical and legacy entry points", async () => {
+    const getActiveConnection = vi.fn<DesktopBridge["getActiveConnection"]>(
+      async () => ONLINE_PRIMARY,
+    );
+    installDesktopBridge(createFakeDesktopBridge({
+      getApiBaseUrl: async () => SIDECAR_BASE_URL,
+      getLocalSecret: async () => "local-secret",
+      getActiveConnection,
+    }));
+
+    httpServer.use(
+      http.get(`${SIDECAR_BASE_URL}/shared-transport`, () => HttpResponse.json({ ok: true })),
+    );
+
+    const canonicalTransport = await import("../../src/ui/shared/api/client");
+    const legacyTransport = await import("../../src/ui/api/client");
+    const canonicalQueries = await import("../../src/ui/shared/api/queryClient");
+    const legacyQueries = await import("../../src/ui/api/queryClient");
+
+    await canonicalTransport.api.get("/shared-transport");
+    await legacyTransport.api.get("/shared-transport");
+
+    expect(getActiveConnection).toHaveBeenCalledTimes(1);
+    expect(legacyTransport.api).toBe(canonicalTransport.api);
+    expect(legacyQueries.queryClient).toBe(canonicalQueries.queryClient);
   });
 });

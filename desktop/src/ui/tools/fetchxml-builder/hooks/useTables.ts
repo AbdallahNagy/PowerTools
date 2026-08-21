@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "../../../api/client";
+import { apiGet } from "../../../shared/api/client";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 
 export function useTables(connectionName: string | null) {
