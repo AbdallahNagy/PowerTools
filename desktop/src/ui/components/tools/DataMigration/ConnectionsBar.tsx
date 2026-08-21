@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
 import {
-  desktopBridge,
+  useConnections,
   type ConnectionInfo,
-} from "../../../platform/desktopBridge";
+} from "../../../shared/connections";
 
 interface ConnectionsBarProps {
   sourceName: string;
@@ -17,13 +16,7 @@ export function ConnectionsBar({
   onSourceChange,
   onTargetChange,
 }: ConnectionsBarProps) {
-  const [connections, setConnections] = useState<ConnectionInfo[]>([]);
-
-  useEffect(() => {
-    desktopBridge.listConnections().then(setConnections);
-    const unsubscribe = desktopBridge.onConnectionsUpdated(setConnections);
-    return unsubscribe;
-  }, []);
+  const { connections } = useConnections();
 
   return (
     <div className="flex items-end gap-3">

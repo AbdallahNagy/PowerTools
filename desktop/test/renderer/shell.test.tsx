@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import ActivityBar from "../../src/ui/components/layout/ActivityBar";
@@ -9,6 +9,7 @@ import { TabProvider } from "../../src/ui/context/TabContext";
 import { useStatusBar } from "../../src/ui/context/useStatusBar";
 import { useTabs } from "../../src/ui/context/useTabs";
 import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
+import { ConnectionsProvider } from "../../src/ui/shared/connections";
 import { renderWithProviders } from "../support/render";
 
 function TabState() {
@@ -44,17 +45,19 @@ afterEach(() => {
 });
 
 describe("renderer shell", () => {
-  it("projects activity tools in order and opens named FetchXML Builder instances", () => {
+  it("projects activity tools in order and opens named FetchXML Builder instances", async () => {
     const now = vi.spyOn(Date, "now");
 
     renderWithProviders(
-      <TabProvider>
-        <ActivityBar />
-        <TabState />
-      </TabProvider>,
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+          <TabState />
+        </TabProvider>
+      </ConnectionsProvider>,
     );
 
-    const dataMigration = screen.getByRole("button", { name: "data migration" });
+    const dataMigration = await screen.findByRole("button", { name: "data migration" });
     const fetchXmlBuilder = screen.getByRole("button", {
       name: "Build, run, and refine FetchXML queries",
     });
@@ -79,17 +82,19 @@ describe("renderer shell", () => {
     );
   });
 
-  it("activates the left tab when the active second instance closes", () => {
+  it("activates the left tab when the active second instance closes", async () => {
     const now = vi.spyOn(Date, "now");
 
     renderWithProviders(
-      <TabProvider>
-        <ActivityBar />
-        <TabState />
-      </TabProvider>,
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+          <TabState />
+        </TabProvider>
+      </ConnectionsProvider>,
     );
 
-    const fetchXmlBuilder = screen.getByRole("button", {
+    const fetchXmlBuilder = await screen.findByRole("button", {
       name: "Build, run, and refine FetchXML queries",
     });
     now.mockReturnValue(301);
@@ -106,18 +111,20 @@ describe("renderer shell", () => {
     );
   });
 
-  it("activates the existing singleton Welcome tab without adding another", () => {
+  it("activates the existing singleton Welcome tab without adding another", async () => {
     const now = vi.spyOn(Date, "now");
 
     renderWithProviders(
-      <TabProvider>
-        <ActivityBar />
-        <TabState />
-      </TabProvider>,
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+          <TabState />
+        </TabProvider>
+      </ConnectionsProvider>,
     );
 
     now.mockReturnValue(401);
-    fireEvent.click(screen.getByRole("button", { name: "data migration" }));
+    fireEvent.click(await screen.findByRole("button", { name: "data migration" }));
     expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe(
       "data-migration-401",
     );
@@ -130,27 +137,31 @@ describe("renderer shell", () => {
     expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe("welcome");
   });
 
-  it("replaces status content by ID and removes only the unmounted publisher", () => {
+  it("replaces status content by ID and removes only the unmounted publisher", async () => {
     const firstStatus = <span role="status" aria-label="first publisher status">First status</span>;
     const updatedFirstStatus = <span role="status" aria-label="first publisher status">Updated first status</span>;
     const secondStatus = <span role="status" aria-label="second publisher status">Second status</span>;
     const { rerender } = renderWithProviders(
-      <StatusBarProvider>
-        <StatusPublisher id="first">{firstStatus}</StatusPublisher>
-        <StatusPublisher id="second">{secondStatus}</StatusPublisher>
-        <StatusBar />
-      </StatusBarProvider>,
+      <ConnectionsProvider>
+        <StatusBarProvider>
+          <StatusPublisher id="first">{firstStatus}</StatusPublisher>
+          <StatusPublisher id="second">{secondStatus}</StatusPublisher>
+          <StatusBar />
+        </StatusBarProvider>
+      </ConnectionsProvider>,
     );
 
-    expect(screen.getByRole("status", { name: "first publisher status" })).toHaveTextContent("First status");
+    expect(await screen.findByRole("status", { name: "first publisher status" })).toHaveTextContent("First status");
     expect(screen.getByRole("status", { name: "second publisher status" })).toHaveTextContent("Second status");
 
     rerender(
-      <StatusBarProvider>
-        <StatusPublisher id="first">{updatedFirstStatus}</StatusPublisher>
-        <StatusPublisher id="second">{secondStatus}</StatusPublisher>
-        <StatusBar />
-      </StatusBarProvider>,
+      <ConnectionsProvider>
+        <StatusBarProvider>
+          <StatusPublisher id="first">{updatedFirstStatus}</StatusPublisher>
+          <StatusPublisher id="second">{secondStatus}</StatusPublisher>
+          <StatusBar />
+        </StatusBarProvider>
+      </ConnectionsProvider>,
     );
 
     expect(screen.getByRole("status", { name: "first publisher status" })).toHaveTextContent(
@@ -159,15 +170,46 @@ describe("renderer shell", () => {
     expect(screen.getByRole("status", { name: "second publisher status" })).toHaveTextContent("Second status");
 
     rerender(
-      <StatusBarProvider>
-        <StatusPublisher id="first">{updatedFirstStatus}</StatusPublisher>
-        <StatusBar />
-      </StatusBarProvider>,
+      <ConnectionsProvider>
+        <StatusBarProvider>
+          <StatusPublisher id="first">{updatedFirstStatus}</StatusPublisher>
+          <StatusBar />
+        </StatusBarProvider>
+      </ConnectionsProvider>,
     );
 
     expect(screen.getByRole("status", { name: "first publisher status" })).toHaveTextContent(
       "Updated first status",
     );
     expect(screen.queryByRole("status", { name: "second publisher status" })).not.toBeInTheDocument();
+  });
+
+  it("uses one shared connection load while preserving StatusBar updates", async () => {
+    const listConnections = vi.fn(async () => [
+      {
+        name: "Primary",
+        envUrl: "https://primary.example.test",
+        crmType: "online" as const,
+      },
+    ]);
+    const getActiveConnectionName = vi.fn(async () => "Primary");
+    const { bridge } = renderWithProviders(
+      <ConnectionsProvider>
+        <StatusBarProvider>
+          <StatusBar />
+        </StatusBarProvider>
+      </ConnectionsProvider>,
+      { bridgeOverrides: { getActiveConnectionName, listConnections } },
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Connected: (Primary)" })).toBeInTheDocument();
+    });
+    expect(listConnections).toHaveBeenCalledTimes(1);
+    expect(getActiveConnectionName).toHaveBeenCalledTimes(1);
+
+    act(() => bridge.emitConnectionStatusUpdate("Secondary"));
+
+    expect(screen.getByRole("button", { name: "Connected: (Secondary)" })).toBeInTheDocument();
   });
 });

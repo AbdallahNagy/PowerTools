@@ -1,7 +1,8 @@
-export interface ActiveConnection {
-  name: string;
-  envUrl: string;
-  crmType: "online" | "onpremise";
+import type { ConnectionInfo } from "../shared/connections/types";
+
+export type { ConnectionInfo } from "../shared/connections/types";
+
+export interface ActiveConnection extends ConnectionInfo {
   token?: string;
   expiresOn?: string | null;
 }
@@ -11,12 +12,6 @@ export interface ConnectionError {
 }
 
 export type ConnectionResult = ActiveConnection | ConnectionError;
-
-export interface ConnectionInfo {
-  name: string;
-  envUrl: string;
-  crmType: "online" | "onpremise";
-}
 
 export type UpdateStatus =
   | { state: "idle" }
@@ -57,6 +52,7 @@ export interface DesktopBridge {
   getConnection(name: string): Promise<ConnectionResult>;
   setActiveConnection(name: string): Promise<DesktopOperationResult>;
   deleteConnection(name: string): Promise<DesktopOperationResult>;
+  getActiveConnectionName(): Promise<string | null>;
   getActiveConnection(): Promise<ConnectionResult>;
   refreshToken(): Promise<ConnectionResult>;
   getApiBaseUrl(): Promise<string>;
@@ -94,6 +90,7 @@ export const desktopBridge: DesktopBridge = {
   getConnection: (name) => bridge().getConnection(name),
   setActiveConnection: (name) => bridge().setActiveConnection(name),
   deleteConnection: (name) => bridge().deleteConnection(name),
+  getActiveConnectionName: () => bridge().getActiveConnectionName(),
   getActiveConnection: () => bridge().getActiveConnection(),
   refreshToken: () => bridge().refreshToken(),
   getApiBaseUrl: () => bridge().getApiBaseUrl(),

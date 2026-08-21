@@ -36,6 +36,7 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     getConnection: async () => ({ error: "Connection not found" }),
     setActiveConnection: async () => ({ success: true }),
     deleteConnection: async () => ({ success: true }),
+    getActiveConnectionName: async () => null,
     getActiveConnection: async () => ({ error: "No active connection" }),
     refreshToken: async () => ({ error: "No active connection" }),
     getApiBaseUrl: async () => "http://localhost",

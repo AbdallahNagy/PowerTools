@@ -12,7 +12,7 @@ import { PreviewModal } from "./PreviewModal";
 import { MigrationStatusItem } from "./MigrationStatusItem";
 import { useStartMigration, useMigrationJob } from "../../../api/hooks/useMigrationJob";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
-import { desktopBridge } from "../../../platform/desktopBridge";
+import { useConnectionSelection } from "../../../shared/connections";
 
 export default function DataMigration() {
   return (
@@ -23,7 +23,8 @@ export default function DataMigration() {
 }
 
 function DataMigrationPage() {
-  const [sourceName, setSourceName] = useState("");
+  const { connectionName: sourceName, setConnectionName: setSourceName } =
+    useConnectionSelection();
   const [targetName, setTargetName] = useState("");
   const [entity, setEntity] = useState<EntityInfo | null>(null);
   const [attributes, setAttributes] = useState<string[]>([]);
@@ -34,18 +35,10 @@ function DataMigrationPage() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
   const [runningEntity, setRunningEntity] = useState("");
-
   const { showToast } = useToast();
   const { setStatus, clearStatus } = useStatusBar();
   const { mutate: startMigration, isPending } = useStartMigration();
   const { data: job } = useMigrationJob(jobId);
-
-  // Autofill source from the active connection on first open.
-  useEffect(() => {
-    desktopBridge.getActiveConnection().then((res) => {
-      if ("name" in res) setSourceName((prev) => prev || res.name);
-    });
-  }, []);
 
   // Metadata hooks now sign each request with the chosen source connection
   // via `meta.connectionName`, so we just reset dependent local state here

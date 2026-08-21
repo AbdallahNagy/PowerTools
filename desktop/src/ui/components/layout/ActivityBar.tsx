@@ -1,10 +1,11 @@
 import ConnectIcon from "../../assets/icons/connect-icon.svg";
 import { useTabs } from "../../context/useTabs";
-import { desktopBridge } from "../../platform/desktopBridge";
+import { useConnections } from "../../shared/connections";
 import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 
 const ActivityBar = () => {
   const { openTool } = useTabs();
+  const { createConnectionWindow } = useConnections();
 
   return (
     <div className="w-12 bg-[#252526] flex flex-col items-center py-2 select-none">
@@ -12,7 +13,7 @@ const ActivityBar = () => {
         title="connect"
         aria-label="connect"
         className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white focus:outline-none mb-2"
-        onClick={() => desktopBridge.createConnectionWindow()}
+        onClick={() => createConnectionWindow()}
       >
         <img src={ConnectIcon} alt="" className="w-full h-full object-cover brightness-0 invert opacity-80" />
       </button>

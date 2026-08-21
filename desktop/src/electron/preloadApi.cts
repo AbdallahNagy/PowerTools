@@ -32,6 +32,8 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       ipcRenderer.invoke("set-active-connection", name),
     deleteConnection: (name: string) =>
       ipcRenderer.invoke("delete-connection", name),
+    getActiveConnectionName: () =>
+      ipcRenderer.invoke("get-active-connection-name"),
     // Back-compat
     getActiveConnection: () =>
       ipcRenderer.invoke("get-active-connection"),

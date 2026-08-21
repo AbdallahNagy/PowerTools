@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { useStatusBar } from "../../context/useStatusBar";
 import {
   desktopBridge,
-  type ConnectionInfo,
   type UpdateStatus,
 } from "../../platform/desktopBridge";
+import { useConnections } from "../../shared/connections";
 import {
   formatAppVersion,
   getUpdateActionLabel,
@@ -12,33 +12,27 @@ import {
 } from "./updateStatus";
 
 const StatusBar = () => {
-  const [connections, setConnections] = useState<ConnectionInfo[]>([]);
-  const [activeName, setActiveName] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState("");
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: "idle" });
   const [open, setOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { items } = useStatusBar();
+  const {
+    activeConnectionName: activeName,
+    connections,
+    createConnectionWindow,
+    deleteConnection: removeConnection,
+    setActiveConnection,
+  } = useConnections();
   const updateActionLabel = getUpdateActionLabel(updateStatus);
 
   useEffect(() => {
-    desktopBridge.listConnections().then(setConnections);
     desktopBridge.getAppVersion().then(setAppVersion);
     desktopBridge.getUpdateStatus().then(setUpdateStatus);
-
-    desktopBridge.getActiveConnection().then((res) => {
-      if ("name" in res) setActiveName(res.name);
-    });
-
-    desktopBridge.onConnectionStatusUpdate((name) => setActiveName(name));
-    const unsubscribeConnections = desktopBridge.onConnectionsUpdated((list) =>
-      setConnections(list)
-    );
     const unsubscribeUpdateStatus =
       desktopBridge.onUpdateStatusChanged(setUpdateStatus);
     return () => {
-      unsubscribeConnections();
       unsubscribeUpdateStatus();
     };
   }, []);
@@ -60,18 +54,17 @@ const StatusBar = () => {
   }, [open]);
 
   const selectConnection = async (name: string) => {
-    await desktopBridge.setActiveConnection(name);
-    setActiveName(name);
+    await setActiveConnection(name);
     setOpen(false);
   };
 
   const deleteConnection = async (name: string) => {
-    await desktopBridge.deleteConnection(name);
+    await removeConnection(name);
     setConfirmingDelete(null);
   };
 
   const addConnection = () => {
-    desktopBridge.createConnectionWindow();
+    createConnectionWindow();
     setOpen(false);
   };
 

@@ -441,6 +441,8 @@ app.whenReady().then(async () => {
     getConnectionForRenderer(name)
   );
 
+  ipcMain.handle("get-active-connection-name", () => activeConnectionName);
+
   // Back-compat: uses whichever connection is currently active
   ipcMain.handle("get-active-connection", () => {
     if (!activeConnectionName) return { error: "Not connected." };

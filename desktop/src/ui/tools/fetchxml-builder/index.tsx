@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { ToastProvider } from "../../components/ui/Toast";
 import { useToast } from "../../components/ui/useToast";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
-import {
-  desktopBridge,
-  type ConnectionInfo,
-} from "../../platform/desktopBridge";
+import { useConnections, useConnectionSelection } from "../../shared/connections";
 import type { FetchResult } from "./model/types";
 import { FilterTree } from "./components/filter-builder/FilterTree";
 import { ResultsGrid } from "./components/ResultsGrid";
@@ -35,16 +32,15 @@ export default function FetchXmlBuilder() {
 }
 
 function FetchXmlBuilderPage() {
-  const [connections, setConnections] = useState<ConnectionInfo[]>([]);
-  const [connectionName, setConnectionName] = useState<string>("");
+  const { connectionName, setConnectionName } = useConnectionSelection();
   const [selectedEntity, setSelectedEntity] = useState<EntityInfo | null>(null);
   const [page, setPage] = useState(1);
   const [pagingCookies, setPagingCookies] = useState<Record<number, string>>({});
   const [lastFetchXml, setLastFetchXml] = useState("");
   const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateTree>>([]);
   const [rightView, setRightView] = useState<RightView>("results");
-
   const { showToast } = useToast();
+  const { connections } = useConnections();
   const tree = useFilterTree();
   const { data: tables, isLoading: tablesLoading, error: tablesError } = useTables(connectionName || null);
   const { data: fields, isLoading: fieldsLoading } = useTableMetadata(
@@ -56,24 +52,6 @@ function FetchXmlBuilderPage() {
     connectionName || null,
   );
   const { mutate: runFetch, data: result, isPending, reset: resetResult } = useRunFetch(connectionName || null);
-
-  // Load connections from Electron
-  useEffect(() => {
-    desktopBridge.listConnections().then((list) => {
-      setConnections(list);
-    });
-
-    desktopBridge.getActiveConnection().then((activeConnection) => {
-      if (activeConnection && "name" in activeConnection) {
-        setConnectionName(activeConnection.name);
-      }
-    });
-
-    const unsubscribe = desktopBridge.onConnectionsUpdated((list) => {
-      setConnections(list);
-    });
-    return unsubscribe;
-  }, []);
 
   const sortedTables = useMemo(
     () => [...(tables ?? [])].sort((a, b) => a.displayName.localeCompare(b.displayName)),

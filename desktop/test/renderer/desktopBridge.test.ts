@@ -57,6 +57,10 @@ describe("desktopBridge", () => {
         observed.push(["deleteConnection", name]);
         return { success: false, error: "delete failed" };
       },
+      getActiveConnectionName: async () => {
+        observed.push(["getActiveConnectionName"]);
+        return "Primary";
+      },
       openExternalUrl: async (url) => {
         observed.push(["openExternalUrl", url]);
       },
@@ -87,6 +91,7 @@ describe("desktopBridge", () => {
       success: false,
       error: "delete failed",
     });
+    await expect(desktopBridge.getActiveConnectionName()).resolves.toBe("Primary");
     await expect(desktopBridge.openExternalUrl("https://example.test/docs")).resolves.toBeUndefined();
 
     expect(observed).toEqual([
@@ -95,6 +100,7 @@ describe("desktopBridge", () => {
       ["getConnection", "Primary"],
       ["setActiveConnection", "Primary"],
       ["deleteConnection", "Primary"],
+      ["getActiveConnectionName"],
       ["openExternalUrl", "https://example.test/docs"],
     ]);
   });
@@ -171,6 +177,7 @@ describe("createFakeDesktopBridge", () => {
     await expect(bridge.getConnection("missing")).resolves.toEqual({ error: "Connection not found" });
     await expect(bridge.setActiveConnection("missing")).resolves.toEqual({ success: true });
     await expect(bridge.deleteConnection("missing")).resolves.toEqual({ success: true });
+    await expect(bridge.getActiveConnectionName()).resolves.toBeNull();
     await expect(bridge.getActiveConnection()).resolves.toEqual({ error: "No active connection" });
     await expect(bridge.refreshToken()).resolves.toEqual({ error: "No active connection" });
     await expect(bridge.getApiBaseUrl()).resolves.toBe("http://localhost");
