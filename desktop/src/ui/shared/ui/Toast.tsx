@@ -1,5 +1,4 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
-
 import { ToastContext, type Toast, type ToastType } from "./ToastContext";
 
 export function ToastProvider({ children }: { children: ReactNode }) {

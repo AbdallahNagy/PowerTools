@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { ToastProvider } from "../../ui/Toast";
-import { useToast } from "../../ui/useToast";
+import { ToastProvider, useToast } from "../../../shared/ui";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { ConnectionsBar } from "./ConnectionsBar";
 import { MigrationOptions, type MigrationMode } from "./MigrationOptions";

@@ -1,15 +1,12 @@
 import { useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { ToastProvider } from "../../components/ui/Toast";
-import { useToast } from "../../components/ui/useToast";
+import { Button, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
 import { useConnections, useConnectionSelection } from "../../shared/connections";
 import type { FetchResult } from "./model/types";
 import { FilterTree } from "./components/filter-builder/FilterTree";
 import { ResultsGrid } from "./components/ResultsGrid";
 import { FetchXmlView } from "./components/FetchXmlView";
-import { Button } from "../../components/ui/Button";
-import { Spinner } from "../../components/ui/Spinner";
 import { FetchXmlBuilderProvider } from "./context/FetchXmlBuilderProvider";
 import { useFilterTree } from "./hooks/useFilterTree";
 import { useTables } from "./hooks/useTables";

@@ -1,5 +1,4 @@
-import { Modal } from "../../../components/ui/Modal";
-import { Button } from "../../../components/ui/Button";
+import { Button, Modal } from "../../../shared/ui";
 import { formatFetchXml } from "../model/fetchxmlFormat";
 
 interface FetchXmlModalProps {

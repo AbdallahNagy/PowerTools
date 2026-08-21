@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { Checkbox } from "../../ui/Checkbox";
-import { SearchInput } from "../../ui/SearchInput";
-import { Spinner } from "../../ui/Spinner";
+import { Checkbox, SearchInput, Spinner } from "../../../shared/ui";
 import { useEntityAttributes } from "../../../api/hooks/useEntityAttributes";
 
 interface FieldsPanelProps {

@@ -1,8 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { ToastProvider } from "../../src/ui/components/ui/Toast";
-import { useToast } from "../../src/ui/components/ui/useToast";
+import { ToastProvider, useToast } from "../../src/ui/shared/ui";
 import { StatusBarProvider, useStatusBar } from "../../src/ui/shared/status";
 import { TabProvider } from "../../src/ui/context/TabContext";
 import { useTabs } from "../../src/ui/context/useTabs";

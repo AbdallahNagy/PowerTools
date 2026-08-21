@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { SearchInput } from "../../../components/ui/SearchInput";
-import { Spinner } from "../../../components/ui/Spinner";
+import { SearchInput, Spinner } from "../../../shared/ui";
 import { useTables } from "../hooks/useTables";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 interface TableSelectorProps {

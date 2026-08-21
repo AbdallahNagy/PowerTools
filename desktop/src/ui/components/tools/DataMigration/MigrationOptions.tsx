@@ -1,6 +1,4 @@
-import { Checkbox } from "../../ui/Checkbox";
-import { Button } from "../../ui/Button";
-import { Spinner } from "../../ui/Spinner";
+import { Button, Checkbox, Spinner } from "../../../shared/ui";
 
 export type MigrationMode = "create" | "update" | "upsert";
 

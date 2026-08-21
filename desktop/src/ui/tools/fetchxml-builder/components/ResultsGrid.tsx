@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import type { FetchResult, FieldMetadata } from "../model/types";
-import { Spinner } from "../../../components/ui/Spinner";
-import { Button } from "../../../components/ui/Button";
+import { Button, Spinner } from "../../../shared/ui";
 import { desktopBridge } from "../../../platform/desktopBridge";
 import { buildDynamicsRecordUrl } from "../model/dynamicsRecordUrl";
 import { formatFetchResultSummary } from "../model/resultSummary";

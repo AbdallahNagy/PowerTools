@@ -1,8 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "../../../../components/ui/Button";
-import { Modal } from "../../../../components/ui/Modal";
-import { SearchInput } from "../../../../components/ui/SearchInput";
-import { Spinner } from "../../../../components/ui/Spinner";
+import { Button, Modal, SearchInput, Spinner } from "../../../../shared/ui";
 import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import type { FieldMetadata } from "../../model/types";
 import { useLookupRecords, type LookupRecord } from "../../hooks/useLookupRecords";

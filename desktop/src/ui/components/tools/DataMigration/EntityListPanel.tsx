@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { SearchInput } from "../../ui/SearchInput";
-import { Spinner } from "../../ui/Spinner";
+import { SearchInput, Spinner } from "../../../shared/ui";
 import { useEntities } from "../../../api/hooks/useEntities";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 
