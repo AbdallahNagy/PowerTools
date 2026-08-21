@@ -4,7 +4,7 @@ import {
   type UpdateStatus,
 } from "../../platform/desktopBridge";
 import { useConnections } from "../../shared/connections";
-import { useStatusBar } from "../../shared/status";
+import { useStatusItems } from "../../shared/status";
 import {
   formatAppVersion,
   getUpdateActionLabel,
@@ -17,7 +17,7 @@ const StatusBar = () => {
   const [open, setOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { items } = useStatusBar();
+  const items = useStatusItems();
   const {
     activeConnectionName: activeName,
     connections,

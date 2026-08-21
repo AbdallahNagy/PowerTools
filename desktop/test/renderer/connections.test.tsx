@@ -9,8 +9,9 @@ import {
   useConnections,
 } from "../../src/ui/shared/connections";
 import { StatusBarProvider } from "../../src/ui/shared/status";
-import DataMigration from "../../src/ui/components/tools/DataMigration";
+import ToolHost from "../../src/ui/shell/tool-runtime/ToolHost";
 import FetchXmlBuilder from "../../src/ui/tools/fetchxml-builder";
+import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { renderWithProviders } from "../support/render";
 import { httpServer } from "../support/httpServer";
 
@@ -40,6 +41,19 @@ const availableConnections = [
     crmType: "online" as const,
   },
 ];
+
+function HostedDataMigration() {
+  return (
+    <ToolHost
+      tab={{
+        id: "data-migration-test",
+        toolId: "data-migration",
+        title: "Data Migration",
+      }}
+      definition={TOOL_REGISTRY["data-migration"]}
+    />
+  );
+}
 
 beforeAll(() => vi.stubGlobal("ResizeObserver", TestResizeObserver));
 afterAll(() => vi.unstubAllGlobals());
@@ -326,7 +340,7 @@ describe("shared connections", () => {
     renderWithProviders(
       <ConnectionsProvider>
         <StatusBarProvider>
-          <DataMigration />
+          <HostedDataMigration />
         </StatusBarProvider>
       </ConnectionsProvider>,
       { bridgeOverrides: { getActiveConnectionName, listConnections } },
@@ -404,7 +418,7 @@ describe("shared connections", () => {
     rerender(
       <ConnectionsProvider>
         <StatusBarProvider>
-          <DataMigration />
+          <HostedDataMigration />
         </StatusBarProvider>
       </ConnectionsProvider>,
     );

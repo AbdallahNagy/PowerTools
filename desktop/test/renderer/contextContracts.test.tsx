@@ -2,7 +2,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { ToastProvider, useToast } from "../../src/ui/shared/ui";
-import { StatusBarProvider, useStatusBar } from "../../src/ui/shared/status";
+import {
+  StatusBarProvider,
+  useStatusBar,
+  useStatusItems,
+} from "../../src/ui/shared/status";
 import { TabProvider } from "../../src/ui/context/TabContext";
 import { useTabs } from "../../src/ui/context/useTabs";
 
@@ -37,18 +41,29 @@ function StatusState() {
   );
 }
 
+function StatusItemsState() {
+  const items = useStatusItems();
+  return <output aria-label="status items state">{items.map((item) => item.id).join(",")}</output>;
+}
+
 describe("renderer context contracts", () => {
   it("rejects each consumer hook outside its provider", () => {
     expect(() => render(<ToastControls />)).toThrow("useToast must be used within ToastProvider");
     expect(() => render(<TabState />)).toThrow("useTabs must be used within a TabProvider");
     expect(() => render(<StatusState />)).toThrow("useStatusBar must be used within StatusBarProvider");
+    expect(() => render(<StatusItemsState />)).toThrow(
+      "useStatusItems must be used within StatusBarProvider",
+    );
   });
 
   it("keeps provider commands and state available to their consumers", () => {
     render(
       <>
         <TabProvider><TabState /></TabProvider>
-        <StatusBarProvider><StatusState /></StatusBarProvider>
+        <StatusBarProvider>
+          <StatusState />
+          <StatusItemsState />
+        </StatusBarProvider>
       </>,
     );
 
@@ -56,6 +71,9 @@ describe("renderer context contracts", () => {
     expect(screen.getByRole("status", { name: "tab state" })).toHaveTextContent("welcome:1");
     fireEvent.click(screen.getByRole("button", { name: "Set status" }));
     expect(screen.getByRole("status", { name: "status state" })).toHaveTextContent("sync");
+    expect(screen.getByRole("status", { name: "status items state" })).toHaveTextContent(
+      "sync",
+    );
   });
 
   it("dismisses one of two simultaneous toasts without removing the other", () => {

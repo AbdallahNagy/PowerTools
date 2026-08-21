@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { ToastProvider, useToast } from "../../../shared/ui";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { ConnectionsBar } from "./ConnectionsBar";
@@ -11,7 +11,7 @@ import { MigrationStatusItem } from "./MigrationStatusItem";
 import { useStartMigration, useMigrationJob } from "../../../api/hooks/useMigrationJob";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 import { useConnectionSelection } from "../../../shared/connections";
-import { useStatusBar } from "../../../shared/status";
+import { useToolStatus } from "../../../shared/status";
 
 export default function DataMigration() {
   return (
@@ -35,9 +35,16 @@ function DataMigrationPage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [runningEntity, setRunningEntity] = useState("");
   const { showToast } = useToast();
-  const { setStatus, clearStatus } = useStatusBar();
   const { mutate: startMigration, isPending } = useStartMigration();
   const { data: job } = useMigrationJob(jobId);
+  const statusContent = useMemo(
+    () =>
+      job ? (
+        <MigrationStatusItem entityLogicalName={runningEntity} job={job} />
+      ) : null,
+    [job, runningEntity],
+  );
+  useToolStatus(statusContent);
 
   // Metadata hooks now sign each request with the chosen source connection
   // via `meta.connectionName`, so we just reset dependent local state here
@@ -54,14 +61,6 @@ function DataMigrationPage() {
     setAttributes([]);
     setFetchFilter("");
   };
-
-  // Mirror job progress into the status bar.
-  useEffect(() => {
-    if (!job) return;
-    setStatus("data-migration", <MigrationStatusItem entityLogicalName={runningEntity} job={job} />);
-  }, [job, runningEntity, setStatus]);
-
-  useEffect(() => () => clearStatus("data-migration"), [clearStatus]);
 
   const mode: MigrationMode = doCreate && doUpdate ? "upsert" : doUpdate ? "update" : "create";
   const isRunning = job?.status === "queued" || job?.status === "running";

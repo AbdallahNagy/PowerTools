@@ -1,5 +1,10 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import { StatusContext, type StatusItem } from "./StatusContext";
+import {
+  StatusActionsContext,
+  StatusContext,
+  StatusItemsContext,
+  type StatusItem,
+} from "./StatusContext";
 
 export function StatusBarProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<StatusItem[]>([]);
@@ -19,10 +24,17 @@ export function StatusBarProvider({ children }: { children: ReactNode }) {
     setItems((previousItems) => previousItems.filter((item) => item.id !== id));
   }, []);
 
+  const actions = useMemo(() => ({ setStatus, clearStatus }), [setStatus, clearStatus]);
   const value = useMemo(
     () => ({ items, setStatus, clearStatus }),
     [items, setStatus, clearStatus],
   );
 
-  return <StatusContext.Provider value={value}>{children}</StatusContext.Provider>;
+  return (
+    <StatusActionsContext.Provider value={actions}>
+      <StatusItemsContext.Provider value={items}>
+        <StatusContext.Provider value={value}>{children}</StatusContext.Provider>
+      </StatusItemsContext.Provider>
+    </StatusActionsContext.Provider>
+  );
 }
