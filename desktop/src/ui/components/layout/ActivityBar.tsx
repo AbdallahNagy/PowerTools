@@ -20,11 +20,11 @@ const ActivityBar = () => {
 
       {ACTIVITY_BAR_TOOLS.map((tool) => (
         <button
-          key={tool.toolId}
+          key={tool.id}
           title={tool.tooltip || tool.title}
           aria-label={tool.tooltip || tool.title}
           className="w-10 h-10 flex items-center justify-center text-gray-400 hover:text-white focus:outline-none mb-2"
-          onClick={() => openTool(tool.toolId)}
+          onClick={() => openTool(tool.id)}
         >
           <img src={tool.icon} alt={tool.tooltip || tool.title} className="brightness-0 invert opacity-80" />
         </button>

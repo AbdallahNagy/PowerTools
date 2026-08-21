@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { desktopBridge } from "../../../platform/desktopBridge";
+import { desktopBridge } from "../../platform/desktopBridge";
 
 const features: {
   icon: ReactElement;
