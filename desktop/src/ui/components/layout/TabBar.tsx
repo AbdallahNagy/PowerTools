@@ -1,13 +1,13 @@
 import { memo } from "react";
 import Tab from "./TabHeader";
 import { useTabs } from "../../context/useTabs";
+import ToolHost from "../../shell/tool-runtime/ToolHost";
 import { TOOL_REGISTRY } from "../../tools/registry";
 import type { TabData } from "../../common/types/tab-data.interface";
 
 const TabContent = memo(({ tab }: { tab: TabData }) => {
   const def = TOOL_REGISTRY[tab.toolId];
-  const Tool = def?.component;
-  return Tool ? <Tool /> : <>{tab.content}</>;
+  return def ? <ToolHost tab={tab} definition={def} /> : <>{tab.content}</>;
 });
 TabContent.displayName = "TabContent";
 
