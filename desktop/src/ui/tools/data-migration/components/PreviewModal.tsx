@@ -63,8 +63,8 @@ export function PreviewModal({
   };
 
   const displayAttrs = attributes
-    .filter((a) => !a.endsWith("id") || a === attributes[0])
-    .slice(0, 8);
+    // .filter((a) => !a.endsWith("id") || a === attributes[0])
+    // .slice(0, 8);
 
   return (
     <Modal
