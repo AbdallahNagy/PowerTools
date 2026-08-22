@@ -59,6 +59,20 @@ test("renders existing root field conditions unchanged through fieldRef", () => 
   expect(xml).toBe('<fetch><entity name="account"><attribute name="name" /><filter type="and"><condition attribute="name" operator="like" value="%Contoso%" /></filter></entity></fetch>');
 });
 
+test.each([
+  ["like", "%Acme[[]West][_]100[%]]%"],
+  ["not-like", "%Acme[[]West][_]100[%]]%"],
+  ["begins-with", "Acme[[]West][_]100[%]]%"],
+  ["ends-with", "%Acme[[]West][_]100[%]]"],
+])("renders user-entered wildcard characters literally for %s", (operator, expectedValue) => {
+  const xml = buildFetchXml(
+    "account",
+    group([condition("c1", { kind: "root", field: "name" }, operator, "Acme[West]_100%]")]),
+  );
+
+  expect(xml).toBe(`<fetch><entity name="account"><filter type="and"><condition attribute="name" operator="${operator === "not-like" ? "not-like" : "like"}" value="${expectedValue}" /></filter></entity></fetch>`);
+});
+
 test("renders one-hop many-to-one related field conditions as link-entity filters", () => {
   const xml = buildFetchXml(
     "contact",

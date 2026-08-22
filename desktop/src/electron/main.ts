@@ -105,6 +105,10 @@ app.whenReady().then(async () => {
           encryptedPassword: c.encryptedPassword,
         };
   }
+  activeConnectionName = persisted.activeConnectionName &&
+    Object.prototype.hasOwnProperty.call(connections, persisted.activeConnectionName)
+    ? persisted.activeConnectionName
+    : null;
 
   function persist() {
     saveState({

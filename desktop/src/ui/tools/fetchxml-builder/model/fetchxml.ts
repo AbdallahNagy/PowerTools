@@ -17,6 +17,12 @@ function esc(v: string): string {
     .replace(/"/g, "&quot;");
 }
 
+function escapeLikeValue(value: string): string {
+  return value.replace(/[%_[]/g, (character) =>
+    character === "[" ? "[[]" : `[${character}]`,
+  );
+}
+
 export function createRelationshipPathSegment(
   relationship: RelationshipMetadata,
   parentPath: RelationshipPathSegment[],
@@ -94,10 +100,10 @@ function renderCondition(c: FilterCondition): string {
   let op = c.operator;
   let val = (c.value as string | undefined) ?? "";
 
-  if (op === "like") val = `%${val}%`;
-  else if (op === "not-like") val = `%${val}%`;
-  else if (op === "begins-with") { op = "like"; val = `${val}%`; }
-  else if (op === "ends-with")   { op = "like"; val = `%${val}`; }
+  if (op === "like") val = `%${escapeLikeValue(val)}%`;
+  else if (op === "not-like") val = `%${escapeLikeValue(val)}%`;
+  else if (op === "begins-with") { op = "like"; val = `${escapeLikeValue(val)}%`; }
+  else if (op === "ends-with")   { op = "like"; val = `%${escapeLikeValue(val)}`; }
 
   return `<condition ${attr} operator="${op}" value="${esc(val)}" />`;
 }
