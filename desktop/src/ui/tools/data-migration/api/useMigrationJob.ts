@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { apiGet, apiPost } from "../client";
+import { apiGet, apiPost } from "../../../shared/api/client";
 
 export interface MigrationJobStatus {
   status: "queued" | "running" | "completed" | "failed";

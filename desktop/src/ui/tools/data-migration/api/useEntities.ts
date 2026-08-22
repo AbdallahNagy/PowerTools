@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "../client";
-import type { EntityInfo } from "../../shared/contracts/dataverse";
+import { apiGet } from "../../../shared/api/client";
+import type { EntityInfo } from "../../../shared/contracts/dataverse";
 
 export function useEntities(connectionName: string | null) {
   return useQuery({

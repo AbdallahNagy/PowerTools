@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiPost } from "../client";
+import { apiPost } from "../../../shared/api/client";
 
 export interface PreviewResult {
   records: Record<string, string | null>[];

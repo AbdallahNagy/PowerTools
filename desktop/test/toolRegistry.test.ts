@@ -9,6 +9,8 @@ import {
   BUILT_IN_TOOLS,
   TOOL_REGISTRY,
 } from "../src/ui/tools/registry";
+import { fetchXmlBuilderTool } from "../src/ui/tools/fetchxml-builder/tool";
+import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
 
 function TestTool() {
   return null;
@@ -76,5 +78,7 @@ describe("tool registry", () => {
       "fetchxml-builder",
     ]);
     expect(TOOL_REGISTRY.welcome.allowMultipleInstances).toBe(false);
+    expect(TOOL_REGISTRY["data-migration"]).toBe(dataMigrationTool);
+    expect(TOOL_REGISTRY["fetchxml-builder"]).toBe(fetchXmlBuilderTool);
   });
 });

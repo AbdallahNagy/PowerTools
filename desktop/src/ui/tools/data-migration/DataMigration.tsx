@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
-import { ToastProvider, useToast } from "../../../shared/ui";
+import { ToastProvider, useToast } from "../../shared/ui";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { ConnectionsBar } from "./ConnectionsBar";
-import { MigrationOptions, type MigrationMode } from "./MigrationOptions";
-import { EntityListPanel } from "./EntityListPanel";
-import { FieldsPanel } from "./FieldsPanel";
-import { FilterModal } from "./FilterModal";
-import { PreviewModal } from "./PreviewModal";
-import { MigrationStatusItem } from "./MigrationStatusItem";
-import { useStartMigration, useMigrationJob } from "../../../api/hooks/useMigrationJob";
-import type { EntityInfo } from "../../../shared/contracts/dataverse";
-import { useConnectionSelection } from "../../../shared/connections";
-import { useToolStatus } from "../../../shared/status";
+import { ConnectionsBar } from "./components/ConnectionsBar";
+import { MigrationOptions, type MigrationMode } from "./components/MigrationOptions";
+import { EntityListPanel } from "./components/EntityListPanel";
+import { FieldsPanel } from "./components/FieldsPanel";
+import { FilterModal } from "./components/FilterModal";
+import { PreviewModal } from "./components/PreviewModal";
+import { MigrationStatusItem } from "./components/MigrationStatusItem";
+import { useStartMigration, useMigrationJob } from "./api/useMigrationJob";
+import type { EntityInfo } from "../../shared/contracts/dataverse";
+import { useConnectionSelection } from "../../shared/connections";
+import { useToolStatus } from "../../shared/status";
 
 export default function DataMigration() {
   return (

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "../client";
+import { apiGet } from "../../../shared/api/client";
 
 export interface AttributeInfo {
   logicalName: string;

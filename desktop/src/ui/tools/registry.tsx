@@ -1,29 +1,12 @@
-import DataMigrationIcon from "../assets/icons/data-migration-icon.svg";
-import DataMigration from "../components/tools/DataMigration";
-import FetchXmlBuilder, { FetchXmlBuilderIcon } from "./fetchxml-builder";
-import { createToolRegistry, defineTool } from "./defineTool";
+import { dataMigrationTool } from "./data-migration/tool";
+import { fetchXmlBuilderTool } from "./fetchxml-builder/tool";
+import { createToolRegistry } from "./defineTool";
 import { welcomeTool } from "./welcome/tool";
 
 export const BUILT_IN_TOOLS = [
   welcomeTool,
-  defineTool({
-    id: "data-migration",
-    title: "Data Migration",
-    tooltip: "data migration",
-    icon: DataMigrationIcon,
-    showInActivityBar: true,
-    component: DataMigration,
-    allowMultipleInstances: true,
-  }),
-  defineTool({
-    id: "fetchxml-builder",
-    title: "FetchXML Builder",
-    tooltip: "Build, run, and refine FetchXML queries",
-    icon: FetchXmlBuilderIcon,
-    showInActivityBar: true,
-    component: FetchXmlBuilder,
-    allowMultipleInstances: true,
-  }),
+  dataMigrationTool,
+  fetchXmlBuilderTool,
 ] as const;
 
 const registry = createToolRegistry(BUILT_IN_TOOLS);

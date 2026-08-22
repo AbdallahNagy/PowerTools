@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Checkbox, SearchInput, Spinner } from "../../../shared/ui";
-import { useEntityAttributes } from "../../../api/hooks/useEntityAttributes";
+import { useEntityAttributes } from "../api/useEntityAttributes";
 
 interface FieldsPanelProps {
   entityLogicalName: string | null;

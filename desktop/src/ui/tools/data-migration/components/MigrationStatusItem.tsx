@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { MigrationJobStatus } from "../../../api/hooks/useMigrationJob";
+import type { MigrationJobStatus } from "../api/useMigrationJob";
 
 interface MigrationStatusItemProps {
   entityLogicalName: string;

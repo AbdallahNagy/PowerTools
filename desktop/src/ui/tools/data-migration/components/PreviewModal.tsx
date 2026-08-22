@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal, Spinner } from "../../../shared/ui";
-import { usePreviewRecords } from "../../../api/hooks/usePreviewRecords";
+import { usePreviewRecords } from "../api/usePreviewRecords";
 
 interface PreviewModalProps {
   open: boolean;

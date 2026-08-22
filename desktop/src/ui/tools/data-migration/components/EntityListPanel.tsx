@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { SearchInput, Spinner } from "../../../shared/ui";
-import { useEntities } from "../../../api/hooks/useEntities";
+import { useEntities } from "../api/useEntities";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 
 interface EntityListPanelProps {
