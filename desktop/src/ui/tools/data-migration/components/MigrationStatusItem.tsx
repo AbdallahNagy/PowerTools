@@ -41,7 +41,10 @@ export function MigrationStatusItem({
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 mb-1 w-96 max-h-64 overflow-auto bg-[#252526] text-[#cccccc] border border-black/40 rounded shadow-lg z-50">
+        <div
+          className="absolute bottom-full right-0 mb-1 w-96 max-h-64 overflow-auto bg-[#252526] text-[#cccccc] border border-black/40 rounded shadow-lg z-50"
+          style={{ userSelect: "text" }}
+        >
           <div className="px-3 py-1.5 text-xs border-b border-black/40">
             {job.processed}/{job.total || "?"} processed · {job.succeeded}{" "}
             succeeded · {job.failed} failed
