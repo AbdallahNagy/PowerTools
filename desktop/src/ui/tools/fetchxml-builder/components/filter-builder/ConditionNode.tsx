@@ -19,6 +19,7 @@ type TreeActions = ReturnType<typeof useFilterTree>;
 interface ConditionNodeProps {
   condition: FilterCondition;
   fields: FieldMetadata[];
+  rootEntity: EntityInfo;
   tables: EntityInfo[];
   relationships: RelationshipMetadata[];
   path: RelationshipPathSegment[];
@@ -34,6 +35,7 @@ interface ConditionNodeProps {
 export function ConditionNode({
   condition,
   fields,
+  rootEntity,
   tables,
   relationships,
   path,
@@ -46,6 +48,10 @@ export function ConditionNode({
     condition.fieldRef?.kind === "related"
       ? condition.fieldRef.fieldMetadata ?? null
       : fields.find((f) => f.logicalName === (condition.fieldRef?.kind === "root" ? condition.fieldRef.field : condition.field)) ?? null;
+  const recordTarget =
+    condition.fieldRef?.kind === "related"
+      ? condition.fieldRef.path[condition.fieldRef.path.length - 1]?.targetEntity ?? rootEntity.logicalName
+      : rootEntity.logicalName;
   const nodeErrors = errors.filter((e) => e.nodeId === condition.id);
   const { dragId, beginDrag, endDrag } = useDrag();
   const isDragging = dragId === condition.id;
@@ -108,6 +114,7 @@ export function ConditionNode({
         <ValueInput
           operator={condition.operator}
           field={field}
+          recordTarget={recordTarget}
           value={condition.value}
           valueLabels={condition.valueLabels}
           lookupTarget={condition.lookupTarget}

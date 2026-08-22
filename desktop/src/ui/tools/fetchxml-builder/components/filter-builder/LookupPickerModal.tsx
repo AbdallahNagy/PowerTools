@@ -13,6 +13,7 @@ interface LookupPickerModalProps {
   open: boolean;
   mode: "single" | "multiple";
   field: FieldMetadata;
+  targetOverride?: string;
   initialTarget?: string;
   selectedRecords?: SelectedLookupRecord[];
   onClose: () => void;
@@ -24,6 +25,7 @@ export function LookupPickerModal({
   open,
   mode,
   field,
+  targetOverride,
   initialTarget,
   selectedRecords = EMPTY_SELECTIONS,
   onClose,
@@ -32,10 +34,10 @@ export function LookupPickerModal({
 }: LookupPickerModalProps) {
   const { connectionName, tables } = useFetchXmlBuilder();
   const targetTables = useMemo(
-    () => (field.targets ?? [])
+    () => (targetOverride ? [targetOverride] : field.targets ?? [])
       .map((target) => tables.find((table) => table.logicalName === target))
       .filter((table): table is EntityInfo => !!table),
-    [field.targets, tables],
+    [field.targets, tables, targetOverride],
   );
   const fallbackTarget = targetTables[0]?.logicalName ?? "";
   const [selectedTarget, setSelectedTarget] = useState(initialTarget ?? fallbackTarget);

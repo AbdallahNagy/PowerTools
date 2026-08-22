@@ -152,6 +152,7 @@ export function GroupNode({
               <ConditionNode
                 condition={child}
                 fields={fields}
+                rootEntity={rootEntity}
                 tables={tables}
                 relationships={relationships}
                 path={path}

@@ -6,6 +6,7 @@ import { LookupPickerModal, type SelectedLookupRecord } from "./LookupPickerModa
 interface ValueInputProps {
   operator: Operator | null;
   field: FieldMetadata | null;
+  recordTarget?: string;
   value: string | string[] | undefined;
   valueLabels?: Record<string, string>;
   lookupTarget?: string;
@@ -18,6 +19,7 @@ const LOOKUP_TYPES = new Set(["Lookup", "Owner", "Customer"]);
 export function ValueInput({
   operator,
   field,
+  recordTarget,
   value,
   valueLabels,
   lookupTarget,
@@ -38,11 +40,14 @@ export function ValueInput({
   if (MULTI_VALUE_OPERATORS.includes(operator)) {
     const selected = Array.isArray(value) ? value : [];
 
-    if (LOOKUP_TYPES.has(field.attributeType)) {
+    if (isRecordPickerField(field, recordTarget)) {
       const selectedRecords: SelectedLookupRecord[] = selected.map((id) => ({
         id,
         name: valueLabels?.[id] ?? id,
-        target: lookupTarget ?? field.targets?.[0] ?? "",
+        target:
+          lookupTarget ??
+          (field.isPrimaryId ? recordTarget : field.targets?.[0]) ??
+          "",
       }));
 
       return (
@@ -88,6 +93,7 @@ export function ValueInput({
             open={lookupOpen}
             mode="multiple"
             field={field}
+            targetOverride={field.isPrimaryId ? recordTarget : undefined}
             initialTarget={lookupTarget}
             selectedRecords={selectedRecords}
             onClose={() => setLookupOpen(false)}
@@ -166,7 +172,7 @@ export function ValueInput({
 
   const strValue = typeof value === "string" ? value : "";
 
-  if (LOOKUP_TYPES.has(field.attributeType)) {
+  if (isRecordPickerField(field, recordTarget)) {
     const displayValue = strValue ? valueLabels?.[strValue] ?? strValue : "";
 
     return (
@@ -191,6 +197,7 @@ export function ValueInput({
           open={lookupOpen}
           mode="single"
           field={field}
+          targetOverride={field.isPrimaryId ? recordTarget : undefined}
           initialTarget={lookupTarget}
           onClose={() => setLookupOpen(false)}
           onSelect={(record) => {
@@ -258,6 +265,10 @@ export function ValueInput({
       className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
     />
   );
+}
+
+function isRecordPickerField(field: FieldMetadata, recordTarget?: string): boolean {
+  return LOOKUP_TYPES.has(field.attributeType) || (field.isPrimaryId && !!recordTarget);
 }
 
 function SearchIcon() {
