@@ -8,6 +8,10 @@ namespace PowerTools.API.Tools.PluginRegistration;
 
 public sealed class PluginRegistrationPreflightService(PluginRegistrationPlanSigner signer)
 {
+    private static readonly HashSet<string> SetLikeArrayPropertyNames = new(
+        ["FilteringAttributes", "Attributes"],
+        StringComparer.Ordinal);
+
     public string CalculateRequestDigest(object normalizedRequest)
     {
         ArgumentNullException.ThrowIfNull(normalizedRequest);
@@ -107,7 +111,10 @@ public sealed class PluginRegistrationPreflightService(PluginRegistrationPlanSig
         return buffer.WrittenSpan.ToArray();
     }
 
-    private static void WriteCanonical(JsonElement value, Utf8JsonWriter writer)
+    private static void WriteCanonical(
+        JsonElement value,
+        Utf8JsonWriter writer,
+        bool sortArrayElements = false)
     {
         switch (value.ValueKind)
         {
@@ -117,26 +124,32 @@ public sealed class PluginRegistrationPreflightService(PluginRegistrationPlanSig
                     .OrderBy(property => property.Name, StringComparer.Ordinal))
                 {
                     writer.WritePropertyName(property.Name);
-                    WriteCanonical(property.Value, writer);
+                    WriteCanonical(
+                        property.Value,
+                        writer,
+                        SetLikeArrayPropertyNames.Contains(property.Name));
                 }
                 writer.WriteEndObject();
                 return;
 
             case JsonValueKind.Array:
                 var values = value.EnumerateArray()
-                    .Select(Canonicalize)
-                    .OrderBy(bytes => Convert.ToBase64String(bytes), StringComparer.Ordinal)
-                    .ToArray();
+                    .Select(Canonicalize);
+                if (sortArrayElements)
+                    values = values.OrderBy(
+                        bytes => Convert.ToBase64String(bytes),
+                        StringComparer.Ordinal);
+                var canonicalValues = values.ToArray();
                 try
                 {
                     writer.WriteStartArray();
-                    foreach (var item in values)
+                    foreach (var item in canonicalValues)
                         writer.WriteRawValue(item, skipInputValidation: true);
                     writer.WriteEndArray();
                 }
                 finally
                 {
-                    foreach (var item in values)
+                    foreach (var item in canonicalValues)
                         CryptographicOperations.ZeroMemory(item);
                 }
                 return;

@@ -1,4 +1,6 @@
 using System.Net;
+using System.Security;
+using System.Security.Authentication;
 using System.ServiceModel;
 using Microsoft.Xrm.Sdk;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
@@ -7,6 +9,12 @@ namespace PowerTools.API.Tools.PluginRegistration;
 
 public static class PluginRegistrationProblem
 {
+    private const string SafeEnvironmentFallback = "Dataverse environment";
+
+    private static readonly HashSet<string> AllowedComponents = new(
+        ["assembly", "plugin", "workflowActivity", "step", "image"],
+        StringComparer.OrdinalIgnoreCase);
+
     public static PluginRegistrationProblemResult FromException(
         Exception exception,
         string environment,
@@ -14,6 +22,8 @@ public static class PluginRegistrationProblem
     {
         ArgumentNullException.ThrowIfNull(exception);
         ArgumentException.ThrowIfNullOrWhiteSpace(environment);
+        var safeEnvironment = SanitizeEnvironment(environment);
+        var safeComponent = SanitizeComponent(component);
 
         return exception switch
         {
@@ -22,8 +32,8 @@ public static class PluginRegistrationProblem
                 "validation",
                 "invalid-request",
                 "The requested registration change is not valid.",
-                environment,
-                component,
+                safeEnvironment,
+                safeComponent,
                 null,
                 "Correct the highlighted values and create a new preview."),
             PluginRegistrationPreflightException => Create(
@@ -31,8 +41,8 @@ public static class PluginRegistrationProblem
                 "concurrency",
                 "stale-plan",
                 "The registration changed after the preview was created.",
-                environment,
-                component,
+                safeEnvironment,
+                safeComponent,
                 null,
                 "Refresh the registration and create a new preview."),
             UnauthorizedAccessException => Create(
@@ -40,8 +50,8 @@ public static class PluginRegistrationProblem
                 "permission",
                 "access-denied",
                 "The connected user does not have permission for this registration operation.",
-                environment,
-                component,
+                safeEnvironment,
+                safeComponent,
                 null,
                 "Use a connection with the required Dataverse privileges."),
             HttpRequestException { StatusCode: HttpStatusCode.Unauthorized } => Create(
@@ -49,17 +59,35 @@ public static class PluginRegistrationProblem
                 "authentication",
                 "authentication-failed",
                 "The Dataverse connection could not be authenticated.",
-                environment,
-                component,
+                safeEnvironment,
+                safeComponent,
                 null,
                 "Reconnect and try the preview again."),
+            AuthenticationException => Create(
+                StatusCodes.Status401Unauthorized,
+                "authentication",
+                "authentication-failed",
+                "The Dataverse connection could not be authenticated.",
+                safeEnvironment,
+                safeComponent,
+                null,
+                "Reconnect and try the preview again."),
+            SecurityException => Create(
+                StatusCodes.Status403Forbidden,
+                "permission",
+                "access-denied",
+                "The connected user does not have permission for this registration operation.",
+                safeEnvironment,
+                safeComponent,
+                null,
+                "Use a connection with the required Dataverse privileges."),
             HttpRequestException { StatusCode: HttpStatusCode.Forbidden } => Create(
                 StatusCodes.Status403Forbidden,
                 "permission",
                 "access-denied",
                 "The connected user does not have permission for this registration operation.",
-                environment,
-                component,
+                safeEnvironment,
+                safeComponent,
                 null,
                 "Use a connection with the required Dataverse privileges."),
             HttpRequestException => Create(
@@ -67,8 +95,8 @@ public static class PluginRegistrationProblem
                 "communication",
                 "dataverse-unreachable",
                 "Dataverse could not be reached for this registration operation.",
-                environment,
-                component,
+                safeEnvironment,
+                safeComponent,
                 null,
                 "Check the connection and refresh before trying again."),
             FaultException<OrganizationServiceFault> fault => Create(
@@ -76,8 +104,8 @@ public static class PluginRegistrationProblem
                 "dataverse",
                 "dataverse-fault",
                 "Dataverse rejected the registration operation.",
-                environment,
-                component,
+                safeEnvironment,
+                safeComponent,
                 GetCorrelationId(fault.Detail),
                 "Refresh the registration and review the current state."),
             _ => Create(
@@ -85,8 +113,8 @@ public static class PluginRegistrationProblem
                 "dataverse",
                 "registration-failed",
                 "The registration operation could not be completed safely.",
-                environment,
-                component,
+                safeEnvironment,
+                safeComponent,
                 null,
                 "Refresh the registration and inspect the current state before trying again.")
         };
@@ -110,13 +138,36 @@ public static class PluginRegistrationProblem
             correlationId,
             suggestedAction));
 
+    private static string SanitizeEnvironment(string environment)
+    {
+        if (!Uri.TryCreate(environment, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp)
+            || string.IsNullOrWhiteSpace(uri.Host)
+            || !string.IsNullOrEmpty(uri.UserInfo))
+            return SafeEnvironmentFallback;
+
+        var origin = new UriBuilder(uri.Scheme, uri.Host)
+        {
+            Port = uri.IsDefaultPort ? -1 : uri.Port
+        }.Uri.GetLeftPart(UriPartial.Authority);
+        return origin.Length <= 255 ? origin : SafeEnvironmentFallback;
+    }
+
+    private static string? SanitizeComponent(string? component) =>
+        component is not null && AllowedComponents.Contains(component)
+            ? AllowedComponents.Single(allowed => string.Equals(
+                allowed,
+                component,
+                StringComparison.OrdinalIgnoreCase))
+            : null;
+
     private static string? GetCorrelationId(OrganizationServiceFault fault)
     {
         var activity = fault.GetType().GetProperty("ActivityId")?.GetValue(fault);
         return activity switch
         {
             Guid { } id when id != Guid.Empty => id.ToString("D"),
-            string { Length: > 0 } id => id,
+            string id when Guid.TryParse(id, out var parsed) => parsed.ToString("D"),
             _ => null
         };
     }

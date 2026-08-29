@@ -1,5 +1,6 @@
 using System.Net;
 using System.Security;
+using System.Security.Authentication;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using PowerTools.API.Tools.PluginRegistration;
@@ -69,5 +70,39 @@ public sealed class PluginRegistrationProblemTests
         Assert.Equal("validation", mapped.Problem.Category);
         Assert.Equal("step", mapped.Problem.Component);
         Assert.DoesNotContain("untrusted payload details", mapped.Problem.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Serialized_problem_sanitizes_environment_and_rejects_sensitive_component_text()
+    {
+        const string queryToken = "environment-query-token";
+        const string componentToken = "component-secret";
+        var mapped = PluginRegistrationProblem.FromException(
+            new ArgumentException("invalid"),
+            $"https://contoso.crm.dynamics.com/instance?access_token={queryToken}",
+            $"step?token={componentToken}");
+        var serialized = JsonSerializer.Serialize(mapped.Problem);
+
+        Assert.Equal("https://contoso.crm.dynamics.com", mapped.Problem.Environment);
+        Assert.Null(mapped.Problem.Component);
+        Assert.DoesNotContain(queryToken, serialized, StringComparison.Ordinal);
+        Assert.DoesNotContain(componentToken, serialized, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("authentication")]
+    [InlineData("permission")]
+    public void Authentication_and_permission_exceptions_map_without_exposing_messages(string category)
+    {
+        Exception exception = category == "authentication"
+            ? new AuthenticationException("raw authentication failure")
+            : new SecurityException("raw permission failure");
+
+        var mapped = PluginRegistrationProblem.FromException(
+            exception,
+            "https://contoso.crm.dynamics.com");
+
+        Assert.Equal(category, mapped.Problem.Category);
+        Assert.DoesNotContain(exception.Message, mapped.Problem.Message, StringComparison.Ordinal);
     }
 }

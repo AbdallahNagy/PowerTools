@@ -50,6 +50,18 @@ public sealed class PluginRegistrationPreflightServiceTests
     }
 
     [Fact]
+    public void Reordered_mutation_relevant_array_produces_a_different_request_digest()
+    {
+        var service = CreateService();
+        var first = new OrderedDraft(["delete-image", "delete-step"]);
+        var reordered = new OrderedDraft(["delete-step", "delete-image"]);
+
+        Assert.NotEqual(
+            service.CalculateRequestDigest(first),
+            service.CalculateRequestDigest(reordered));
+    }
+
+    [Fact]
     public async Task Execution_reloads_state_and_rejects_a_changed_server_version_before_mutation()
     {
         var service = CreateService();
@@ -88,6 +100,48 @@ public sealed class PluginRegistrationPreflightServiceTests
         Assert.Equal(PlanValidationFailure.BindingMismatch, error.Failure);
     }
 
+    [Theory]
+    [InlineData("capabilities")]
+    [InlineData("assemblySha256")]
+    [InlineData("normalizedRequest")]
+    public async Task Execution_reloads_state_and_rejects_every_additional_changed_binding_value(
+        string changedValue)
+    {
+        var service = CreateService();
+        var request = CreateRequest();
+        var plan = service.CreatePlan(request, [], new MutationImpactDto([], [], []));
+        var reloadCount = 0;
+
+        var error = await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() =>
+            service.ValidateExecutionAsync(
+                plan.Token,
+                request,
+                _ =>
+                {
+                    reloadCount++;
+                    return Task.FromResult(changedValue switch
+                    {
+                        "capabilities" => request with
+                        {
+                            Capabilities = new Dictionary<string, bool>
+                            {
+                                ["transactionalCascadeUnregister"] = true
+                            }
+                        },
+                        "assemblySha256" => request with { AssemblySha256 = "changed-assembly-hash" },
+                        "normalizedRequest" => request with
+                        {
+                            NormalizedRequest = new StepDraft(20, ["name"], [])
+                        },
+                        _ => throw new ArgumentOutOfRangeException(nameof(changedValue))
+                    });
+                },
+                CancellationToken.None));
+
+        Assert.Equal(1, reloadCount);
+        Assert.Equal(PlanValidationFailure.BindingMismatch, error.Failure);
+    }
+
     private static PluginRegistrationPreflightService CreateService()
     {
         var time = new ManualTimeProvider(new DateTimeOffset(2026, 8, 30, 10, 0, 0, TimeSpan.Zero));
@@ -95,10 +149,27 @@ public sealed class PluginRegistrationPreflightServiceTests
             new PluginRegistrationPlanSigner("sidecar-secret", time));
     }
 
+    private static MutationPreflightRequest CreateRequest() => new(
+        "https://contoso.crm.dynamics.com",
+        "steps.update",
+        Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"),
+        new StepDraft(10, ["name"], []),
+        new Dictionary<Guid, long>
+        {
+            [Guid.Parse("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")] = 7
+        },
+        "assembly-hash",
+        new Dictionary<string, bool>
+        {
+            ["transactionalCascadeUnregister"] = false
+        });
+
     private sealed record StepDraft(
         int Rank,
         IReadOnlyList<string> FilteringAttributes,
         IReadOnlyList<ImageDraft> Images);
 
     private sealed record ImageDraft(string Alias, IReadOnlyList<string> Attributes);
+
+    private sealed record OrderedDraft(IReadOnlyList<string> OrderedOperations);
 }
