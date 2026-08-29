@@ -2,10 +2,12 @@ import { dataMigrationTool } from "./data-migration/tool";
 import { fetchXmlBuilderTool } from "./fetchxml-builder/tool";
 import { createToolRegistry } from "./defineTool";
 import { welcomeTool } from "./welcome/tool";
+import { pluginRegistrationTool } from "./plugin-registration/tool";
 
 export const BUILT_IN_TOOLS = [
   welcomeTool,
   dataMigrationTool,
+  pluginRegistrationTool,
   fetchXmlBuilderTool,
 ] as const;
 
