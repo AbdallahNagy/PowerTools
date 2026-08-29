@@ -1,4 +1,5 @@
 using Microsoft.PowerPlatform.Dataverse.Client;
+using PowerTools.API.Tools.PluginRegistration.Dtos;
 
 namespace PowerTools.API.Tools.PluginRegistration;
 
@@ -6,6 +7,18 @@ public interface IPluginRegistrationGateway
 {
     Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(
         CancellationToken cancellationToken);
+
+    Task<Guid> RegisterAssemblyAsync(
+        PluginAssemblyMutationCommand command,
+        CancellationToken cancellationToken) =>
+        Task.FromException<Guid>(new NotSupportedException(
+            "Assembly registration is not supported by this gateway."));
+
+    Task<Guid> UpdateAssemblyAsync(
+        PluginAssemblyMutationCommand command,
+        CancellationToken cancellationToken) =>
+        Task.FromException<Guid>(new NotSupportedException(
+            "Assembly update is not supported by this gateway."));
 }
 
 public interface IPluginRegistrationGatewayFactory

@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
@@ -44,6 +45,26 @@ public static class PluginRegistrationEndpoints
                     + MultipartRequestOverheadBytes
             })
             .WithName("AnalyzePluginAssembly");
+
+        group.MapPost("/assemblies/register/preflight", (HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
+            CreateAssemblyPreflightAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), null, cancellationToken))
+            .DisableAntiforgery()
+            .WithName("PreflightRegisterPluginAssembly");
+
+        group.MapPost("/assemblies/{assemblyId:guid}/update/preflight", (Guid assemblyId, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
+            CreateAssemblyPreflightAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), assemblyId, cancellationToken))
+            .DisableAntiforgery()
+            .WithName("PreflightUpdatePluginAssembly");
+
+        group.MapPost("/assemblies/register/execute", (HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
+            ExecuteAssemblyMutationAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), null, cancellationToken))
+            .DisableAntiforgery()
+            .WithName("ExecuteRegisterPluginAssembly");
+
+        group.MapPost("/assemblies/{assemblyId:guid}/update/execute", (Guid assemblyId, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
+            ExecuteAssemblyMutationAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), assemblyId, cancellationToken))
+            .DisableAntiforgery()
+            .WithName("ExecuteUpdatePluginAssembly");
 
         return app;
     }
@@ -150,4 +171,102 @@ public static class PluginRegistrationEndpoints
 
     private static IResult ValidationError(string code, string message) =>
         Results.BadRequest(new AssemblyInspectionErrorDto(code, message));
+
+    private static async Task<IResult> CreateAssemblyPreflightAsync(
+        HttpContext context,
+        IPluginRegistrationGatewayFactory gatewayFactory,
+        DataverseClientFactory clientFactory,
+        ICurrentConnection connection,
+        PluginAssemblyMutationService mutations,
+        Guid? routeAssemblyId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var upload = await ReadAssemblyMutationFormAsync(context.Request, routeAssemblyId, false, cancellationToken);
+            await using var content = new MemoryStream(upload.Content, writable: false);
+            var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+            var preflight = await mutations.CreatePreflightAsync(gateway, connection.EnvironmentUrl,
+                upload.Draft, content, upload.Content.Length, Capabilities(connection), cancellationToken);
+            return Results.Ok(preflight);
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "assembly");
+            return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+        }
+    }
+
+    private static async Task<IResult> ExecuteAssemblyMutationAsync(
+        HttpContext context,
+        IPluginRegistrationGatewayFactory gatewayFactory,
+        DataverseClientFactory clientFactory,
+        ICurrentConnection connection,
+        PluginAssemblyMutationService mutations,
+        Guid? routeAssemblyId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var upload = await ReadAssemblyMutationFormAsync(context.Request, routeAssemblyId, true, cancellationToken);
+            await using var content = new MemoryStream(upload.Content, writable: false);
+            var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+            var result = await mutations.ExecuteAsync(gateway, connection.EnvironmentUrl, upload.PlanToken!,
+                upload.Draft, content, upload.Content.Length, Capabilities(connection), cancellationToken);
+            return Results.Ok(result);
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "assembly");
+            return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+        }
+    }
+
+    private static async Task<AssemblyMutationUpload> ReadAssemblyMutationFormAsync(
+        HttpRequest request,
+        Guid? routeAssemblyId,
+        bool requiresPlanToken,
+        CancellationToken cancellationToken)
+    {
+        if (!request.HasFormContentType) throw new ArgumentException("A multipart assembly form is required.");
+        var form = await request.ReadFormAsync(cancellationToken);
+        var file = form.Files.GetFile("assembly");
+        var json = form["draft"].FirstOrDefault();
+        var token = form["planToken"].FirstOrDefault();
+        if (file is null || form.Files.Count != 1 || string.IsNullOrWhiteSpace(json)
+            || (requiresPlanToken && string.IsNullOrWhiteSpace(token)))
+            throw new ArgumentException("The assembly, draft, and plan token are required.");
+        if (file.Length <= 0 || file.Length > PluginAssemblyInspector.MaxAssemblyBytes)
+            throw new ArgumentException("The assembly size is not valid.");
+        var draft = JsonSerializer.Deserialize<AssemblyMutationDraftDto>(json,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+            ?? throw new ArgumentException("The assembly draft is not valid.");
+        if (draft.AssemblyId != routeAssemblyId) throw new ArgumentException("The draft target does not match the route.");
+        var content = new byte[file.Length];
+        await using var stream = file.OpenReadStream();
+        var offset = 0;
+        while (offset < content.Length)
+        {
+            var read = await stream.ReadAsync(content.AsMemory(offset), cancellationToken);
+            if (read == 0) throw new InvalidDataException("The assembly upload ended unexpectedly.");
+            offset += read;
+        }
+        return new AssemblyMutationUpload(draft with { FileName = file.FileName }, token, content);
+    }
+
+    private static IReadOnlyDictionary<string, bool> Capabilities(ICurrentConnection connection) =>
+        new Dictionary<string, bool>
+        {
+            ["onPremisesAssemblyOptions"] = connection.Context is OnPremisesConnectionContext
+        };
+
+    private static PluginAssemblyMutationService CreateMutationService(HttpContext context) => new(
+        context.RequestServices.GetRequiredService<IPluginAssemblyInspector>(),
+        context.RequestServices.GetRequiredService<PluginRegistrationPreflightService>(),
+        context.RequestServices.GetRequiredService<PluginRegistrationCatalogService>());
+
+    private sealed record AssemblyMutationUpload(
+        AssemblyMutationDraftDto Draft,
+        string? PlanToken,
+        byte[] Content);
 }

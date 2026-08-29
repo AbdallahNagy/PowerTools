@@ -10,6 +10,7 @@ import {
   type RegistrationContextMenuState,
 } from "./components/RegistrationContextMenu";
 import { RegistrationDialogShell } from "./components/dialogs/RegistrationDialogShell";
+import { AssemblyDialog } from "./components/dialogs/AssemblyDialog";
 import { RegistrationWorkspace } from "./components/RegistrationWorkspace";
 import { buildCatalogTree, findCatalogNode, type CatalogTreeNode } from "./model/catalogTree";
 
@@ -42,6 +43,11 @@ function PluginRegistrationPage() {
     [catalogQuery.data],
   );
   const selectedNode = selectedNodeId ? findCatalogNode(nodes, selectedNodeId) ?? null : null;
+  const dialogNode = dialogIntent?.kind === "update"
+    ? findCatalogNode(nodes, dialogIntent.nodeId) ?? null
+    : null;
+  const isAssemblyMutationDialog = dialogIntent?.kind === "registerAssembly"
+    || (dialogIntent?.kind === "update" && dialogNode?.kind === "assembly");
 
   const changeConnection = (name: string) => {
     setSelectedNodeId(null);
@@ -127,14 +133,19 @@ function PluginRegistrationPage() {
         onClose={() => setContextMenu(null)}
       />
       <RegistrationDialogShell
-        intent={dialogIntent}
-        node={
-          dialogIntent?.kind === "update"
-            ? findCatalogNode(nodes, dialogIntent.nodeId) ?? null
-            : null
-        }
+        intent={isAssemblyMutationDialog ? null : dialogIntent}
+        node={dialogNode}
         onClose={() => setDialogIntent(null)}
       />
+      {isAssemblyMutationDialog ? (
+        <AssemblyDialog
+          assembly={dialogNode?.kind === "assembly" ? dialogNode.data : null}
+          connectionName={connectionName || null}
+          onClose={() => setDialogIntent(null)}
+          onVerified={(assembly) => setSelectedNodeId(`assembly:${assembly.id}`)}
+          refreshCatalog={() => catalogQuery.refetch()}
+        />
+      ) : null}
     </div>
   );
 }

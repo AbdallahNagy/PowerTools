@@ -1,6 +1,7 @@
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
+using PowerTools.API.Tools.PluginRegistration.Dtos;
 
 namespace PowerTools.API.Tools.PluginRegistration;
 
@@ -14,6 +15,28 @@ public sealed class DataversePluginRegistrationGatewayFactory
 public sealed class DataversePluginRegistrationGateway(
     IOrganizationServiceAsync2 service) : IPluginRegistrationGateway
 {
+    public async Task<Guid> RegisterAssemblyAsync(
+        PluginAssemblyMutationCommand command,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        var entity = CreateAssemblyEntity(command);
+        return await service.CreateAsync(entity, cancellationToken);
+    }
+
+    public async Task<Guid> UpdateAssemblyAsync(
+        PluginAssemblyMutationCommand command,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(command);
+        if (command.AssemblyId is not { } id || id == Guid.Empty)
+            throw new ArgumentException("An assembly id is required for update.", nameof(command));
+        var entity = CreateAssemblyEntity(command);
+        entity.Id = id;
+        await service.UpdateAsync(entity, cancellationToken);
+        return id;
+    }
+
     public async Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(
         CancellationToken cancellationToken)
     {
@@ -67,6 +90,21 @@ public sealed class DataversePluginRegistrationGateway(
             query.PageInfo.PageNumber++;
             query.PageInfo.PagingCookie = page.PagingCookie;
         }
+    }
+
+    private static Entity CreateAssemblyEntity(PluginAssemblyMutationCommand command)
+    {
+        var identity = command.Inspection.Identity;
+        return new Entity("pluginassembly")
+        {
+            ["name"] = identity.Name,
+            ["version"] = identity.Version,
+            ["culture"] = identity.Culture,
+            ["publickeytoken"] = identity.PublicKeyToken,
+            ["sourcetype"] = new OptionSetValue(command.SourceType),
+            ["isolationmode"] = new OptionSetValue(command.IsolationMode),
+            ["content"] = Convert.ToBase64String(command.Content)
+        };
     }
 
     private static PluginAssemblyRow MapAssembly(Entity entity) =>
