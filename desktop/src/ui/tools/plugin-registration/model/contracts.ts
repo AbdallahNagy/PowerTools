@@ -93,3 +93,53 @@ export interface ComponentDependency {
   isCustomizable: boolean;
   versionNumber: number;
 }
+
+/** The JSON shape emitted by the ASP.NET sidecar's CatalogDtos.cs records. */
+export interface PluginRegistrationCatalogDto {
+  assemblies: PluginAssemblyDto[];
+}
+
+export interface PluginAssemblyDto extends Omit<PluginAssembly, "handlers"> {
+  handlers: PluginHandlerDto[];
+}
+
+export interface PluginHandlerDto extends Omit<PluginHandlerBase, "kind" | "workflowArguments"> {
+  kind: 0 | 1;
+  workflowArguments: WorkflowArgumentDto[];
+}
+
+export interface WorkflowArgumentDto extends Omit<WorkflowArgument, "direction"> {
+  direction: 0 | 1;
+}
+
+export function normalizePluginRegistrationCatalog(
+  catalog: PluginRegistrationCatalogDto,
+): PluginRegistrationCatalog {
+  return {
+    assemblies: catalog.assemblies.map(({ handlers, ...assembly }) => ({
+      ...assembly,
+      handlers: handlers.map(normalizePluginHandler),
+    })),
+  };
+}
+
+function normalizePluginHandler(handler: PluginHandlerDto): PluginHandler {
+  const { kind, workflowArguments, ...rest } = handler;
+  const normalizedArguments = workflowArguments.map(normalizeWorkflowArgument);
+
+  if (kind === 0) {
+    return { ...rest, kind: "plugin", workflowArguments: normalizedArguments };
+  }
+  if (kind === 1) {
+    return { ...rest, kind: "workflowActivity", workflowArguments: normalizedArguments };
+  }
+
+  throw new Error(`Unknown plug-in handler kind: ${kind}`);
+}
+
+function normalizeWorkflowArgument(argument: WorkflowArgumentDto): WorkflowArgument {
+  if (argument.direction === 0) return { ...argument, direction: "input" };
+  if (argument.direction === 1) return { ...argument, direction: "output" };
+
+  throw new Error(`Unknown workflow argument direction: ${argument.direction}`);
+}
