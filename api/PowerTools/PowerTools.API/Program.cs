@@ -5,6 +5,7 @@ using PowerTools.API.Tools.Connection;
 using PowerTools.API.Tools.DataMigration;
 using PowerTools.API.Tools.Fetch;
 using PowerTools.API.Tools.Metadata;
+using PowerTools.API.Tools.PluginRegistration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,9 @@ builder.Services.AddScoped<DataverseContextFilter>();
 builder.Services.AddScoped<DataverseTargetContextFilter>();
 builder.Services.AddSingleton<IMigrationJobStore, InMemoryMigrationJobStore>();
 builder.Services.AddHostedService<MigrationJobRunner>();
+builder.Services.AddSingleton<IPluginRegistrationGatewayFactory,
+    DataversePluginRegistrationGatewayFactory>();
+builder.Services.AddSingleton<PluginRegistrationCatalogService>();
 
 var app = builder.Build();
 
@@ -75,6 +79,7 @@ app.MapFetchEndpoints();
 app.MapDataMigrationEndpoints();
 app.MapPreviewEndpoints();
 app.MapMigrationEndpoints();
+app.MapPluginRegistrationEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would
@@ -111,3 +116,5 @@ static bool CryptographicEquals(string a, string b)
     for (var i = 0; i < a.Length; i++) diff |= a[i] ^ b[i];
     return diff == 0;
 }
+
+public partial class Program { }
