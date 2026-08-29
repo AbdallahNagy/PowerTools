@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
-import { Button, Modal } from "../../../shared/ui";
+import { Button, Modal } from "../../../../shared/ui";
 import { type AssemblyInspection, type AssemblyMutationPreflight, useAssemblyMutations } from "../../api/useAssemblyMutations";
 import type { PluginAssembly } from "../../model/contracts";
 import { ImpactPreviewDialog } from "./ImpactPreviewDialog";

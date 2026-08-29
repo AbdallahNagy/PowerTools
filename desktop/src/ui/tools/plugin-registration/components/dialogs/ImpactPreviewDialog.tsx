@@ -1,4 +1,4 @@
-import { Button, Modal } from "../../../shared/ui";
+import { Button, Modal } from "../../../../shared/ui";
 import type { AssemblyMutationPreflight } from "../../api/useAssemblyMutations";
 
 interface ImpactPreviewDialogProps {
