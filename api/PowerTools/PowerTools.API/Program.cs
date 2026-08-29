@@ -36,6 +36,7 @@ builder.Services.AddHostedService<MigrationJobRunner>();
 builder.Services.AddSingleton<IPluginRegistrationGatewayFactory,
     DataversePluginRegistrationGatewayFactory>();
 builder.Services.AddSingleton<PluginRegistrationCatalogService>();
+builder.Services.AddSingleton<IPluginAssemblyInspector, PluginAssemblyInspector>();
 
 var app = builder.Build();
 

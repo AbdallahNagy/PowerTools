@@ -17,4 +17,26 @@
   <ItemGroup>
     <ProjectReference Include="..\PowerTools.API\PowerTools.API.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InspectionFixtureProject Include="TestFixtures\MixedRegistrationAssembly\MixedRegistrationAssembly.csproj" />
+    <InspectionFixtureProject Include="TestFixtures\RemovedHandlerAssembly\RemovedHandlerAssembly.csproj" />
+    <InspectionFixtureProject Include="TestFixtures\BreakingWorkflowAssembly\BreakingWorkflowAssembly.csproj" />
+    <InspectionFixtureProject Include="TestFixtures\UnsignedPluginAssembly\UnsignedPluginAssembly.csproj" />
+    <InspectionFixtureProject Include="TestFixtures\MissingDependencyAssembly\MissingDependencyAssembly.csproj" />
+    <Compile Remove="TestFixtures\**\*.cs" />
+  </ItemGroup>
+
+  <Target Name="BuildAndCopyInspectionFixtures" BeforeTargets="CoreCompile">
+    <MSBuild Projects="@(InspectionFixtureProject)"
+             Targets="Build"
+             BuildInParallel="true"
+             Properties="Configuration=$(Configuration)">
+      <Output TaskParameter="TargetOutputs" ItemName="InspectionFixtureAssembly" />
+    </MSBuild>
+    <MakeDir Directories="$(OutDir)Fixtures" />
+    <Copy SourceFiles="@(InspectionFixtureAssembly)"
+          DestinationFolder="$(OutDir)Fixtures"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>
