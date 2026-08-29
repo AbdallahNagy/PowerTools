@@ -1,9 +1,25 @@
 import { fireEvent, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import { renderWithProviders } from "../../../../../../test/support/render";
 import PluginRegistration from "../../PluginRegistration";
+
+const originalResizeObserver = window.ResizeObserver;
+
+beforeAll(() => {
+  class TestResizeObserver implements ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+  window.ResizeObserver = TestResizeObserver;
+});
+
+afterAll(() => {
+  if (originalResizeObserver) window.ResizeObserver = originalResizeObserver;
+  else Reflect.deleteProperty(window, "ResizeObserver");
+});
 
 describe("Assembly mutations", () => {
   it("starts registration with a DLL file selection", async () => {
