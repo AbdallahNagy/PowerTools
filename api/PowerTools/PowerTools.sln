@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerTools.API", "PowerTool
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerTools.API.Tests", "PowerTools.API.Tests\PowerTools.API.Tests.csproj", "{3E08C7F9-D5CC-4FB1-9070-92152E583EB9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerTools.API.PluginRegistration.Tests", "PowerTools.API.PluginRegistration.Tests\PowerTools.API.PluginRegistration.Tests.csproj", "{C25C520B-B867-4D01-A0A4-074089DD8F59}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,6 +20,10 @@ Global
 		{3E08C7F9-D5CC-4FB1-9070-92152E583EB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E08C7F9-D5CC-4FB1-9070-92152E583EB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3E08C7F9-D5CC-4FB1-9070-92152E583EB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C25C520B-B867-4D01-A0A4-074089DD8F59}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C25C520B-B867-4D01-A0A4-074089DD8F59}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C25C520B-B867-4D01-A0A4-074089DD8F59}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C25C520B-B867-4D01-A0A4-074089DD8F59}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
