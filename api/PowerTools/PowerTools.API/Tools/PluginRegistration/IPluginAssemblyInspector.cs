@@ -19,6 +19,7 @@ public static class AssemblyInspectionValidationCodes
     public const string NotManaged = "assembly_not_managed";
     public const string MissingAssemblyMetadata = "assembly_metadata_missing";
     public const string Unsigned = "assembly_unsigned";
+    public const string InvalidStrongName = "assembly_strong_name_invalid";
     public const string FileRequired = "assembly_file_required";
     public const string InspectionFailed = "assembly_inspection_failed";
 }

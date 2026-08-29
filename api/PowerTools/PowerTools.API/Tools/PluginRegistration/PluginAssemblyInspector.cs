@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Buffers.Binary;
 using System.Reflection;
 using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
@@ -132,11 +133,23 @@ public sealed class PluginAssemblyInspector : IPluginAssemblyInspector
             var publicKey = metadata.GetBlobBytes(assembly.PublicKey);
             if ((assembly.Flags & AssemblyFlags.PublicKey) == 0
                 || publicKey.Length == 0
-                || pe.PEHeaders.CorHeader?.StrongNameSignatureDirectory.Size <= 0)
+                || pe.PEHeaders.CorHeader is not
+                {
+                    Flags: var corFlags,
+                    StrongNameSignatureDirectory.Size: > 0
+                }
+                || (corFlags & CorFlags.StrongNameSigned) == 0)
             {
                 throw Validation(
                     AssemblyInspectionValidationCodes.Unsigned,
                     "The assembly must be strong-name signed.");
+            }
+
+            if (!VerifyStrongNameSignature(pe, publicKey))
+            {
+                throw Validation(
+                    AssemblyInspectionValidationCodes.InvalidStrongName,
+                    "The assembly strong-name signature is invalid.");
             }
 
             var targetFramework = ReadTargetFramework(metadata, assembly);
@@ -213,6 +226,265 @@ public sealed class PluginAssemblyInspector : IPluginAssemblyInspector
                 AssemblyInspectionValidationCodes.InvalidPe,
                 "The file is not a valid managed PE assembly.");
         }
+        catch (ArgumentException)
+        {
+            throw Validation(
+                AssemblyInspectionValidationCodes.InvalidPe,
+                "The file is not a valid managed PE assembly.");
+        }
+        catch (IndexOutOfRangeException)
+        {
+            throw Validation(
+                AssemblyInspectionValidationCodes.InvalidPe,
+                "The file is not a valid managed PE assembly.");
+        }
+        catch (OverflowException)
+        {
+            throw Validation(
+                AssemblyInspectionValidationCodes.InvalidPe,
+                "The file is not a valid managed PE assembly.");
+        }
+    }
+
+    private static bool VerifyStrongNameSignature(PEReader pe, byte[] publicKey)
+    {
+        byte[]? image = null;
+        byte[]? signature = null;
+        try
+        {
+            var corHeader = pe.PEHeaders.CorHeader;
+            if (corHeader is null)
+                return false;
+
+            image = pe.GetEntireImage().GetContent().ToArray();
+            var signatureDirectory = corHeader.StrongNameSignatureDirectory;
+            var signatureOffset = RvaToFileOffset(
+                pe.PEHeaders,
+                signatureDirectory.RelativeVirtualAddress,
+                signatureDirectory.Size,
+                image.Length);
+            if (signatureOffset < 0)
+                return false;
+
+            signature = image.AsSpan(signatureOffset, signatureDirectory.Size).ToArray();
+            var optionalHeaderOffset = GetOptionalHeaderOffset(image);
+            image.AsSpan(optionalHeaderOffset + 64, sizeof(uint)).Clear();
+            image.AsSpan(GetCertificateDirectoryOffset(image, optionalHeaderOffset), 8)
+                .Clear();
+
+            if (!TryReadStrongNamePublicKey(publicKey, out var parameters))
+            {
+                return false;
+            }
+
+            Array.Reverse(signature);
+            var hash = ComputeStrongNameHash(
+                image,
+                pe.PEHeaders,
+                signatureOffset,
+                signatureDirectory.Size);
+            try
+            {
+                using var rsa = RSA.Create();
+                rsa.ImportParameters(parameters);
+                return rsa.VerifyHash(
+                    hash,
+                    signature,
+                    HashAlgorithmName.SHA1,
+                    RSASignaturePadding.Pkcs1);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(hash);
+            }
+        }
+        catch (ArgumentException)
+        {
+            return false;
+        }
+        catch (CryptographicException)
+        {
+            return false;
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+        finally
+        {
+            if (signature is not null)
+                CryptographicOperations.ZeroMemory(signature);
+            if (image is not null)
+                CryptographicOperations.ZeroMemory(image);
+        }
+    }
+
+    private static int GetOptionalHeaderOffset(ReadOnlySpan<byte> image)
+    {
+        const int dosHeaderPeOffset = 0x3c;
+        const int coffHeaderSize = 20;
+        const int peSignatureSize = 4;
+        if (image.Length < dosHeaderPeOffset + sizeof(uint))
+            throw new ArgumentException("Invalid PE header.");
+
+        var peOffset = BinaryPrimitives.ReadInt32LittleEndian(
+            image.Slice(dosHeaderPeOffset, sizeof(int)));
+        var optionalHeaderOffset = checked(peOffset + peSignatureSize + coffHeaderSize);
+        if (peOffset < 0 || image.Length < optionalHeaderOffset + 68)
+            throw new ArgumentException("Invalid PE header.");
+
+        return optionalHeaderOffset;
+    }
+
+    private static int GetCertificateDirectoryOffset(
+        ReadOnlySpan<byte> image,
+        int optionalHeaderOffset)
+    {
+        const ushort pe32 = 0x10b;
+        const ushort pe32Plus = 0x20b;
+        var magic = BinaryPrimitives.ReadUInt16LittleEndian(
+            image.Slice(optionalHeaderOffset, sizeof(ushort)));
+        var dataDirectoryOffset = magic switch
+        {
+            pe32 => 96,
+            pe32Plus => 112,
+            _ => throw new ArgumentException("Invalid PE optional header.")
+        };
+        var certificateDirectoryOffset = checked(
+            optionalHeaderOffset + dataDirectoryOffset + (4 * 8));
+        if (image.Length < certificateDirectoryOffset + 8)
+            throw new ArgumentException("Invalid PE optional header.");
+
+        return certificateDirectoryOffset;
+    }
+
+    private static int RvaToFileOffset(
+        PEHeaders headers,
+        int rva,
+        int size,
+        int imageLength)
+    {
+        if (rva < 0 || size <= 0)
+            return -1;
+
+        if (rva < headers.PEHeader?.SizeOfHeaders)
+            return IsRangeInImage(rva, size, imageLength) ? rva : -1;
+
+        foreach (var section in headers.SectionHeaders)
+        {
+            var relativeOffset = (long)rva - section.VirtualAddress;
+            if (relativeOffset < 0 || relativeOffset > section.SizeOfRawData
+                || size > section.SizeOfRawData - relativeOffset)
+            {
+                continue;
+            }
+
+            var fileOffset = (long)section.PointerToRawData + relativeOffset;
+            return IsRangeInImage(fileOffset, size, imageLength)
+                ? (int)fileOffset
+                : -1;
+        }
+
+        return -1;
+    }
+
+    private static bool IsRangeInImage(long offset, int size, int imageLength) =>
+        offset >= 0 && size >= 0 && offset <= imageLength - (long)size;
+
+    private static byte[] ComputeStrongNameHash(
+        byte[] image,
+        PEHeaders headers,
+        int strongNameOffset,
+        int strongNameSize)
+    {
+        var peHeader = headers.PEHeader
+            ?? throw new ArgumentException("Missing PE header.");
+        var peHeadersSize = checked(
+            headers.PEHeaderStartOffset
+            + (peHeader.Magic == PEMagic.PE32 ? 0xe0 : 0xf0)
+            + (headers.SectionHeaders.Length * 40));
+        if (!IsRangeInImage(0, peHeadersSize, image.Length))
+            throw new ArgumentException("Invalid PE headers.");
+
+        using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA1);
+        hash.AppendData(image, 0, peHeadersSize);
+        var strongNameEnd = checked(strongNameOffset + strongNameSize);
+        foreach (var section in headers.SectionHeaders)
+        {
+            var sectionOffset = section.PointerToRawData;
+            var sectionSize = section.SizeOfRawData;
+            var sectionEnd = checked(sectionOffset + sectionSize);
+            if (!IsRangeInImage(sectionOffset, sectionSize, image.Length))
+                throw new ArgumentException("Invalid PE section.");
+
+            if (strongNameEnd <= sectionOffset || strongNameOffset >= sectionEnd)
+            {
+                hash.AppendData(image, sectionOffset, sectionSize);
+                continue;
+            }
+
+            hash.AppendData(image, sectionOffset, strongNameOffset - sectionOffset);
+            hash.AppendData(image, strongNameEnd, sectionEnd - strongNameEnd);
+        }
+
+        return hash.GetHashAndReset();
+    }
+
+    private static bool TryReadStrongNamePublicKey(
+        ReadOnlySpan<byte> publicKey,
+        out RSAParameters parameters)
+    {
+        const uint rsaSignAlgorithm = 0x00002400;
+        const uint rsaPublicKeyMagic = 0x31415352;
+        const int publicKeyHeaderSize = 12;
+        const int rsaPublicKeyOffset = publicKeyHeaderSize + 8;
+        const int modulusOffset = rsaPublicKeyOffset + 12;
+
+        parameters = default;
+        if (publicKey.Length < modulusOffset)
+            return false;
+
+        var signatureAlgorithm = BinaryPrimitives.ReadUInt32LittleEndian(
+            publicKey.Slice(0, sizeof(uint)));
+        var declaredPublicKeySize = BinaryPrimitives.ReadUInt32LittleEndian(
+            publicKey.Slice(sizeof(uint) * 2, sizeof(uint)));
+        if (signatureAlgorithm is not 0 and not rsaSignAlgorithm
+            || declaredPublicKeySize != publicKey.Length - publicKeyHeaderSize
+            || publicKey[publicKeyHeaderSize] != 0x06
+            || BinaryPrimitives.ReadUInt32LittleEndian(
+                publicKey.Slice(rsaPublicKeyOffset, sizeof(uint))) != rsaPublicKeyMagic)
+        {
+            return false;
+        }
+
+        var bitLength = BinaryPrimitives.ReadUInt32LittleEndian(
+            publicKey.Slice(rsaPublicKeyOffset + sizeof(uint), sizeof(uint)));
+        var exponent = BinaryPrimitives.ReadUInt32LittleEndian(
+            publicKey.Slice(rsaPublicKeyOffset + (sizeof(uint) * 2), sizeof(uint)));
+        if (bitLength == 0 || bitLength % 8 != 0 || exponent == 0
+            || bitLength / 8 != publicKey.Length - modulusOffset)
+        {
+            return false;
+        }
+
+        var modulus = publicKey[modulusOffset..].ToArray();
+        Array.Reverse(modulus);
+        parameters = new RSAParameters
+        {
+            Exponent = ToBigEndianBytes(exponent),
+            Modulus = modulus
+        };
+        return true;
+    }
+
+    private static byte[] ToBigEndianBytes(uint value)
+    {
+        Span<byte> bytes = stackalloc byte[sizeof(uint)];
+        BinaryPrimitives.WriteUInt32BigEndian(bytes, value);
+        var firstValueByte = 0;
+        while (firstValueByte < bytes.Length - 1 && bytes[firstValueByte] == 0)
+            firstValueByte++;
+        return bytes[firstValueByte..].ToArray();
     }
 
     private static IReadOnlyList<AssemblyInspectionDiagnosticDto> BuildDiagnostics(

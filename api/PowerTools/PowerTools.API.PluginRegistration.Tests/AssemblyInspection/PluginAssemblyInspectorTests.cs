@@ -1,4 +1,6 @@
 using System.Security.Cryptography;
+using System.Net;
+using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http.Metadata;
 using Microsoft.AspNetCore.Mvc;
@@ -108,6 +110,36 @@ public sealed class PluginAssemblyInspectorTests
     }
 
     [Fact]
+    public async Task Inspect_rejects_a_tampered_strong_name_signature()
+    {
+        var bytes = await File.ReadAllBytesAsync(
+            FixturePath("MixedRegistrationAssembly.dll"));
+        var typeName = "AlphaPlugin"u8.ToArray();
+        var offset = bytes.AsSpan().IndexOf(typeName);
+        Assert.True(offset >= 0, "The fixture must contain the type name to tamper.");
+        bytes[offset] = (byte)'Z';
+
+        await using var stream = new MemoryStream(bytes);
+        var error = await Assert.ThrowsAsync<AssemblyInspectionValidationException>(
+            () => new PluginAssemblyInspector().InspectAsync(
+                stream, "tampered.dll", stream.Length, CancellationToken.None));
+
+        Assert.Equal("assembly_strong_name_invalid", error.Code);
+        Assert.Equal("The assembly strong-name signature is invalid.", error.Message);
+    }
+
+    [Fact]
+    public async Task Inspect_reports_an_unsupported_target_framework_diagnostic()
+    {
+        var result = await InspectAsync(
+            FixturePath("UnsupportedTargetFrameworkAssembly.dll"));
+
+        Assert.Contains(result.Diagnostics, diagnostic =>
+            diagnostic.Code == "target_framework_unsupported"
+            && diagnostic.Severity == AssemblyInspectionDiagnosticSeverity.Error);
+    }
+
+    [Fact]
     public async Task Inspect_rejects_corrupt_pe_with_safe_validation_code()
     {
         await using var stream = new MemoryStream("not a PE file"u8.ToArray());
@@ -195,6 +227,50 @@ public sealed class PluginAssemblyInspectorTests
             PluginAssemblyInspector.MaxAssemblyBytes + (128 * 1024));
         Assert.IsType<PluginAssemblyInspector>(
             factory.Services.GetRequiredService<IPluginAssemblyInspector>());
+    }
+
+    [Fact]
+    public async Task Analyze_endpoint_rejects_unexpected_multipart_form_values()
+    {
+        using var factory = new PluginRegistrationApplicationFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Local-Secret", "test-secret");
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "test-token");
+        client.DefaultRequestHeaders.Add("X-Environment-Url", "https://example.crm.dynamics.com");
+
+        using var content = new MultipartFormDataContent();
+        await using var fixture = File.OpenRead(FixturePath("MixedRegistrationAssembly.dll"));
+        content.Add(new StreamContent(fixture), "assembly", "MixedRegistrationAssembly.dll");
+        content.Add(new StringContent("unexpected"), "extra");
+
+        var response = await client.PostAsync(
+            "/api/plugin-registration/assemblies/analyze", content);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var error = await response.Content.ReadFromJsonAsync<AssemblyInspectionErrorDto>();
+        Assert.NotNull(error);
+        Assert.Equal(AssemblyInspectionValidationCodes.FileRequired, error.Code);
+    }
+
+    [Fact]
+    public async Task Analyze_endpoint_accepts_exactly_one_assembly_file()
+    {
+        using var factory = new PluginRegistrationApplicationFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Local-Secret", "test-secret");
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "test-token");
+        client.DefaultRequestHeaders.Add("X-Environment-Url", "https://example.crm.dynamics.com");
+
+        using var content = new MultipartFormDataContent();
+        await using var fixture = File.OpenRead(FixturePath("MixedRegistrationAssembly.dll"));
+        content.Add(new StreamContent(fixture), "assembly", "MixedRegistrationAssembly.dll");
+
+        var response = await client.PostAsync(
+            "/api/plugin-registration/assemblies/analyze", content);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
     private static async Task<AssemblyInspectionDto> InspectAsync(string path)

@@ -24,6 +24,7 @@
     <InspectionFixtureProject Include="TestFixtures\BreakingWorkflowAssembly\BreakingWorkflowAssembly.csproj" />
     <InspectionFixtureProject Include="TestFixtures\UnsignedPluginAssembly\UnsignedPluginAssembly.csproj" />
     <InspectionFixtureProject Include="TestFixtures\MissingDependencyAssembly\MissingDependencyAssembly.csproj" />
+    <InspectionFixtureProject Include="TestFixtures\UnsupportedTargetFrameworkAssembly\UnsupportedTargetFrameworkAssembly.csproj" />
     <Compile Remove="TestFixtures\**\*.cs" />
   </ItemGroup>
 

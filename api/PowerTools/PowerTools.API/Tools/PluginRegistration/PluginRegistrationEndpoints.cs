@@ -62,7 +62,7 @@ public static class PluginRegistrationEndpoints
 
             var form = await request.ReadFormAsync(cancellationToken);
             var file = form.Files.GetFile("assembly");
-            if (file is null || form.Files.Count != 1)
+            if (file is null || form.Files.Count != 1 || form.Count != 0)
             {
                 return ValidationError(
                     AssemblyInspectionValidationCodes.FileRequired,
