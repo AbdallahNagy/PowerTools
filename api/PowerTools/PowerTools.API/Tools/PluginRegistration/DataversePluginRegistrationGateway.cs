@@ -31,10 +31,22 @@ public sealed class DataversePluginRegistrationGateway(
             cancellationToken);
 
         return new PluginRegistrationRows(
-            assemblies.Select(MapAssembly).ToArray(),
-            types.Select(MapType).ToArray(),
-            steps.Select(MapStep).ToArray(),
-            images.Select(MapImage).ToArray());
+            MapDistinct(assemblies, MapAssembly, (row, solution) => row with
+            {
+                SolutionDisplayName = solution
+            }),
+            MapDistinct(types, MapType, (row, solution) => row with
+            {
+                SolutionDisplayName = solution
+            }),
+            MapDistinct(steps, MapStep, (row, solution) => row with
+            {
+                SolutionDisplayName = solution
+            }),
+            MapDistinct(images, MapImage, (row, solution) => row with
+            {
+                SolutionDisplayName = solution
+            }));
     }
 
     private async Task<IReadOnlyList<Entity>> RetrieveAllPagesAsync(
@@ -69,6 +81,7 @@ public sealed class DataversePluginRegistrationGateway(
             entity.GetAttributeValue<bool>("ismanaged"),
             ManagedBoolean(entity, "iscustomizable"),
             Number(entity, "versionnumber"),
+            null,
             NullableText(entity, "description"));
 
     private static PluginTypeRow MapType(Entity entity) =>
@@ -83,7 +96,8 @@ public sealed class DataversePluginRegistrationGateway(
             entity.GetAttributeValue<bool>("isworkflowactivity"),
             entity.GetAttributeValue<bool>("ismanaged"),
             ManagedBoolean(entity, "iscustomizable"),
-            Number(entity, "versionnumber"));
+            Number(entity, "versionnumber"),
+            null);
 
     private static PluginStepRow MapStep(Entity entity)
     {
@@ -111,7 +125,8 @@ public sealed class DataversePluginRegistrationGateway(
             entity.GetAttributeValue<bool>("ismanaged"),
             ManagedBoolean(entity, "iscustomizable"),
             Number(entity, "versionnumber"),
-            secureConfigExists);
+            secureConfigExists,
+            null);
     }
 
     private static PluginImageRow MapImage(Entity entity) =>
@@ -126,7 +141,36 @@ public sealed class DataversePluginRegistrationGateway(
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             entity.GetAttributeValue<bool>("ismanaged"),
             ManagedBoolean(entity, "iscustomizable"),
-            Number(entity, "versionnumber"));
+            Number(entity, "versionnumber"),
+            null);
+
+    private static IReadOnlyList<TRow> MapDistinct<TRow>(
+        IReadOnlyList<Entity> entities,
+        Func<Entity, TRow> map,
+        Func<TRow, string?, TRow> withSolutionDisplay)
+        where TRow : class
+    {
+        return entities
+            .GroupBy(entity => entity.Id)
+            .Select(group => withSolutionDisplay(
+                map(group.First()),
+                SolutionDisplay(group)))
+            .ToArray();
+    }
+
+    private static string? SolutionDisplay(IEnumerable<Entity> entities)
+    {
+        var names = entities
+            .Select(entity => AliasedText(entity, "solution.friendlyname"))
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .GroupBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.OrderBy(name => name, StringComparer.Ordinal).First())
+            .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(name => name, StringComparer.Ordinal)
+            .ToArray();
+        return names.Length == 0 ? null : string.Join(", ", names);
+    }
 
     private static string Text(Entity entity, string attribute) =>
         entity.GetAttributeValue<string>(attribute) ?? "";

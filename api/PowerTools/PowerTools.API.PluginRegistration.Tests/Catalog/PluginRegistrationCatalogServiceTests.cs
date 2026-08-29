@@ -49,19 +49,24 @@ public sealed class PluginRegistrationCatalogServiceTests
         Assert.Equal(["alpha Assembly", "Zulu Assembly"],
             catalog.Assemblies.Select(assembly => assembly.Name));
         var alphaAssembly = catalog.Assemblies[0];
+        Assert.Equal("Core Solution", alphaAssembly.SolutionDisplayName);
         Assert.Equal(["Alpha.Plugin", "Zulu.Workflow"],
             alphaAssembly.Handlers.Select(handler => handler.TypeName));
         var plugin = alphaAssembly.Handlers[0];
         Assert.Equal(HandlerKind.Plugin, plugin.Kind);
         Assert.Equal(pluginId, plugin.Id);
+        Assert.Equal("Core Solution", plugin.SolutionDisplayName);
         var step = Assert.Single(plugin.Steps);
         Assert.Equal(stepId, step.Id);
+        Assert.Equal("Core Solution", step.SolutionDisplayName);
         Assert.True(step.SecureConfigExists);
         Assert.DoesNotContain(
             step.GetType().GetProperties(),
             property => property.Name.Contains("SecureConfig", StringComparison.OrdinalIgnoreCase)
                 && property.Name != nameof(PluginStepDto.SecureConfigExists));
-        Assert.Equal(imageId, Assert.Single(step.Images).Id);
+        var image = Assert.Single(step.Images);
+        Assert.Equal(imageId, image.Id);
+        Assert.Equal("Core Solution", image.SolutionDisplayName);
 
         var workflow = alphaAssembly.Handlers[1];
         Assert.Equal(HandlerKind.WorkflowActivity, workflow.Kind);
@@ -98,7 +103,8 @@ public sealed class PluginRegistrationCatalogServiceTests
     }
 
     private static PluginAssemblyRow Assembly(Guid id, string name) =>
-        new(id, name, "1.0.0.0", "neutral", "token", 0, 2, false, true, 1);
+        new(id, name, "1.0.0.0", "neutral", "token", 0, 2, false, true, 1,
+            SolutionDisplayName: "Core Solution");
 
     private static PluginTypeRow Type(
         Guid id,
@@ -107,7 +113,7 @@ public sealed class PluginRegistrationCatalogServiceTests
         bool isWorkflowActivity = false,
         string? workflowGroup = null) =>
         new(id, assemblyId, typeName, typeName, null, null, workflowGroup,
-            isWorkflowActivity, false, true, 1);
+            isWorkflowActivity, false, true, 1, "Core Solution");
 
     private static PluginStepRow Step(
         Guid id,
@@ -116,9 +122,9 @@ public sealed class PluginRegistrationCatalogServiceTests
         bool secureConfigExists) =>
         new(id, pluginTypeId, name, null, "Create", "account", null,
             "PreOperation", "Synchronous", 20, 0, 1, true, false, true, 1,
-            secureConfigExists);
+            secureConfigExists, "Core Solution");
 
     private static PluginImageRow Image(Guid id, Guid stepId, string name) =>
         new(id, stepId, name, null, "PreImage", "target", ["name", "emailaddress1"],
-            false, true, 1);
+            false, true, 1, "Core Solution");
 }

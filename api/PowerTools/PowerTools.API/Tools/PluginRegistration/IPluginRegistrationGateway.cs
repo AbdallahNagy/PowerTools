@@ -30,8 +30,8 @@ public sealed record PluginAssemblyRow(
     bool IsManaged,
     bool IsCustomizable,
     long VersionNumber,
-    string? Description = null,
-    string? SolutionDisplayName = null);
+    string? SolutionDisplayName,
+    string? Description = null);
 
 public sealed record PluginTypeRow(
     Guid Id,
@@ -45,7 +45,7 @@ public sealed record PluginTypeRow(
     bool IsManaged,
     bool IsCustomizable,
     long VersionNumber,
-    string? SolutionDisplayName = null);
+    string? SolutionDisplayName);
 
 public sealed record PluginStepRow(
     Guid Id,
@@ -65,7 +65,7 @@ public sealed record PluginStepRow(
     bool IsCustomizable,
     long VersionNumber,
     bool SecureConfigExists,
-    string? SolutionDisplayName = null);
+    string? SolutionDisplayName);
 
 public sealed record PluginImageRow(
     Guid Id,
@@ -78,4 +78,4 @@ public sealed record PluginImageRow(
     bool IsManaged,
     bool IsCustomizable,
     long VersionNumber,
-    string? SolutionDisplayName = null);
+    string? SolutionDisplayName);

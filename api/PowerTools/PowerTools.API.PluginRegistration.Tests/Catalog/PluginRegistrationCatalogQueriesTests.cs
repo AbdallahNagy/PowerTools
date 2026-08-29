@@ -48,40 +48,95 @@ public sealed class PluginRegistrationCatalogQueriesTests
 
         var stepLinks = PluginRegistrationCatalogQueries.CreateStepQuery().LinkEntities;
         Assert.Collection(
-            stepLinks.OrderBy(link => link.EntityAlias),
+            stepLinks
+                .Where(link => link.EntityAlias != "solutioncomponent")
+                .OrderBy(link => link.EntityAlias),
             link => AssertLink(link, "sdkmessagefilter", "filter",
                 "primaryobjecttypecode", "secondaryobjecttypecode"),
             link => AssertLink(link, "sdkmessage", "message", "name"));
+
+        AssertSolutionLink(
+            PluginRegistrationCatalogQueries.CreateAssemblyQuery(),
+            "pluginassemblyid",
+            91);
+        AssertSolutionLink(
+            PluginRegistrationCatalogQueries.CreateTypeQuery(),
+            "plugintypeid",
+            90);
+        AssertSolutionLink(
+            PluginRegistrationCatalogQueries.CreateStepQuery(),
+            "sdkmessageprocessingstepid",
+            92);
+        AssertSolutionLink(
+            PluginRegistrationCatalogQueries.CreateImageQuery(),
+            "sdkmessageprocessingstepimageid",
+            93);
     }
 
     [Fact]
     public async Task Gateway_retrieves_every_page_and_copies_the_server_cookie()
     {
         var firstAssemblyId = Guid.NewGuid();
-        var secondAssemblyId = Guid.NewGuid();
+        var pluginTypeId = Guid.NewGuid();
+        var stepId = Guid.NewGuid();
+        var imageId = Guid.NewGuid();
         var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
         var handler = (PagedOrganizationServiceProxy)(object)proxy;
         handler.Responses["pluginassembly"] = new Queue<EntityCollection>(
         [
-            Page(new Entity("pluginassembly", firstAssemblyId)
+            Page(WithSolution(new Entity("pluginassembly", firstAssemblyId)
             {
                 ["name"] = "First",
                 ["version"] = "1.0.0.0"
-            }, moreRecords: true, cookie: "assembly-cookie"),
-            Page(new Entity("pluginassembly", secondAssemblyId)
+            }, "Zeta Solution"), moreRecords: true, cookie: "assembly-cookie"),
+            Page(WithSolution(new Entity("pluginassembly", firstAssemblyId)
             {
-                ["name"] = "Second",
-                ["version"] = "2.0.0.0"
-            })
+                ["name"] = "First",
+                ["version"] = "1.0.0.0"
+            }, "Alpha Solution"))
         ]);
-        handler.Responses["plugintype"] = new Queue<EntityCollection>([Page()]);
-        handler.Responses["sdkmessageprocessingstep"] = new Queue<EntityCollection>([Page()]);
-        handler.Responses["sdkmessageprocessingstepimage"] = new Queue<EntityCollection>([Page()]);
+        handler.Responses["plugintype"] = new Queue<EntityCollection>(
+        [
+            Page(WithSolution(new Entity("plugintype", pluginTypeId)
+            {
+                ["pluginassemblyid"] = new EntityReference("pluginassembly", firstAssemblyId),
+                ["typename"] = "Contoso.Plugin",
+                ["name"] = "Plugin"
+            }, "Plugin Solution"))
+        ]);
+        handler.Responses["sdkmessageprocessingstep"] = new Queue<EntityCollection>(
+        [
+            Page(WithSolution(new Entity("sdkmessageprocessingstep", stepId)
+            {
+                ["plugintypeid"] = new EntityReference("plugintype", pluginTypeId),
+                ["name"] = "Create account",
+                ["sdkmessageprocessingstepsecureconfigid"] = new EntityReference(
+                    "sdkmessageprocessingstepsecureconfig",
+                    Guid.NewGuid())
+            }, "Step Solution"))
+        ]);
+        handler.Responses["sdkmessageprocessingstepimage"] = new Queue<EntityCollection>(
+        [
+            Page(WithSolution(new Entity("sdkmessageprocessingstepimage", imageId)
+            {
+                ["sdkmessageprocessingstepid"] = new EntityReference(
+                    "sdkmessageprocessingstep",
+                    stepId),
+                ["name"] = "Pre Image"
+            }, "Image Solution"))
+        ]);
 
         var rows = await new DataversePluginRegistrationGateway(proxy)
             .RetrieveCatalogRowsAsync(CancellationToken.None);
 
-        Assert.Equal([firstAssemblyId, secondAssemblyId], rows.Assemblies.Select(row => row.Id));
+        var assembly = Assert.Single(rows.Assemblies);
+        Assert.Equal(firstAssemblyId, assembly.Id);
+        Assert.Equal("Alpha Solution, Zeta Solution", assembly.SolutionDisplayName);
+        Assert.Equal("Plugin Solution", Assert.Single(rows.Types).SolutionDisplayName);
+        var step = Assert.Single(rows.Steps);
+        Assert.Equal("Step Solution", step.SolutionDisplayName);
+        Assert.True(step.SecureConfigExists);
+        Assert.Equal("Image Solution", Assert.Single(rows.Images).SolutionDisplayName);
         var assemblyRequests = handler.Queries
             .Where(query => query.EntityName == "pluginassembly")
             .ToArray();
@@ -116,6 +171,39 @@ public sealed class PluginRegistrationCatalogQueriesTests
         Assert.Equal(alias, link.EntityAlias);
         Assert.Equal(JoinOperator.LeftOuter, link.JoinOperator);
         Assert.Equal(approvedColumns.Order(), link.Columns.Columns.Order());
+    }
+
+    private static void AssertSolutionLink(
+        QueryExpression query,
+        string rootIdAttribute,
+        int componentType)
+    {
+        var componentLink = Assert.Single(
+            query.LinkEntities,
+            link => link.EntityAlias == "solutioncomponent");
+        Assert.Equal("solutioncomponent", componentLink.LinkToEntityName);
+        Assert.Equal(rootIdAttribute, componentLink.LinkFromAttributeName);
+        Assert.Equal("objectid", componentLink.LinkToAttributeName);
+        Assert.Equal(JoinOperator.LeftOuter, componentLink.JoinOperator);
+        Assert.Empty(componentLink.Columns.Columns);
+        var componentTypeCondition = Assert.Single(componentLink.LinkCriteria.Conditions);
+        Assert.Equal("componenttype", componentTypeCondition.AttributeName);
+        Assert.Equal(ConditionOperator.Equal, componentTypeCondition.Operator);
+        Assert.Equal(componentType, Assert.Single(componentTypeCondition.Values));
+
+        var solutionLink = Assert.Single(componentLink.LinkEntities);
+        AssertLink(solutionLink, "solution", "solution", "friendlyname");
+        Assert.Equal("solutionid", solutionLink.LinkFromAttributeName);
+        Assert.Equal("solutionid", solutionLink.LinkToAttributeName);
+    }
+
+    private static Entity WithSolution(Entity entity, string friendlyName)
+    {
+        entity["solution.friendlyname"] = new AliasedValue(
+            "solution",
+            "friendlyname",
+            friendlyName);
+        return entity;
     }
 
     private static EntityCollection Page(

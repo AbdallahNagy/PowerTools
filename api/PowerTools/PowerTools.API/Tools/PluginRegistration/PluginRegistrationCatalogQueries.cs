@@ -7,18 +7,24 @@ public static class PluginRegistrationCatalogQueries
     private const int PageSize = 5_000;
 
     public static QueryExpression CreateAssemblyQuery() =>
-        CreatePagedQuery(
+        AddSolutionDisplayLink(
+            CreatePagedQuery(
             "pluginassembly",
             "pluginassemblyid", "name", "version", "culture", "publickeytoken",
             "sourcetype", "isolationmode", "ismanaged", "iscustomizable",
-            "versionnumber", "description");
+            "versionnumber", "description"),
+            "pluginassemblyid",
+            91);
 
     public static QueryExpression CreateTypeQuery() =>
-        CreatePagedQuery(
+        AddSolutionDisplayLink(
+            CreatePagedQuery(
             "plugintype",
             "plugintypeid", "pluginassemblyid", "typename", "name", "friendlyname",
             "description", "workflowactivitygroupname", "isworkflowactivity", "ismanaged",
-            "iscustomizable", "versionnumber");
+            "iscustomizable", "versionnumber"),
+            "plugintypeid",
+            90);
 
     public static QueryExpression CreateStepQuery()
     {
@@ -42,15 +48,44 @@ public static class PluginRegistrationCatalogQueries
         query.LinkEntities[^1].Columns = new ColumnSet(
             "primaryobjecttypecode",
             "secondaryobjecttypecode");
-        return query;
+        return AddSolutionDisplayLink(query, "sdkmessageprocessingstepid", 92);
     }
 
     public static QueryExpression CreateImageQuery() =>
-        CreatePagedQuery(
+        AddSolutionDisplayLink(
+            CreatePagedQuery(
             "sdkmessageprocessingstepimage",
             "sdkmessageprocessingstepimageid", "sdkmessageprocessingstepid", "name",
             "description", "imagetype", "entityalias", "attributes", "ismanaged",
-            "iscustomizable", "versionnumber");
+            "iscustomizable", "versionnumber"),
+            "sdkmessageprocessingstepimageid",
+            93);
+
+    private static QueryExpression AddSolutionDisplayLink(
+        QueryExpression query,
+        string rootIdAttribute,
+        int componentType)
+    {
+        var componentLink = query.AddLink(
+            "solutioncomponent",
+            rootIdAttribute,
+            "objectid",
+            JoinOperator.LeftOuter);
+        componentLink.EntityAlias = "solutioncomponent";
+        componentLink.LinkCriteria.AddCondition(
+            "componenttype",
+            ConditionOperator.Equal,
+            componentType);
+
+        var solutionLink = componentLink.AddLink(
+            "solution",
+            "solutionid",
+            "solutionid",
+            JoinOperator.LeftOuter);
+        solutionLink.EntityAlias = "solution";
+        solutionLink.Columns = new ColumnSet("friendlyname");
+        return query;
+    }
 
     private static QueryExpression CreatePagedQuery(
         string entityName,
