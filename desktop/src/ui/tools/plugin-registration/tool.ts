@@ -5,7 +5,7 @@ import PluginRegistration from "./PluginRegistration";
 export const pluginRegistrationTool = defineTool({
   id: "plugin-registration",
   title: "Plugin Registration",
-  tooltip: "",
+  tooltip: "Browse and safely manage Dataverse plug-in registrations",
   icon: PluginRegistrationIcon,
   showInActivityBar: true,
   component: PluginRegistration,
