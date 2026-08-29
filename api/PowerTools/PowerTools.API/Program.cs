@@ -37,6 +37,12 @@ builder.Services.AddSingleton<IPluginRegistrationGatewayFactory,
     DataversePluginRegistrationGatewayFactory>();
 builder.Services.AddSingleton<PluginRegistrationCatalogService>();
 builder.Services.AddSingleton<IPluginAssemblyInspector, PluginAssemblyInspector>();
+builder.Services.AddSingleton<TimeProvider>(TimeProvider.System);
+builder.Services.AddSingleton<PluginRegistrationPlanSigner>(services =>
+    new PluginRegistrationPlanSigner(
+        localSecret,
+        services.GetRequiredService<TimeProvider>()));
+builder.Services.AddSingleton<PluginRegistrationPreflightService>();
 
 var app = builder.Build();
 
