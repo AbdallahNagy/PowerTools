@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
@@ -29,13 +29,28 @@ describe("Assembly mutations", () => {
       </ConnectionsProvider>,
       {
         bridgeOverrides: {
-          listConnections: async () => [],
-          getActiveConnectionName: async () => null,
+          listConnections: async () => [
+            {
+              name: "Development",
+              envUrl: "https://development.example.test",
+              crmType: "online",
+            },
+          ],
+          getActiveConnectionName: async () => "Development",
+          getConnection: async (name) => ({
+            name,
+            envUrl: "https://development.example.test",
+            crmType: "online",
+            token: "development-token",
+            expiresOn: "2099-01-01T00:00:00.000Z",
+          }),
         },
       },
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Register assembly" }));
+    const register = screen.getByRole("button", { name: "Register assembly" });
+    await waitFor(() => expect(register).toBeEnabled());
+    fireEvent.click(register);
 
     expect(await screen.findByLabelText("Assembly DLL")).toHaveAttribute("type", "file");
   });
