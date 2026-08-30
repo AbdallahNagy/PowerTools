@@ -75,6 +75,36 @@ public static class PluginRegistrationEndpoints
             .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes, MemoryBufferThreshold = (int)PluginAssemblyInspector.MaxAssemblyBytes })
             .WithName("ExecuteUpdatePluginAssembly");
 
+        group.MapGet("/step-options", async (HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory,
+            DataverseClientFactory clientFactory, CancellationToken cancellationToken) =>
+        {
+            var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+            return Results.Ok(await gateway.RetrieveStepOptionsAsync(cancellationToken));
+        }).WithName("GetPluginStepOptions");
+
+        group.MapPost("/steps/create/preflight", (StepDraftDto draft, HttpContext context,
+            IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+            ICurrentConnection connection, PluginStepMutationService mutations, CancellationToken cancellationToken) =>
+            CreateStepPreflightAsync(draft, null, "create", context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
+            .WithName("PreflightCreatePluginStep");
+        group.MapPost("/steps/{stepId:guid}/{operation:regex(^update|enable|disable|unregister$)}/preflight",
+            (Guid stepId, string operation, StepDraftDto draft, HttpContext context,
+             IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+             ICurrentConnection connection, PluginStepMutationService mutations, CancellationToken cancellationToken) =>
+                CreateStepPreflightAsync(draft, stepId, operation, context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
+            .WithName("PreflightPluginStepMutation");
+        group.MapPost("/steps/create/execute", (StepMutationExecuteRequestDto request, HttpContext context,
+            IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+            ICurrentConnection connection, PluginStepMutationService mutations, CancellationToken cancellationToken) =>
+            ExecuteStepAsync(request, null, "create", context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
+            .WithName("ExecuteCreatePluginStep");
+        group.MapPost("/steps/{stepId:guid}/{operation:regex(^update|enable|disable|unregister$)}/execute",
+            (Guid stepId, string operation, StepMutationExecuteRequestDto request, HttpContext context,
+             IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+             ICurrentConnection connection, PluginStepMutationService mutations, CancellationToken cancellationToken) =>
+                ExecuteStepAsync(request, stepId, operation, context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
+            .WithName("ExecutePluginStepMutation");
+
         return app;
     }
 
@@ -289,6 +319,51 @@ public static class PluginRegistrationEndpoints
         context.RequestServices.GetRequiredService<IPluginAssemblyInspector>(),
         context.RequestServices.GetRequiredService<PluginRegistrationPreflightService>(),
         context.RequestServices.GetRequiredService<PluginRegistrationCatalogService>());
+
+    private static async Task<IResult> CreateStepPreflightAsync(StepDraftDto draft, Guid? routeStepId,
+        string operation, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory,
+        DataverseClientFactory clientFactory, ICurrentConnection connection, PluginStepMutationService mutations,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            EnsureStepRouteTarget(draft, routeStepId, operation);
+            var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+            return Results.Ok(await mutations.CreatePreflightAsync(gateway, connection.EnvironmentUrl,
+                operation, draft, cancellationToken));
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "step");
+            return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+        }
+    }
+
+    private static async Task<IResult> ExecuteStepAsync(StepMutationExecuteRequestDto request, Guid? routeStepId,
+        string operation, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory,
+        DataverseClientFactory clientFactory, ICurrentConnection connection, PluginStepMutationService mutations,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            EnsureStepRouteTarget(request.Draft, routeStepId, operation);
+            var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+            return Results.Ok(await mutations.ExecuteAsync(gateway, connection.EnvironmentUrl, operation,
+                request.PlanToken, request.Draft, request.TypedName, cancellationToken));
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "step");
+            return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+        }
+    }
+
+    private static void EnsureStepRouteTarget(StepDraftDto draft, Guid? routeStepId, string operation)
+    {
+        var targetIds = draft.ExpectedVersions.Keys.Where(id => id != draft.PluginTypeId).ToArray();
+        if (operation == "create" ? routeStepId is not null : targetIds.Length != 1 || targetIds[0] != routeStepId)
+            throw new ArgumentException("The step draft target does not match the route.");
+    }
 
     private sealed record AssemblyMutationUpload(
         AssemblyMutationDraftDto Draft,

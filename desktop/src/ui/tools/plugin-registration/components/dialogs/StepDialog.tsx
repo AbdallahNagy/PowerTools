@@ -1,0 +1,51 @@
+import { useMemo, useState } from "react";
+
+import { Button, Modal } from "../../../../shared/ui";
+import { useStepMutations, type StepDraft, type StepPreflight } from "../../api/useStepMutations";
+import type { PluginHandler, PluginStep } from "../../model/contracts";
+
+interface Props { connectionName: string | null; plugin: PluginHandler & { kind: "plugin" }; step?: PluginStep | null;
+  operation: "create" | "update"; onClose: () => void; refreshCatalog: () => Promise<unknown>; }
+
+export function StepDialog({ connectionName, plugin, step, operation, onClose, refreshCatalog }: Props) {
+  const mutations = useStepMutations(connectionName, refreshCatalog);
+  const options = mutations.options.data;
+  const [messageId, setMessageId] = useState("");
+  const selectedMessageId = messageId || options?.messages[0]?.id || "";
+  const matchingFilters = options?.filters.filter(item => item.messageId === selectedMessageId) ?? [];
+  const [filterId, setFilterId] = useState("");
+  const selectedFilter = matchingFilters.find(item => item.id === filterId) ?? matchingFilters[0];
+  const [attributesText, setAttributesText] = useState("");
+  const [secureReplacement, setSecureReplacement] = useState("");
+  const [stage, setStage] = useState(step?.stage ?? 40);
+  const [mode, setMode] = useState(step?.mode ?? 0);
+  const [rank, setRank] = useState(step?.rank ?? 1);
+  const [preview, setPreview] = useState<StepPreflight | null>(null);
+  const attributes = useMemo(() => attributesText.split(",").map(value => value.trim().toLowerCase()).filter(Boolean), [attributesText]);
+  const primaryKeySelected = Boolean(selectedFilter && attributes.includes(selectedFilter.primaryIdAttribute.toLowerCase()));
+  const updateWithoutFilters = options?.messages.find(item => item.id === selectedMessageId)?.name === "Update" && attributes.length === 0;
+  const draft: StepDraft | null = selectedFilter ? {
+    pluginTypeId: plugin.id, sdkMessageId: selectedMessageId, sdkMessageFilterId: selectedFilter.id,
+    primaryTable: selectedFilter.primaryTable, secondaryTable: selectedFilter.secondaryTable,
+    stage, mode, rank, filteringAttributes: attributes, impersonatingUserId: null,
+    unsecureConfiguration: null, replacementSecureConfiguration: secureReplacement || null,
+    expectedVersions: step ? { [plugin.id]: plugin.versionNumber, [step.id]: step.versionNumber } : { [plugin.id]: plugin.versionNumber },
+  } : null;
+  const title = operation === "create" ? "Register step" : "Update step";
+  const submit = async () => { if (!draft) return; setPreview(await mutations.preflight.mutateAsync({ operation, stepId: step?.id ?? null, draft })); };
+  const confirm = async () => { if (!draft || !preview) return; const result = await mutations.execute.mutateAsync({ operation, stepId: step?.id ?? null, draft, token: preview.plan.token }); if (result.succeededAndVerified) onClose(); };
+  return <>
+    <Modal open title={title} onClose={onClose} widthClass="max-w-xl"><div role="dialog" aria-label={title} className="flex flex-col gap-3">
+      <label className="text-sm">Message<select aria-label="Message" value={selectedMessageId} onChange={event => { setMessageId(event.target.value); setFilterId(""); }} className="w-full bg-[#3c3c3c] p-2">{options?.messages.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+      <label className="text-sm">Primary table<select aria-label="Primary table" value={selectedFilter?.primaryTable ?? ""} onChange={event => setFilterId(matchingFilters.find(item => item.primaryTable === event.target.value)?.id ?? "")} className="w-full bg-[#3c3c3c] p-2">{matchingFilters.map(item => <option key={item.id} value={item.primaryTable}>{item.primaryTable}</option>)}</select></label>
+      <div className="grid grid-cols-3 gap-2"><label>Stage<select aria-label="Stage" value={stage} onChange={event => setStage(Number(event.target.value))}><option value={10}>PreValidation</option><option value={20}>PreOperation</option><option value={40}>PostOperation</option></select></label><label>Mode<select aria-label="Mode" value={mode} onChange={event => setMode(Number(event.target.value))}><option value={0}>Synchronous</option>{stage === 40 ? <option value={1}>Asynchronous</option> : null}</select></label><label>Rank<input aria-label="Rank" type="number" value={rank} onChange={event => setRank(Number(event.target.value))} /></label></div>
+      <label>Filtering attributes<input aria-label="Filtering attributes" value={attributesText} onChange={event => setAttributesText(event.target.value)} className="w-full bg-[#3c3c3c] p-2" /></label>
+      {updateWithoutFilters ? <p role="status" className="text-amber-300">Update steps should select filtering attributes.</p> : null}
+      {primaryKeySelected ? <p role="alert" className="text-red-300">The primary key cannot be used as an Update filtering attribute.</p> : null}
+      <p className="text-xs text-[#858585]">{step?.secureConfigExists ? "Stored secure configuration exists. " : ""}Stored secure configuration is not displayed.</p>
+      <label>Replacement secure configuration<input aria-label="Replacement secure configuration" type="password" value={secureReplacement} onChange={event => setSecureReplacement(event.target.value)} className="w-full bg-[#3c3c3c] p-2" /></label>
+      <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={() => void submit()} disabled={!draft || primaryKeySelected || mutations.preflight.isPending}>Preview changes</Button></div>
+    </div></Modal>
+    {preview ? <Modal open title="Step impact preview" onClose={() => setPreview(null)} widthClass="max-w-lg"><div role="dialog" aria-label="Step impact preview" className="flex flex-col gap-3"><p>{preview.after.message} {preview.after.primaryTable}</p>{preview.plan.warnings.map(item => <p key={item.code} role="status" className="text-amber-300">{item.message}</p>)}{preview.plan.blockers.map(item => <p key={item.code} role="alert" className="text-red-300">{item.message}</p>)}<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setPreview(null)}>Cancel</Button><Button disabled={preview.plan.blockers.length > 0 || mutations.execute.isPending} onClick={() => void confirm()}>Confirm</Button></div></div></Modal> : null}
+  </>;
+}

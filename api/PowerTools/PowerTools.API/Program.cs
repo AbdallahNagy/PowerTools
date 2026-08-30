@@ -43,6 +43,8 @@ builder.Services.AddSingleton<PluginRegistrationPlanSigner>(services =>
         localSecret,
         services.GetRequiredService<TimeProvider>()));
 builder.Services.AddSingleton<PluginRegistrationPreflightService>();
+builder.Services.AddSingleton<PluginStepValidator>();
+builder.Services.AddSingleton<PluginStepMutationService>();
 
 var app = builder.Build();
 

@@ -25,6 +25,17 @@ public interface IPluginRegistrationGateway
         IReadOnlyList<PluginTypeRow> handlers,
         CancellationToken cancellationToken) =>
         Task.FromResult(new PluginAssemblyImpactSnapshot([], [], false));
+
+    Task<StepOptionsDto> RetrieveStepOptionsAsync(CancellationToken cancellationToken) =>
+        Task.FromResult(new StepOptionsDto([], [], []));
+
+    Task<PluginStepPreflightState> RetrieveStepPreflightStateAsync(
+        Guid pluginTypeId, Guid? targetStepId, StepDraftDto draft, CancellationToken cancellationToken) =>
+        Task.FromException<PluginStepPreflightState>(new NotSupportedException("Step preflight is not supported by this gateway."));
+
+    Task<Guid> MutateStepAsync(string operation, Guid? targetStepId, StepDraftDto draft,
+        CancellationToken cancellationToken) =>
+        Task.FromException<Guid>(new NotSupportedException("Step mutation is not supported by this gateway."));
 }
 
 public interface IPluginRegistrationGatewayFactory

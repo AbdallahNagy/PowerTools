@@ -1,6 +1,8 @@
 using System.Security.Cryptography;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
 
@@ -16,6 +18,164 @@ public sealed class DataversePluginRegistrationGatewayFactory
 public sealed class DataversePluginRegistrationGateway(
     IOrganizationServiceAsync2 service) : IPluginRegistrationGateway
 {
+    public async Task<StepOptionsDto> RetrieveStepOptionsAsync(CancellationToken cancellationToken)
+    {
+        var messages = await RetrieveAllPagesAsync(new QueryExpression("sdkmessage")
+        {
+            ColumnSet = new ColumnSet("sdkmessageid", "name"),
+            Criteria = new FilterExpression(LogicalOperator.And)
+            {
+                Conditions = { new("isprivate", ConditionOperator.Equal, false) }
+            }
+        }, cancellationToken);
+        var filters = await RetrieveAllPagesAsync(new QueryExpression("sdkmessagefilter")
+        {
+            ColumnSet = new ColumnSet("sdkmessagefilterid", "sdkmessageid", "primaryobjecttypecode", "secondaryobjecttypecode")
+        }, cancellationToken);
+        var users = await RetrieveAllPagesAsync(new QueryExpression("systemuser")
+        {
+            ColumnSet = new ColumnSet("systemuserid", "fullname"),
+            Criteria = new FilterExpression(LogicalOperator.And)
+            {
+                Conditions = { new("isdisabled", ConditionOperator.Equal, false), new("accessmode", ConditionOperator.NotEqual, 3) }
+            }
+        }, cancellationToken);
+        var primaryIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var logicalName in filters.Select(row => Text(row, "primaryobjecttypecode"))
+            .Where(value => value.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var response = (RetrieveEntityResponse)await service.ExecuteAsync(new RetrieveEntityRequest
+            {
+                LogicalName = logicalName,
+                EntityFilters = EntityFilters.Entity,
+                RetrieveAsIfPublished = true
+            }, cancellationToken);
+            primaryIds[logicalName] = response.EntityMetadata.PrimaryIdAttribute;
+        }
+        return new(
+            messages.Select(row => new StepOptionDto(row.Id, Text(row, "name"))).OrderBy(row => row.Name).ToArray(),
+            filters.Select(row => new StepMessageFilterOptionDto(row.Id, LookupId(row, "sdkmessageid") ?? Guid.Empty,
+                Text(row, "primaryobjecttypecode"), NullableText(row, "secondaryobjecttypecode"),
+                primaryIds.GetValueOrDefault(Text(row, "primaryobjecttypecode"), $"{Text(row, "primaryobjecttypecode")}id"))).ToArray(),
+            users.Select(row => new StepOptionDto(row.Id, Text(row, "fullname"))).OrderBy(row => row.Name).ToArray());
+    }
+
+    public async Task<PluginStepPreflightState> RetrieveStepPreflightStateAsync(Guid pluginTypeId,
+        Guid? targetStepId, StepDraftDto draft, CancellationToken cancellationToken)
+    {
+        var options = await RetrieveStepOptionsAsync(cancellationToken);
+        var message = options.Messages.SingleOrDefault(item => item.Id == draft.SdkMessageId);
+        var filter = options.Filters.SingleOrDefault(item => item.Id == draft.SdkMessageFilterId
+            && item.MessageId == draft.SdkMessageId);
+        var userValid = !draft.ImpersonatingUserId.HasValue || options.EnabledUsers.Any(item => item.Id == draft.ImpersonatingUserId);
+        var rows = await RetrieveCatalogRowsAsync(cancellationToken);
+        var target = targetStepId is { } id ? rows.Steps.SingleOrDefault(item => item.Id == id) : null;
+        Entity? targetDetails = null;
+        if (targetStepId is { } detailId)
+            targetDetails = await service.RetrieveAsync("sdkmessageprocessingstep", detailId,
+                new ColumnSet("sdkmessageid", "sdkmessagefilterid", "filteringattributes", "impersonatinguserid",
+                    "configuration", "sdkmessageprocessingstepsecureconfigid"), cancellationToken);
+        var duplicate = rows.Steps.Any(item => item.Id != targetStepId && item.PluginTypeId == pluginTypeId
+            && string.Equals(item.MessageLabel, message?.Name, StringComparison.OrdinalIgnoreCase)
+            && string.Equals(item.PrimaryTableLabel, filter?.PrimaryTable, StringComparison.OrdinalIgnoreCase)
+            && item.Stage == draft.Stage && item.Mode == draft.Mode && item.Rank == draft.Rank);
+        var dependencies = targetStepId is { } stepId
+            ? await RetrieveDependenciesAsync(stepId, 92, cancellationToken)
+            : [];
+        return new(message?.Name ?? "", filter?.PrimaryTable ?? draft.PrimaryTable,
+            filter?.PrimaryIdAttribute ?? $"{draft.PrimaryTable}id", message is not null, filter is not null,
+            userValid, duplicate, target?.IsManaged ?? false, target?.IsCustomizable ?? true,
+            targetDetails is not null && LookupId(targetDetails, "sdkmessageprocessingstepsecureconfigid").HasValue,
+            target?.VersionNumber, pluginTypeId, targetStepId, target?.Name, dependencies,
+            targetDetails is null ? null : LookupId(targetDetails, "sdkmessageid"),
+            targetDetails is null ? null : LookupId(targetDetails, "sdkmessagefilterid"),
+            targetDetails is null ? null : (NullableText(targetDetails, "filteringattributes") ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            targetDetails is null ? null : LookupId(targetDetails, "impersonatinguserid"),
+            targetDetails is null ? null : NullableText(targetDetails, "configuration"));
+    }
+
+    public async Task<Guid> MutateStepAsync(string operation, Guid? targetStepId, StepDraftDto draft,
+        CancellationToken cancellationToken)
+    {
+        var stepId = targetStepId ?? Guid.NewGuid();
+        var requests = new OrganizationRequestCollection();
+        if (operation == "unregister")
+        {
+            requests.Add(new DeleteRequest { Target = new EntityReference("sdkmessageprocessingstep", stepId) });
+        }
+        else
+        {
+            var entity = new Entity("sdkmessageprocessingstep", stepId)
+            {
+                ["plugintypeid"] = new EntityReference("plugintype", draft.PluginTypeId),
+                ["sdkmessageid"] = new EntityReference("sdkmessage", draft.SdkMessageId),
+                ["sdkmessagefilterid"] = new EntityReference("sdkmessagefilter", draft.SdkMessageFilterId),
+                ["stage"] = new OptionSetValue(draft.Stage), ["mode"] = new OptionSetValue(draft.Mode),
+                ["rank"] = draft.Rank, ["filteringattributes"] = string.Join(',', draft.FilteringAttributes)
+            };
+            if (draft.UnsecureConfiguration is not null)
+                entity["configuration"] = draft.UnsecureConfiguration;
+            if (draft.ImpersonatingUserId is { } userId)
+                entity["impersonatinguserid"] = new EntityReference("systemuser", userId);
+            if (operation == "create")
+            {
+                entity["name"] = $"{draft.PrimaryTable} step";
+                requests.Add(new CreateRequest { Target = entity });
+            }
+            else
+            {
+                if (operation is "enable" or "disable")
+                {
+                    entity.Attributes.Clear();
+                    entity["statecode"] = new OptionSetValue(operation == "enable" ? 0 : 1);
+                    entity["statuscode"] = new OptionSetValue(operation == "enable" ? 1 : 2);
+                }
+                requests.Add(new UpdateRequest { Target = entity });
+            }
+            if (draft.ReplacementSecureConfiguration is not null)
+            {
+                Guid? existingSecureId = null;
+                if (targetStepId is { } existingStepId)
+                {
+                    var existingStep = await service.RetrieveAsync("sdkmessageprocessingstep", existingStepId,
+                        new ColumnSet("sdkmessageprocessingstepsecureconfigid"), cancellationToken);
+                    existingSecureId = LookupId(existingStep, "sdkmessageprocessingstepsecureconfigid");
+                }
+                var secureId = existingSecureId ?? Guid.NewGuid();
+                var secure = new Entity("sdkmessageprocessingstepsecureconfig", secureId)
+                {
+                    ["secureconfig"] = draft.ReplacementSecureConfiguration
+                };
+                requests.Insert(0, existingSecureId.HasValue
+                    ? new UpdateRequest { Target = secure }
+                    : new CreateRequest { Target = secure });
+                entity["sdkmessageprocessingstepsecureconfigid"] = new EntityReference("sdkmessageprocessingstepsecureconfig", secureId);
+            }
+        }
+        var transaction = new ExecuteTransactionRequest { Requests = requests, ReturnResponses = true };
+        await service.ExecuteAsync(transaction, cancellationToken);
+        return stepId;
+    }
+
+    private async Task<IReadOnlyList<ComponentDependencyDto>> RetrieveDependenciesAsync(Guid id, int componentType,
+        CancellationToken cancellationToken)
+    {
+        var request = new OrganizationRequest("RetrieveDependenciesForDelete")
+        {
+            ["ComponentType"] = componentType,
+            ["ObjectId"] = id
+        };
+        var response = await service.ExecuteAsync(request, cancellationToken);
+        if (!response.Results.TryGetValue("EntityDependencies", out var value) || value is not EntityCollection collection)
+            return [];
+        return collection.Entities.Select(entity =>
+        {
+            var reference = entity.GetAttributeValue<EntityReference>("dependentcomponentobjectid");
+            return new ComponentDependencyDto(reference?.Id ?? Guid.Empty, reference?.Name ?? "External component",
+                reference?.LogicalName ?? "Solution component", null, false, true, 0);
+        }).ToArray();
+    }
     public async Task<PluginAssemblyImpactSnapshot> RetrieveAssemblyImpactSnapshotAsync(
         PluginAssemblyRow assembly,
         IReadOnlyList<PluginTypeRow> handlers,

@@ -11,6 +11,8 @@ import {
 } from "./components/RegistrationContextMenu";
 import { RegistrationDialogShell } from "./components/dialogs/RegistrationDialogShell";
 import { AssemblyDialog } from "./components/dialogs/AssemblyDialog";
+import { StepDialog } from "./components/dialogs/StepDialog";
+import { TypedNameConfirmationDialog } from "./components/dialogs/TypedNameConfirmationDialog";
 import { RegistrationWorkspace } from "./components/RegistrationWorkspace";
 import { buildCatalogTree, findCatalogNode, type CatalogTreeNode } from "./model/catalogTree";
 
@@ -19,6 +21,8 @@ export type DialogIntent =
   | { kind: "update"; nodeId: string }
   | { kind: "createStep"; pluginId: string }
   | { kind: "createImage"; stepId: string }
+  | { kind: "unregisterStep"; stepId: string }
+  | { kind: "toggleStep"; stepId: string; enable: boolean }
   | null;
 
 export default function PluginRegistration() {
@@ -48,6 +52,16 @@ function PluginRegistrationPage() {
     : null;
   const isAssemblyMutationDialog = dialogIntent?.kind === "registerAssembly"
     || (dialogIntent?.kind === "update" && dialogNode?.kind === "assembly");
+  const stepNode = dialogIntent?.kind === "unregisterStep" || dialogIntent?.kind === "toggleStep"
+    ? findCatalogNode(nodes, `step:${dialogIntent.stepId}`) ?? null
+    : dialogNode?.kind === "step" ? dialogNode : null;
+  const pluginId = dialogIntent?.kind === "createStep" ? dialogIntent.pluginId
+    : stepNode?.kind === "step" ? stepNode.data.pluginHandlerId : null;
+  const pluginNode = pluginId ? findCatalogNode(nodes, `plugin:${pluginId}`) ?? null : null;
+  const isStepEditDialog = Boolean(pluginNode?.kind === "plugin"
+    && (dialogIntent?.kind === "createStep" || dialogIntent?.kind === "update" && dialogNode?.kind === "step"));
+  const isStepConfirmation = Boolean(pluginNode?.kind === "plugin" && stepNode?.kind === "step"
+    && (dialogIntent?.kind === "unregisterStep" || dialogIntent?.kind === "toggleStep"));
 
   const changeConnection = (name: string) => {
     setSelectedNodeId(null);
@@ -95,7 +109,10 @@ function PluginRegistrationPage() {
         setDialogIntent({ kind: "createImage", stepId: intent.stepId });
         break;
       case "unregister":
+        if (intent.nodeId.startsWith("step:")) setDialogIntent({ kind: "unregisterStep", stepId: intent.nodeId.slice(5) });
+        break;
       case "toggleStep":
+        setDialogIntent({ kind: "toggleStep", stepId: intent.stepId, enable: intent.enable });
         break;
     }
   };
@@ -133,7 +150,7 @@ function PluginRegistrationPage() {
         onClose={() => setContextMenu(null)}
       />
       <RegistrationDialogShell
-        intent={isAssemblyMutationDialog ? null : dialogIntent}
+        intent={isAssemblyMutationDialog || isStepEditDialog || isStepConfirmation ? null : dialogIntent}
         node={dialogNode}
         onClose={() => setDialogIntent(null)}
       />
@@ -145,6 +162,18 @@ function PluginRegistrationPage() {
           onVerified={(assembly) => setSelectedNodeId(`assembly:${assembly.id}`)}
           refreshCatalog={() => catalogQuery.refetch()}
         />
+      ) : null}
+      {isStepEditDialog && pluginNode?.kind === "plugin" ? (
+        <StepDialog connectionName={connectionName || null} plugin={pluginNode.data}
+          step={stepNode?.kind === "step" ? stepNode.data : null}
+          operation={stepNode?.kind === "step" ? "update" : "create"}
+          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
+      ) : null}
+      {isStepConfirmation && pluginNode?.kind === "plugin" && stepNode?.kind === "step"
+        && (dialogIntent?.kind === "unregisterStep" || dialogIntent?.kind === "toggleStep") ? (
+        <TypedNameConfirmationDialog connectionName={connectionName || null} plugin={pluginNode.data}
+          step={stepNode.data} operation={dialogIntent.kind === "unregisterStep" ? "unregister" : dialogIntent.enable ? "enable" : "disable"}
+          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
       ) : null}
     </div>
   );
