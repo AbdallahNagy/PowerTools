@@ -16,6 +16,7 @@ export function TypedNameConfirmationDialog({ connectionName, plugin, step, oper
     sdkMessageFilterId: filter.id, primaryTable: filter.primaryTable, secondaryTable: filter.secondaryTable,
     stage: step.stage, mode: step.mode, rank: step.rank, filteringAttributes: [], impersonatingUserId: null,
     unsecureConfiguration: null, replacementSecureConfiguration: null,
+    impersonatingUserAction: "keep", unsecureConfigurationAction: "keep",
     expectedVersions: { [plugin.id]: plugin.versionNumber, [step.id]: step.versionNumber } }) : null,
   [filter, message, plugin.id, plugin.versionNumber, step]);
   useEffect(() => { if (draft && !mutations.preflight.data && !mutations.preflight.isPending) void mutations.preflight.mutateAsync({ operation, stepId: step.id, draft }); }, [draft, mutations.preflight, operation, step.id]);

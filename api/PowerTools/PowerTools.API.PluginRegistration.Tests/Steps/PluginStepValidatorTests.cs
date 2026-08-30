@@ -83,6 +83,17 @@ public sealed class PluginStepValidatorTests
             result.Blockers.Select(item => item.Code).Order());
     }
 
+    [Fact]
+    public void Nullable_field_actions_must_match_their_values()
+    {
+        var draft = Draft() with { ImpersonatingUserAction = "set", ImpersonatingUserId = null,
+            UnsecureConfigurationAction = "clear", UnsecureConfiguration = "still-present" };
+
+        var result = Validate(draft);
+
+        Assert.Contains(result.Blockers, item => item.Code == "invalidNullableAction");
+    }
+
     private static PluginStepValidationResult Validate(StepDraftDto draft) => new PluginStepValidator().Validate(draft, State());
 
     private static StepDraftDto Draft(int stage = 40, int mode = 0, int rank = 1,

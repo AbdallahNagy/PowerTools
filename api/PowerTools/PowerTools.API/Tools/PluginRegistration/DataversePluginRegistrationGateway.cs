@@ -80,6 +80,14 @@ public sealed class DataversePluginRegistrationGateway(
             targetDetails = await service.RetrieveAsync("sdkmessageprocessingstep", detailId,
                 new ColumnSet("sdkmessageid", "sdkmessagefilterid", "filteringattributes", "impersonatinguserid",
                     "configuration", "sdkmessageprocessingstepsecureconfigid"), cancellationToken);
+        var secureConfigId = targetDetails is null ? null : LookupId(targetDetails, "sdkmessageprocessingstepsecureconfigid");
+        long? secureConfigVersion = null;
+        if (secureConfigId is { } secureId)
+        {
+            var secure = await service.RetrieveAsync("sdkmessageprocessingstepsecureconfig", secureId,
+                new ColumnSet("versionnumber"), cancellationToken);
+            secureConfigVersion = Number(secure, "versionnumber");
+        }
         var duplicate = rows.Steps.Any(item => item.Id != targetStepId && item.PluginTypeId == pluginTypeId
             && string.Equals(item.MessageLabel, message?.Name, StringComparison.OrdinalIgnoreCase)
             && string.Equals(item.PrimaryTableLabel, filter?.PrimaryTable, StringComparison.OrdinalIgnoreCase)
@@ -105,7 +113,9 @@ public sealed class DataversePluginRegistrationGateway(
             AvailableAttributes = filter?.AvailableAttributes ?? [],
             IsOrdinaryPlugin = plugin is { IsWorkflowActivity: false },
             IsParentManaged = plugin?.IsManaged ?? false,
-            IsParentCustomizable = plugin?.IsCustomizable ?? false
+            IsParentCustomizable = plugin?.IsCustomizable ?? false,
+            SecureConfigId = secureConfigId,
+            SecureConfigVersion = secureConfigVersion
         };
     }
 
@@ -157,10 +167,11 @@ public sealed class DataversePluginRegistrationGateway(
             };
             if (command.ExpectedStepVersion is { } expectedStepVersion)
                 entity.RowVersion = expectedStepVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            if (draft.UnsecureConfiguration is not null)
-                entity["configuration"] = draft.UnsecureConfiguration;
-            if (draft.ImpersonatingUserId is { } userId)
+            if (draft.UnsecureConfigurationAction == "set") entity["configuration"] = draft.UnsecureConfiguration;
+            else if (draft.UnsecureConfigurationAction == "clear") entity["configuration"] = null;
+            if (draft.ImpersonatingUserAction == "set" && draft.ImpersonatingUserId is { } userId)
                 entity["impersonatinguserid"] = new EntityReference("systemuser", userId);
+            else if (draft.ImpersonatingUserAction == "clear") entity["impersonatinguserid"] = null;
             if (operation == "create")
             {
                 entity["name"] = $"{draft.PrimaryTable} step";
@@ -178,20 +189,16 @@ public sealed class DataversePluginRegistrationGateway(
             }
             if (draft.ReplacementSecureConfiguration is not null)
             {
-                Guid? existingSecureId = null;
-                if (targetStepId is { } existingStepId)
-                {
-                    var existingStep = await service.RetrieveAsync("sdkmessageprocessingstep", existingStepId,
-                        new ColumnSet("sdkmessageprocessingstepsecureconfigid"), cancellationToken);
-                    existingSecureId = LookupId(existingStep, "sdkmessageprocessingstepsecureconfigid");
-                }
+                var existingSecureId = command.ExpectedSecureConfigId;
                 var secureId = existingSecureId ?? Guid.NewGuid();
                 var secure = new Entity("sdkmessageprocessingstepsecureconfig", secureId)
                 {
                     ["secureconfig"] = draft.ReplacementSecureConfiguration
                 };
+                if (command.ExpectedSecureConfigVersion is { } expectedSecureVersion)
+                    secure.RowVersion = expectedSecureVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 requests.Insert(0, existingSecureId.HasValue
-                    ? new UpdateRequest { Target = secure }
+                    ? new UpdateRequest { Target = secure, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches }
                     : new CreateRequest { Target = secure });
                 entity["sdkmessageprocessingstepsecureconfigid"] = new EntityReference("sdkmessageprocessingstepsecureconfig", secureId);
             }

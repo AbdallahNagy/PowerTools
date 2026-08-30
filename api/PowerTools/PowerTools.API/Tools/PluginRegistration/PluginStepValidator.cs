@@ -16,6 +16,12 @@ public sealed class PluginStepValidator
             FilteringAttributes = attributes };
         var warnings = new List<MutationWarningDto>();
         var blockers = new List<MutationBlockerDto>();
+        if (!NullableActions.Contains(draft.ImpersonatingUserAction) || !NullableActions.Contains(draft.UnsecureConfigurationAction)
+            || draft.ImpersonatingUserAction == "set" && draft.ImpersonatingUserId is null
+            || draft.ImpersonatingUserAction == "clear" && draft.ImpersonatingUserId is not null
+            || draft.UnsecureConfigurationAction == "set" && draft.UnsecureConfiguration is null
+            || draft.UnsecureConfigurationAction == "clear" && draft.UnsecureConfiguration is not null)
+            blockers.Add(new("invalidNullableAction", "Nullable step fields require keep, set, or clear semantics."));
         if (!state.MessageIsSupported || !state.FilterIsSupported
             || !string.Equals(draft.PrimaryTable, state.PrimaryTable, StringComparison.OrdinalIgnoreCase))
             blockers.Add(new("unsupportedMessageFilter", "The selected message and table filter are not supported."));
@@ -49,6 +55,9 @@ public sealed class PluginStepValidator
         }
         return new(draft, new(state.StepName ?? "New step", state.Message, state.PrimaryTable, draft.SecondaryTable, draft.Stage, draft.Mode,
             draft.Rank, attributes, draft.ImpersonatingUserId, draft.UnsecureConfiguration,
-            state.SecureConfigExists || !string.IsNullOrEmpty(draft.ReplacementSecureConfiguration), state.CurrentEnabled), warnings, blockers);
+            state.SecureConfigExists || !string.IsNullOrEmpty(draft.ReplacementSecureConfiguration), state.CurrentEnabled,
+            draft.ReplacementSecureConfiguration is null ? "keep" : "set"), warnings, blockers);
     }
+
+    private static readonly HashSet<string> NullableActions = new(["keep", "set", "clear"], StringComparer.Ordinal);
 }

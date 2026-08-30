@@ -65,6 +65,8 @@ public sealed class PluginStepMutationTests
         Assert.Equal(7, gateway.LastCommand?.ExpectedStepVersion);
         Assert.Equal(4, gateway.LastCommand?.ExpectedPluginVersion);
         Assert.True(gateway.LastCommand?.Before.IsEnabled);
+        Assert.Equal(gateway.SecureConfigId, gateway.LastCommand?.ExpectedSecureConfigId);
+        Assert.Equal(11, gateway.LastCommand?.ExpectedSecureConfigVersion);
     }
 
     [Fact]
@@ -82,6 +84,42 @@ public sealed class PluginStepMutationTests
         Assert.Equal(0, gateway.MutationCalls);
     }
 
+    [Fact]
+    public async Task Update_can_explicitly_clear_nullable_fields_and_verifies_the_clear()
+    {
+        var gateway = new StatefulStepGateway("update");
+        var service = Service();
+        var draft = gateway.Draft("update") with
+        {
+            ImpersonatingUserId = null,
+            UnsecureConfiguration = null,
+            ImpersonatingUserAction = "clear",
+            UnsecureConfigurationAction = "clear"
+        };
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", "update", draft, CancellationToken.None);
+
+        var result = await service.ExecuteAsync(gateway, "https://contoso.test", "update", preflight.Plan.Token,
+            draft, null, CancellationToken.None);
+
+        Assert.True(result.SucceededAndVerified);
+        Assert.Equal("clear", gateway.LastCommand?.Draft.ImpersonatingUserAction);
+        Assert.Equal("clear", gateway.LastCommand?.Draft.UnsecureConfigurationAction);
+    }
+
+    [Fact]
+    public async Task Keep_actions_bind_fresh_nullable_values_not_submitted_placeholders()
+    {
+        var gateway = new StatefulStepGateway("update");
+        var service = Service();
+        var draft = gateway.Draft("update") with { UnsecureConfiguration = "untrusted-placeholder",
+            UnsecureConfigurationAction = "keep" };
+
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", "update", draft, CancellationToken.None);
+
+        Assert.Equal("public", preflight.After.UnsecureConfiguration);
+        Assert.Equal("public", preflight.Draft.UnsecureConfiguration);
+    }
+
     private static PluginStepMutationService Service() => new(new PluginStepValidator(),
         new PluginRegistrationPreflightService(new PluginRegistrationPlanSigner("test-secret", TimeProvider.System)));
 
@@ -93,6 +131,7 @@ public sealed class PluginStepMutationTests
         private bool enabled = operation != "enable";
         private bool mutated;
         private StepDraftDto? appliedDraft;
+        public Guid SecureConfigId { get; } = Guid.NewGuid();
         public string StepName => "Update account";
         public bool HasDependency { get; init; }
         public bool WriteRace { get; set; }
@@ -123,13 +162,15 @@ public sealed class PluginStepMutationTests
                 appliedDraft?.SdkMessageId ?? draft.SdkMessageId,
                 appliedDraft?.SdkMessageFilterId ?? draft.SdkMessageFilterId,
                 appliedDraft?.FilteringAttributes ?? ["name"],
-                appliedDraft?.ImpersonatingUserId,
-                appliedDraft?.UnsecureConfiguration ?? "public",
+                mutated ? appliedDraft?.ImpersonatingUserId : null,
+                mutated ? appliedDraft?.UnsecureConfiguration : "public",
                 40, 0, 1, enabled)
             {
                 AvailableAttributes = ["accountid", "name"],
                 IsOrdinaryPlugin = true,
-                IsParentCustomizable = true
+                IsParentCustomizable = true,
+                SecureConfigId = SecureConfigId,
+                SecureConfigVersion = 11
             });
 
         public Task<StepEditDetailsDto> RetrieveStepEditDetailsAsync(Guid requestedStepId, CancellationToken cancellationToken) =>
@@ -140,7 +181,10 @@ public sealed class PluginStepMutationTests
         public Task<Guid> MutateStepAsync(PluginStepMutationCommand command, CancellationToken cancellationToken)
         {
             if (WriteRace) throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
-            MutationCalls++; mutated = true; appliedDraft = command.Draft; LastCommand = command;
+            LastCommand = command;
+            MutationCalls++; mutated = true; appliedDraft = command.Draft with {
+                ImpersonatingUserId = command.Draft.ImpersonatingUserAction == "clear" ? null : command.Draft.ImpersonatingUserId,
+                UnsecureConfiguration = command.Draft.UnsecureConfigurationAction == "clear" ? null : command.Draft.UnsecureConfiguration };
             exists = command.Operation != "unregister";
             enabled = command.Operation == "enable" || (command.Operation != "disable" && enabled);
             return Task.FromResult(stepId);

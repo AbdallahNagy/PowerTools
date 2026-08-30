@@ -39,12 +39,17 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, r
     stage, mode, rank, filteringAttributes: attributes, impersonatingUserId: userId || null,
     unsecureConfiguration: unsecure || null, replacementSecureConfiguration: secureReplacement || null,
     expectedVersions: editDetails.data?.expectedVersions ?? (step ? { [plugin.id]: plugin.versionNumber, [step.id]: step.versionNumber } : { [plugin.id]: plugin.versionNumber }),
+    impersonatingUserAction: operation === "create" ? (userId ? "set" : "clear")
+      : userId === (editDetails.data?.impersonatingUserId ?? "") ? "keep" : userId ? "set" : "clear",
+    unsecureConfigurationAction: operation === "create" ? (unsecure ? "set" : "clear")
+      : unsecure === (editDetails.data?.unsecureConfiguration ?? "") ? "keep" : unsecure ? "set" : "clear",
   } : null;
   const title = operation === "create" ? "Register step" : "Update step";
   const submit = async () => { if (!draft) return; setPreview(await mutations.preflight.mutateAsync({ operation, stepId: step?.id ?? null, draft })); };
   const confirm = async () => { if (!draft || !preview) return; const result = await mutations.execute.mutateAsync({ operation, stepId: step?.id ?? null, draft, token: preview.plan.token }); if (result.succeededAndVerified) onClose(); };
   return <>
     <Modal open title={title} onClose={onClose} widthClass="max-w-xl"><div role="dialog" aria-label={title} className="flex flex-col gap-3">
+      <fieldset disabled={operation === "update" && !editDetails.isSuccess} className="contents">
       <label className="text-sm">Message<select aria-label="Message" value={selectedMessageId} onChange={event => { setMessageId(event.target.value); setFilterId(""); }} className="w-full bg-[#3c3c3c] p-2">{options?.messages.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label className="text-sm">Primary table<select aria-label="Primary table" value={selectedFilter?.primaryTable ?? ""} onChange={event => setFilterId(matchingFilters.find(item => item.primaryTable === event.target.value)?.id ?? "")} className="w-full bg-[#3c3c3c] p-2">{matchingFilters.map(item => <option key={item.id} value={item.primaryTable}>{item.primaryTable}</option>)}</select></label>
       <div className="grid grid-cols-3 gap-2"><label>Stage<select aria-label="Stage" value={stage} onChange={event => setStage(Number(event.target.value))}><option value={10}>PreValidation</option><option value={20}>PreOperation</option><option value={40}>PostOperation</option></select></label><label>Mode<select aria-label="Mode" value={mode} onChange={event => setMode(Number(event.target.value))}><option value={0}>Synchronous</option>{stage === 40 ? <option value={1}>Asynchronous</option> : null}</select></label><label>Rank<input aria-label="Rank" type="number" value={rank} onChange={event => setRank(Number(event.target.value))} /></label></div>
@@ -55,10 +60,20 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, r
       <label>Impersonating user<select aria-label="Impersonating user" value={userId} onChange={event => setUserId(event.target.value)} className="w-full bg-[#3c3c3c] p-2"><option value="">Calling user</option>{options?.enabledUsers.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label>Unsecure configuration<textarea aria-label="Unsecure configuration" value={unsecure} onChange={event => setUnsecure(event.target.value)} className="w-full bg-[#3c3c3c] p-2" /></label>
       <label>Replacement secure configuration<input aria-label="Replacement secure configuration" type="password" value={secureReplacement} onChange={event => setSecureReplacement(event.target.value)} className="w-full bg-[#3c3c3c] p-2" /></label>
-      <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={() => void submit()} disabled={!draft || primaryKeySelected || mutations.preflight.isPending}>Preview changes</Button></div>
+      </fieldset>
+      {operation === "update" && editDetails.isError ? <p role="alert" className="text-red-300">Unable to load step details. Close this dialog and try again.</p> : null}
+      <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={() => void submit()} disabled={!draft || primaryKeySelected || mutations.preflight.isPending || operation === "update" && !editDetails.isSuccess}>Preview changes</Button></div>
     </div></Modal>
-    {preview ? <Modal open title="Step impact preview" onClose={() => setPreview(null)} widthClass="max-w-lg"><div role="dialog" aria-label="Step impact preview" className="flex flex-col gap-3"><p>{preview.after.message} {preview.after.primaryTable}</p><dl>{(preview.plan.changes ?? []).map(item => <div key={item.field}><dt className="font-semibold">{label(item.field)}: {item.before ?? "New"} → {item.after ?? "Empty"}</dt></div>)}</dl>{preview.plan.warnings.map(item => <p key={item.code} role="status" className="text-amber-300">{item.message}</p>)}{preview.plan.blockers.map(item => <p key={item.code} role="alert" className="text-red-300">{item.message}</p>)}<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setPreview(null)}>Cancel</Button><Button disabled={preview.plan.blockers.length > 0 || mutations.execute.isPending} onClick={() => void confirm()}>Confirm</Button></div></div></Modal> : null}
+    {preview ? <Modal open title="Step impact preview" onClose={() => setPreview(null)} widthClass="max-w-lg"><div role="dialog" aria-label="Step impact preview" className="flex flex-col gap-3"><p>{preview.after.message} {preview.after.primaryTable}</p><dl>{(preview.plan.changes ?? []).map(item => <div key={item.field}><dt className="font-semibold">{label(item.field)}: {item.field === "secureConfigurationAction" ? display(item.after, "Keep") : `${display(item.before, "New")} → ${display(item.after, "Empty")}`}</dt></div>)}</dl>{preview.plan.warnings.map(item => <p key={item.code} role="status" className="text-amber-300">{item.message}</p>)}{preview.plan.blockers.map(item => <p key={item.code} role="alert" className="text-red-300">{item.message}</p>)}<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setPreview(null)}>Cancel</Button><Button disabled={preview.plan.blockers.length > 0 || mutations.execute.isPending} onClick={() => void confirm()}>Confirm</Button></div></div></Modal> : null}
   </>;
 }
+function display(value: string | null, fallback: string) {
+  if (value === null) return fallback;
+  return value === "keep" || value === "set" ? value[0].toUpperCase() + value.slice(1) : value;
+}
 
-function label(value: string) { return value === "rank" ? "Rank" : value; }
+function label(value: string) {
+  if (value === "rank") return "Rank";
+  if (value === "secureConfigurationAction") return "Secure configuration";
+  return value;
+}

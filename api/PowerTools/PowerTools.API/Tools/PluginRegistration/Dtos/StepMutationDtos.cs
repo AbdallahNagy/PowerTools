@@ -4,11 +4,16 @@ public sealed record StepDraftDto(Guid PluginTypeId, Guid SdkMessageId, Guid Sdk
     string PrimaryTable, string? SecondaryTable, int Stage, int Mode, int Rank,
     IReadOnlyList<string> FilteringAttributes, Guid? ImpersonatingUserId,
     string? UnsecureConfiguration, string? ReplacementSecureConfiguration,
-    IReadOnlyDictionary<Guid, long> ExpectedVersions);
+    IReadOnlyDictionary<Guid, long> ExpectedVersions)
+{
+    public string ImpersonatingUserAction { get; init; } = "keep";
+    public string UnsecureConfigurationAction { get; init; } = "keep";
+}
 
 public sealed record StepPublicValuesDto(string Name, string Message, string PrimaryTable, string? SecondaryTable,
     int Stage, int Mode, int Rank, IReadOnlyList<string> FilteringAttributes,
-    Guid? ImpersonatingUserId, string? UnsecureConfiguration, bool SecureConfigExists, bool IsEnabled);
+    Guid? ImpersonatingUserId, string? UnsecureConfiguration, bool SecureConfigExists, bool IsEnabled,
+    string SecureConfigurationAction);
 
 public sealed record PluginStepValidationState(string? StepName, string Message, string PrimaryTable, string? SecondaryTable,
     string PrimaryIdAttribute, IReadOnlyList<string> AvailableAttributes,
@@ -40,6 +45,8 @@ public sealed record PluginStepPreflightState(string Message, string PrimaryTabl
     public bool IsOrdinaryPlugin { get; init; }
     public bool IsParentManaged { get; init; }
     public bool IsParentCustomizable { get; init; }
+    public Guid? SecureConfigId { get; init; }
+    public long? SecureConfigVersion { get; init; }
 }
 
 public sealed record StepMutationPreflightDto(StepDraftDto Draft, MutationPlanDto Plan,
@@ -59,4 +66,5 @@ public sealed record StepEditDetailsDto(Guid StepId, Guid PluginTypeId, Guid Sdk
     bool SecureConfigExists, IReadOnlyDictionary<Guid, long> ExpectedVersions);
 
 public sealed record PluginStepMutationCommand(string Operation, Guid? TargetStepId, StepDraftDto Draft,
-    StepPublicValuesDto Before, long ExpectedPluginVersion, long? ExpectedStepVersion);
+    StepPublicValuesDto Before, long ExpectedPluginVersion, long? ExpectedStepVersion,
+    Guid? ExpectedSecureConfigId, long? ExpectedSecureConfigVersion);

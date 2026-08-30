@@ -10,6 +10,8 @@ export interface StepDraft {
   filteringAttributes: string[]; impersonatingUserId: string | null;
   unsecureConfiguration: string | null; replacementSecureConfiguration: string | null;
   expectedVersions: Record<string, number>;
+  impersonatingUserAction: "keep" | "set" | "clear";
+  unsecureConfigurationAction: "keep" | "set" | "clear";
 }
 export interface StepOptions {
   messages: { id: string; name: string }[];
@@ -21,7 +23,7 @@ export interface StepPublicValues {
   name: string; message: string; primaryTable: string; secondaryTable: string | null;
   stage: number; mode: number; rank: number; filteringAttributes: string[];
   impersonatingUserId: string | null; unsecureConfiguration: string | null;
-  secureConfigExists: boolean; isEnabled: boolean;
+  secureConfigExists: boolean; isEnabled: boolean; secureConfigurationAction: "keep" | "set";
 }
 export interface StepPreflight {
   draft: StepDraft;

@@ -14,7 +14,8 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
         var dependencies = operation == "unregister" ? current.State.Dependencies.Select(item => $"{item.ComponentTypeLabel}: {item.Name}").ToArray() : [];
         var blockers = current.Validation.Blockers.Concat(operation == "unregister" ? current.State.Dependencies.Select(item =>
             new MutationBlockerDto("dependency", $"{item.ComponentTypeLabel} '{item.Name}' depends on this step.")) : []).ToArray();
-        var request = Request(environment, operation, targetId, current.Validation.Draft, submitted.ExpectedVersions, dependencies);
+        var request = Request(environment, operation, targetId, current.Validation.Draft, submitted.ExpectedVersions, dependencies,
+            current.State.SecureConfigId, current.State.SecureConfigVersion);
         var confirmation = operation == "unregister"
             ? new ConfirmationRequirementDto("typedName", $"Type {current.State.StepName} to unregister this step.", current.State.StepName)
             : operation is "enable" or "disable"
@@ -39,19 +40,22 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
             throw new ArgumentException("The typed step name does not match exactly.");
         var dependencies = operation == "unregister" ? initial.State.Dependencies.Select(item => $"{item.ComponentTypeLabel}: {item.Name}").ToArray() : [];
         await preflight.ValidateExecutionAsync(token,
-            Request(environment, operation, targetId, initial.Validation.Draft, submitted.ExpectedVersions, dependencies),
+            Request(environment, operation, targetId, initial.Validation.Draft, submitted.ExpectedVersions, dependencies,
+                initial.State.SecureConfigId, initial.State.SecureConfigVersion),
             async ct =>
             {
                 var fresh = await ReadAndValidateAsync(gateway, operation, targetId, submitted, ct);
                 EnsureExecutable(fresh.Validation.Blockers, operation == "unregister" ? fresh.State.Dependencies : []);
                 var freshDependencies = operation == "unregister" ? fresh.State.Dependencies.Select(item => $"{item.ComponentTypeLabel}: {item.Name}").ToArray() : [];
-                return Request(environment, operation, targetId, fresh.Validation.Draft, submitted.ExpectedVersions, freshDependencies);
+                return Request(environment, operation, targetId, fresh.Validation.Draft, submitted.ExpectedVersions, freshDependencies,
+                    fresh.State.SecureConfigId, fresh.State.SecureConfigVersion);
             }, cancellationToken);
 
         var before = PublicBefore(initial.State);
         var mutatedId = await gateway.MutateStepAsync(new PluginStepMutationCommand(operation, targetId,
             initial.Validation.Draft, before, submitted.ExpectedVersions[submitted.PluginTypeId],
-            targetId is { } id ? submitted.ExpectedVersions[id] : null), cancellationToken);
+            targetId is { } id ? submitted.ExpectedVersions[id] : null,
+            initial.State.SecureConfigId, initial.State.SecureConfigVersion), cancellationToken);
         var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
         var row = rows.Steps.SingleOrDefault(item => item.Id == mutatedId);
         if (operation == "unregister")
@@ -67,7 +71,8 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
             || !(verifiedState.CurrentFilteringAttributes ?? []).Order(StringComparer.OrdinalIgnoreCase)
                 .SequenceEqual(initial.Validation.Draft.FilteringAttributes.Order(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase)
             || verifiedState.CurrentImpersonatingUserId != initial.Validation.Draft.ImpersonatingUserId
-            || initial.Validation.Draft.UnsecureConfiguration is not null
+                && initial.Validation.Draft.ImpersonatingUserAction != "keep"
+            || initial.Validation.Draft.UnsecureConfigurationAction != "keep"
                 && !string.Equals(verifiedState.CurrentUnsecureConfiguration, initial.Validation.Draft.UnsecureConfiguration, StringComparison.Ordinal)
             || initial.Validation.Draft.ReplacementSecureConfiguration is not null && !verifiedState.SecureConfigExists)
             return new("verificationFailed", false, row is null ? null : Map(row));
@@ -85,7 +90,8 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
             if (actual != expected.Value) throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
         }
         var state = await gateway.RetrieveStepPreflightStateAsync(draft.PluginTypeId, targetId, draft, cancellationToken);
-        var normalizedDraft = operation is "enable" or "disable" or "unregister" ? operationDraft(targetId, draft, state) : draft;
+        var operationNormalized = operation is "enable" or "disable" or "unregister" ? operationDraft(targetId, draft, state) : draft;
+        var normalizedDraft = NormalizeNullableDraft(operationNormalized, state);
         var validation = validator.Validate(normalizedDraft, new(state.StepName, state.Message, state.PrimaryTable, state.SecondaryTable,
             state.PrimaryIdAttribute, state.AvailableAttributes, state.MessageIsSupported, state.FilterIsSupported,
             state.IsImpersonatingUserEnabled, state.IsOrdinaryPlugin, state.IsParentManaged, state.IsParentCustomizable,
@@ -101,8 +107,24 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
             PrimaryTable = state.PrimaryTable, SecondaryTable = state.SecondaryTable, Stage = state.CurrentStage,
             Mode = state.CurrentMode, Rank = state.CurrentRank, FilteringAttributes = state.CurrentFilteringAttributes ?? [],
             ImpersonatingUserId = state.CurrentImpersonatingUserId, UnsecureConfiguration = state.CurrentUnsecureConfiguration,
-            ReplacementSecureConfiguration = null };
+            ReplacementSecureConfiguration = null, ImpersonatingUserAction = "keep", UnsecureConfigurationAction = "keep" };
     }
+
+    private static StepDraftDto NormalizeNullableDraft(StepDraftDto draft, PluginStepPreflightState state) => draft with
+    {
+        ImpersonatingUserId = draft.ImpersonatingUserAction switch
+        {
+            "keep" => state.CurrentImpersonatingUserId,
+            "clear" => null,
+            _ => draft.ImpersonatingUserId
+        },
+        UnsecureConfiguration = draft.UnsecureConfigurationAction switch
+        {
+            "keep" => state.CurrentUnsecureConfiguration,
+            "clear" => null,
+            _ => draft.UnsecureConfiguration
+        }
+    };
 
     private static Guid? TargetId(string operation, StepDraftDto draft)
     {
@@ -113,8 +135,10 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
     }
 
     private static MutationPreflightRequest Request(string environment, string operation, Guid? targetId,
-        StepDraftDto draft, IReadOnlyDictionary<Guid, long> versions, IReadOnlyList<string> dependencies) =>
-        new(environment, $"steps.{operation}", targetId, new { Draft = draft, Dependencies = dependencies }, versions, null,
+        StepDraftDto draft, IReadOnlyDictionary<Guid, long> versions, IReadOnlyList<string> dependencies,
+        Guid? secureConfigId, long? secureConfigVersion) =>
+        new(environment, $"steps.{operation}", targetId, new { Draft = draft, Dependencies = dependencies,
+            SecureConfig = new { Id = secureConfigId, Version = secureConfigVersion } }, versions, null,
             new Dictionary<string, bool>());
     private static void EnsureExecutable(IReadOnlyList<MutationBlockerDto> blockers, IReadOnlyList<ComponentDependencyDto> dependencies)
     {
@@ -124,7 +148,7 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
     private static StepPublicValuesDto PublicBefore(PluginStepPreflightState state) => new(state.StepName ?? "Step",
         state.Message, state.PrimaryTable, state.SecondaryTable, state.CurrentStage, state.CurrentMode, state.CurrentRank,
         state.CurrentFilteringAttributes ?? [], state.CurrentImpersonatingUserId, state.CurrentUnsecureConfiguration,
-        state.SecureConfigExists, state.CurrentEnabled);
+        state.SecureConfigExists, state.CurrentEnabled, "keep");
     private static IReadOnlyList<MutationChangeDto> Changes(StepPublicValuesDto? before, StepPublicValuesDto after)
     {
         var pairs = new (string Field, string? Before, string? After)[] {
@@ -135,6 +159,7 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
             ("impersonatingUser", before?.ImpersonatingUserId?.ToString(), after.ImpersonatingUserId?.ToString()),
             ("unsecureConfiguration", before?.UnsecureConfiguration, after.UnsecureConfiguration),
             ("secureConfigExists", before?.SecureConfigExists.ToString(), after.SecureConfigExists.ToString()),
+            ("secureConfigurationAction", null, after.SecureConfigurationAction),
             ("enabled", before?.IsEnabled.ToString(), after.IsEnabled.ToString()) };
         return pairs.Where(pair => before is null || !string.Equals(pair.Before, pair.After, StringComparison.Ordinal))
             .Select(pair => new MutationChangeDto(pair.Field, pair.Before, pair.After)).ToArray();
