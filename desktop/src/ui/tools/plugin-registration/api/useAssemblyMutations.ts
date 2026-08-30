@@ -25,8 +25,17 @@ export interface AssemblyMutationDraft {
 
 export interface AssemblyMutationPreflight {
   draft: AssemblyMutationDraft;
-  plan: { token: string; blockers: { code: string; message: string }[]; warnings: { code: string; message: string }[] };
-  impact: { previousIdentity: AssemblyInspection["identity"] | null; currentIdentity: AssemblyInspection["identity"]; addedPlugins: string[]; unchangedPlugins: string[]; removedPlugins: string[]; addedWorkflowActivities: string[]; changedWorkflowActivities: string[]; removedWorkflowActivities: string[]; ownedStepsAndImages: string[]; dependencies: string[]; warnings: { code: string; message: string }[]; blockers: { code: string; message: string }[] };
+  plan: { token: string; blockers: { code: string; message: string }[]; warnings: { code: string; message: string }[]; confirmation: { level: string; message: string; requiredText?: string | null; requiresAcknowledgement: boolean } };
+  impact: {
+    previousIdentity: AssemblyInspection["identity"] | null; currentIdentity: AssemblyInspection["identity"];
+    previousSha256: string | null; currentSha256: string; previousSize: number | null; currentSize: number;
+    previousIsolationMode: number | null; currentIsolationMode: number; previousSourceType: number | null; currentSourceType: number;
+    addedPlugins: string[]; unchangedPlugins: string[]; changedPlugins: string[]; removedPlugins: string[];
+    addedWorkflowActivities: string[]; changedWorkflowActivities: string[]; removedWorkflowActivities: string[];
+    ownedStepsAndImages: string[]; dependencies: string[];
+    workflowContractDifferences: { typeName: string; argumentName: string; change: string; isBreaking: boolean; isReferenced: boolean }[];
+    warnings: { code: string; message: string }[]; blockers: { code: string; message: string }[];
+  };
 }
 
 interface AssemblyMutationResult {

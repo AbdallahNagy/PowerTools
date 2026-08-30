@@ -30,7 +30,14 @@ public sealed record PluginRegistrationRows(
     IReadOnlyList<PluginAssemblyRow> Assemblies,
     IReadOnlyList<PluginTypeRow> Types,
     IReadOnlyList<PluginStepRow> Steps,
-    IReadOnlyList<PluginImageRow> Images);
+    IReadOnlyList<PluginImageRow> Images,
+    IReadOnlyList<PluginHandlerDependencyRow>? DependencyRows = null,
+    IReadOnlyList<PluginWorkflowArgumentRow>? WorkflowArgumentRows = null,
+    bool HasCompleteAssemblyImpactData = false)
+{
+    public IReadOnlyList<PluginHandlerDependencyRow> Dependencies { get; init; } = DependencyRows ?? [];
+    public IReadOnlyList<PluginWorkflowArgumentRow> WorkflowArguments { get; init; } = WorkflowArgumentRows ?? [];
+}
 
 public sealed record PluginAssemblyRow(
     Guid Id,
@@ -44,7 +51,24 @@ public sealed record PluginAssemblyRow(
     bool IsCustomizable,
     long VersionNumber,
     string? SolutionDisplayName,
-    string? Description = null);
+    string? Description = null,
+    string? SourceHash = null,
+    long? ContentSize = null);
+
+public sealed record PluginHandlerDependencyRow(
+    Guid HandlerId,
+    string Name,
+    string ComponentTypeLabel,
+    bool IsCustomApi,
+    bool IsExternal);
+
+public sealed record PluginWorkflowArgumentRow(
+    Guid HandlerId,
+    string Name,
+    string TypeName,
+    WorkflowArgumentDirection Direction,
+    bool IsRequired,
+    string? ReferenceTarget);
 
 public sealed record PluginTypeRow(
     Guid Id,

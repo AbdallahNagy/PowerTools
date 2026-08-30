@@ -21,8 +21,13 @@ public sealed class PluginAssemblyMutationService(
         var draft = Normalize(submittedDraft, inspection, capabilities);
         var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
         var target = FindTarget(rows, draft);
-        EnsureExpectedTarget(draft, target);
-        var impact = PluginAssemblyDiff.Compare(target, TypesFor(rows, target), rows.Steps, rows.Images, inspection);
+        EnsureExpectedTarget(draft, target, rows);
+        var impact = PluginAssemblyDiff.Compare(target, TypesFor(rows, target), rows.Steps, rows.Images,
+            inspection, rows.Dependencies, rows.WorkflowArguments, rows.HasCompleteAssemblyImpactData) with
+        {
+            CurrentIsolationMode = draft.RequestedIsolationMode,
+            CurrentSourceType = draft.RequestedSourceType
+        };
         var request = BuildRequest(environment, draft, rows, target, capabilities);
         var changes = BuildChanges(target, inspection);
         var plan = preflight.CreatePlan(request, changes,
@@ -50,12 +55,14 @@ public sealed class PluginAssemblyMutationService(
             var inspection = await inspector.InspectAsync(new MemoryStream(bytes, writable: false), submittedDraft.FileName, bytes.Length, cancellationToken);
             var draft = Normalize(submittedDraft, inspection, capabilities);
             var submittedRows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
+            EnsureExpectedTarget(draft, FindTarget(submittedRows, draft), submittedRows);
             await preflight.ValidateExecutionAsync(token,
                 BuildRequest(environment, draft, submittedRows, FindTarget(submittedRows, draft), capabilities),
                 async ct =>
                 {
                     var current = await gateway.RetrieveCatalogRowsAsync(ct);
                     var target = FindTarget(current, draft);
+                    EnsureExpectedTarget(draft, target, current);
                     return BuildRequest(environment, draft, current, target, capabilities);
                 }, cancellationToken);
 
@@ -67,6 +74,12 @@ public sealed class PluginAssemblyMutationService(
             var verified = catalog.Assemblies.SingleOrDefault(assembly => assembly.Id == assemblyId);
             if (verified is null || !string.Equals(verified.Name, inspection.Identity.Name, StringComparison.Ordinal)
                 || !string.Equals(verified.Version, inspection.Identity.Version, StringComparison.Ordinal)
+                || !string.Equals(verified.Culture ?? "neutral", inspection.Identity.Culture, StringComparison.Ordinal)
+                || !string.Equals(verified.PublicKeyToken ?? "", inspection.Identity.PublicKeyToken, StringComparison.Ordinal)
+                || verified.IsolationMode != draft.RequestedIsolationMode
+                || verified.SourceType != draft.RequestedSourceType
+                || (verified.SourceHash is not null && !string.Equals(verified.SourceHash, inspection.Sha256, StringComparison.OrdinalIgnoreCase))
+                || (verified.ContentSize is not null && verified.ContentSize != inspection.Size)
                 || !TypesMatch(verified, inspection))
                 return new AssemblyMutationExecutionDto("verificationFailed", false, verified);
             return new AssemblyMutationExecutionDto("succeededAndVerified", true, verified);
@@ -106,12 +119,18 @@ public sealed class PluginAssemblyMutationService(
 
     private static PluginAssemblyRow? FindTarget(PluginRegistrationRows rows, AssemblyMutationDraftDto draft) =>
         draft.AssemblyId is { } id ? rows.Assemblies.SingleOrDefault(assembly => assembly.Id == id) : null;
-    private static void EnsureExpectedTarget(AssemblyMutationDraftDto draft, PluginAssemblyRow? target)
+    private static void EnsureExpectedTarget(AssemblyMutationDraftDto draft, PluginAssemblyRow? target, PluginRegistrationRows rows)
     {
         if (draft.Operation != "update") return;
         if (target is null) throw new ArgumentException("The selected assembly no longer exists.");
         if (draft.ExpectedAssemblyVersionNumber != target.VersionNumber)
             throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
+        foreach (var expected in draft.ExpectedHandlerVersionNumbers)
+        {
+            var current = rows.Types.SingleOrDefault(type => type.Id == expected.Key);
+            if (current is null || current.AssemblyId != target.Id || current.VersionNumber != expected.Value)
+                throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
+        }
     }
     private static IReadOnlyList<PluginTypeRow> TypesFor(PluginRegistrationRows rows, PluginAssemblyRow? assembly) =>
         assembly is null ? [] : rows.Types.Where(type => type.AssemblyId == assembly.Id).ToArray();

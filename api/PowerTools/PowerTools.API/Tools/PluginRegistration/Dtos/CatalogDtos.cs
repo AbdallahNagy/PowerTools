@@ -16,7 +16,9 @@ public sealed record PluginAssemblyDto(
     long VersionNumber,
     IReadOnlyList<PluginHandlerDto> Handlers,
     string? Description = null,
-    string? SolutionDisplayName = null);
+    string? SolutionDisplayName = null,
+    string? SourceHash = null,
+    long? ContentSize = null);
 
 public sealed record PluginHandlerDto(
     Guid Id,

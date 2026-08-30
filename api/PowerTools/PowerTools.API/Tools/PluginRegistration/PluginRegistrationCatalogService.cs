@@ -64,7 +64,9 @@ public sealed class PluginRegistrationCatalogService
                 .Select(type => MapHandler(type, stepsByType, imagesByStep))
                 .ToArray(),
             assembly.Description,
-            assembly.SolutionDisplayName);
+            assembly.SolutionDisplayName,
+            assembly.SourceHash,
+            assembly.ContentSize);
 
     private static PluginHandlerDto MapHandler(
         PluginTypeRow type,
