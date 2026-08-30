@@ -22,17 +22,10 @@ public sealed class PluginAssemblyMutationService(
         var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
         var target = FindTarget(rows, draft);
         EnsureExpectedTarget(draft, target, rows);
-        var existingTypes = TypesFor(rows, target);
-        var snapshot = await LoadImpactSnapshotAsync(gateway, target, existingTypes, cancellationToken);
-        target = target is null ? null : target with { SourceHash = snapshot.Sha256, ContentSize = snapshot.Size };
-        var impact = PluginAssemblyDiff.Compare(target, existingTypes, rows.Steps, rows.Images,
-            inspection, snapshot.Dependencies, snapshot.WorkflowArguments, snapshot.IsComplete) with
-        {
-            CurrentIsolationMode = draft.RequestedIsolationMode,
-            CurrentSourceType = draft.RequestedSourceType
-        };
-        var request = BuildRequest(environment, draft, rows, target, capabilities);
-        var changes = BuildChanges(target, inspection);
+        var impactState = await BuildImpactStateAsync(gateway, rows, target, draft, inspection, cancellationToken);
+        var impact = impactState.Impact;
+        var request = BuildRequest(environment, draft, rows, impactState.Target, impact, capabilities);
+        var changes = BuildChanges(impactState.Target, inspection);
         var plan = preflight.CreatePlan(request, changes,
             new MutationImpactDto(impact.OwnedStepsAndImages, impact.Dependencies, impact.OwnedStepsAndImages),
             impact.Warnings, impact.Blockers,
@@ -58,15 +51,20 @@ public sealed class PluginAssemblyMutationService(
             var inspection = await inspector.InspectAsync(new MemoryStream(bytes, writable: false), submittedDraft.FileName, bytes.Length, cancellationToken);
             var draft = Normalize(submittedDraft, inspection, capabilities);
             var submittedRows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
-            EnsureExpectedTarget(draft, FindTarget(submittedRows, draft), submittedRows);
+            var submittedTarget = FindTarget(submittedRows, draft);
+            EnsureExpectedTarget(draft, submittedTarget, submittedRows);
+            var submittedImpactState = await BuildImpactStateAsync(gateway, submittedRows, submittedTarget, draft, inspection, cancellationToken);
+            EnsureImpactIsExecutable(submittedImpactState.Impact);
             await preflight.ValidateExecutionAsync(token,
-                BuildRequest(environment, draft, submittedRows, FindTarget(submittedRows, draft), capabilities),
+                BuildRequest(environment, draft, submittedRows, submittedImpactState.Target, submittedImpactState.Impact, capabilities),
                 async ct =>
                 {
                     var current = await gateway.RetrieveCatalogRowsAsync(ct);
                     var target = FindTarget(current, draft);
                     EnsureExpectedTarget(draft, target, current);
-                    return BuildRequest(environment, draft, current, target, capabilities);
+                    var impactState = await BuildImpactStateAsync(gateway, current, target, draft, inspection, ct);
+                    EnsureImpactIsExecutable(impactState.Impact);
+                    return BuildRequest(environment, draft, current, impactState.Target, impactState.Impact, capabilities);
                 }, cancellationToken);
 
             var command = new PluginAssemblyMutationCommand(draft.AssemblyId, inspection, bytes, draft.RequestedIsolationMode, draft.RequestedSourceType);
@@ -112,8 +110,9 @@ public sealed class PluginAssemblyMutationService(
             RequestedSourceType = allowsNonDefault ? submitted.RequestedSourceType : 0 };
     }
 
-    private static MutationPreflightRequest BuildRequest(string environment, AssemblyMutationDraftDto draft, PluginRegistrationRows rows, PluginAssemblyRow? target, IReadOnlyDictionary<string, bool> capabilities) =>
-        new(environment, $"assemblies.{draft.Operation}", draft.AssemblyId, draft with { Inspection = draft.Inspection with { Diagnostics = [], Plugins = [], WorkflowActivities = [] } },
+    private static MutationPreflightRequest BuildRequest(string environment, AssemblyMutationDraftDto draft, PluginRegistrationRows rows, PluginAssemblyRow? target, AssemblyMutationImpactDto impact, IReadOnlyDictionary<string, bool> capabilities) =>
+        new(environment, $"assemblies.{draft.Operation}", draft.AssemblyId,
+            new AssemblyMutationPlanRequest(draft with { Inspection = draft.Inspection with { Diagnostics = [], Plugins = [], WorkflowActivities = [] } }, impact),
             BuildVersions(rows, target), draft.Inspection.Sha256, capabilities);
 
     private static IReadOnlyDictionary<Guid, long> BuildVersions(PluginRegistrationRows rows, PluginAssemblyRow? target)
@@ -141,6 +140,11 @@ public sealed class PluginAssemblyMutationService(
     }
     private static IReadOnlyList<PluginTypeRow> TypesFor(PluginRegistrationRows rows, PluginAssemblyRow? assembly) =>
         assembly is null ? [] : rows.Types.Where(type => type.AssemblyId == assembly.Id).ToArray();
+    private static void EnsureImpactIsExecutable(AssemblyMutationImpactDto impact)
+    {
+        if (impact.Blockers.Count > 0)
+            throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
+    }
     private static IReadOnlyList<MutationChangeDto> BuildChanges(PluginAssemblyRow? existing, AssemblyInspectionDto inspection) =>
         [new("identity", existing?.Name, inspection.Identity.Name), new("version", existing?.Version, inspection.Identity.Version), new("sha256", null, inspection.Sha256)];
     private static bool TypesMatch(PluginAssemblyDto assembly, AssemblyInspectionDto inspection) =>
@@ -198,4 +202,34 @@ public sealed class PluginAssemblyMutationService(
         IReadOnlyList<PluginHandlerDependencyRow> Dependencies,
         IReadOnlyList<PluginWorkflowArgumentRow> WorkflowArguments,
         bool IsComplete);
+
+    private async Task<AssemblyMutationImpactState> BuildImpactStateAsync(
+        IPluginRegistrationGateway gateway,
+        PluginRegistrationRows rows,
+        PluginAssemblyRow? target,
+        AssemblyMutationDraftDto draft,
+        AssemblyInspectionDto inspection,
+        CancellationToken cancellationToken)
+    {
+        var existingTypes = TypesFor(rows, target);
+        var snapshot = await LoadImpactSnapshotAsync(gateway, target, existingTypes, cancellationToken);
+        var targetWithSource = target is null
+            ? null
+            : target with { SourceHash = snapshot.Sha256, ContentSize = snapshot.Size };
+        var impact = PluginAssemblyDiff.Compare(targetWithSource, existingTypes, rows.Steps, rows.Images,
+            inspection, snapshot.Dependencies, snapshot.WorkflowArguments, snapshot.IsComplete) with
+        {
+            CurrentIsolationMode = draft.RequestedIsolationMode,
+            CurrentSourceType = draft.RequestedSourceType
+        };
+        return new(targetWithSource, impact);
+    }
+
+    private sealed record AssemblyMutationImpactState(
+        PluginAssemblyRow? Target,
+        AssemblyMutationImpactDto Impact);
+
+    private sealed record AssemblyMutationPlanRequest(
+        AssemblyMutationDraftDto Draft,
+        AssemblyMutationImpactDto Impact);
 }
