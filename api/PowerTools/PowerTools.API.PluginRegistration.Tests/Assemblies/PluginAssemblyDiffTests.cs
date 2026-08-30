@@ -89,6 +89,41 @@ public sealed class PluginAssemblyDiffTests
     }
 
     [Fact]
+    public void Adding_a_required_input_to_a_referenced_workflow_activity_is_reported_and_blocked()
+    {
+        var assembly = Assembly();
+        var activity = Type(assembly.Id, "Contoso.Workflow", true);
+        var dependency = new PluginHandlerDependencyRow(activity.Id, "Account flow", "Workflow", false, false);
+        var inspection = Inspection([new WorkflowActivityInspectionDto("Contoso.Workflow", [
+            new WorkflowArgumentInspectionDto(
+                "RequiredAccount",
+                "Required Account",
+                "Microsoft.Xrm.Sdk.EntityReference",
+                WorkflowArgumentDirection.Input,
+                true,
+                "account")
+        ])]);
+
+        var impact = PluginAssemblyDiff.Compare(
+            assembly,
+            [activity],
+            [],
+            [],
+            inspection,
+            [dependency],
+            [],
+            true);
+
+        var difference = Assert.Single(impact.WorkflowContractDifferences);
+        Assert.Equal("Required Account", difference.ArgumentName);
+        Assert.Equal("added-required", difference.Change);
+        Assert.True(difference.IsBreaking);
+        Assert.True(difference.IsReferenced);
+        Assert.Contains(impact.Blockers,
+            blocker => blocker.Code == "assembly_workflow_contract_breaking");
+    }
+
+    [Fact]
     public void Existing_plugins_are_reported_as_changed_when_the_assembly_identity_or_hash_changes()
     {
         var assembly = Assembly() with { SourceHash = "old-hash" };

@@ -33,8 +33,12 @@ export function AssemblyDialog({ assembly, connectionName, onClose, onVerified, 
   const selectFile = async (selected: File | null) => {
     setFile(selected); setInspection(null); setPreflight(null); setHashMismatch(false);
     if (!selected) return;
-    const result = await mutations.analyze.mutateAsync(selected);
-    setInspection(result);
+    try {
+      const result = await mutations.analyze.mutateAsync(selected);
+      setInspection(result);
+    } catch {
+      // The mutation exposes its sanitized error state in the dialog.
+    }
   };
   const preview = async () => {
     if (!file || !draft || !inspection) return;

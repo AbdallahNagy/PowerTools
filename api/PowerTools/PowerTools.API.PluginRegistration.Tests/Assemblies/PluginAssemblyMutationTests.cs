@@ -10,6 +10,88 @@ namespace PowerTools.API.PluginRegistration.Tests.Assemblies;
 
 public sealed class PluginAssemblyMutationTests
 {
+    [Theory]
+    [InlineData("register")]
+    [InlineData("update")]
+    public async Task Register_and_update_return_verified_readback_after_exactly_one_mutation_attempt(string operation)
+    {
+        var inspection = Inspection();
+        var existing = operation == "update" ? Assembly("1.0.0.0") : null;
+        var gateway = new StatefulAssemblyGateway(existing, inspection);
+        var service = Service(inspection);
+        var draft = Draft(operation, existing, inspection, 2, 0);
+
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", draft,
+            Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None);
+        var result = await service.ExecuteAsync(gateway, "https://contoso.test", preflight.Plan.Token,
+            preflight.Draft, Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None);
+
+        Assert.True(result.SucceededAndVerified);
+        Assert.Equal("succeededAndVerified", result.Outcome);
+        Assert.Equal(inspection.Identity.Version, result.Assembly?.Version);
+        Assert.Equal(operation == "register" ? 1 : 0, gateway.RegisterCalls);
+        Assert.Equal(operation == "update" ? 1 : 0, gateway.UpdateCalls);
+        Assert.Equal(1, gateway.RegisterCalls + gateway.UpdateCalls);
+    }
+
+    [Fact]
+    public async Task Execute_reports_verification_failure_when_readback_does_not_match_the_uploaded_identity()
+    {
+        var inspection = Inspection();
+        var gateway = new StatefulAssemblyGateway(null, inspection) { ReturnMismatchedVersion = true };
+        var service = Service(inspection);
+        var draft = Draft("register", null, inspection, 2, 0);
+
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", draft,
+            Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None);
+        var result = await service.ExecuteAsync(gateway, "https://contoso.test", preflight.Plan.Token,
+            preflight.Draft, Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None);
+
+        Assert.False(result.SucceededAndVerified);
+        Assert.Equal("verificationFailed", result.Outcome);
+        Assert.Equal(1, gateway.RegisterCalls);
+    }
+
+    [Fact]
+    public async Task Online_execution_uses_only_sandbox_and_database_values()
+    {
+        var inspection = Inspection();
+        var gateway = new StatefulAssemblyGateway(null, inspection);
+        var service = Service(inspection);
+        var draft = Draft("register", null, inspection, 2, 0);
+
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", draft,
+            Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None);
+        await service.ExecuteAsync(gateway, "https://contoso.test", preflight.Plan.Token,
+            preflight.Draft, Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None);
+
+        Assert.Equal(2, gateway.LastCommand?.IsolationMode);
+        Assert.Equal(0, gateway.LastCommand?.SourceType);
+    }
+
+    [Fact]
+    public async Task Non_default_on_premises_options_are_rejected_unless_the_capability_is_bound()
+    {
+        var inspection = Inspection();
+        var service = Service(inspection);
+        var draft = Draft("register", null, inspection, 1, 1);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CreatePreflightAsync(
+            new StatefulAssemblyGateway(null, inspection), "https://contoso.test", draft,
+            Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None));
+
+        var gateway = new StatefulAssemblyGateway(null, inspection);
+        var capabilities = new Dictionary<string, bool> { ["onPremisesAssemblyOptions"] = true };
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", draft,
+            Bytes(), 3, capabilities, CancellationToken.None);
+        var result = await service.ExecuteAsync(gateway, "https://contoso.test", preflight.Plan.Token,
+            preflight.Draft, Bytes(), 3, capabilities, CancellationToken.None);
+
+        Assert.True(result.SucceededAndVerified);
+        Assert.Equal(1, gateway.LastCommand?.IsolationMode);
+        Assert.Equal(1, gateway.LastCommand?.SourceType);
+    }
+
     [Fact]
     public async Task Execute_rejects_a_new_dependency_before_the_single_update_attempt_when_versions_are_unchanged()
     {
@@ -104,6 +186,95 @@ public sealed class PluginAssemblyMutationTests
     {
         public Task<AssemblyInspectionDto> InspectAsync(Stream assembly, string fileName, long length, CancellationToken cancellationToken) =>
             Task.FromResult(inspection);
+    }
+
+    private static PluginAssemblyMutationService Service(AssemblyInspectionDto inspection) => new(
+        new FixedInspector(inspection),
+        new PluginRegistrationPreflightService(new PluginRegistrationPlanSigner("test-secret", TimeProvider.System)),
+        new PluginRegistrationCatalogService());
+
+    private static AssemblyInspectionDto Inspection() => new(
+        "Contoso.dll",
+        3,
+        "new-sha",
+        new AssemblyIdentityInspectionDto("Contoso", "2.0.0.0", "neutral", "token"),
+        ".NETFramework,Version=v4.6.2",
+        "v4.0.30319",
+        [],
+        [],
+        []);
+
+    private static PluginAssemblyRow Assembly(string version) => new(
+        Guid.NewGuid(), "Contoso", version, "neutral", "token", 0, 2, false, true, 1, null);
+
+    private static AssemblyMutationDraftDto Draft(
+        string operation,
+        PluginAssemblyRow? existing,
+        AssemblyInspectionDto inspection,
+        int isolationMode,
+        int sourceType) => new(
+            "Contoso.dll",
+            operation,
+            existing?.Id,
+            isolationMode,
+            sourceType,
+            existing?.VersionNumber,
+            new Dictionary<Guid, long>(),
+            inspection);
+
+    private static MemoryStream Bytes() => new([1, 2, 3]);
+
+    private sealed class StatefulAssemblyGateway(
+        PluginAssemblyRow? existing,
+        AssemblyInspectionDto inspection) : IPluginRegistrationGateway
+    {
+        private readonly Guid assemblyId = existing?.Id ?? Guid.NewGuid();
+        private PluginAssemblyRow? current = existing;
+
+        public int RegisterCalls { get; private set; }
+        public int UpdateCalls { get; private set; }
+        public PluginAssemblyMutationCommand? LastCommand { get; private set; }
+        public bool ReturnMismatchedVersion { get; init; }
+
+        public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(new PluginRegistrationRows(current is null ? [] : [current], [], [], []));
+
+        public Task<PluginAssemblyImpactSnapshot> RetrieveAssemblyImpactSnapshotAsync(
+            PluginAssemblyRow assembly,
+            IReadOnlyList<PluginTypeRow> handlers,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new PluginAssemblyImpactSnapshot([1, 2, 3], [], true));
+
+        public Task<Guid> RegisterAssemblyAsync(PluginAssemblyMutationCommand command, CancellationToken cancellationToken)
+        {
+            RegisterCalls++;
+            Apply(command);
+            return Task.FromResult(assemblyId);
+        }
+
+        public Task<Guid> UpdateAssemblyAsync(PluginAssemblyMutationCommand command, CancellationToken cancellationToken)
+        {
+            UpdateCalls++;
+            Apply(command);
+            return Task.FromResult(assemblyId);
+        }
+
+        private void Apply(PluginAssemblyMutationCommand command)
+        {
+            LastCommand = command;
+            current = new PluginAssemblyRow(
+                assemblyId,
+                inspection.Identity.Name,
+                ReturnMismatchedVersion ? "9.9.9.9" : inspection.Identity.Version,
+                inspection.Identity.Culture,
+                inspection.Identity.PublicKeyToken,
+                command.SourceType,
+                command.IsolationMode,
+                false,
+                true,
+                (current?.VersionNumber ?? 0) + 1,
+                null);
+        }
     }
 
     private sealed class DependencyAppearsGateway(

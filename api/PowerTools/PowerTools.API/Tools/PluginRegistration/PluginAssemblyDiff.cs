@@ -55,6 +55,13 @@ public static class PluginAssemblyDiff
                 if (current is null) differences.Add(new(typeName, oldArgument.Name, "removed", true, referenced));
                 else if (current.TypeName != oldArgument.TypeName || current.Direction != oldArgument.Direction || current.ReferenceTarget != oldArgument.ReferenceTarget || current.IsRequired != oldArgument.IsRequired) differences.Add(new(typeName, oldArgument.Name, "changed", true, referenced));
             }
+            foreach (var newArgument in activity.Arguments.Where(argument =>
+                         argument.Direction == WorkflowArgumentDirection.Input
+                         && argument.IsRequired
+                         && !oldByName.ContainsKey(argument.Name)))
+            {
+                differences.Add(new(typeName, newArgument.Name, "added-required", true, referenced));
+            }
         }
         return differences;
     }

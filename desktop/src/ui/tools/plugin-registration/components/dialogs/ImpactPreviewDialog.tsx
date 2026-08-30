@@ -24,7 +24,7 @@ export function ImpactPreviewDialog({ preflight, executing, onCancel, onConfirm 
           <dt className="text-[#858585]">Storage / isolation</dt><dd>{preflight.impact.previousSourceType ?? "New"} / {preflight.impact.previousIsolationMode ?? "New"} → {preflight.impact.currentSourceType} / {preflight.impact.currentIsolationMode}</dd>
           <dt className="text-[#858585]">Confirmation</dt><dd>{preflight.plan.confirmation.level}: {preflight.plan.confirmation.message}</dd>
         </dl>
-        <ImpactList label="Plug-ins" values={[...preflight.impact.addedPlugins.map((value) => `Added: ${value}`), ...preflight.impact.changedPlugins.map((value) => `Changed: ${value}`), ...preflight.impact.removedPlugins.map((value) => `Removed: ${value}`)]} />
+        <ImpactList label="Plug-ins" values={[...preflight.impact.addedPlugins.map((value) => `Added: ${value}`), ...preflight.impact.unchangedPlugins.map((value) => `Unchanged: ${value}`), ...preflight.impact.changedPlugins.map((value) => `Changed: ${value}`), ...preflight.impact.removedPlugins.map((value) => `Removed: ${value}`)]} />
         <ImpactList label="Workflow activities" values={[...preflight.impact.addedWorkflowActivities.map((value) => `Added: ${value}`), ...preflight.impact.changedWorkflowActivities.map((value) => `Changed: ${value}`), ...preflight.impact.removedWorkflowActivities.map((value) => `Removed: ${value}`), ...preflight.impact.workflowContractDifferences.map((value) => `${value.typeName}.${value.argumentName}: ${value.change}${value.isBreaking ? " (breaking)" : ""}`)]} />
         <ImpactList label="Owned steps and images" values={preflight.impact.ownedStepsAndImages} />
         <ImpactList label="Dependencies" values={preflight.impact.dependencies} />
