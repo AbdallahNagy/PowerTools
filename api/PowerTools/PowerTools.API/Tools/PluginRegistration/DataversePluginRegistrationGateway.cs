@@ -208,6 +208,83 @@ public sealed class DataversePluginRegistrationGateway(
         return stepId;
     }
 
+    public async Task<PluginImagePreflightState> RetrieveImagePreflightStateAsync(Guid stepId, Guid? imageId,
+        ImageDraftDto draft, CancellationToken cancellationToken)
+    {
+        var rows = await RetrieveCatalogRowsAsync(cancellationToken);
+        var step = rows.Steps.Single(item => item.Id == stepId);
+        var image = imageId is { } id ? rows.Images.SingleOrDefault(item => item.Id == id && item.PluginStepId == stepId) : null;
+        var stepDetails = await service.RetrieveAsync("sdkmessageprocessingstep", stepId,
+            new ColumnSet("sdkmessageid", "sdkmessagefilterid", "stage", "versionnumber"), cancellationToken);
+        var messageId = LookupId(stepDetails, "sdkmessageid") ?? Guid.Empty;
+        var filterId = LookupId(stepDetails, "sdkmessagefilterid") ?? Guid.Empty;
+        var message = await service.RetrieveAsync("sdkmessage", messageId, new ColumnSet("name"), cancellationToken);
+        var filter = await service.RetrieveAsync("sdkmessagefilter", filterId,
+            new ColumnSet("primaryobjecttypecode"), cancellationToken);
+        var table = Text(filter, "primaryobjecttypecode");
+        var metadata = (RetrieveEntityResponse)await service.ExecuteAsync(new RetrieveEntityRequest
+        {
+            LogicalName = table, EntityFilters = EntityFilters.Attributes, RetrieveAsIfPublished = true
+        }, cancellationToken);
+        var aliases = rows.Images.Where(item => item.PluginStepId == stepId && item.Id != imageId)
+            .Select(item => item.EntityAlias ?? item.Name);
+        string? property = null;
+        if (imageId is { } detailId)
+        {
+            var details = await service.RetrieveAsync("sdkmessageprocessingstepimage", detailId,
+                new ColumnSet("messagepropertyname"), cancellationToken);
+            property = NullableText(details, "messagepropertyname");
+        }
+        return new(imageId, image?.Name, Text(message, "name"), step.Stage, table, property ?? "Target",
+            metadata.EntityMetadata.Attributes.Select(item => item.LogicalName).Where(item => !string.IsNullOrWhiteSpace(item)).ToArray()!,
+            aliases.Contains(draft.Alias.Trim(), StringComparer.OrdinalIgnoreCase), image?.IsManaged ?? false,
+            image?.IsCustomizable ?? true, step.VersionNumber, image?.VersionNumber, stepId);
+    }
+
+    public async Task<Guid> MutateImageAsync(PluginImageMutationCommand command, CancellationToken cancellationToken)
+    {
+        var id = command.TargetImageId ?? Guid.NewGuid();
+        var parent = new Entity("sdkmessageprocessingstep", command.Draft.StepId)
+        {
+            RowVersion = command.ExpectedStepVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        };
+        var requests = new OrganizationRequestCollection
+        {
+            new UpdateRequest { Target = parent, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches }
+        };
+        if (command.Operation == "unregister")
+        {
+            requests.Add(new DeleteRequest
+            {
+                Target = new EntityReference("sdkmessageprocessingstepimage", id)
+                    { RowVersion = command.ExpectedImageVersion?.ToString(System.Globalization.CultureInfo.InvariantCulture) },
+                ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
+            });
+            await service.ExecuteAsync(new ExecuteTransactionRequest { Requests = requests, ReturnResponses = true }, cancellationToken);
+            return id;
+        }
+        var entity = new Entity("sdkmessageprocessingstepimage", id)
+        {
+            ["sdkmessageprocessingstepid"] = new EntityReference("sdkmessageprocessingstep", command.Draft.StepId),
+            ["entityalias"] = command.Draft.Alias,
+            ["imagetype"] = new OptionSetValue(command.Draft.ImageType),
+            ["messagepropertyname"] = command.Draft.MessagePropertyName,
+            ["attributes"] = string.Join(',', command.Draft.Attributes)
+        };
+        if (command.Operation == "create")
+        {
+            entity["name"] = command.Draft.Alias;
+            requests.Add(new CreateRequest { Target = entity });
+        }
+        else
+        {
+            entity.RowVersion = command.ExpectedImageVersion?.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            requests.Add(new UpdateRequest { Target = entity, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
+        }
+        await service.ExecuteAsync(new ExecuteTransactionRequest { Requests = requests, ReturnResponses = true }, cancellationToken);
+        return id;
+    }
+
     private async Task<IReadOnlyList<ComponentDependencyDto>> RetrieveDependenciesAsync(Guid id, int componentType,
         CancellationToken cancellationToken)
     {

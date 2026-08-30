@@ -39,6 +39,13 @@ public interface IPluginRegistrationGateway
     Task<Guid> MutateStepAsync(PluginStepMutationCommand command,
         CancellationToken cancellationToken) =>
         Task.FromException<Guid>(new NotSupportedException("Step mutation is not supported by this gateway."));
+
+    Task<PluginImagePreflightState> RetrieveImagePreflightStateAsync(Guid stepId, Guid? imageId,
+        ImageDraftDto draft, CancellationToken cancellationToken) =>
+        Task.FromException<PluginImagePreflightState>(new NotSupportedException("Image preflight is not supported by this gateway."));
+
+    Task<Guid> MutateImageAsync(PluginImageMutationCommand command, CancellationToken cancellationToken) =>
+        Task.FromException<Guid>(new NotSupportedException("Image mutation is not supported by this gateway."));
 }
 
 public interface IPluginRegistrationGatewayFactory

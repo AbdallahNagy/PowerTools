@@ -13,6 +13,7 @@ import { RegistrationDialogShell } from "./components/dialogs/RegistrationDialog
 import { AssemblyDialog } from "./components/dialogs/AssemblyDialog";
 import { StepDialog } from "./components/dialogs/StepDialog";
 import { TypedNameConfirmationDialog } from "./components/dialogs/TypedNameConfirmationDialog";
+import { ImageDialog } from "./components/dialogs/ImageDialog";
 import { RegistrationWorkspace } from "./components/RegistrationWorkspace";
 import { buildCatalogTree, findCatalogNode, type CatalogTreeNode } from "./model/catalogTree";
 
@@ -23,6 +24,7 @@ export type DialogIntent =
   | { kind: "createImage"; stepId: string }
   | { kind: "unregisterStep"; stepId: string }
   | { kind: "toggleStep"; stepId: string; enable: boolean }
+  | { kind: "unregisterImage"; imageId: string }
   | null;
 
 export default function PluginRegistration() {
@@ -62,6 +64,12 @@ function PluginRegistrationPage() {
     && (dialogIntent?.kind === "createStep" || dialogIntent?.kind === "update" && dialogNode?.kind === "step"));
   const isStepConfirmation = Boolean(pluginNode?.kind === "plugin" && stepNode?.kind === "step"
     && (dialogIntent?.kind === "unregisterStep" || dialogIntent?.kind === "toggleStep"));
+  const imageNode = dialogIntent?.kind === "unregisterImage" ? findCatalogNode(nodes, `image:${dialogIntent.imageId}`) ?? null
+    : dialogNode?.kind === "image" ? dialogNode : null;
+  const imageStepNode = imageNode?.kind === "image" ? findCatalogNode(nodes, `step:${imageNode.data.pluginStepId}`) ?? null
+    : dialogIntent?.kind === "createImage" ? findCatalogNode(nodes, `step:${dialogIntent.stepId}`) ?? null : null;
+  const isImageDialog = Boolean(imageStepNode?.kind === "step" && (dialogIntent?.kind === "createImage"
+    || dialogIntent?.kind === "unregisterImage" || dialogIntent?.kind === "update" && dialogNode?.kind === "image"));
 
   const changeConnection = (name: string) => {
     setSelectedNodeId(null);
@@ -110,6 +118,7 @@ function PluginRegistrationPage() {
         break;
       case "unregister":
         if (intent.nodeId.startsWith("step:")) setDialogIntent({ kind: "unregisterStep", stepId: intent.nodeId.slice(5) });
+        else if (intent.nodeId.startsWith("image:")) setDialogIntent({ kind: "unregisterImage", imageId: intent.nodeId.slice(6) });
         break;
       case "toggleStep":
         setDialogIntent({ kind: "toggleStep", stepId: intent.stepId, enable: intent.enable });
@@ -150,7 +159,7 @@ function PluginRegistrationPage() {
         onClose={() => setContextMenu(null)}
       />
       <RegistrationDialogShell
-        intent={isAssemblyMutationDialog || isStepEditDialog || isStepConfirmation ? null : dialogIntent}
+        intent={isAssemblyMutationDialog || isStepEditDialog || isStepConfirmation || isImageDialog ? null : dialogIntent}
         node={dialogNode}
         onClose={() => setDialogIntent(null)}
       />
@@ -173,6 +182,12 @@ function PluginRegistrationPage() {
         && (dialogIntent?.kind === "unregisterStep" || dialogIntent?.kind === "toggleStep") ? (
         <TypedNameConfirmationDialog connectionName={connectionName || null} plugin={pluginNode.data}
           step={stepNode.data} operation={dialogIntent.kind === "unregisterStep" ? "unregister" : dialogIntent.enable ? "enable" : "disable"}
+          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
+      ) : null}
+      {isImageDialog && imageStepNode?.kind === "step" ? (
+        <ImageDialog connectionName={connectionName || null} step={imageStepNode.data}
+          image={imageNode?.kind === "image" ? imageNode.data : null}
+          operation={dialogIntent?.kind === "createImage" ? "create" : dialogIntent?.kind === "unregisterImage" ? "unregister" : "update"}
           onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
       ) : null}
     </div>

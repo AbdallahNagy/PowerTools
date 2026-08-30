@@ -113,6 +113,29 @@ public static class PluginRegistrationEndpoints
                 ExecuteStepAsync(request, stepId, operation, context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
             .WithName("ExecutePluginStepMutation");
 
+        group.MapPost("/images/create/preflight", (ImageDraftDto draft, HttpContext context,
+            IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+            ICurrentConnection connection, PluginImageMutationService mutations, CancellationToken cancellationToken) =>
+            CreateImagePreflightAsync(draft, null, "create", context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
+            .WithName("PreflightCreatePluginImage");
+        group.MapPost("/images/{imageId:guid}/{operation:regex(^update|unregister$)}/preflight",
+            (Guid imageId, string operation, ImageDraftDto draft, HttpContext context,
+             IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+             ICurrentConnection connection, PluginImageMutationService mutations, CancellationToken cancellationToken) =>
+            CreateImagePreflightAsync(draft, imageId, operation, context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
+            .WithName("PreflightPluginImageMutation");
+        group.MapPost("/images/create/execute", (ImageMutationExecuteRequestDto request, HttpContext context,
+            IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+            ICurrentConnection connection, PluginImageMutationService mutations, CancellationToken cancellationToken) =>
+            ExecuteImageAsync(request, null, "create", context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
+            .WithName("ExecuteCreatePluginImage");
+        group.MapPost("/images/{imageId:guid}/{operation:regex(^update|unregister$)}/execute",
+            (Guid imageId, string operation, ImageMutationExecuteRequestDto request, HttpContext context,
+             IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+             ICurrentConnection connection, PluginImageMutationService mutations, CancellationToken cancellationToken) =>
+            ExecuteImageAsync(request, imageId, operation, context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
+            .WithName("ExecutePluginImageMutation");
+
         return app;
     }
 
@@ -371,6 +394,50 @@ public static class PluginRegistrationEndpoints
         var targetIds = draft.ExpectedVersions.Keys.Where(id => id != draft.PluginTypeId).ToArray();
         if (operation == "create" ? routeStepId is not null : targetIds.Length != 1 || targetIds[0] != routeStepId)
             throw new ArgumentException("The step draft target does not match the route.");
+    }
+
+    private static async Task<IResult> CreateImagePreflightAsync(ImageDraftDto draft, Guid? routeImageId,
+        string operation, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory,
+        DataverseClientFactory clientFactory, ICurrentConnection connection, PluginImageMutationService mutations,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            EnsureImageRouteTarget(draft, routeImageId, operation);
+            var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+            return Results.Ok(await mutations.CreatePreflightAsync(gateway, connection.EnvironmentUrl, operation, draft, cancellationToken));
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "image");
+            return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+        }
+    }
+
+    private static async Task<IResult> ExecuteImageAsync(ImageMutationExecuteRequestDto request, Guid? routeImageId,
+        string operation, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory,
+        DataverseClientFactory clientFactory, ICurrentConnection connection, PluginImageMutationService mutations,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            EnsureImageRouteTarget(request.Draft, routeImageId, operation);
+            var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+            return Results.Ok(await mutations.ExecuteAsync(gateway, connection.EnvironmentUrl, operation,
+                request.PlanToken, request.Draft, request.TypedName, cancellationToken));
+        }
+        catch (Exception error) when (error is not OperationCanceledException)
+        {
+            var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "image");
+            return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+        }
+    }
+
+    private static void EnsureImageRouteTarget(ImageDraftDto draft, Guid? routeImageId, string operation)
+    {
+        var targetIds = draft.ExpectedVersions.Keys.Where(id => id != draft.StepId).ToArray();
+        if (operation == "create" ? routeImageId is not null : targetIds.Length != 1 || targetIds[0] != routeImageId)
+            throw new ArgumentException("The image draft target does not match the route.");
     }
 
     private sealed record AssemblyMutationUpload(
