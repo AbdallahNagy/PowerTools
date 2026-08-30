@@ -64,6 +64,9 @@ describe("Assembly mutations", () => {
       plugins: [], workflowActivities: [],
     };
     httpServer.use(
+      http.get("http://localhost/api/plugin-registration/catalog", () =>
+        HttpResponse.json({ assemblies: [] }),
+      ),
       http.post("http://localhost/api/plugin-registration/assemblies/analyze", () => HttpResponse.json(inspection)),
       http.post("http://localhost/api/plugin-registration/assemblies/register/preflight", () => HttpResponse.json({
         draft: { fileName: "Contoso.dll", operation: "register", assemblyId: null, requestedIsolationMode: 2, requestedSourceType: 0, expectedAssemblyVersionNumber: null, expectedHandlerVersionNumbers: {}, inspection: { ...inspection, sha256: "preflight-hash" } },
