@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { Button, Modal } from "../../../../shared/ui";
 import { useImageMutations, type ImageDraft, type ImageOperation, type ImagePreflight } from "../../api/useImageMutations";
 import type { PluginImage, PluginStep } from "../../model/contracts";
+import { MutationImpactPreviewDialog } from "./ImpactPreviewDialog";
+import { TypedNameConfirmation } from "./TypedNameConfirmationDialog";
 
 interface Props { connectionName: string | null; step: PluginStep; image: PluginImage | null; operation: ImageOperation;
   onClose: () => void; refreshCatalog: () => Promise<unknown>; }
@@ -22,7 +24,7 @@ export function ImageDialog({ connectionName, step, image, operation, onClose, r
     imageId: image?.id ?? null, draft, token: preview.plan.token, typedName: operation === "unregister" ? typedName : undefined });
     if (result.succeededAndVerified) onClose(); };
   if (operation === "unregister") return <Modal open title={title} onClose={onClose} widthClass="max-w-lg"><div role="dialog" aria-label={title} className="flex flex-col gap-3">
-    <p>Deleting this image requires its exact name.</p><label>Type {image?.name} to confirm<input aria-label={`Type ${image?.name} to confirm`} value={typedName} onChange={e => setTypedName(e.target.value)} /></label>
+    <TypedNameConfirmation componentLabel="image" requiredName={image?.name ?? ""} value={typedName} onChange={setTypedName} />
     {!preview ? <Button onClick={() => void submit()}>Preview unregister</Button> : <><Preview preview={preview} /><Button disabled={typedName !== image?.name || preview.plan.blockers.length > 0} onClick={() => void confirm()}>Unregister image</Button></>}
     <Button variant="secondary" onClick={onClose}>Cancel</Button></div></Modal>;
   return <><Modal open title={title} onClose={onClose} widthClass="max-w-xl"><div role="dialog" aria-label={title} className="flex flex-col gap-3">
@@ -32,7 +34,9 @@ export function ImageDialog({ connectionName, step, image, operation, onClose, r
     <label>Selected columns<input aria-label="Selected columns" value={columns} onChange={e => setColumns(e.target.value)} /></label>
     {allColumns ? <p role="alert">All columns is not allowed; select explicit columns.</p> : null}
     <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={!alias.trim() || attributes.length === 0 || allColumns || mutations.preflight.isPending} onClick={() => void submit()}>Preview changes</Button></div>
-  </div></Modal>{preview ? <Modal open title="Image impact preview" onClose={() => setPreview(null)} widthClass="max-w-lg"><div role="dialog" aria-label="Image impact preview" className="flex flex-col gap-3"><Preview preview={preview} /><div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setPreview(null)}>Cancel</Button><Button disabled={preview.plan.blockers.length > 0 || mutations.execute.isPending} onClick={() => void confirm()}>Confirm</Button></div></div></Modal> : null}</>;
+  </div></Modal>{preview ? <MutationImpactPreviewDialog title="Image impact preview" environment={connectionName ?? "No environment"} component={image?.name ?? alias}
+    changes={preview.plan.changes} warnings={preview.plan.warnings} blockers={preview.plan.blockers} confirmation={preview.plan.confirmation.message}
+    executing={mutations.execute.isPending} onCancel={() => setPreview(null)} onConfirm={() => void confirm()} /> : null}</>;
 }
 function Preview({ preview }: { preview: ImagePreflight }) { return <>{preview.plan.changes.map(x => <p key={x.field}>{label(x.field)}: {x.before ?? "New"} → {x.after ?? "Empty"}</p>)}{preview.plan.warnings.map(x => <p role="status" key={x.code}>{x.message}</p>)}{preview.plan.blockers.map(x => <p role="alert" key={x.code}>{x.message}</p>)}</>; }
 function label(value: string) { return value === "attributes" ? "Attributes" : value; }

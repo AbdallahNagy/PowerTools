@@ -52,6 +52,29 @@ public sealed class PluginImageMutationTests
         Assert.Equal(["accountnumber"], gateway.LastCommand.Draft.Attributes);
     }
 
+    [Fact]
+    public async Task Rejects_target_image_owned_by_a_different_step_before_preflight()
+    {
+        var gateway = new FakeGateway { ExistingImage = Image() with { PluginStepId = Guid.NewGuid() } };
+        await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => Service().CreatePreflightAsync(
+            gateway, "Dev", "update", Draft(ImageId, ["name"]), default));
+        Assert.Null(gateway.LastCommand);
+    }
+
+    [Fact]
+    public async Task Blocks_managed_parent_and_fresh_delete_dependencies()
+    {
+        var gateway = new FakeGateway { ExistingImage = Image(), ParentManaged = true };
+        var managed = await Service().CreatePreflightAsync(gateway, "Dev", "update", Draft(ImageId, ["name"]), default);
+        Assert.Contains(managed.Plan.Blockers, x => x.Code == "managedParent");
+        gateway.ParentManaged = false;
+        gateway.Dependencies = [new(Guid.NewGuid(), "Solution component", "Workflow", null, false, true, 1)];
+        var blocked = await Service().CreatePreflightAsync(gateway, "Dev", "unregister", Draft(ImageId, ["name"]), default);
+        Assert.Contains(blocked.Plan.Blockers, x => x.Code == "dependency");
+        await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => Service().ExecuteAsync(gateway, "Dev",
+            "unregister", blocked.Plan.Token, Draft(ImageId, ["name"]), "PreImage", default));
+    }
+
     private static PluginImageMutationService Service()
     {
         var signer = new PluginRegistrationPlanSigner("test-secret", new ManualTimeProvider(new DateTimeOffset(2026, 8, 30, 0, 0, 0, TimeSpan.Zero)));
@@ -66,16 +89,21 @@ public sealed class PluginImageMutationTests
     private sealed class FakeGateway : IPluginRegistrationGateway
     {
         public PluginImageRow? ExistingImage { get; set; }
+        public bool ParentManaged { get; set; }
+        public IReadOnlyList<ComponentDependencyDto> Dependencies { get; set; } = [];
+        private bool mutated;
         public PluginImageMutationCommand? LastCommand { get; private set; }
         public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) => Task.FromResult(new PluginRegistrationRows([], [],
-            [new PluginStepRow(StepId, Guid.NewGuid(), "Update account", null, "Update", "account", null, "PreOperation", "Synchronous", 20, 0, 1, true, false, true, 11, false, null)],
+            [new PluginStepRow(StepId, Guid.NewGuid(), "Update account", null, "Update", "account", null, "PreOperation", "Synchronous", 20, 0, 1, true, false, true, mutated ? 12 : 11, false, null)],
             ExistingImage is null ? [] : [ExistingImage]));
         public Task<PluginImagePreflightState> RetrieveImagePreflightStateAsync(Guid stepId, Guid? imageId, ImageDraftDto draft, CancellationToken cancellationToken) =>
             Task.FromResult(new PluginImagePreflightState(imageId, ExistingImage?.Name, "Update", 20, "account", "Target", ["accountid", "name", "accountnumber"], false,
-                ExistingImage?.IsManaged ?? false, ExistingImage?.IsCustomizable ?? true, 11, ExistingImage?.VersionNumber, stepId));
+                ExistingImage?.IsManaged ?? false, ExistingImage?.IsCustomizable ?? true, 11, ExistingImage?.VersionNumber, stepId)
+                { ParentIsManaged = ParentManaged, ParentIsCustomizable = true, Dependencies = Dependencies });
         public Task<Guid> MutateImageAsync(PluginImageMutationCommand command, CancellationToken cancellationToken)
         {
             LastCommand = command;
+            mutated = true;
             if (command.Operation == "unregister") { ExistingImage = null; return Task.FromResult(command.TargetImageId!.Value); }
             ExistingImage = new PluginImageRow(command.TargetImageId ?? ImageId, StepId,
                 command.Operation == "update" ? ExistingImage?.Name ?? command.Draft.Alias : command.Draft.Alias, null,

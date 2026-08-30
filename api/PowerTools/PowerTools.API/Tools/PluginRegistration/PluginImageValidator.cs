@@ -27,6 +27,8 @@ public sealed class PluginImageValidator
             blockers.Add(new("invalidAttribute", "Every image column must exist on the step table."));
         if (state.IsManaged) blockers.Add(new("managedComponent", "Managed images cannot be changed here."));
         if (!state.IsCustomizable) blockers.Add(new("nonCustomizable", "This image is not customizable."));
+        if (state.ParentIsManaged) blockers.Add(new("managedParent", "The parent step is managed."));
+        if (!state.ParentIsCustomizable) blockers.Add(new("nonCustomizableParent", "The parent step is not customizable."));
         if (!draft.ExpectedVersions.TryGetValue(state.StepId, out var stepVersion) || stepVersion != state.StepVersion)
             blockers.Add(new("staleStepVersion", "The parent step changed after it was loaded."));
         if (state.TargetImageId is { } imageId && state.CurrentImageVersion is { } imageVersion

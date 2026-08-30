@@ -10,11 +10,20 @@ public sealed record ImageMutationExecutionDto(string Outcome, bool SucceededAnd
 public sealed record ImageMutationExecuteRequestDto(ImageDraftDto Draft, string PlanToken, string? TypedName);
 public sealed record PluginImageValidationState(Guid? TargetImageId, string? ImageName, string Message, int Stage,
     string PrimaryTable, string SupportedMessagePropertyName, IReadOnlyList<string> AvailableAttributes,
-    bool DuplicateAlias, bool IsManaged, bool IsCustomizable, long StepVersion, long? CurrentImageVersion, Guid StepId);
+    bool DuplicateAlias, bool IsManaged, bool IsCustomizable, long StepVersion, long? CurrentImageVersion, Guid StepId)
+{
+    public bool ParentIsManaged { get; init; }
+    public bool ParentIsCustomizable { get; init; } = true;
+}
 public sealed record PluginImageValidationResult(ImageDraftDto Draft, ImagePublicValuesDto PublicAfter,
     IReadOnlyList<MutationWarningDto> Warnings, IReadOnlyList<MutationBlockerDto> Blockers);
 public sealed record PluginImagePreflightState(Guid? TargetImageId, string? ImageName, string Message, int Stage,
     string PrimaryTable, string SupportedMessagePropertyName, IReadOnlyList<string> AvailableAttributes,
-    bool DuplicateAlias, bool IsManaged, bool IsCustomizable, long StepVersion, long? CurrentImageVersion, Guid StepId);
+    bool DuplicateAlias, bool IsManaged, bool IsCustomizable, long StepVersion, long? CurrentImageVersion, Guid StepId)
+{
+    public bool ParentIsManaged { get; init; }
+    public bool ParentIsCustomizable { get; init; } = true;
+    public IReadOnlyList<ComponentDependencyDto> Dependencies { get; init; } = [];
+}
 public sealed record PluginImageMutationCommand(string Operation, Guid? TargetImageId, ImageDraftDto Draft,
     long ExpectedStepVersion, long? ExpectedImageVersion);

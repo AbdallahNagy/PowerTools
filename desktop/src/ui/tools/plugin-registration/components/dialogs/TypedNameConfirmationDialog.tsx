@@ -24,8 +24,12 @@ export function TypedNameConfirmationDialog({ connectionName, plugin, step, oper
   const execute = async () => { const plan = mutations.preflight.data; if (!draft || !plan) return; const result = await mutations.execute.mutateAsync({ operation: operation as StepOperation, stepId: step.id, draft, token: plan.plan.token, typedName: operation === "unregister" ? typedName : undefined }); if (result.succeededAndVerified) onClose(); };
   const blocked = !mutations.preflight.data || mutations.preflight.data.plan.blockers.length > 0 || (operation === "unregister" && typedName !== step.name);
   return <Modal open title={title} onClose={onClose} widthClass="max-w-lg"><div role="dialog" aria-label={title} className="flex flex-col gap-3">
-    {operation === "unregister" ? <><p>Deleting this step requires its exact name.</p><label>Type {step.name} to confirm<input aria-label={`Type ${step.name} to confirm`} value={typedName} onChange={event => setTypedName(event.target.value)} className="w-full bg-[#3c3c3c] p-2" /></label></> : <p>{connectionName}: {step.messageLabel} · {step.primaryTableLabel} · {step.stageLabel}. Execution is {operation === "enable" ? "starting" : "stopping"}.</p>}
+    {operation === "unregister" ? <TypedNameConfirmation componentLabel="step" requiredName={step.name} value={typedName} onChange={setTypedName} /> : <p>{connectionName}: {step.messageLabel} · {step.primaryTableLabel} · {step.stageLabel}. Execution is {operation === "enable" ? "starting" : "stopping"}.</p>}
     {mutations.preflight.data?.plan.blockers.map(item => <p role="alert" key={item.code}>{item.message}</p>)}
     <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button disabled={blocked || mutations.execute.isPending} onClick={() => void execute()}>{title}</Button></div>
   </div></Modal>;
+}
+
+export function TypedNameConfirmation({ componentLabel, requiredName, value, onChange }: { componentLabel: string; requiredName: string; value: string; onChange: (value: string) => void }) {
+  return <><p>Deleting this {componentLabel} requires its exact name.</p><label>Type {requiredName} to confirm<input aria-label={`Type ${requiredName} to confirm`} value={value} onChange={event => onChange(event.target.value)} className="w-full bg-[#3c3c3c] p-2" /></label></>;
 }

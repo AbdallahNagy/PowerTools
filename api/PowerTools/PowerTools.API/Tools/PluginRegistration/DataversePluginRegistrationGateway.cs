@@ -238,7 +238,12 @@ public sealed class DataversePluginRegistrationGateway(
         return new(imageId, image?.Name, Text(message, "name"), step.Stage, table, property ?? "Target",
             metadata.EntityMetadata.Attributes.Select(item => item.LogicalName).Where(item => !string.IsNullOrWhiteSpace(item)).ToArray()!,
             aliases.Contains(draft.Alias.Trim(), StringComparer.OrdinalIgnoreCase), image?.IsManaged ?? false,
-            image?.IsCustomizable ?? true, step.VersionNumber, image?.VersionNumber, stepId);
+            image?.IsCustomizable ?? true, step.VersionNumber, image?.VersionNumber, stepId)
+        {
+            ParentIsManaged = step.IsManaged,
+            ParentIsCustomizable = step.IsCustomizable,
+            Dependencies = imageId is { } dependencyId ? await RetrieveDependenciesAsync(dependencyId, 93, cancellationToken) : []
+        };
     }
 
     public async Task<Guid> MutateImageAsync(PluginImageMutationCommand command, CancellationToken cancellationToken)

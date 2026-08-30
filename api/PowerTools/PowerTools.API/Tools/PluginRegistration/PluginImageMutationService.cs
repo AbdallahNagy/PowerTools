@@ -15,9 +15,12 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
             ? new ConfirmationRequirementDto("typedName", $"Type {current.State.ImageName} to unregister this image.", current.State.ImageName)
             : new ConfirmationRequirementDto("explicit", "Confirm every displayed image change.");
         var before = current.CurrentRow is null ? null : Before(current.CurrentRow, current.State.SupportedMessagePropertyName);
-        var plan = preflight.CreatePlan(Request(environment, operation, targetId, current.Validation.Draft),
-            Changes(before, current.Validation.PublicAfter), new MutationImpactDto([current.Validation.PublicAfter.Name], [], []),
-            current.Validation.Warnings, current.Validation.Blockers, confirmation);
+        var dependencies = operation == "unregister" ? current.State.Dependencies.Select(x => $"{x.ComponentTypeLabel}: {x.Name}").ToArray() : [];
+        var blockers = current.Validation.Blockers.Concat(operation == "unregister" ? current.State.Dependencies.Select(x =>
+            new MutationBlockerDto("dependency", $"{x.ComponentTypeLabel} '{x.Name}' depends on this image.")) : []).ToArray();
+        var plan = preflight.CreatePlan(Request(environment, operation, targetId, current.Validation.Draft, dependencies),
+            Changes(before, current.Validation.PublicAfter), new MutationImpactDto([current.Validation.PublicAfter.Name], dependencies, []),
+            current.Validation.Warnings, blockers, confirmation);
         return new(current.Validation.Draft, plan, before, current.Validation.PublicAfter);
     }
 
@@ -26,14 +29,16 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
     {
         var targetId = TargetId(operation, submitted);
         var initial = await ReadAndValidateAsync(gateway, operation, targetId, submitted, cancellationToken);
-        EnsureExecutable(initial.Validation.Blockers);
+        EnsureExecutable(initial.Validation.Blockers, operation == "unregister" ? initial.State.Dependencies : []);
         if (operation == "unregister" && !string.Equals(typedName, initial.State.ImageName, StringComparison.Ordinal))
             throw new ArgumentException("The typed image name does not match exactly.");
-        await preflight.ValidateExecutionAsync(token, Request(environment, operation, targetId, initial.Validation.Draft), async ct =>
+        var dependencies = operation == "unregister" ? initial.State.Dependencies.Select(x => $"{x.ComponentTypeLabel}: {x.Name}").ToArray() : [];
+        await preflight.ValidateExecutionAsync(token, Request(environment, operation, targetId, initial.Validation.Draft, dependencies), async ct =>
         {
             var fresh = await ReadAndValidateAsync(gateway, operation, targetId, submitted, ct);
-            EnsureExecutable(fresh.Validation.Blockers);
-            return Request(environment, operation, targetId, fresh.Validation.Draft);
+            EnsureExecutable(fresh.Validation.Blockers, operation == "unregister" ? fresh.State.Dependencies : []);
+            var freshDependencies = operation == "unregister" ? fresh.State.Dependencies.Select(x => $"{x.ComponentTypeLabel}: {x.Name}").ToArray() : [];
+            return Request(environment, operation, targetId, fresh.Validation.Draft, freshDependencies);
         }, cancellationToken);
 
         var id = await gateway.MutateImageAsync(new(operation, targetId, initial.Validation.Draft,
@@ -45,7 +50,8 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
         var parent = rows.Steps.SingleOrDefault(item => item.Id == submitted.StepId);
         var verifiedState = row is null ? null : await gateway.RetrieveImagePreflightStateAsync(submitted.StepId, id,
             initial.Validation.Draft, cancellationToken);
-        if (row is null || parent is null || verifiedState is null || row.PluginStepId != submitted.StepId
+        if (row is null || parent is null || parent.VersionNumber <= submitted.ExpectedVersions[submitted.StepId]
+            || verifiedState is null || row.PluginStepId != submitted.StepId
             || !string.Equals(row.Name, initial.Validation.PublicAfter.Name, StringComparison.Ordinal)
             || !string.Equals(row.EntityAlias, initial.Validation.Draft.Alias, StringComparison.Ordinal)
             || !string.Equals(verifiedState.SupportedMessagePropertyName, initial.Validation.Draft.MessagePropertyName, StringComparison.OrdinalIgnoreCase)
@@ -66,17 +72,22 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
             if (actual != expected.Value) throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
         }
         var state = await gateway.RetrieveImagePreflightStateAsync(draft.StepId, targetId, draft, cancellationToken);
-        var currentRow = targetId is { } id ? rows.Images.Single(item => item.Id == id) : null;
+        var currentRow = targetId is { } id ? rows.Images.SingleOrDefault(item => item.Id == id) : null;
+        if (targetId.HasValue && (currentRow is null || currentRow.PluginStepId != draft.StepId))
+            throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
         var effective = operation == "unregister" && currentRow is not null ? draft with
         {
             ImageType = ImageType(currentRow.ImageTypeLabel),
             Alias = currentRow.EntityAlias ?? currentRow.Name,
             Attributes = currentRow.Attributes,
             MessagePropertyName = state.SupportedMessagePropertyName
-        } : draft;
+        } : operation == "update" && currentRow is not null && string.IsNullOrWhiteSpace(draft.Alias)
+            ? draft with { Alias = currentRow.EntityAlias ?? currentRow.Name }
+            : draft;
         var validation = validator.Validate(effective, new(state.TargetImageId, state.ImageName, state.Message, state.Stage,
             state.PrimaryTable, state.SupportedMessagePropertyName, state.AvailableAttributes, state.DuplicateAlias,
-            state.IsManaged, state.IsCustomizable, state.StepVersion, state.CurrentImageVersion, state.StepId));
+            state.IsManaged, state.IsCustomizable, state.StepVersion, state.CurrentImageVersion, state.StepId)
+            { ParentIsManaged = state.ParentIsManaged, ParentIsCustomizable = state.ParentIsCustomizable });
         return new(state, validation, currentRow);
     }
     private static Guid? TargetId(string operation, ImageDraftDto draft)
@@ -86,11 +97,11 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
         if (operation == "create") return null;
         return ids.Length == 1 ? ids[0] : throw new ArgumentException("Exactly one target image version is required.");
     }
-    private static MutationPreflightRequest Request(string environment, string operation, Guid? targetId, ImageDraftDto draft) =>
-        new(environment, $"images.{operation}", targetId, draft, draft.ExpectedVersions, null, new Dictionary<string, bool>());
-    private static void EnsureExecutable(IReadOnlyList<MutationBlockerDto> blockers)
+    private static MutationPreflightRequest Request(string environment, string operation, Guid? targetId, ImageDraftDto draft, IReadOnlyList<string> dependencies) =>
+        new(environment, $"images.{operation}", targetId, new { Draft = draft, Dependencies = dependencies }, draft.ExpectedVersions, null, new Dictionary<string, bool>());
+    private static void EnsureExecutable(IReadOnlyList<MutationBlockerDto> blockers, IReadOnlyList<ComponentDependencyDto> dependencies)
     {
-        if (blockers.Count > 0) throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
+        if (blockers.Count > 0 || dependencies.Count > 0) throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
     }
     private static ImagePublicValuesDto Before(PluginImageRow row, string messagePropertyName) =>
         new(row.Name, ImageType(row.ImageTypeLabel), row.EntityAlias ?? row.Name, messagePropertyName, row.Attributes);
