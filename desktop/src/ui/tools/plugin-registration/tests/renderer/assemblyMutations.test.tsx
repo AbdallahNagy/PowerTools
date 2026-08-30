@@ -1,11 +1,19 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import { renderWithProviders } from "../../../../../../test/support/render";
 import PluginRegistration from "../../PluginRegistration";
 import { httpServer } from "../../../../../../test/support/httpServer";
+
+const apiPostMock = vi.hoisted(() => vi.fn());
+
+vi.mock("../../../../shared/api/client", async (importOriginal) => ({
+  ...await importOriginal<typeof import("../../../../shared/api/client")>(),
+  apiPost: apiPostMock,
+}));
 
 const originalResizeObserver = window.ResizeObserver;
 
@@ -21,6 +29,10 @@ beforeAll(() => {
 afterAll(() => {
   if (originalResizeObserver) window.ResizeObserver = originalResizeObserver;
   else Reflect.deleteProperty(window, "ResizeObserver");
+});
+
+beforeEach(() => {
+  apiPostMock.mockReset();
 });
 
 describe("Assembly mutations", () => {
@@ -67,13 +79,16 @@ describe("Assembly mutations", () => {
       http.get("http://localhost/api/plugin-registration/catalog", () =>
         HttpResponse.json({ assemblies: [] }),
       ),
-      http.post("http://localhost/api/plugin-registration/assemblies/analyze", () => HttpResponse.json(inspection)),
-      http.post("http://localhost/api/plugin-registration/assemblies/register/preflight", () => HttpResponse.json({
+    );
+    apiPostMock.mockImplementation((url: string) => {
+      if (url.endsWith("/analyze")) return Promise.resolve(inspection);
+      if (url.endsWith("/register/preflight")) return Promise.resolve({
         draft: { fileName: "Contoso.dll", operation: "register", assemblyId: null, requestedIsolationMode: 2, requestedSourceType: 0, expectedAssemblyVersionNumber: null, expectedHandlerVersionNumbers: {}, inspection: { ...inspection, sha256: "preflight-hash" } },
         plan: { token: "token", blockers: [], warnings: [], confirmation: { level: "explicit", message: "Confirm", requiresAcknowledgement: false } },
         impact: { previousIdentity: null, currentIdentity: inspection.identity, previousSha256: null, currentSha256: "preflight-hash", previousSize: null, currentSize: 3, previousIsolationMode: null, currentIsolationMode: 2, previousSourceType: null, currentSourceType: 0, addedPlugins: [], unchangedPlugins: [], changedPlugins: [], removedPlugins: [], addedWorkflowActivities: [], changedWorkflowActivities: [], removedWorkflowActivities: [], ownedStepsAndImages: [], dependencies: [], workflowContractDifferences: [], warnings: [], blockers: [] },
-      })),
-    );
+      });
+      return Promise.reject(new Error(`Unexpected mutation request: ${url}`));
+    });
     renderWithProviders(<ConnectionsProvider><PluginRegistration /></ConnectionsProvider>, {
       bridgeOverrides: {
         listConnections: async () => [{ name: "Development", envUrl: "https://development.example.test", crmType: "online" }],
@@ -84,7 +99,13 @@ describe("Assembly mutations", () => {
     const register = screen.getByRole("button", { name: "Register assembly" });
     await waitFor(() => expect(register).toBeEnabled());
     fireEvent.click(register);
-    fireEvent.change(await screen.findByLabelText("Assembly DLL"), { target: { files: [new File(["dll"], "Contoso.dll", { type: "application/octet-stream" })] } });
+    const user = userEvent.setup();
+    await user.upload(await screen.findByLabelText("Assembly DLL"), new File(["dll"], "Contoso.dll", { type: "application/octet-stream" }));
+    await waitFor(() => expect(apiPostMock).toHaveBeenCalledWith(
+      "/api/plugin-registration/assemblies/analyze",
+      expect.any(FormData),
+      expect.objectContaining({ meta: { connectionName: "Development" } }),
+    ));
     await screen.findByText("Contoso 1.0.0.0");
     fireEvent.click(screen.getByRole("button", { name: "Preview impact" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("uploaded DLL changed after analysis");
