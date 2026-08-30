@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
@@ -15,6 +16,48 @@ public sealed class DataversePluginRegistrationGatewayFactory
 public sealed class DataversePluginRegistrationGateway(
     IOrganizationServiceAsync2 service) : IPluginRegistrationGateway
 {
+    public async Task<PluginAssemblyImpactSnapshot> RetrieveAssemblyImpactSnapshotAsync(
+        PluginAssemblyRow assembly,
+        IReadOnlyList<PluginTypeRow> handlers,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var entity = await service.RetrieveAsync("pluginassembly", assembly.Id,
+            new ColumnSet("content"), cancellationToken);
+        var encoded = entity.GetAttributeValue<string>("content");
+        if (string.IsNullOrWhiteSpace(encoded))
+            return new PluginAssemblyImpactSnapshot([], [], false);
+
+        byte[] content;
+        try { content = Convert.FromBase64String(encoded); }
+        catch (FormatException) { return new PluginAssemblyImpactSnapshot([], [], false); }
+
+        try
+        {
+            var dependencies = new List<PluginHandlerDependencyRow>();
+            foreach (var handler in handlers)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var request = new OrganizationRequest("RetrieveDependenciesForDelete")
+                {
+                    ["ComponentType"] = 90,
+                    ["ObjectId"] = handler.Id
+                };
+                var response = await service.ExecuteAsync(request, cancellationToken);
+                if (response.Results.TryGetValue("EntityDependencies", out var value)
+                    && value is EntityCollection collection)
+                {
+                    dependencies.AddRange(collection.Entities.Select(dependency => MapDependency(handler.Id, dependency)));
+                }
+            }
+            return new PluginAssemblyImpactSnapshot(content, dependencies, true);
+        }
+        catch
+        {
+            CryptographicOperations.ZeroMemory(content);
+            throw;
+        }
+    }
     public async Task<Guid> RegisterAssemblyAsync(
         PluginAssemblyMutationCommand command,
         CancellationToken cancellationToken)
@@ -105,6 +148,19 @@ public sealed class DataversePluginRegistrationGateway(
             ["isolationmode"] = new OptionSetValue(command.IsolationMode),
             ["content"] = Convert.ToBase64String(command.Content)
         };
+    }
+
+    private static PluginHandlerDependencyRow MapDependency(Guid handlerId, Entity dependency)
+    {
+        var type = dependency.GetAttributeValue<OptionSetValue>("dependentcomponenttype")?.Value ?? 0;
+        var reference = dependency.GetAttributeValue<EntityReference>("dependentcomponentobjectid");
+        var id = reference?.Id ?? dependency.GetAttributeValue<Guid?>("dependentcomponentobjectid") ?? Guid.Empty;
+        var isCustomApi = reference?.LogicalName is "customapi"
+            or "customapirequestparameter"
+            or "customapiresponseproperty";
+        var label = isCustomApi ? "Custom API" : $"Component type {type}";
+        var name = reference?.Name ?? (id == Guid.Empty ? "Unknown component" : id.ToString("D"));
+        return new PluginHandlerDependencyRow(handlerId, name, label, isCustomApi, id != Guid.Empty);
     }
 
     private static PluginAssemblyRow MapAssembly(Entity entity) =>

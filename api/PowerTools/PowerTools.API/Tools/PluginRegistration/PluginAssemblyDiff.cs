@@ -12,6 +12,12 @@ public static class PluginAssemblyDiff
         var oldActivities = existingTypes.Where(type => type.IsWorkflowActivity).ToDictionary(type => type.TypeName, StringComparer.Ordinal);
         var newPlugins = inspection.Plugins.Select(plugin => plugin.TypeName).ToHashSet(StringComparer.Ordinal);
         var newActivities = inspection.WorkflowActivities.ToDictionary(activity => activity.TypeName, StringComparer.Ordinal);
+        var assemblyChanged = existing is not null && (existing.Version != inspection.Identity.Version
+            || existing.Name != inspection.Identity.Name || existing.Culture != inspection.Identity.Culture
+            || existing.PublicKeyToken != inspection.Identity.PublicKeyToken || existing.SourceHash != inspection.Sha256);
+        var changedPlugins = assemblyChanged
+            ? newPlugins.Where(oldPlugins.ContainsKey).Order().ToArray()
+            : [];
         var removedPlugins = oldPlugins.Keys.Where(name => !newPlugins.Contains(name)).Order().ToArray();
         var removedActivities = oldActivities.Keys.Where(name => !newActivities.ContainsKey(name)).Order().ToArray();
         var owned = OwnedRecords(removedPlugins, oldPlugins, existingSteps, existingImages);
@@ -27,7 +33,7 @@ public static class PluginAssemblyDiff
         var warnings = new List<MutationWarningDto>();
         if (existing?.IsManaged == true) warnings.Add(new("assembly_managed", "The existing assembly is managed."));
         if (!hasCompleteImpactData) warnings.Add(new("assembly_impact_data_unavailable", "Dependency impact data is unavailable; removals are blocked."));
-        return new AssemblyMutationImpactDto(existing is null ? null : new(existing.Name, existing.Version, existing.Culture ?? "neutral", existing.PublicKeyToken ?? ""), inspection.Identity, existing?.SourceHash, inspection.Sha256, existing?.ContentSize, inspection.Size, existing?.IsolationMode, existing is null ? 2 : existing.IsolationMode, existing?.SourceType, existing is null ? 0 : existing.SourceType, newPlugins.Where(name => !oldPlugins.ContainsKey(name)).Order().ToArray(), newPlugins.Where(oldPlugins.ContainsKey).Order().ToArray(), [], removedPlugins, newActivities.Keys.Where(name => !oldActivities.ContainsKey(name)).Order().ToArray(), differences.Select(difference => difference.TypeName).Distinct().Order().ToArray(), removedActivities, owned, affectedDependencies, differences, warnings, blockers);
+        return new AssemblyMutationImpactDto(existing is null ? null : new(existing.Name, existing.Version, existing.Culture ?? "neutral", existing.PublicKeyToken ?? ""), inspection.Identity, existing?.SourceHash, inspection.Sha256, existing?.ContentSize, inspection.Size, existing?.IsolationMode, existing is null ? 2 : existing.IsolationMode, existing?.SourceType, existing is null ? 0 : existing.SourceType, newPlugins.Where(name => !oldPlugins.ContainsKey(name)).Order().ToArray(), newPlugins.Where(name => oldPlugins.ContainsKey(name) && !changedPlugins.Contains(name, StringComparer.Ordinal)).Order().ToArray(), changedPlugins, removedPlugins, newActivities.Keys.Where(name => !oldActivities.ContainsKey(name)).Order().ToArray(), differences.Select(difference => difference.TypeName).Distinct().Order().ToArray(), removedActivities, owned, affectedDependencies, differences, warnings, blockers);
     }
 
     private static string[] OwnedRecords(IReadOnlyList<string> removedPlugins, IReadOnlyDictionary<string, PluginTypeRow> oldPlugins, IReadOnlyList<PluginStepRow> steps, IReadOnlyList<PluginImageRow> images) => removedPlugins.SelectMany(name =>

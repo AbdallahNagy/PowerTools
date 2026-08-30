@@ -87,6 +87,19 @@ public sealed class PluginAssemblyDiffTests
         Assert.Contains(impact.Blockers, blocker => blocker.Code == "assembly_workflow_contract_breaking");
         Assert.Contains(impact.WorkflowContractDifferences, difference => difference.ArgumentName == "Account" && difference.IsBreaking);
     }
+
+    [Fact]
+    public void Existing_plugins_are_reported_as_changed_when_the_assembly_identity_or_hash_changes()
+    {
+        var assembly = Assembly() with { SourceHash = "old-hash" };
+        var plugin = Type(assembly.Id, "Contoso.Plugin", false);
+        var inspection = Inspection(plugins: [new PluginTypeInspectionDto("Contoso.Plugin")]);
+
+        var impact = PluginAssemblyDiff.Compare(assembly, [plugin], [], [], inspection, [], [], true);
+
+        Assert.Contains("Contoso.Plugin", impact.ChangedPlugins);
+        Assert.DoesNotContain("Contoso.Plugin", impact.UnchangedPlugins);
+    }
     [Fact]
     public void Application_maps_assembly_register_and_update_preflight_endpoints()
     {
@@ -122,7 +135,7 @@ public sealed class PluginAssemblyDiffTests
 
     private static PluginAssemblyRow Assembly() => new(Guid.NewGuid(), "Contoso", "1.0.0.0", "neutral", "token", 0, 2, false, true, 1, null);
     private static PluginTypeRow Type(Guid assemblyId, string typeName, bool workflow) => new(Guid.NewGuid(), assemblyId, typeName, typeName, null, null, null, workflow, false, true, 2, null);
-    private static AssemblyInspectionDto Inspection(IReadOnlyList<WorkflowActivityInspectionDto>? workflowActivities = null) => new("Contoso.dll", 1, "hash",
+    private static AssemblyInspectionDto Inspection(IReadOnlyList<WorkflowActivityInspectionDto>? workflowActivities = null, IReadOnlyList<PluginTypeInspectionDto>? plugins = null) => new("Contoso.dll", 1, "hash",
         new AssemblyIdentityInspectionDto("Contoso", "2.0.0.0", "neutral", "token"),
-        ".NETFramework,Version=v4.6.2", "v4.0.30319", [], [], workflowActivities ?? []);
+        ".NETFramework,Version=v4.6.2", "v4.0.30319", [], plugins ?? [], workflowActivities ?? []);
 }

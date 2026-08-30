@@ -22,8 +22,11 @@ public sealed class PluginAssemblyMutationService(
         var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
         var target = FindTarget(rows, draft);
         EnsureExpectedTarget(draft, target, rows);
-        var impact = PluginAssemblyDiff.Compare(target, TypesFor(rows, target), rows.Steps, rows.Images,
-            inspection, rows.Dependencies, rows.WorkflowArguments, rows.HasCompleteAssemblyImpactData) with
+        var existingTypes = TypesFor(rows, target);
+        var snapshot = await LoadImpactSnapshotAsync(gateway, target, existingTypes, cancellationToken);
+        target = target is null ? null : target with { SourceHash = snapshot.Sha256, ContentSize = snapshot.Size };
+        var impact = PluginAssemblyDiff.Compare(target, existingTypes, rows.Steps, rows.Images,
+            inspection, snapshot.Dependencies, snapshot.WorkflowArguments, snapshot.IsComplete) with
         {
             CurrentIsolationMode = draft.RequestedIsolationMode,
             CurrentSourceType = draft.RequestedSourceType
@@ -72,14 +75,18 @@ public sealed class PluginAssemblyMutationService(
                 : await gateway.UpdateAssemblyAsync(command, cancellationToken);
             var catalog = await catalogService.RetrieveCatalogAsync(gateway, cancellationToken);
             var verified = catalog.Assemblies.SingleOrDefault(assembly => assembly.Id == assemblyId);
+            var verifiedRow = (await gateway.RetrieveCatalogRowsAsync(cancellationToken)).Assemblies
+                .SingleOrDefault(assembly => assembly.Id == assemblyId);
+            var verifiedSnapshot = await LoadImpactSnapshotAsync(gateway, verifiedRow, [], cancellationToken);
             if (verified is null || !string.Equals(verified.Name, inspection.Identity.Name, StringComparison.Ordinal)
                 || !string.Equals(verified.Version, inspection.Identity.Version, StringComparison.Ordinal)
                 || !string.Equals(verified.Culture ?? "neutral", inspection.Identity.Culture, StringComparison.Ordinal)
                 || !string.Equals(verified.PublicKeyToken ?? "", inspection.Identity.PublicKeyToken, StringComparison.Ordinal)
                 || verified.IsolationMode != draft.RequestedIsolationMode
                 || verified.SourceType != draft.RequestedSourceType
-                || (verified.SourceHash is not null && !string.Equals(verified.SourceHash, inspection.Sha256, StringComparison.OrdinalIgnoreCase))
-                || (verified.ContentSize is not null && verified.ContentSize != inspection.Size)
+                || !verifiedSnapshot.IsComplete
+                || !string.Equals(verifiedSnapshot.Sha256, inspection.Sha256, StringComparison.OrdinalIgnoreCase)
+                || verifiedSnapshot.Size != inspection.Size
                 || !TypesMatch(verified, inspection))
                 return new AssemblyMutationExecutionDto("verificationFailed", false, verified);
             return new AssemblyMutationExecutionDto("succeededAndVerified", true, verified);
@@ -148,4 +155,47 @@ public sealed class PluginAssemblyMutationService(
         await content.CopyToAsync(memory, cancellationToken);
         return memory.ToArray();
     }
+
+    private async Task<LoadedImpactSnapshot> LoadImpactSnapshotAsync(
+        IPluginRegistrationGateway gateway,
+        PluginAssemblyRow? assembly,
+        IReadOnlyList<PluginTypeRow> handlers,
+        CancellationToken cancellationToken)
+    {
+        if (assembly is null) return new(null, null, [], [], true);
+        var snapshot = await gateway.RetrieveAssemblyImpactSnapshotAsync(assembly, handlers, cancellationToken);
+        try
+        {
+            if (!snapshot.IsComplete || snapshot.Content.Length == 0)
+                return new(null, null, snapshot.Dependencies, [], false);
+            AssemblyInspectionDto oldInspection;
+            try
+            {
+                oldInspection = await inspector.InspectAsync(new MemoryStream(snapshot.Content, writable: false),
+                    $"{assembly.Name}.dll", snapshot.Content.Length, cancellationToken);
+            }
+            catch (AssemblyInspectionValidationException)
+            {
+                return new(null, null, snapshot.Dependencies, [], false);
+            }
+            var arguments = oldInspection.WorkflowActivities.SelectMany(activity =>
+            {
+                var handler = handlers.SingleOrDefault(type => type.IsWorkflowActivity && type.TypeName == activity.TypeName);
+                return handler is null ? [] : activity.Arguments.Select(argument => new PluginWorkflowArgumentRow(
+                    handler.Id, argument.Name, argument.TypeName, argument.Direction, argument.IsRequired, argument.ReferenceTarget));
+            }).ToArray();
+            return new(oldInspection.Sha256, oldInspection.Size, snapshot.Dependencies, arguments, true);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(snapshot.Content);
+        }
+    }
+
+    private sealed record LoadedImpactSnapshot(
+        string? Sha256,
+        long? Size,
+        IReadOnlyList<PluginHandlerDependencyRow> Dependencies,
+        IReadOnlyList<PluginWorkflowArgumentRow> WorkflowArguments,
+        bool IsComplete);
 }

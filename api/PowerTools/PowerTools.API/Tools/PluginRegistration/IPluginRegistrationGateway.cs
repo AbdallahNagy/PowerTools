@@ -19,6 +19,12 @@ public interface IPluginRegistrationGateway
         CancellationToken cancellationToken) =>
         Task.FromException<Guid>(new NotSupportedException(
             "Assembly update is not supported by this gateway."));
+
+    Task<PluginAssemblyImpactSnapshot> RetrieveAssemblyImpactSnapshotAsync(
+        PluginAssemblyRow assembly,
+        IReadOnlyList<PluginTypeRow> handlers,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(new PluginAssemblyImpactSnapshot([], [], false));
 }
 
 public interface IPluginRegistrationGatewayFactory
@@ -69,6 +75,11 @@ public sealed record PluginWorkflowArgumentRow(
     WorkflowArgumentDirection Direction,
     bool IsRequired,
     string? ReferenceTarget);
+
+public sealed record PluginAssemblyImpactSnapshot(
+    byte[] Content,
+    IReadOnlyList<PluginHandlerDependencyRow> Dependencies,
+    bool IsComplete);
 
 public sealed record PluginTypeRow(
     Guid Id,
