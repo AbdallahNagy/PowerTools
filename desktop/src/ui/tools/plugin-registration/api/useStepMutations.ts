@@ -13,13 +13,21 @@ export interface StepDraft {
 }
 export interface StepOptions {
   messages: { id: string; name: string }[];
-  filters: { id: string; messageId: string; primaryTable: string; secondaryTable: string | null; primaryIdAttribute: string }[];
+  filters: { id: string; messageId: string; primaryTable: string; secondaryTable: string | null; primaryIdAttribute: string; availableAttributes: string[] }[];
   enabledUsers: { id: string; name: string }[];
+}
+export interface StepEditDetails extends StepDraft { stepId: string; secureConfigExists: boolean; }
+export interface StepPublicValues {
+  name: string; message: string; primaryTable: string; secondaryTable: string | null;
+  stage: number; mode: number; rank: number; filteringAttributes: string[];
+  impersonatingUserId: string | null; unsecureConfiguration: string | null;
+  secureConfigExists: boolean; isEnabled: boolean;
 }
 export interface StepPreflight {
   draft: StepDraft;
-  plan: { token: string; blockers: { code: string; message: string }[]; warnings: { code: string; message: string }[]; confirmation: { message: string; requiredText?: string | null } };
-  after: { message: string; primaryTable: string; secondaryTable: string | null; stage: number; mode: number; rank: number; filteringAttributes: string[]; secureConfigExists: boolean };
+  plan: { token: string; blockers: { code: string; message: string }[]; warnings: { code: string; message: string }[]; changes: { field: string; before: string | null; after: string | null }[]; confirmation: { message: string; requiredText?: string | null } };
+  before: StepPublicValues | null;
+  after: StepPublicValues;
 }
 
 function route(operation: StepOperation, stepId: string | null, action: "preflight" | "execute") {
@@ -52,4 +60,11 @@ export function useStepMutations(connectionName: string | null, refreshCatalog: 
     },
   });
   return { options, preflight, execute };
+}
+
+export function useStepEditDetails(connectionName: string | null, stepId: string | null) {
+  const meta = { connectionName: connectionName ?? undefined };
+  return useQuery({ queryKey: ["plugin-registration", "step-edit-details", connectionName, stepId],
+    queryFn: () => apiGet<StepEditDetails>(`/api/plugin-registration/steps/${stepId}/edit-details`, { meta }),
+    enabled: Boolean(connectionName && stepId), staleTime: 0 });
 }

@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
@@ -60,6 +60,39 @@ describe("Step mutations", () => {
     expect(stateDialog).toHaveTextContent("Development");
     expect(stateDialog).toHaveTextContent("Update · account · PostOperation");
   });
+
+  it("initializes update from safe fresh details and refreshes only after verified execute", async () => {
+    let catalogReads = 0;
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/catalog", () => { catalogReads++; return HttpResponse.json(catalog); }),
+      http.get("http://localhost/api/plugin-registration/steps/step-1/edit-details", () => HttpResponse.json({
+        stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
+        primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 3,
+        filteringAttributes: ["name"], impersonatingUserId: "user-1", unsecureConfiguration: "public-config",
+        secureConfigExists: true, expectedVersions: { "plugin-1": 4, "step-1": 7 },
+      })),
+    );
+    apiPostMock.mockImplementation((url: string) => url.endsWith("/preflight") ? Promise.resolve({
+      draft: {}, before: { message: "Update", primaryTable: "account", stage: 40, mode: 0, rank: 3, filteringAttributes: ["name"], impersonatingUserId: "user-1", unsecureConfiguration: "public-config", secureConfigExists: true, isEnabled: true },
+      after: { message: "Update", primaryTable: "account", stage: 40, mode: 0, rank: 3, filteringAttributes: ["name"], impersonatingUserId: "user-1", unsecureConfiguration: "public-config", secureConfigExists: true, isEnabled: true },
+      plan: { token: "signed", blockers: [], warnings: [], changes: [{ field: "rank", before: "3", after: "3" }], confirmation: { message: "Confirm" } },
+    }) : Promise.resolve({ outcome: "succeededAndVerified", succeededAndVerified: true, step: catalog.assemblies[0].handlers[0].steps[0] }));
+    const { queryClient } = renderPage();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Update step" });
+    expect(await within(dialog).findByLabelText("Filtering attributes")).toHaveValue("name");
+    expect(within(dialog).getByLabelText("Impersonating user")).toHaveValue("user-1");
+    expect(within(dialog).getByLabelText("Unsecure configuration")).toHaveValue("public-config");
+    expect(dialog).not.toHaveTextContent("stored-secret");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Preview changes" }));
+    const preview = await screen.findByRole("dialog", { name: "Step impact preview" });
+    expect(preview).toHaveTextContent("Rank: 3 → 3");
+    await userEvent.click(within(preview).getByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["plugin-registration", "catalog", "Development"] }));
+    expect(catalogReads).toBeGreaterThanOrEqual(2);
+  });
 });
 
 function useResponses() {
@@ -69,6 +102,12 @@ function useResponses() {
       messages: [{ id: "message-update", name: "Update" }],
       filters: [{ id: "filter-account", messageId: "message-update", primaryTable: "account", secondaryTable: null, primaryIdAttribute: "accountid" }],
       enabledUsers: [{ id: "user-1", name: "Service User" }],
+    })),
+    http.get("http://localhost/api/plugin-registration/steps/:stepId/edit-details", () => HttpResponse.json({
+      stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
+      primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 1, filteringAttributes: [],
+      impersonatingUserId: null, unsecureConfiguration: null, secureConfigExists: true,
+      expectedVersions: { "plugin-1": 4, "step-1": 7 },
     })),
   );
   apiPostMock.mockResolvedValue({

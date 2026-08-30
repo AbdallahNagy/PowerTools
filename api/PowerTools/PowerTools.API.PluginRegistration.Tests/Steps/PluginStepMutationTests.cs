@@ -48,6 +48,40 @@ public sealed class PluginStepMutationTests
         Assert.Equal(0, unblockedGateway.MutationCalls);
     }
 
+    [Fact]
+    public async Task State_preflight_uses_fresh_before_values_and_execute_carries_row_versions_to_write_boundary()
+    {
+        var gateway = new StatefulStepGateway("disable");
+        var service = Service();
+        var draft = gateway.Draft("disable") with { Stage = 10, Mode = 1, Rank = 99, FilteringAttributes = ["bogus"] };
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", "disable", draft, CancellationToken.None);
+
+        Assert.True(preflight.Before?.IsEnabled);
+        Assert.False(preflight.After.IsEnabled);
+        Assert.Equal(40, preflight.After.Stage);
+        Assert.Equal(0, preflight.After.Mode);
+        await service.ExecuteAsync(gateway, "https://contoso.test", "disable", preflight.Plan.Token,
+            draft, null, CancellationToken.None);
+        Assert.Equal(7, gateway.LastCommand?.ExpectedStepVersion);
+        Assert.Equal(4, gateway.LastCommand?.ExpectedPluginVersion);
+        Assert.True(gateway.LastCommand?.Before.IsEnabled);
+    }
+
+    [Fact]
+    public async Task Dependency_blocks_unregister_but_not_update_and_write_time_concurrency_stops_send()
+    {
+        var gateway = new StatefulStepGateway("update") { HasDependency = true };
+        var service = Service();
+        var draft = gateway.Draft("update");
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", "update", draft, CancellationToken.None);
+        Assert.DoesNotContain(preflight.Plan.Blockers, item => item.Code == "dependency");
+        gateway.WriteRace = true;
+
+        await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => service.ExecuteAsync(gateway,
+            "https://contoso.test", "update", preflight.Plan.Token, draft, null, CancellationToken.None));
+        Assert.Equal(0, gateway.MutationCalls);
+    }
+
     private static PluginStepMutationService Service() => new(new PluginStepValidator(),
         new PluginRegistrationPreflightService(new PluginRegistrationPlanSigner("test-secret", TimeProvider.System)));
 
@@ -61,8 +95,10 @@ public sealed class PluginStepMutationTests
         private StepDraftDto? appliedDraft;
         public string StepName => "Update account";
         public bool HasDependency { get; init; }
+        public bool WriteRace { get; set; }
         public int MutationCalls { get; private set; }
         public int ReadsAfterMutation { get; private set; }
+        public PluginStepMutationCommand? LastCommand { get; private set; }
 
         public StepDraftDto Draft(string requestedOperation) => new(pluginId, Guid.NewGuid(), Guid.NewGuid(), "account", null,
             40, 0, 1, ["name"], null, null, "replacement-secret",
@@ -86,15 +122,27 @@ public sealed class PluginStepMutationTests
                 HasDependency ? [new ComponentDependencyDto(Guid.NewGuid(), "External", "Workflow", null, false, true, 1)] : [],
                 appliedDraft?.SdkMessageId ?? draft.SdkMessageId,
                 appliedDraft?.SdkMessageFilterId ?? draft.SdkMessageFilterId,
-                appliedDraft?.FilteringAttributes ?? draft.FilteringAttributes,
-                appliedDraft?.ImpersonatingUserId ?? draft.ImpersonatingUserId,
-                appliedDraft?.UnsecureConfiguration ?? draft.UnsecureConfiguration));
+                appliedDraft?.FilteringAttributes ?? ["name"],
+                appliedDraft?.ImpersonatingUserId,
+                appliedDraft?.UnsecureConfiguration ?? "public",
+                40, 0, 1, enabled)
+            {
+                AvailableAttributes = ["accountid", "name"],
+                IsOrdinaryPlugin = true,
+                IsParentCustomizable = true
+            });
 
-        public Task<Guid> MutateStepAsync(string requestedOperation, Guid? targetStepId, StepDraftDto draft, CancellationToken cancellationToken)
+        public Task<StepEditDetailsDto> RetrieveStepEditDetailsAsync(Guid requestedStepId, CancellationToken cancellationToken) =>
+            Task.FromResult(new StepEditDetailsDto(stepId, pluginId, Guid.NewGuid(), Guid.NewGuid(), "account", null,
+                40, 0, 1, ["name"], null, "public", true,
+                new Dictionary<Guid, long> { [pluginId] = 4, [stepId] = 7 }));
+
+        public Task<Guid> MutateStepAsync(PluginStepMutationCommand command, CancellationToken cancellationToken)
         {
-            MutationCalls++; mutated = true; appliedDraft = draft;
-            exists = requestedOperation != "unregister";
-            enabled = requestedOperation == "enable" || (requestedOperation != "disable" && enabled);
+            if (WriteRace) throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
+            MutationCalls++; mutated = true; appliedDraft = command.Draft; LastCommand = command;
+            exists = command.Operation != "unregister";
+            enabled = command.Operation == "enable" || (command.Operation != "disable" && enabled);
             return Task.FromResult(stepId);
         }
     }

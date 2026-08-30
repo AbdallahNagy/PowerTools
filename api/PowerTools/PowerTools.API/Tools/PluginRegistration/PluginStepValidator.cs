@@ -19,6 +19,13 @@ public sealed class PluginStepValidator
         if (!state.MessageIsSupported || !state.FilterIsSupported
             || !string.Equals(draft.PrimaryTable, state.PrimaryTable, StringComparison.OrdinalIgnoreCase))
             blockers.Add(new("unsupportedMessageFilter", "The selected message and table filter are not supported."));
+        if (!string.Equals(draft.SecondaryTable, state.SecondaryTable, StringComparison.OrdinalIgnoreCase))
+            blockers.Add(new("unsupportedSecondaryTable", "The selected secondary table does not match the message filter."));
+        if (attributes.Any(attribute => !state.AvailableAttributes.Contains(attribute, StringComparer.OrdinalIgnoreCase)))
+            blockers.Add(new("invalidFilteringAttribute", "Every filtering attribute must exist on the primary table."));
+        if (!state.IsOrdinaryPlugin) blockers.Add(new("ordinaryPluginRequired", "Steps require an ordinary plug-in class."));
+        if (state.IsParentManaged) blockers.Add(new("managedParent", "The parent plug-in is managed."));
+        if (!state.IsParentCustomizable) blockers.Add(new("nonCustomizableParent", "The parent plug-in is not customizable."));
         if (draft.Stage is not (10 or 20 or 40)) blockers.Add(new("invalidStage", "Select PreValidation, PreOperation, or PostOperation."));
         if (draft.Mode is not (0 or 1) || draft.Mode == 1 && draft.Stage != 40)
             blockers.Add(new("invalidMode", "Asynchronous execution is supported only for PostOperation."));
@@ -40,8 +47,8 @@ public sealed class PluginStepValidator
             if (attributes.Length == 0)
                 warnings.Add(new("updateWithoutFilteringAttributes", "Update steps should select filtering attributes to avoid unnecessary execution."));
         }
-        return new(draft, new(state.Message, state.PrimaryTable, draft.SecondaryTable, draft.Stage, draft.Mode,
+        return new(draft, new(state.StepName ?? "New step", state.Message, state.PrimaryTable, draft.SecondaryTable, draft.Stage, draft.Mode,
             draft.Rank, attributes, draft.ImpersonatingUserId, draft.UnsecureConfiguration,
-            state.SecureConfigExists || !string.IsNullOrEmpty(draft.ReplacementSecureConfiguration)), warnings, blockers);
+            state.SecureConfigExists || !string.IsNullOrEmpty(draft.ReplacementSecureConfiguration), state.CurrentEnabled), warnings, blockers);
     }
 }

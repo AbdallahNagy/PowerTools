@@ -41,22 +41,26 @@ public sealed class DataversePluginRegistrationGateway(
             }
         }, cancellationToken);
         var primaryIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var availableAttributes = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
         foreach (var logicalName in filters.Select(row => Text(row, "primaryobjecttypecode"))
             .Where(value => value.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var response = (RetrieveEntityResponse)await service.ExecuteAsync(new RetrieveEntityRequest
             {
                 LogicalName = logicalName,
-                EntityFilters = EntityFilters.Entity,
+                EntityFilters = EntityFilters.Entity | EntityFilters.Attributes,
                 RetrieveAsIfPublished = true
             }, cancellationToken);
             primaryIds[logicalName] = response.EntityMetadata.PrimaryIdAttribute;
+            availableAttributes[logicalName] = response.EntityMetadata.Attributes
+                .Select(attribute => attribute.LogicalName).Where(name => !string.IsNullOrWhiteSpace(name)).ToArray()!;
         }
         return new(
             messages.Select(row => new StepOptionDto(row.Id, Text(row, "name"))).OrderBy(row => row.Name).ToArray(),
             filters.Select(row => new StepMessageFilterOptionDto(row.Id, LookupId(row, "sdkmessageid") ?? Guid.Empty,
                 Text(row, "primaryobjecttypecode"), NullableText(row, "secondaryobjecttypecode"),
-                primaryIds.GetValueOrDefault(Text(row, "primaryobjecttypecode"), $"{Text(row, "primaryobjecttypecode")}id"))).ToArray(),
+                primaryIds.GetValueOrDefault(Text(row, "primaryobjecttypecode"), $"{Text(row, "primaryobjecttypecode")}id"),
+                availableAttributes.GetValueOrDefault(Text(row, "primaryobjecttypecode"), []))).ToArray(),
             users.Select(row => new StepOptionDto(row.Id, Text(row, "fullname"))).OrderBy(row => row.Name).ToArray());
     }
 
@@ -70,6 +74,7 @@ public sealed class DataversePluginRegistrationGateway(
         var userValid = !draft.ImpersonatingUserId.HasValue || options.EnabledUsers.Any(item => item.Id == draft.ImpersonatingUserId);
         var rows = await RetrieveCatalogRowsAsync(cancellationToken);
         var target = targetStepId is { } id ? rows.Steps.SingleOrDefault(item => item.Id == id) : null;
+        var plugin = rows.Types.SingleOrDefault(item => item.Id == pluginTypeId);
         Entity? targetDetails = null;
         if (targetStepId is { } detailId)
             targetDetails = await service.RetrieveAsync("sdkmessageprocessingstep", detailId,
@@ -92,17 +97,53 @@ public sealed class DataversePluginRegistrationGateway(
             targetDetails is null ? null : (NullableText(targetDetails, "filteringattributes") ?? "")
                 .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             targetDetails is null ? null : LookupId(targetDetails, "impersonatinguserid"),
-            targetDetails is null ? null : NullableText(targetDetails, "configuration"));
+            targetDetails is null ? null : NullableText(targetDetails, "configuration"),
+            target?.Stage ?? draft.Stage, target?.Mode ?? draft.Mode, target?.Rank ?? draft.Rank,
+            target?.IsEnabled ?? true)
+        {
+            SecondaryTable = filter?.SecondaryTable,
+            AvailableAttributes = filter?.AvailableAttributes ?? [],
+            IsOrdinaryPlugin = plugin is { IsWorkflowActivity: false },
+            IsParentManaged = plugin?.IsManaged ?? false,
+            IsParentCustomizable = plugin?.IsCustomizable ?? false
+        };
     }
 
-    public async Task<Guid> MutateStepAsync(string operation, Guid? targetStepId, StepDraftDto draft,
+    public async Task<StepEditDetailsDto> RetrieveStepEditDetailsAsync(Guid stepId, CancellationToken cancellationToken)
+    {
+        var rows = await RetrieveCatalogRowsAsync(cancellationToken);
+        var step = rows.Steps.Single(item => item.Id == stepId);
+        var plugin = rows.Types.Single(item => item.Id == step.PluginTypeId);
+        var details = await service.RetrieveAsync("sdkmessageprocessingstep", stepId,
+            new ColumnSet("sdkmessageid", "sdkmessagefilterid", "filteringattributes", "impersonatinguserid",
+                "configuration", "sdkmessageprocessingstepsecureconfigid"), cancellationToken);
+        var options = await RetrieveStepOptionsAsync(cancellationToken);
+        var filterId = LookupId(details, "sdkmessagefilterid") ?? Guid.Empty;
+        var filter = options.Filters.Single(item => item.Id == filterId);
+        return new(stepId, plugin.Id, LookupId(details, "sdkmessageid") ?? Guid.Empty, filterId,
+            filter.PrimaryTable, filter.SecondaryTable, step.Stage, step.Mode, step.Rank,
+            (NullableText(details, "filteringattributes") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+            LookupId(details, "impersonatinguserid"), NullableText(details, "configuration"),
+            LookupId(details, "sdkmessageprocessingstepsecureconfigid").HasValue,
+            new Dictionary<Guid, long> { [plugin.Id] = plugin.VersionNumber, [step.Id] = step.VersionNumber });
+    }
+
+    public async Task<Guid> MutateStepAsync(PluginStepMutationCommand command,
         CancellationToken cancellationToken)
     {
+        var operation = command.Operation;
+        var targetStepId = command.TargetStepId;
+        var draft = command.Draft;
+        var parent = await service.RetrieveAsync("plugintype", draft.PluginTypeId, new ColumnSet("versionnumber"), cancellationToken);
+        if (Number(parent, "versionnumber") != command.ExpectedPluginVersion)
+            throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
         var stepId = targetStepId ?? Guid.NewGuid();
         var requests = new OrganizationRequestCollection();
         if (operation == "unregister")
         {
-            requests.Add(new DeleteRequest { Target = new EntityReference("sdkmessageprocessingstep", stepId) });
+            requests.Add(new DeleteRequest { Target = new EntityReference("sdkmessageprocessingstep", stepId)
+                { RowVersion = command.ExpectedStepVersion?.ToString(System.Globalization.CultureInfo.InvariantCulture) },
+                ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
         }
         else
         {
@@ -114,6 +155,8 @@ public sealed class DataversePluginRegistrationGateway(
                 ["stage"] = new OptionSetValue(draft.Stage), ["mode"] = new OptionSetValue(draft.Mode),
                 ["rank"] = draft.Rank, ["filteringattributes"] = string.Join(',', draft.FilteringAttributes)
             };
+            if (command.ExpectedStepVersion is { } expectedStepVersion)
+                entity.RowVersion = expectedStepVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
             if (draft.UnsecureConfiguration is not null)
                 entity["configuration"] = draft.UnsecureConfiguration;
             if (draft.ImpersonatingUserId is { } userId)
@@ -131,7 +174,7 @@ public sealed class DataversePluginRegistrationGateway(
                     entity["statecode"] = new OptionSetValue(operation == "enable" ? 0 : 1);
                     entity["statuscode"] = new OptionSetValue(operation == "enable" ? 1 : 2);
                 }
-                requests.Add(new UpdateRequest { Target = entity });
+                requests.Add(new UpdateRequest { Target = entity, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
             }
             if (draft.ReplacementSecureConfiguration is not null)
             {

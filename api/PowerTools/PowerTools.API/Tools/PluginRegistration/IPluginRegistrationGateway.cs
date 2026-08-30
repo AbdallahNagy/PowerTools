@@ -33,7 +33,10 @@ public interface IPluginRegistrationGateway
         Guid pluginTypeId, Guid? targetStepId, StepDraftDto draft, CancellationToken cancellationToken) =>
         Task.FromException<PluginStepPreflightState>(new NotSupportedException("Step preflight is not supported by this gateway."));
 
-    Task<Guid> MutateStepAsync(string operation, Guid? targetStepId, StepDraftDto draft,
+    Task<StepEditDetailsDto> RetrieveStepEditDetailsAsync(Guid stepId, CancellationToken cancellationToken) =>
+        Task.FromException<StepEditDetailsDto>(new NotSupportedException("Step edit details are not supported by this gateway."));
+
+    Task<Guid> MutateStepAsync(PluginStepMutationCommand command,
         CancellationToken cancellationToken) =>
         Task.FromException<Guid>(new NotSupportedException("Step mutation is not supported by this gateway."));
 }

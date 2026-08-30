@@ -82,6 +82,14 @@ public static class PluginRegistrationEndpoints
             return Results.Ok(await gateway.RetrieveStepOptionsAsync(cancellationToken));
         }).WithName("GetPluginStepOptions");
 
+        group.MapGet("/steps/{stepId:guid}/edit-details", async (Guid stepId, HttpContext context,
+            IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+            CancellationToken cancellationToken) =>
+        {
+            var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+            return Results.Ok(await gateway.RetrieveStepEditDetailsAsync(stepId, cancellationToken));
+        }).WithName("GetPluginStepEditDetails");
+
         group.MapPost("/steps/create/preflight", (StepDraftDto draft, HttpContext context,
             IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
             ICurrentConnection connection, PluginStepMutationService mutations, CancellationToken cancellationToken) =>

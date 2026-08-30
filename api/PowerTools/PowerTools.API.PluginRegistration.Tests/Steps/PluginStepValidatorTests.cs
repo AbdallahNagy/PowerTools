@@ -72,6 +72,17 @@ public sealed class PluginStepValidatorTests
         Assert.True(result.PublicAfter.SecureConfigExists);
     }
 
+    [Fact]
+    public void Secondary_table_unknown_attributes_and_non_plugin_or_locked_parent_are_blocked()
+    {
+        var state = State() with { SecondaryTable = "contact", AvailableAttributes = ["name", "accountid"],
+            IsOrdinaryPlugin = false, IsParentManaged = true, IsParentCustomizable = false };
+        var result = new PluginStepValidator().Validate(Draft(attributes: ["missing"]) with { SecondaryTable = "lead" }, state);
+
+        Assert.Equal(new[] { "invalidFilteringAttribute", "managedParent", "nonCustomizableParent", "ordinaryPluginRequired", "unsupportedSecondaryTable" },
+            result.Blockers.Select(item => item.Code).Order());
+    }
+
     private static PluginStepValidationResult Validate(StepDraftDto draft) => new PluginStepValidator().Validate(draft, State());
 
     private static StepDraftDto Draft(int stage = 40, int mode = 0, int rank = 1,
@@ -80,6 +91,6 @@ public sealed class PluginStepValidatorTests
             stage, mode, rank, attributes ?? ["name"], userId, unsecure, secure,
             new Dictionary<Guid, long> { [PluginId] = expected });
 
-    private static PluginStepValidationState State() => new("Update", "account", "accountid", true, true, true,
-        false, false, true, false, 7, PluginId, null);
+    private static PluginStepValidationState State() => new(null, "Update", "account", null, "accountid", ["accountid", "name", "telephone1"],
+        true, true, true, true, false, true, false, false, true, false, true, 7, PluginId, null);
 }
