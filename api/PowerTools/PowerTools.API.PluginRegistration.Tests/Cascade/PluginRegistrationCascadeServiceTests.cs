@@ -72,6 +72,26 @@ public sealed class PluginRegistrationCascadeServiceTests
         Assert.Contains(preview.Plan.Blockers, blocker => blocker.Code == "transactional_cascade_unsupported");
     }
 
+    [Fact]
+    public async Task Assembly_preflight_queries_every_planned_component_and_blocks_external_dependents()
+    {
+        var fixture = CascadeFixture.Create();
+        fixture.Gateway.CascadeDependencies = [
+            new(fixture.Assembly.Id, "Assembly consumer", "Custom API", true, true, Guid.NewGuid()),
+            new(fixture.Step.Id, "Step consumer", "Workflow", false, true, Guid.NewGuid()),
+            new(fixture.Image.Id, "Image consumer", "External component", false, true, Guid.NewGuid())
+        ];
+
+        var preview = await fixture.Service.CreatePreflightAsync(fixture.Gateway, "Dev", new CascadeUnregisterDraftDto(
+            CascadeTargetKind.Assembly, fixture.Assembly.Id, fixture.ExpectedVersions), CancellationToken.None);
+
+        Assert.Equal([fixture.Image.Id, fixture.Step.Id, fixture.Plugin.Id, fixture.Activity.Id, fixture.Assembly.Id],
+            Assert.Single(fixture.Gateway.CascadeRequests).Select(item => item.Id));
+        Assert.Equal(3, preview.Impact.ExternalDependencies.Count);
+        Assert.Equal(3, preview.Plan.Blockers.Count(blocker => blocker.Code == "external_dependency"));
+        Assert.DoesNotContain(preview.DeletePlan, item => fixture.Gateway.CascadeDependencies.Any(dependency => dependency.ComponentId == item.Id));
+    }
+
     private sealed class CascadeFixture
     {
         public required PluginRegistrationCascadeService Service { get; init; }
@@ -117,7 +137,15 @@ public sealed class PluginRegistrationCascadeServiceTests
     {
         private PluginRegistrationRows current = rows;
         public int TransactionCount { get; private set; }
+        public IReadOnlyList<PluginHandlerDependencyRow> CascadeDependencies { get; set; } = [];
+        public List<IReadOnlyList<CascadeDeleteRequestDto>> CascadeRequests { get; } = [];
         public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) => Task.FromResult(current);
+        public Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveCascadeDependenciesAsync(
+            IReadOnlyList<CascadeDeleteRequestDto> deletes, CancellationToken cancellationToken)
+        {
+            CascadeRequests.Add(deletes);
+            return Task.FromResult(CascadeDependencies);
+        }
         public Task<bool> SupportsCascadeTransactionAsync(CancellationToken cancellationToken) => Task.FromResult(environmentSupportsTransaction);
         public Task ExecuteCascadeTransactionAsync(IReadOnlyList<CascadeDeleteRequestDto> deletes, CancellationToken cancellationToken)
         {

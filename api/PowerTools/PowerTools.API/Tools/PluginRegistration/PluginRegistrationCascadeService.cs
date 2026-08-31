@@ -10,7 +10,7 @@ public sealed class PluginRegistrationCascadeService(
     public async Task<CascadeUnregisterPreflightDto> CreatePreflightAsync(IPluginRegistrationGateway gateway,
         string environment, CascadeUnregisterDraftDto draft, CancellationToken cancellationToken)
     {
-        var snapshot = dependencies.Build(await gateway.RetrieveCatalogRowsAsync(cancellationToken), draft);
+        var snapshot = await BuildSnapshotAsync(gateway, draft, cancellationToken);
         var plan = BuildDeletePlan(snapshot);
         ValidateExpectedVersions(draft, plan);
         var capability = capabilities.GetCapabilities(await gateway.SupportsCascadeTransactionAsync(cancellationToken)).TransactionalCascadeUnregister;
@@ -26,14 +26,14 @@ public sealed class PluginRegistrationCascadeService(
     public async Task<CascadeUnregisterExecutionDto> ExecuteAsync(IPluginRegistrationGateway gateway, string environment,
         string token, CascadeUnregisterDraftDto draft, string? typedName, bool acknowledged, CancellationToken cancellationToken)
     {
-        var initial = dependencies.Build(await gateway.RetrieveCatalogRowsAsync(cancellationToken), draft);
+        var initial = await BuildSnapshotAsync(gateway, draft, cancellationToken);
         var initialPlan = BuildDeletePlan(initial);
         ValidateExpectedVersions(draft, initialPlan);
         var capability = capabilities.GetCapabilities(await gateway.SupportsCascadeTransactionAsync(cancellationToken)).TransactionalCascadeUnregister;
         EnsureExecutable(initial, capability, draft, typedName, acknowledged);
         await preflight.ValidateExecutionAsync(token, Request(environment, draft, initialPlan, initial.ExternalDependencies, capability), async ct =>
         {
-            var fresh = dependencies.Build(await gateway.RetrieveCatalogRowsAsync(ct), draft);
+            var fresh = await BuildSnapshotAsync(gateway, draft, ct);
             var freshPlan = BuildDeletePlan(fresh);
             ValidateExpectedVersions(draft, freshPlan);
             EnsureExecutable(fresh, capability, draft, typedName, acknowledged);
@@ -43,6 +43,20 @@ public sealed class PluginRegistrationCascadeService(
         var verified = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
         var remaining = PlannedIds(initialPlan).Intersect(AllIds(verified)).ToArray();
         return remaining.Length == 0 ? new("succeededAndVerified", true) : new("verificationFailed", false, MapImpact(initial));
+    }
+
+    private async Task<CascadeDependencySnapshot> BuildSnapshotAsync(IPluginRegistrationGateway gateway,
+        CascadeUnregisterDraftDto draft, CancellationToken cancellationToken)
+    {
+        var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
+        var initial = dependencies.Build(rows, draft);
+        var plan = BuildDeletePlan(initial);
+        var cascadeDependencies = await gateway.RetrieveCascadeDependenciesAsync(plan, cancellationToken);
+        if (cascadeDependencies.Count == 0) return initial;
+        var augmented = new PluginRegistrationRows(rows.Assemblies, rows.Types, rows.Steps, rows.Images,
+            rows.Dependencies.Concat(cascadeDependencies).ToArray(), rows.WorkflowArguments,
+            rows.HasCompleteAssemblyImpactData);
+        return dependencies.Build(augmented, draft);
     }
 
     private static IReadOnlyList<CascadeDeleteRequestDto> BuildDeletePlan(CascadeDependencySnapshot snapshot) =>

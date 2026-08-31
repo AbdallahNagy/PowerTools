@@ -42,6 +42,19 @@ public sealed class DataversePluginRegistrationGateway(
         }, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveCascadeDependenciesAsync(
+        IReadOnlyList<CascadeDeleteRequestDto> deletes, CancellationToken cancellationToken)
+    {
+        var dependencies = new List<PluginHandlerDependencyRow>();
+        foreach (var delete in deletes)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            dependencies.AddRange(await RetrieveDependenciesForDeleteAsync(delete.Id,
+                CascadeComponentType(delete.LogicalName), cancellationToken));
+        }
+        return dependencies;
+    }
+
     public async Task<StepOptionsDto> RetrieveStepOptionsAsync(CancellationToken cancellationToken)
     {
         var messages = await RetrieveAllPagesAsync(new QueryExpression("sdkmessage")
@@ -455,7 +468,7 @@ public sealed class DataversePluginRegistrationGateway(
         foreach (var handler in mappedTypes)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            dependencies.AddRange(await RetrieveHandlerDependenciesAsync(handler.Id, cancellationToken));
+            dependencies.AddRange(await RetrieveDependenciesForDeleteAsync(handler.Id, 90, cancellationToken));
         }
         dependencies = await EnrichWorkflowDependenciesAsync(dependencies, cancellationToken);
         return new PluginRegistrationRows(mappedAssemblies, mappedTypes, mappedSteps, mappedImages,
@@ -510,19 +523,29 @@ public sealed class DataversePluginRegistrationGateway(
         return new PluginHandlerDependencyRow(handlerId, name, label, isCustomApi, id != Guid.Empty, id);
     }
 
-    private async Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveHandlerDependenciesAsync(Guid handlerId,
+    private async Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveDependenciesForDeleteAsync(Guid componentId,
+        int componentType,
         CancellationToken cancellationToken)
     {
         var request = new OrganizationRequest("RetrieveDependenciesForDelete")
         {
-            ["ComponentType"] = 90,
-            ["ObjectId"] = handlerId
+            ["ComponentType"] = componentType,
+            ["ObjectId"] = componentId
         };
         var response = await service.ExecuteAsync(request, cancellationToken);
         if (!response.Results.TryGetValue("EntityDependencies", out var value) || value is not EntityCollection dependencies)
             return [];
-        return dependencies.Entities.Select(dependency => MapDependency(handlerId, dependency)).ToArray();
+        return dependencies.Entities.Select(dependency => MapDependency(componentId, dependency)).ToArray();
     }
+
+    private static int CascadeComponentType(string logicalName) => logicalName switch
+    {
+        "pluginassembly" => 91,
+        "plugintype" => 90,
+        "sdkmessageprocessingstep" => 92,
+        "sdkmessageprocessingstepimage" => 93,
+        _ => throw new ArgumentException("The cascade delete plan contains an unsupported component type.", nameof(logicalName))
+    };
 
     private async Task<List<PluginHandlerDependencyRow>> EnrichWorkflowDependenciesAsync(
         IReadOnlyList<PluginHandlerDependencyRow> dependencies, CancellationToken cancellationToken)

@@ -26,7 +26,7 @@ public sealed class PluginRegistrationDependencyService
         var images = rows.Images.Where(value => value.PluginStepId is { } id && stepIds.Contains(id)).OrderBy(value => value.Id).ToArray();
         var ownedIds = handlers.Select(value => value.Id).Concat(steps.Select(value => value.Id)).Concat(images.Select(value => value.Id))
             .Append(assembly?.Id ?? Guid.Empty).Where(id => id != Guid.Empty).ToHashSet();
-        var dependencies = rows.Dependencies.Where(value => handlers.Any(handler => handler.Id == value.HandlerId))
+        var dependencies = rows.Dependencies.Where(value => ownedIds.Contains(value.HandlerId))
             .Where(value => value.IsExternal || value.ComponentId == Guid.Empty || !ownedIds.Contains(value.ComponentId))
             .OrderBy(value => value.ComponentId).ThenBy(value => value.ComponentTypeLabel, StringComparer.Ordinal).ThenBy(value => value.Name, StringComparer.Ordinal)
             .Select(value => new ComponentDependencyDto(value.ComponentId, value.Name, value.ComponentTypeLabel,

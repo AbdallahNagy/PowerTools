@@ -54,6 +54,10 @@ public interface IPluginRegistrationGateway
         CancellationToken cancellationToken) =>
         Task.FromException(new NotSupportedException("Transactional cascade unregister is not supported by this gateway."));
 
+    Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveCascadeDependenciesAsync(
+        IReadOnlyList<CascadeDeleteRequestDto> deletes, CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<PluginHandlerDependencyRow>>([]);
+
     // This remains false until the release gate has a safe, non-mutating Dataverse capability probe.
     Task<bool> SupportsCascadeTransactionAsync(CancellationToken cancellationToken) => Task.FromResult(false);
 }

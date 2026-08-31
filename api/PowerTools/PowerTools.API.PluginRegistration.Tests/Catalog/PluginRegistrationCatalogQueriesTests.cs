@@ -199,6 +199,24 @@ public sealed class PluginRegistrationCatalogQueriesTests
         Assert.Equal([pluginTypeId], handler.DependencyObjectIds);
     }
 
+    [Fact]
+    public async Task Gateway_uses_exact_component_type_codes_for_every_cascade_delete_request()
+    {
+        var assembly = Guid.NewGuid();
+        var handler = Guid.NewGuid();
+        var step = Guid.NewGuid();
+        var image = Guid.NewGuid();
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var recorder = (PagedOrganizationServiceProxy)(object)proxy;
+
+        await new DataversePluginRegistrationGateway(proxy).RetrieveCascadeDependenciesAsync([
+            new(image, "sdkmessageprocessingstepimage", 4), new(step, "sdkmessageprocessingstep", 3),
+            new(handler, "plugintype", 2), new(assembly, "pluginassembly", 1)
+        ], CancellationToken.None);
+
+        Assert.Equal([(image, 93), (step, 92), (handler, 90), (assembly, 91)], recorder.DependencyRequests);
+    }
+
     private static void AssertQuery(
         QueryExpression query,
         string entityName,
@@ -283,6 +301,7 @@ public sealed class PluginRegistrationCatalogQueriesTests
         public List<QueryExpression> Queries { get; } = [];
         public Queue<EntityCollection> DependencyResponses { get; } = [];
         public List<Guid> DependencyObjectIds { get; } = [];
+        public List<(Guid Id, int ComponentType)> DependencyRequests { get; } = [];
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
@@ -306,6 +325,7 @@ public sealed class PluginRegistrationCatalogQueriesTests
                 && request.RequestName == "RetrieveDependenciesForDelete")
             {
                 DependencyObjectIds.Add((Guid)request.Parameters["ObjectId"]);
+                DependencyRequests.Add(((Guid)request.Parameters["ObjectId"], (int)request.Parameters["ComponentType"]));
                 var response = new OrganizationResponse();
                 response.Results["EntityDependencies"] = DependencyResponses.Count > 0
                     ? DependencyResponses.Dequeue()
