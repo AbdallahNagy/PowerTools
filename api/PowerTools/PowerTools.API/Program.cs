@@ -47,6 +47,7 @@ builder.Services.AddSingleton<PluginStepValidator>();
 builder.Services.AddSingleton<PluginStepMutationService>();
 builder.Services.AddSingleton<PluginImageValidator>();
 builder.Services.AddSingleton<PluginImageMutationService>();
+builder.Services.AddSingleton<WorkflowActivityMutationService>();
 
 var app = builder.Build();
 

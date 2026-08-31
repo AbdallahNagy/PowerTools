@@ -290,6 +290,25 @@ public sealed class DataversePluginRegistrationGateway(
         return id;
     }
 
+    public async Task<Guid> MutateWorkflowActivityAsync(WorkflowActivityMutationCommand command,
+        CancellationToken cancellationToken)
+    {
+        var entity = new Entity("plugintype", command.WorkflowActivityId)
+        {
+            ["name"] = command.Name,
+            ["friendlyname"] = command.FriendlyName,
+            ["workflowactivitygroupname"] = command.WorkflowActivityGroupName,
+            ["description"] = command.Description,
+            RowVersion = command.ExpectedVersion.ToString(System.Globalization.CultureInfo.InvariantCulture)
+        };
+        await service.ExecuteAsync(new UpdateRequest
+        {
+            Target = entity,
+            ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
+        }, cancellationToken);
+        return command.WorkflowActivityId;
+    }
+
     private async Task<IReadOnlyList<ComponentDependencyDto>> RetrieveDependenciesAsync(Guid id, int componentType,
         CancellationToken cancellationToken)
     {

@@ -46,6 +46,9 @@ public interface IPluginRegistrationGateway
 
     Task<Guid> MutateImageAsync(PluginImageMutationCommand command, CancellationToken cancellationToken) =>
         Task.FromException<Guid>(new NotSupportedException("Image mutation is not supported by this gateway."));
+
+    Task<Guid> MutateWorkflowActivityAsync(WorkflowActivityMutationCommand command, CancellationToken cancellationToken) =>
+        Task.FromException<Guid>(new NotSupportedException("Workflow activity mutation is not supported by this gateway."));
 }
 
 public interface IPluginRegistrationGatewayFactory

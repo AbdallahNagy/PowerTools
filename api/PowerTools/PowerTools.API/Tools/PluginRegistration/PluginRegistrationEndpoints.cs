@@ -136,6 +136,43 @@ public static class PluginRegistrationEndpoints
             ExecuteImageAsync(request, imageId, operation, context, gatewayFactory, clientFactory, connection, mutations, cancellationToken))
             .WithName("ExecutePluginImageMutation");
 
+        group.MapPost("/workflow-activities/{workflowActivityId:guid}/update/preflight", async (Guid workflowActivityId,
+            WorkflowActivityDraftDto draft, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory,
+            DataverseClientFactory clientFactory, ICurrentConnection connection, WorkflowActivityMutationService mutations,
+            CancellationToken cancellationToken) =>
+        {
+            if (draft.WorkflowActivityId != workflowActivityId) return Results.BadRequest();
+            try
+            {
+                var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+                return Results.Ok(await mutations.CreatePreflightAsync(gateway, connection.EnvironmentUrl, draft, cancellationToken));
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "workflowActivity");
+                return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+            }
+        }).WithName("PreflightWorkflowActivityUpdate");
+
+        group.MapPost("/workflow-activities/{workflowActivityId:guid}/update/execute", async (Guid workflowActivityId,
+            WorkflowActivityExecuteRequestDto request, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory,
+            DataverseClientFactory clientFactory, ICurrentConnection connection, WorkflowActivityMutationService mutations,
+            CancellationToken cancellationToken) =>
+        {
+            if (request.Draft.WorkflowActivityId != workflowActivityId) return Results.BadRequest();
+            try
+            {
+                var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+                return Results.Ok(await mutations.ExecuteAsync(gateway, connection.EnvironmentUrl, request.Draft,
+                    request.PlanToken, cancellationToken));
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "workflowActivity");
+                return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+            }
+        }).WithName("ExecuteWorkflowActivityUpdate");
+
         return app;
     }
 

@@ -47,21 +47,14 @@ public static class PluginAssemblyDiff
         var differences = new List<WorkflowContractDifferenceDto>();
         foreach (var (typeName, activity) in newActivities.Where(pair => oldActivities.ContainsKey(pair.Key)))
         {
-            var oldByName = oldArguments.Where(argument => argument.HandlerId == oldActivities[typeName].Id).ToDictionary(argument => argument.Name, StringComparer.Ordinal);
             var referenced = dependencies.Any(dependency => dependency.HandlerId == oldActivities[typeName].Id);
-            foreach (var oldArgument in oldByName.Values)
-            {
-                var current = activity.Arguments.SingleOrDefault(argument => argument.Name == oldArgument.Name);
-                if (current is null) differences.Add(new(typeName, oldArgument.Name, "removed", true, referenced));
-                else if (current.TypeName != oldArgument.TypeName || current.Direction != oldArgument.Direction || current.ReferenceTarget != oldArgument.ReferenceTarget || current.IsRequired != oldArgument.IsRequired) differences.Add(new(typeName, oldArgument.Name, "changed", true, referenced));
-            }
-            foreach (var newArgument in activity.Arguments.Where(argument =>
-                         argument.Direction == WorkflowArgumentDirection.Input
-                         && argument.IsRequired
-                         && !oldByName.ContainsKey(argument.Name)))
-            {
-                differences.Add(new(typeName, newArgument.Name, "added-required", true, referenced));
-            }
+            var existing = new WorkflowContractSnapshot(typeName, typeName,
+                oldArguments.Where(argument => argument.HandlerId == oldActivities[typeName].Id)
+                    .Select((argument, position) => new WorkflowArgumentDto(argument.Name, argument.Name,
+                        argument.TypeName, argument.Direction, argument.IsRequired, position)).ToArray(), referenced);
+            var current = activity.Arguments.Select((argument, position) => new WorkflowArgumentDto(argument.Name,
+                argument.Name, argument.TypeName, argument.Direction, argument.IsRequired, position)).ToArray();
+            differences.AddRange(WorkflowContractComparer.Compare(existing, typeName, current).Differences);
         }
         return differences;
     }

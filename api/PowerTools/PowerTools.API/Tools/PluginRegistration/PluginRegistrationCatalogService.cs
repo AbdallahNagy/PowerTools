@@ -37,7 +37,8 @@ public sealed class PluginRegistrationCatalogService
                 assembly,
                 typesByAssembly.GetValueOrDefault(assembly.Id) ?? [],
                 stepsByType,
-                imagesByStep))
+                imagesByStep,
+                rows))
             .ToArray();
         return new PluginRegistrationCatalogDto(assemblies);
     }
@@ -46,7 +47,8 @@ public sealed class PluginRegistrationCatalogService
         PluginAssemblyRow assembly,
         IReadOnlyList<PluginTypeRow> types,
         IReadOnlyDictionary<Guid, PluginStepRow[]> stepsByType,
-        IReadOnlyDictionary<Guid, PluginImageRow[]> imagesByStep) =>
+        IReadOnlyDictionary<Guid, PluginImageRow[]> imagesByStep,
+        PluginRegistrationRows rows) =>
         new(
             assembly.Id,
             assembly.Name,
@@ -61,7 +63,7 @@ public sealed class PluginRegistrationCatalogService
             types
                 .OrderBy(type => type.TypeName, NameComparer)
                 .ThenBy(type => type.Id)
-                .Select(type => MapHandler(type, stepsByType, imagesByStep))
+                .Select(type => MapHandler(type, stepsByType, imagesByStep, rows))
                 .ToArray(),
             assembly.Description,
             assembly.SolutionDisplayName,
@@ -71,7 +73,8 @@ public sealed class PluginRegistrationCatalogService
     private static PluginHandlerDto MapHandler(
         PluginTypeRow type,
         IReadOnlyDictionary<Guid, PluginStepRow[]> stepsByType,
-        IReadOnlyDictionary<Guid, PluginImageRow[]> imagesByStep) =>
+        IReadOnlyDictionary<Guid, PluginImageRow[]> imagesByStep,
+        PluginRegistrationRows rows) =>
         new(
             type.Id,
             type.IsWorkflowActivity ? HandlerKind.WorkflowActivity : HandlerKind.Plugin,
@@ -90,8 +93,12 @@ public sealed class PluginRegistrationCatalogService
                     .ThenBy(step => step.Id)
                     .Select(step => MapStep(step, imagesByStep))
                     .ToArray(),
-            [],
-            [],
+            rows.WorkflowArguments.Where(argument => argument.HandlerId == type.Id).Select((argument, position) =>
+                new WorkflowArgumentDto(argument.Name, argument.Name, argument.TypeName, argument.Direction,
+                    argument.IsRequired, position)).ToArray(),
+            rows.Dependencies.Where(dependency => dependency.HandlerId == type.Id).Select(dependency =>
+                new ComponentDependencyDto(Guid.Empty, dependency.Name, dependency.ComponentTypeLabel, null,
+                    false, true, 0)).ToArray(),
             type.AssemblyId,
             type.SolutionDisplayName);
 
