@@ -41,8 +41,6 @@ export function ImageDialog({ connectionName, step, image, operation, onClose, r
     changes={preview.plan.changes} warnings={preview.plan.warnings} blockers={preview.plan.blockers} confirmation={preview.plan.confirmation.message}
     executing={mutations.execute.isPending} onCancel={() => setPreview(null)} onConfirm={() => void confirm()} /> : null}</>;
 }
-function Preview({ preview }: { preview: ImagePreflight }) { return <>{preview.plan.changes.map(x => <p key={x.field}>{label(x.field)}: {x.before ?? "New"} → {x.after ?? "Empty"}</p>)}{preview.plan.warnings.map(x => <p role="status" key={x.code}>{x.message}</p>)}{preview.plan.blockers.map(x => <p role="alert" key={x.code}>{x.message}</p>)}</>; }
-function label(value: string) { return value === "attributes" ? "Attributes" : value; }
 function labelType(value: string) { return value.toLowerCase().includes("both") ? 2 : value.toLowerCase().includes("post") ? 1 : 0; }
 function defaultType(step: PluginStep) { return step.messageLabel.toLowerCase() === "create" ? 1 : 0; }
 function types(step: PluginStep) { const message = step.messageLabel.toLowerCase(); if (message === "create") return [{ value: 1, label: "Post image" }]; if (message === "delete") return [{ value: 0, label: "Pre image" }];
