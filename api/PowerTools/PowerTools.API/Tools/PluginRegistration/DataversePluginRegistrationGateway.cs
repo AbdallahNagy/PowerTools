@@ -18,6 +18,30 @@ public sealed class DataversePluginRegistrationGatewayFactory
 public sealed class DataversePluginRegistrationGateway(
     IOrganizationServiceAsync2 service) : IPluginRegistrationGateway
 {
+    // Task 13 replaces this conservative default after proving the exact request shape in a disposable environment.
+    public Task<bool> SupportsCascadeTransactionAsync(CancellationToken cancellationToken) => Task.FromResult(false);
+
+    public async Task ExecuteCascadeTransactionAsync(IReadOnlyList<CascadeDeleteRequestDto> deletes,
+        CancellationToken cancellationToken)
+    {
+        if (deletes.Count == 0) throw new ArgumentException("The cascade transaction is empty.");
+        var requests = new OrganizationRequestCollection();
+        foreach (var delete in deletes)
+            requests.Add(new DeleteRequest
+            {
+                Target = new EntityReference(delete.LogicalName, delete.Id)
+                {
+                    RowVersion = delete.VersionNumber.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                },
+                ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
+            });
+        await service.ExecuteAsync(new ExecuteTransactionRequest
+        {
+            Requests = requests,
+            ReturnResponses = true
+        }, cancellationToken);
+    }
+
     public async Task<StepOptionsDto> RetrieveStepOptionsAsync(CancellationToken cancellationToken)
     {
         var messages = await RetrieveAllPagesAsync(new QueryExpression("sdkmessage")

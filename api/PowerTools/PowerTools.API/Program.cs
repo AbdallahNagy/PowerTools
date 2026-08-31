@@ -43,6 +43,9 @@ builder.Services.AddSingleton<PluginRegistrationPlanSigner>(services =>
         localSecret,
         services.GetRequiredService<TimeProvider>()));
 builder.Services.AddSingleton<PluginRegistrationPreflightService>();
+builder.Services.AddSingleton<PluginRegistrationDependencyService>();
+builder.Services.AddSingleton<PluginRegistrationCapabilityService>();
+builder.Services.AddSingleton<PluginRegistrationCascadeService>();
 builder.Services.AddSingleton<PluginStepValidator>();
 builder.Services.AddSingleton<PluginStepMutationService>();
 builder.Services.AddSingleton<PluginImageValidator>();

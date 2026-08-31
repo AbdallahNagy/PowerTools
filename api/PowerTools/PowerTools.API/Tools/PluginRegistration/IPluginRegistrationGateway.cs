@@ -49,6 +49,13 @@ public interface IPluginRegistrationGateway
 
     Task<Guid> MutateWorkflowActivityAsync(WorkflowActivityMutationCommand command, CancellationToken cancellationToken) =>
         Task.FromException<Guid>(new NotSupportedException("Workflow activity mutation is not supported by this gateway."));
+
+    Task ExecuteCascadeTransactionAsync(IReadOnlyList<CascadeDeleteRequestDto> deletes,
+        CancellationToken cancellationToken) =>
+        Task.FromException(new NotSupportedException("Transactional cascade unregister is not supported by this gateway."));
+
+    // This remains false until the release gate has a safe, non-mutating Dataverse capability probe.
+    Task<bool> SupportsCascadeTransactionAsync(CancellationToken cancellationToken) => Task.FromResult(false);
 }
 
 public interface IPluginRegistrationGatewayFactory

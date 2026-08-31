@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { useConnections, useConnectionSelection } from "../../shared/connections";
-import { ToastProvider } from "../../shared/ui";
+import { Button, Modal, ToastProvider } from "../../shared/ui";
 import { useRegistrationCatalog } from "./api/useRegistrationCatalog";
 import { PluginRegistrationHeader } from "./components/PluginRegistrationHeader";
 import {
@@ -15,6 +15,8 @@ import { StepDialog } from "./components/dialogs/StepDialog";
 import { TypedNameConfirmationDialog } from "./components/dialogs/TypedNameConfirmationDialog";
 import { ImageDialog } from "./components/dialogs/ImageDialog";
 import { WorkflowActivityDialog } from "./components/dialogs/WorkflowActivityDialog";
+import { CascadeConfirmationDialog } from "./components/dialogs/CascadeConfirmationDialog";
+import { useUnregisterMutations, type CascadeDraft } from "./api/useUnregisterMutations";
 import { RegistrationWorkspace } from "./components/RegistrationWorkspace";
 import { buildCatalogTree, findCatalogNode, type CatalogTreeNode } from "./model/catalogTree";
 
@@ -26,6 +28,7 @@ export type DialogIntent =
   | { kind: "unregisterStep"; stepId: string }
   | { kind: "toggleStep"; stepId: string; enable: boolean }
   | { kind: "unregisterImage"; imageId: string }
+  | { kind: "cascadeUnregister"; nodeId: string }
   | null;
 
 export default function PluginRegistration() {
@@ -40,6 +43,7 @@ function PluginRegistrationPage() {
   const { connectionName, setConnectionName } = useConnectionSelection();
   const { connections } = useConnections();
   const catalogQuery = useRegistrationCatalog(connectionName || null);
+  const cascades = useUnregisterMutations(connectionName || null, () => catalogQuery.refetch());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(new Set());
   const [dialogIntent, setDialogIntent] = useState<DialogIntent>(null);
@@ -72,6 +76,10 @@ function PluginRegistrationPage() {
   const isImageDialog = Boolean(imageStepNode?.kind === "step" && (dialogIntent?.kind === "createImage"
     || dialogIntent?.kind === "unregisterImage" || dialogIntent?.kind === "update" && dialogNode?.kind === "image"));
   const workflowActivityNode = dialogIntent?.kind === "update" && dialogNode?.kind === "workflowActivity" ? dialogNode : null;
+  const cascadeNode = dialogIntent?.kind === "cascadeUnregister" ? findCatalogNode(nodes, dialogIntent.nodeId) ?? null : null;
+  const cascadeDraft: CascadeDraft | null = cascadeNode?.kind === "assembly" ? { targetKind: "assembly", targetId: cascadeNode.data.id, expectedVersions: collectAssemblyVersions(cascadeNode.data) }
+    : cascadeNode?.kind === "plugin" ? { targetKind: "plugin", targetId: cascadeNode.data.id, expectedVersions: collectHandlerVersions(cascadeNode.data) }
+    : cascadeNode?.kind === "workflowActivity" ? { targetKind: "workflowActivity", targetId: cascadeNode.data.id, expectedVersions: { [cascadeNode.data.id]: cascadeNode.data.versionNumber } } : null;
 
   const changeConnection = (name: string) => {
     setSelectedNodeId(null);
@@ -119,7 +127,8 @@ function PluginRegistrationPage() {
         setDialogIntent({ kind: "createImage", stepId: intent.stepId });
         break;
       case "unregister":
-        if (intent.nodeId.startsWith("step:")) setDialogIntent({ kind: "unregisterStep", stepId: intent.nodeId.slice(5) });
+        if (intent.nodeId.startsWith("assembly:") || intent.nodeId.startsWith("plugin:") || intent.nodeId.startsWith("workflowActivity:")) setDialogIntent({ kind: "cascadeUnregister", nodeId: intent.nodeId });
+        else if (intent.nodeId.startsWith("step:")) setDialogIntent({ kind: "unregisterStep", stepId: intent.nodeId.slice(5) });
         else if (intent.nodeId.startsWith("image:")) setDialogIntent({ kind: "unregisterImage", imageId: intent.nodeId.slice(6) });
         break;
       case "toggleStep":
@@ -196,6 +205,40 @@ function PluginRegistrationPage() {
         <WorkflowActivityDialog connectionName={connectionName || null} activity={workflowActivityNode.data}
           onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
       ) : null}
+      {cascadeNode && cascadeDraft ? <CascadeUnregisterFlow node={cascadeNode} draft={cascadeDraft} connectionName={connectionName || null}
+        mutations={cascades} onClose={() => setDialogIntent(null)} /> : null}
     </div>
   );
+}
+
+function CascadeUnregisterFlow({ node, draft, connectionName, mutations, onClose }: { node: CatalogTreeNode; draft: CascadeDraft; connectionName: string | null;
+  mutations: ReturnType<typeof useUnregisterMutations>; onClose: () => void }) {
+  const preview = mutations.preflight.data;
+  if (!preview) return <Modal open title="Cascade unregister" onClose={onClose} widthClass="max-w-lg"><div role="dialog" aria-label="Cascade unregister" className="flex flex-col gap-3">
+    <p>Review the exact owned registration impact before deleting this component.</p><div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={() => void mutations.preflight.mutateAsync(draft)}>Preview unregister</Button></div>
+  </div></Modal>;
+  const isAssembly = node.kind === "assembly";
+  const handlerClassName = node.kind === "plugin" || node.kind === "workflowActivity" ? node.data.typeName : null;
+  return <CascadeConfirmationDialog open connectionName={connectionName ?? "No environment"} targetKind={draft.targetKind}
+    assemblyName={isAssembly ? node.data.name : null} handlerClassName={handlerClassName}
+    impact={{ handlers: preview.impact.handlers.length, steps: preview.impact.steps.length, images: preview.impact.images.length,
+      enabledSteps: preview.impact.enabledStepCount, dependencies: preview.impact.externalDependencies.map(value => `${value.componentTypeLabel}: ${value.name}`),
+      items: [
+        ...preview.impact.handlers.map(value => `${value.kind === "workflowActivity" ? "Workflow activity" : "Plug-in"}: ${value.typeName}`),
+        ...preview.impact.steps.map(value => `Step: ${value.name}`),
+        ...preview.impact.images.map(value => `Image: ${value.name}`),
+      ] }}
+    blockers={preview.plan.blockers} executing={mutations.execute.isPending} onCancel={onClose}
+    onConfirm={(typedName, acknowledged) => void mutations.execute.mutateAsync({ draft, token: preview.plan.token, typedName, acknowledged }).then(result => { if (result.succeededAndVerified) onClose(); })} />;
+}
+
+function collectHandlerVersions(handler: { id: string; versionNumber: number; steps: { id: string; versionNumber: number; images: { id: string; versionNumber: number }[] }[] }): Record<string, number> {
+  return handler.steps.reduce<Record<string, number>>((versions, step) => {
+    versions[step.id] = step.versionNumber;
+    for (const image of step.images) versions[image.id] = image.versionNumber;
+    return versions;
+  }, { [handler.id]: handler.versionNumber });
+}
+function collectAssemblyVersions(assembly: { id: string; versionNumber: number; handlers: { id: string; versionNumber: number; steps: { id: string; versionNumber: number; images: { id: string; versionNumber: number }[] }[] }[] }): Record<string, number> {
+  return assembly.handlers.reduce<Record<string, number>>((versions, handler) => Object.assign(versions, collectHandlerVersions(handler)), { [assembly.id]: assembly.versionNumber });
 }

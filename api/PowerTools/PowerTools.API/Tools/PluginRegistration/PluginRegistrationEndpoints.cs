@@ -33,6 +33,43 @@ public static class PluginRegistrationEndpoints
             return Results.Ok(catalog);
         }).WithName("GetPluginRegistrationCatalog");
 
+        group.MapGet("/capabilities", (PluginRegistrationCapabilityService capabilities) =>
+            Results.Ok(capabilities.GetCapabilities()))
+            .WithName("GetPluginRegistrationCapabilities");
+
+        group.MapPost("/cascade-unregister/preflight", async (CascadeUnregisterDraftDto draft, HttpContext context,
+            IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection,
+            PluginRegistrationCascadeService cascades, CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+                return Results.Ok(await cascades.CreatePreflightAsync(gateway, connection.EnvironmentUrl, draft, cancellationToken));
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "cascadeUnregister");
+                return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+            }
+        }).WithName("PreflightPluginRegistrationCascadeUnregister");
+
+        group.MapPost("/cascade-unregister/execute", async (CascadeUnregisterExecuteRequestDto request, HttpContext context,
+            IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection,
+            PluginRegistrationCascadeService cascades, CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+                return Results.Ok(await cascades.ExecuteAsync(gateway, connection.EnvironmentUrl, request.PlanToken,
+                    request.Draft, request.TypedName, request.Acknowledged, cancellationToken));
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                var problem = PluginRegistrationProblem.FromException(error, connection.EnvironmentUrl, "cascadeUnregister");
+                return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+            }
+        }).WithName("ExecutePluginRegistrationCascadeUnregister");
+
         group.MapPost("/assemblies/analyze", AnalyzeAssemblyAsync)
             .DisableAntiforgery()
             .WithMetadata(new RequestSizeLimitAttribute(
