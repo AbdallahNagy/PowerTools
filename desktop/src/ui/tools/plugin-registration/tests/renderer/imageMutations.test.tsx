@@ -43,7 +43,9 @@ it("opens from the step menu, limits image types, requires explicit columns, and
   expect(await screen.findByRole("dialog", { name: "Image impact preview" })).toHaveTextContent("Attributes: New → name");
 });
 
-it("requires the exact image name before unregister execution", async () => {
+it("confirms image unregister in the visible preview, executes once, and refreshes after verification", async () => {
+  apiPostMock.mockResolvedValueOnce({ draft: {}, before: { name: "PostImage" }, after: { name: "PostImage" }, plan: { token: "signed", blockers: [], warnings: [], changes: [], confirmation: { message: "Confirm" } } })
+    .mockResolvedValueOnce({ outcome: "succeededAndVerified", succeededAndVerified: true, image: null });
   renderWithProviders(<ConnectionsProvider><PluginRegistration /></ConnectionsProvider>, { bridgeOverrides: {
     listConnections: async () => [{ name: "Development", envUrl: "https://development.test", crmType: "online" }],
     getActiveConnectionName: async () => "Development",
@@ -61,8 +63,13 @@ it("requires the exact image name before unregister execution", async () => {
   expect(preview).toHaveTextContent("Confirm");
   const button = within(preview).getByRole("button", { name: "Confirm" });
   expect(button).toBeDisabled();
-  await userEvent.type(within(dialog).getByLabelText("Type PostImage to confirm"), "PostImage");
+  await userEvent.type(within(preview).getByLabelText("Type PostImage to confirm"), "PostImage");
   expect(button).toBeEnabled();
+  await userEvent.click(button);
+
+  await vi.waitFor(() => expect(apiPostMock).toHaveBeenCalledTimes(2));
+  await vi.waitFor(() => expect(catalogReads).toBeGreaterThanOrEqual(2));
+  expect(screen.queryByRole("dialog", { name: "Unregister image" })).not.toBeInTheDocument();
 });
 
 it("initializes an existing image alias from its name when entityAlias is absent", async () => {
