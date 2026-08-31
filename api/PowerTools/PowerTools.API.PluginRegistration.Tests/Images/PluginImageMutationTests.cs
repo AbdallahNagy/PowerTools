@@ -75,14 +75,98 @@ public sealed class PluginImageMutationTests
             "unregister", blocked.Plan.Token, Draft(ImageId, ["name"]), "PreImage", default));
     }
 
+    [Fact]
+    public async Task Unregister_binds_the_complete_dependency_snapshot_for_add_remove_and_replace_changes()
+    {
+        var time = new ManualTimeProvider(new DateTimeOffset(2026, 8, 30, 0, 0, 0, TimeSpan.Zero));
+        var signer = new PluginRegistrationPlanSigner("test-secret", time);
+        var preflight = new PluginRegistrationPreflightService(signer);
+        var gateway = new FakeGateway { ExistingImage = Image() };
+        var baseline = Dependency("Baseline", 1);
+        gateway.Dependencies = [baseline];
+        var preview = await new PluginImageMutationService(new PluginImageValidator(), preflight)
+            .CreatePreflightAsync(gateway, "Dev", "unregister", Draft(ImageId, ["name"]), default);
+
+        var signed = signer.Validate(preview.Plan.Token).Binding!;
+        var request = ImageRequest(preview.Draft, [baseline]);
+        Assert.Equal(preflight.CalculateRequestDigest(request.NormalizedRequest), signed.RequestDigest);
+
+        foreach (var changed in new IReadOnlyList<ComponentDependencyDto>[]
+        {
+            [baseline, Dependency("Added", 2)],
+            [],
+            [Dependency("Replacement", 3)]
+        })
+        {
+            var failure = await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => preflight.ValidateExecutionAsync(
+                preview.Plan.Token, request, _ => Task.FromResult(ImageRequest(preview.Draft, changed)), default));
+            Assert.Equal(PlanValidationFailure.BindingMismatch, failure.Failure);
+        }
+    }
+
+    [Fact]
+    public async Task Unregister_rejects_a_dependency_added_between_initial_read_and_final_revalidation()
+    {
+        var gateway = new FakeGateway { ExistingImage = Image(), DependenciesAfterStateRead = 3 };
+        var service = Service();
+        var preview = await service.CreatePreflightAsync(gateway, "Dev", "unregister", Draft(ImageId, ["name"]), default);
+        gateway.Dependencies = [Dependency("Workflow", 4)];
+
+        var failure = await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => service.ExecuteAsync(gateway,
+            "Dev", "unregister", preview.Plan.Token, Draft(ImageId, ["name"]), "PreImage", default));
+
+        Assert.Equal(PlanValidationFailure.BindingMismatch, failure.Failure);
+        Assert.Null(gateway.LastCommand);
+    }
+
+    [Fact]
+    public async Task Execute_rejects_tampered_request_and_token_without_mutating()
+    {
+        var gateway = new FakeGateway { ExistingImage = Image() };
+        var service = Service();
+        var preview = await service.CreatePreflightAsync(gateway, "Dev", "update", Draft(ImageId, ["name"]), default);
+
+        var requestFailure = await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => service.ExecuteAsync(gateway,
+            "Dev", "update", preview.Plan.Token, Draft(ImageId, ["accountnumber"]), null, default));
+        Assert.Equal(PlanValidationFailure.BindingMismatch, requestFailure.Failure);
+
+        var tokenFailure = await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => service.ExecuteAsync(gateway,
+            "Dev", "update", preview.Plan.Token + "x", Draft(ImageId, ["name"]), null, default));
+        Assert.Equal(PlanValidationFailure.InvalidToken, tokenFailure.Failure);
+        Assert.Null(gateway.LastCommand);
+    }
+
+    [Fact]
+    public async Task Execute_rejects_an_expired_plan_without_mutating()
+    {
+        var time = new ManualTimeProvider(new DateTimeOffset(2026, 8, 30, 0, 0, 0, TimeSpan.Zero));
+        var gateway = new FakeGateway { ExistingImage = Image() };
+        var service = Service(time);
+        var preview = await service.CreatePreflightAsync(gateway, "Dev", "update", Draft(ImageId, ["name"]), default);
+        time.Advance(PluginRegistrationPlanSigner.DefaultLifetime);
+
+        var failure = await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => service.ExecuteAsync(gateway,
+            "Dev", "update", preview.Plan.Token, Draft(ImageId, ["name"]), null, default));
+
+        Assert.Equal(PlanValidationFailure.Expired, failure.Failure);
+        Assert.Null(gateway.LastCommand);
+    }
+
     private static PluginImageMutationService Service()
     {
-        var signer = new PluginRegistrationPlanSigner("test-secret", new ManualTimeProvider(new DateTimeOffset(2026, 8, 30, 0, 0, 0, TimeSpan.Zero)));
+        return Service(new ManualTimeProvider(new DateTimeOffset(2026, 8, 30, 0, 0, 0, TimeSpan.Zero)));
+    }
+    private static PluginImageMutationService Service(ManualTimeProvider time)
+    {
+        var signer = new PluginRegistrationPlanSigner("test-secret", time);
         return new(new PluginImageValidator(), new PluginRegistrationPreflightService(signer));
     }
     private static ImageDraftDto Draft(Guid? imageId, IReadOnlyList<string> attributes) => new(StepId, 0, "PreImage", "Target", attributes,
         imageId is null ? new Dictionary<Guid, long> { [StepId] = 11 } : new Dictionary<Guid, long> { [StepId] = 11, [imageId.Value] = 22 });
     private static PluginImageRow Image() => new(ImageId, StepId, "PreImage", null, "Pre Image", "PreImage", ["name"], false, true, 22, null);
+    private static ComponentDependencyDto Dependency(string name, long version) => new(Guid.NewGuid(), name, "Workflow", "Solution", false, true, version);
+    private static MutationPreflightRequest ImageRequest(ImageDraftDto draft, IReadOnlyList<ComponentDependencyDto> dependencies) =>
+        new("Dev", "images.unregister", ImageId, new { Draft = draft, Dependencies = dependencies }, draft.ExpectedVersions, null, new Dictionary<string, bool>());
     private static readonly Guid StepId = Guid.NewGuid();
     private static readonly Guid ImageId = Guid.NewGuid();
 
@@ -91,15 +175,21 @@ public sealed class PluginImageMutationTests
         public PluginImageRow? ExistingImage { get; set; }
         public bool ParentManaged { get; set; }
         public IReadOnlyList<ComponentDependencyDto> Dependencies { get; set; } = [];
+        public int DependenciesAfterStateRead { get; set; }
+        private int stateReads;
         private bool mutated;
         public PluginImageMutationCommand? LastCommand { get; private set; }
         public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) => Task.FromResult(new PluginRegistrationRows([], [],
             [new PluginStepRow(StepId, Guid.NewGuid(), "Update account", null, "Update", "account", null, "PreOperation", "Synchronous", 20, 0, 1, true, false, true, mutated ? 12 : 11, false, null)],
             ExistingImage is null ? [] : [ExistingImage]));
-        public Task<PluginImagePreflightState> RetrieveImagePreflightStateAsync(Guid stepId, Guid? imageId, ImageDraftDto draft, CancellationToken cancellationToken) =>
-            Task.FromResult(new PluginImagePreflightState(imageId, ExistingImage?.Name, "Update", 20, "account", "Target", ["accountid", "name", "accountnumber"], false,
+        public Task<PluginImagePreflightState> RetrieveImagePreflightStateAsync(Guid stepId, Guid? imageId, ImageDraftDto draft, CancellationToken cancellationToken)
+        {
+            stateReads++;
+            var dependencies = stateReads >= DependenciesAfterStateRead ? Dependencies : [];
+            return Task.FromResult(new PluginImagePreflightState(imageId, ExistingImage?.Name, "Update", 20, "account", "Target", ["accountid", "name", "accountnumber"], false,
                 ExistingImage?.IsManaged ?? false, ExistingImage?.IsCustomizable ?? true, 11, ExistingImage?.VersionNumber, stepId)
-                { ParentIsManaged = ParentManaged, ParentIsCustomizable = true, Dependencies = Dependencies });
+                { ParentIsManaged = ParentManaged, ParentIsCustomizable = true, Dependencies = dependencies });
+        }
         public Task<Guid> MutateImageAsync(PluginImageMutationCommand command, CancellationToken cancellationToken)
         {
             LastCommand = command;

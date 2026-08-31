@@ -15,10 +15,11 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
             ? new ConfirmationRequirementDto("typedName", $"Type {current.State.ImageName} to unregister this image.", current.State.ImageName)
             : new ConfirmationRequirementDto("explicit", "Confirm every displayed image change.");
         var before = current.CurrentRow is null ? null : Before(current.CurrentRow, current.State.SupportedMessagePropertyName);
-        var dependencies = operation == "unregister" ? current.State.Dependencies.Select(x => $"{x.ComponentTypeLabel}: {x.Name}").ToArray() : [];
+        var dependencySnapshot = operation == "unregister" ? DependencySnapshot(current.State.Dependencies) : [];
+        var dependencies = dependencySnapshot.Select(x => $"{x.ComponentTypeLabel}: {x.Name}").ToArray();
         var blockers = current.Validation.Blockers.Concat(operation == "unregister" ? current.State.Dependencies.Select(x =>
             new MutationBlockerDto("dependency", $"{x.ComponentTypeLabel} '{x.Name}' depends on this image.")) : []).ToArray();
-        var plan = preflight.CreatePlan(Request(environment, operation, targetId, current.Validation.Draft, dependencies),
+        var plan = preflight.CreatePlan(Request(environment, operation, targetId, current.Validation.Draft, dependencySnapshot),
             Changes(before, current.Validation.PublicAfter), new MutationImpactDto([current.Validation.PublicAfter.Name], dependencies, []),
             current.Validation.Warnings, blockers, confirmation);
         return new(current.Validation.Draft, plan, before, current.Validation.PublicAfter);
@@ -32,12 +33,12 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
         EnsureExecutable(initial.Validation.Blockers, operation == "unregister" ? initial.State.Dependencies : []);
         if (operation == "unregister" && !string.Equals(typedName, initial.State.ImageName, StringComparison.Ordinal))
             throw new ArgumentException("The typed image name does not match exactly.");
-        var dependencies = operation == "unregister" ? initial.State.Dependencies.Select(x => $"{x.ComponentTypeLabel}: {x.Name}").ToArray() : [];
-        await preflight.ValidateExecutionAsync(token, Request(environment, operation, targetId, initial.Validation.Draft, dependencies), async ct =>
+        var dependencySnapshot = operation == "unregister" ? DependencySnapshot(initial.State.Dependencies) : [];
+        await preflight.ValidateExecutionAsync(token, Request(environment, operation, targetId, initial.Validation.Draft, dependencySnapshot), async ct =>
         {
             var fresh = await ReadAndValidateAsync(gateway, operation, targetId, submitted, ct);
             EnsureExecutable(fresh.Validation.Blockers, operation == "unregister" ? fresh.State.Dependencies : []);
-            var freshDependencies = operation == "unregister" ? fresh.State.Dependencies.Select(x => $"{x.ComponentTypeLabel}: {x.Name}").ToArray() : [];
+            var freshDependencies = operation == "unregister" ? DependencySnapshot(fresh.State.Dependencies) : [];
             return Request(environment, operation, targetId, fresh.Validation.Draft, freshDependencies);
         }, cancellationToken);
 
@@ -97,8 +98,12 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
         if (operation == "create") return null;
         return ids.Length == 1 ? ids[0] : throw new ArgumentException("Exactly one target image version is required.");
     }
-    private static MutationPreflightRequest Request(string environment, string operation, Guid? targetId, ImageDraftDto draft, IReadOnlyList<string> dependencies) =>
+    private static MutationPreflightRequest Request(string environment, string operation, Guid? targetId, ImageDraftDto draft, IReadOnlyList<ComponentDependencyDto> dependencies) =>
         new(environment, $"images.{operation}", targetId, new { Draft = draft, Dependencies = dependencies }, draft.ExpectedVersions, null, new Dictionary<string, bool>());
+    private static ComponentDependencyDto[] DependencySnapshot(IReadOnlyList<ComponentDependencyDto> dependencies) => dependencies
+        .OrderBy(x => x.ComponentId).ThenBy(x => x.ComponentTypeLabel, StringComparer.Ordinal).ThenBy(x => x.Name, StringComparer.Ordinal)
+        .Select(x => new ComponentDependencyDto(x.ComponentId, x.Name, x.ComponentTypeLabel, x.SolutionDisplayName,
+            x.IsManaged, x.IsCustomizable, x.VersionNumber)).ToArray();
     private static void EnsureExecutable(IReadOnlyList<MutationBlockerDto> blockers, IReadOnlyList<ComponentDependencyDto> dependencies)
     {
         if (blockers.Count > 0 || dependencies.Count > 0) throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
