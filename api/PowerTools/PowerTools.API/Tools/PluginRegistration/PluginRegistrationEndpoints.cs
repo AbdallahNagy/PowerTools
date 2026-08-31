@@ -33,8 +33,14 @@ public static class PluginRegistrationEndpoints
             return Results.Ok(catalog);
         }).WithName("GetPluginRegistrationCatalog");
 
-        group.MapGet("/capabilities", (PluginRegistrationCapabilityService capabilities) =>
-            Results.Ok(capabilities.GetCapabilities()))
+        group.MapGet("/capabilities", async (HttpContext context,
+            IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+            PluginRegistrationCapabilityService capabilities, CancellationToken cancellationToken) =>
+        {
+            var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
+            return Results.Ok(capabilities.GetCapabilities(
+                await gateway.SupportsCascadeTransactionAsync(cancellationToken)));
+        })
             .WithName("GetPluginRegistrationCapabilities");
 
         group.MapPost("/cascade-unregister/preflight", async (CascadeUnregisterDraftDto draft, HttpContext context,

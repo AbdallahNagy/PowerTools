@@ -448,18 +448,18 @@ public sealed class DataversePluginRegistrationGateway(
                 SolutionDisplayName = solution
             });
 
-        // Dependency records contain only component references and are read after the four
-        // catalog queries finish. A failure deliberately fails the entire catalog request:
-        // the renderer must never present workflow dependency data as complete when it is not.
-        var workflowDependencies = new List<PluginHandlerDependencyRow>();
-        foreach (var activity in mappedTypes.Where(type => type.IsWorkflowActivity))
+        // Dependencies are part of the delete-safety boundary. Read every handler, not only
+        // workflow activities, so ordinary plug-ins cannot bypass Custom API or external
+        // component blockers during a cascade unregister.
+        var dependencies = new List<PluginHandlerDependencyRow>();
+        foreach (var handler in mappedTypes)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            workflowDependencies.AddRange(await RetrieveWorkflowDependenciesAsync(activity.Id, cancellationToken));
+            dependencies.AddRange(await RetrieveHandlerDependenciesAsync(handler.Id, cancellationToken));
         }
-        workflowDependencies = await EnrichWorkflowDependenciesAsync(workflowDependencies, cancellationToken);
+        dependencies = await EnrichWorkflowDependenciesAsync(dependencies, cancellationToken);
         return new PluginRegistrationRows(mappedAssemblies, mappedTypes, mappedSteps, mappedImages,
-            workflowDependencies, [], true);
+            dependencies, [], true);
     }
 
     private async Task<IReadOnlyList<Entity>> RetrieveAllPagesAsync(
@@ -510,7 +510,7 @@ public sealed class DataversePluginRegistrationGateway(
         return new PluginHandlerDependencyRow(handlerId, name, label, isCustomApi, id != Guid.Empty, id);
     }
 
-    private async Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveWorkflowDependenciesAsync(Guid handlerId,
+    private async Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveHandlerDependenciesAsync(Guid handlerId,
         CancellationToken cancellationToken)
     {
         var request = new OrganizationRequest("RetrieveDependenciesForDelete")
@@ -527,21 +527,17 @@ public sealed class DataversePluginRegistrationGateway(
     private async Task<List<PluginHandlerDependencyRow>> EnrichWorkflowDependenciesAsync(
         IReadOnlyList<PluginHandlerDependencyRow> dependencies, CancellationToken cancellationToken)
     {
-        if (dependencies.Count == 0) return [];
-        if (dependencies.Any(dependency => dependency.ComponentId == Guid.Empty
-            || !string.Equals(dependency.ComponentTypeLabel, "Workflow", StringComparison.Ordinal)))
-            throw new InvalidOperationException("A workflow dependency could not be resolved to a supported workflow or action component.");
-
-        var ids = dependencies.Select(dependency => dependency.ComponentId).Distinct().ToArray();
+        var workflowDependencies = dependencies.Where(dependency => dependency.ComponentId != Guid.Empty
+            && string.Equals(dependency.ComponentTypeLabel, "Workflow", StringComparison.Ordinal)).ToArray();
+        if (workflowDependencies.Length == 0) return dependencies.ToList();
+        var ids = workflowDependencies.Select(dependency => dependency.ComponentId).Distinct().ToArray();
         var processes = await RetrieveAllPagesAsync(
             PluginRegistrationCatalogQueries.CreateWorkflowDependencyQuery(ids), cancellationToken);
         var byId = processes.ToDictionary(process => process.Id);
-        if (ids.Any(id => !byId.ContainsKey(id)))
-            throw new InvalidOperationException("A workflow dependency could not be resolved to a supported workflow or action component.");
-
         return dependencies.Select(dependency =>
         {
-            var process = byId[dependency.ComponentId];
+            if (!string.Equals(dependency.ComponentTypeLabel, "Workflow", StringComparison.Ordinal)
+                || !byId.TryGetValue(dependency.ComponentId, out var process)) return dependency;
             var category = FormattedOrOption(process, "category");
             var state = FormattedOrOption(process, "statecode");
             return dependency with
@@ -549,7 +545,9 @@ public sealed class DataversePluginRegistrationGateway(
                 Name = Text(process, "name"),
                 ComponentTypeLabel = $"Workflow/action ({category})",
                 IsCustomApi = false,
-                IsExternal = false,
+                // A workflow/action dependency is not an owned registration child and must
+                // remain an explicit blocker, even after its display metadata is enriched.
+                IsExternal = true,
                 SolutionDisplayName = SolutionDisplay([process]),
                 IsManaged = process.GetAttributeValue<bool>("ismanaged"),
                 IsCustomizable = ManagedBoolean(process, "iscustomizable"),

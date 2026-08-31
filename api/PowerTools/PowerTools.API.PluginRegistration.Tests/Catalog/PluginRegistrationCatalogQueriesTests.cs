@@ -167,6 +167,38 @@ public sealed class PluginRegistrationCatalogQueriesTests
         Assert.Equal(5, handler.Queries.Count);
     }
 
+    [Fact]
+    public async Task Gateway_reads_and_preserves_delete_dependencies_for_ordinary_plugin_types()
+    {
+        var assemblyId = Guid.NewGuid();
+        var pluginTypeId = Guid.NewGuid();
+        var customApiId = Guid.NewGuid();
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var handler = (PagedOrganizationServiceProxy)(object)proxy;
+        handler.Responses["pluginassembly"] = new Queue<EntityCollection>([Page(new Entity("pluginassembly", assemblyId) { ["name"] = "Contoso", ["version"] = "1.0" })]);
+        handler.Responses["plugintype"] = new Queue<EntityCollection>([Page(new Entity("plugintype", pluginTypeId)
+        {
+            ["pluginassemblyid"] = new EntityReference("pluginassembly", assemblyId), ["typename"] = "Contoso.Plugin", ["name"] = "Plugin"
+        })]);
+        handler.Responses["sdkmessageprocessingstep"] = new Queue<EntityCollection>([Page()]);
+        handler.Responses["sdkmessageprocessingstepimage"] = new Queue<EntityCollection>([Page()]);
+        handler.DependencyResponses.Enqueue(Dependencies(new Entity("dependency")
+        {
+            ["dependentcomponenttype"] = new OptionSetValue(371),
+            ["dependentcomponentobjectid"] = new EntityReference("customapi", customApiId) { Name = "Submit Account" }
+        }));
+
+        var rows = await new DataversePluginRegistrationGateway(proxy).RetrieveCatalogRowsAsync(CancellationToken.None);
+
+        var dependency = Assert.Single(rows.Dependencies);
+        Assert.Equal(pluginTypeId, dependency.HandlerId);
+        Assert.True(dependency.IsCustomApi);
+        Assert.True(dependency.IsExternal);
+        Assert.Equal("Custom API", dependency.ComponentTypeLabel);
+        Assert.Equal(customApiId, dependency.ComponentId);
+        Assert.Equal([pluginTypeId], handler.DependencyObjectIds);
+    }
+
     private static void AssertQuery(
         QueryExpression query,
         string entityName,
@@ -243,10 +275,14 @@ public sealed class PluginRegistrationCatalogQueriesTests
         return page;
     }
 
+    private static EntityCollection Dependencies(params Entity[] dependencies) => new(dependencies);
+
     public class PagedOrganizationServiceProxy : DispatchProxy
     {
         public Dictionary<string, Queue<EntityCollection>> Responses { get; } = [];
         public List<QueryExpression> Queries { get; } = [];
+        public Queue<EntityCollection> DependencyResponses { get; } = [];
+        public List<Guid> DependencyObjectIds { get; } = [];
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
@@ -263,6 +299,18 @@ public sealed class PluginRegistrationCatalogQueriesTests
                     }
                 });
                 return Task.FromResult(Responses[query.EntityName].Dequeue());
+            }
+
+            if (targetMethod?.Name == nameof(IOrganizationServiceAsync2.ExecuteAsync)
+                && args is [OrganizationRequest request, CancellationToken]
+                && request.RequestName == "RetrieveDependenciesForDelete")
+            {
+                DependencyObjectIds.Add((Guid)request.Parameters["ObjectId"]);
+                var response = new OrganizationResponse();
+                response.Results["EntityDependencies"] = DependencyResponses.Count > 0
+                    ? DependencyResponses.Dequeue()
+                    : new EntityCollection();
+                return Task.FromResult(response);
             }
 
             throw new NotSupportedException(targetMethod?.Name);

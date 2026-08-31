@@ -224,6 +224,7 @@ function CascadeUnregisterFlow({ node, draft, connectionName, mutations, onClose
     impact={{ handlers: preview.impact.handlers.length, steps: preview.impact.steps.length, images: preview.impact.images.length,
       enabledSteps: preview.impact.enabledStepCount, dependencies: preview.impact.externalDependencies.map(value => `${value.componentTypeLabel}: ${value.name}`),
       items: [
+        ...(preview.impact.assembly ? [`Assembly: ${preview.impact.assembly.name}`] : []),
         ...preview.impact.handlers.map(value => `${value.kind === "workflowActivity" ? "Workflow activity" : "Plug-in"}: ${value.typeName}`),
         ...preview.impact.steps.map(value => `Step: ${value.name}`),
         ...preview.impact.images.map(value => `Image: ${value.name}`),
