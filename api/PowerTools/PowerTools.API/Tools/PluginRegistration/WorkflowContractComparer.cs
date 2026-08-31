@@ -4,7 +4,6 @@ namespace PowerTools.API.Tools.PluginRegistration;
 
 public sealed record WorkflowContractSnapshot(
     string TypeName,
-    string ClassIdentity,
     IReadOnlyList<WorkflowArgumentDto> Arguments,
     bool IsReferenced);
 
@@ -18,17 +17,12 @@ public static class WorkflowContractComparer
 {
     public static WorkflowContractComparison Compare(
         WorkflowContractSnapshot existing,
-        string currentClassIdentity,
         IReadOnlyList<WorkflowArgumentDto> currentArguments)
     {
         ArgumentNullException.ThrowIfNull(existing);
-        ArgumentException.ThrowIfNullOrWhiteSpace(currentClassIdentity);
         ArgumentNullException.ThrowIfNull(currentArguments);
 
         var differences = new List<WorkflowContractDifferenceDto>();
-        if (!string.Equals(existing.ClassIdentity, currentClassIdentity, StringComparison.Ordinal))
-            differences.Add(Difference(existing, "(class)", "class-identity-changed"));
-
         var before = existing.Arguments.ToDictionary(argument => argument.Name, StringComparer.Ordinal);
         var after = currentArguments.ToDictionary(argument => argument.Name, StringComparer.Ordinal);
         foreach (var argument in before.Values)

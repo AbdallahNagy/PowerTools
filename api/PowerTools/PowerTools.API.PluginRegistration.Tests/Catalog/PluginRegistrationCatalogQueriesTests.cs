@@ -74,6 +74,25 @@ public sealed class PluginRegistrationCatalogQueriesTests
     }
 
     [Fact]
+    public void Workflow_dependency_enrichment_reads_only_safe_process_metadata()
+    {
+        var first = Guid.NewGuid();
+        var second = Guid.NewGuid();
+
+        var query = PluginRegistrationCatalogQueries.CreateWorkflowDependencyQuery([first, second]);
+
+        Assert.Equal("workflow", query.EntityName);
+        Assert.Equal(new[] { "workflowid", "name", "category", "statecode", "ismanaged", "iscustomizable", "versionnumber" }.Order(),
+            query.ColumnSet.Columns.Order());
+        Assert.DoesNotContain(query.ColumnSet.Columns, column => column.Contains("xaml", StringComparison.OrdinalIgnoreCase));
+        var condition = Assert.Single(query.Criteria.Conditions);
+        Assert.Equal("workflowid", condition.AttributeName);
+        Assert.Equal(ConditionOperator.In, condition.Operator);
+        Assert.Equal(new[] { first, second }.Order(), condition.Values.Cast<Guid>().Order());
+        AssertSolutionLink(query, "workflowid", 29);
+    }
+
+    [Fact]
     public async Task Gateway_retrieves_every_page_and_copies_the_server_cookie()
     {
         var firstAssemblyId = Guid.NewGuid();

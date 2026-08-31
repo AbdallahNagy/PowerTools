@@ -48,13 +48,13 @@ public static class PluginAssemblyDiff
         foreach (var (typeName, activity) in newActivities.Where(pair => oldActivities.ContainsKey(pair.Key)))
         {
             var referenced = dependencies.Any(dependency => dependency.HandlerId == oldActivities[typeName].Id);
-            var existing = new WorkflowContractSnapshot(typeName, typeName,
+            var existing = new WorkflowContractSnapshot(typeName,
                 oldArguments.Where(argument => argument.HandlerId == oldActivities[typeName].Id)
                     .Select((argument, position) => new WorkflowArgumentDto(argument.Name, argument.Name,
                         argument.TypeName, argument.Direction, argument.IsRequired, position)).ToArray(), referenced);
             var current = activity.Arguments.Select((argument, position) => new WorkflowArgumentDto(argument.Name,
                 argument.Name, argument.TypeName, argument.Direction, argument.IsRequired, position)).ToArray();
-            differences.AddRange(WorkflowContractComparer.Compare(existing, typeName, current).Differences);
+            differences.AddRange(WorkflowContractComparer.Compare(existing, current).Differences);
         }
         return differences;
     }

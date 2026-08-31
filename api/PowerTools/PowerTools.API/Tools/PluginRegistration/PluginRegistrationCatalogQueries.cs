@@ -61,6 +61,18 @@ public static class PluginRegistrationCatalogQueries
             "sdkmessageprocessingstepimageid",
             93);
 
+    /// <summary>Reads registration-facing workflow/action metadata only; never a process definition.</summary>
+    public static QueryExpression CreateWorkflowDependencyQuery(IReadOnlyCollection<Guid> processIds)
+    {
+        ArgumentNullException.ThrowIfNull(processIds);
+        var query = AddSolutionDisplayLink(CreatePagedQuery("workflow",
+                "workflowid", "name", "category", "statecode", "ismanaged", "iscustomizable", "versionnumber"),
+            "workflowid", 29);
+        if (processIds.Count > 0)
+            query.Criteria.AddCondition("workflowid", ConditionOperator.In, processIds.Cast<object>().ToArray());
+        return query;
+    }
+
     private static QueryExpression AddSolutionDisplayLink(
         QueryExpression query,
         string rootIdAttribute,

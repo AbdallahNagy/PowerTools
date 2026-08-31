@@ -9,11 +9,11 @@ public sealed class WorkflowContractComparerTests
     [Fact]
     public void Compare_marks_referenced_removed_argument_as_blocker()
     {
-        var existing = new WorkflowContractSnapshot("Contoso.Activity", "Contoso.Activity", [
+        var existing = new WorkflowContractSnapshot("Contoso.Activity", [
             new WorkflowArgumentDto("account", "Account", "EntityReference", WorkflowArgumentDirection.Input, false, 0)
         ], true);
 
-        var result = WorkflowContractComparer.Compare(existing, "Contoso.Activity", []);
+        var result = WorkflowContractComparer.Compare(existing, []);
 
         var difference = Assert.Single(result.Differences);
         Assert.Equal("removed", difference.Change);
@@ -25,12 +25,12 @@ public sealed class WorkflowContractComparerTests
     [Fact]
     public void Compare_warns_for_unreferenced_type_and_direction_changes_and_required_addition()
     {
-        var existing = new WorkflowContractSnapshot("Contoso.Activity", "Contoso.Activity", [
+        var existing = new WorkflowContractSnapshot("Contoso.Activity", [
             new WorkflowArgumentDto("account", "Account", "EntityReference", WorkflowArgumentDirection.Input, false, 0),
             new WorkflowArgumentDto("result", "Result", "string", WorkflowArgumentDirection.Output, false, 1)
         ], false);
 
-        var result = WorkflowContractComparer.Compare(existing, "Contoso.Activity", [
+        var result = WorkflowContractComparer.Compare(existing, [
             new WorkflowArgumentDto("account", "Account", "string", WorkflowArgumentDirection.Output, false, 0),
             new WorkflowArgumentDto("required", "Required", "string", WorkflowArgumentDirection.Input, true, 1)
         ]);
@@ -41,15 +41,4 @@ public sealed class WorkflowContractComparerTests
         Assert.DoesNotContain(result.Differences, item => item.IsBreaking && item.IsReferenced);
     }
 
-    [Fact]
-    public void Compare_treats_class_identity_change_as_breaking()
-    {
-        var existing = new WorkflowContractSnapshot("Contoso.Activity", "Contoso.OldActivity", [], true);
-
-        var result = WorkflowContractComparer.Compare(existing, "Contoso.NewActivity", []);
-
-        var difference = Assert.Single(result.Differences);
-        Assert.Equal("class-identity-changed", difference.Change);
-        Assert.Contains(result.Differences, item => item.IsBreaking && item.IsReferenced);
-    }
 }

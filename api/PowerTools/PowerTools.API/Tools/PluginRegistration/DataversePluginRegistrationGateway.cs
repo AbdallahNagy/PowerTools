@@ -433,6 +433,7 @@ public sealed class DataversePluginRegistrationGateway(
             cancellationToken.ThrowIfCancellationRequested();
             workflowDependencies.AddRange(await RetrieveWorkflowDependenciesAsync(activity.Id, cancellationToken));
         }
+        workflowDependencies = await EnrichWorkflowDependenciesAsync(workflowDependencies, cancellationToken);
         return new PluginRegistrationRows(mappedAssemblies, mappedTypes, mappedSteps, mappedImages,
             workflowDependencies, [], true);
     }
@@ -497,6 +498,41 @@ public sealed class DataversePluginRegistrationGateway(
         if (!response.Results.TryGetValue("EntityDependencies", out var value) || value is not EntityCollection dependencies)
             return [];
         return dependencies.Entities.Select(dependency => MapDependency(handlerId, dependency)).ToArray();
+    }
+
+    private async Task<List<PluginHandlerDependencyRow>> EnrichWorkflowDependenciesAsync(
+        IReadOnlyList<PluginHandlerDependencyRow> dependencies, CancellationToken cancellationToken)
+    {
+        if (dependencies.Count == 0) return [];
+        if (dependencies.Any(dependency => dependency.ComponentId == Guid.Empty
+            || !string.Equals(dependency.ComponentTypeLabel, "Workflow", StringComparison.Ordinal)))
+            throw new InvalidOperationException("A workflow dependency could not be resolved to a supported workflow or action component.");
+
+        var ids = dependencies.Select(dependency => dependency.ComponentId).Distinct().ToArray();
+        var processes = await RetrieveAllPagesAsync(
+            PluginRegistrationCatalogQueries.CreateWorkflowDependencyQuery(ids), cancellationToken);
+        var byId = processes.ToDictionary(process => process.Id);
+        if (ids.Any(id => !byId.ContainsKey(id)))
+            throw new InvalidOperationException("A workflow dependency could not be resolved to a supported workflow or action component.");
+
+        return dependencies.Select(dependency =>
+        {
+            var process = byId[dependency.ComponentId];
+            var category = FormattedOrOption(process, "category");
+            var state = FormattedOrOption(process, "statecode");
+            return dependency with
+            {
+                Name = Text(process, "name"),
+                ComponentTypeLabel = $"Workflow/action ({category})",
+                IsCustomApi = false,
+                IsExternal = false,
+                SolutionDisplayName = SolutionDisplay([process]),
+                IsManaged = process.GetAttributeValue<bool>("ismanaged"),
+                IsCustomizable = ManagedBoolean(process, "iscustomizable"),
+                VersionNumber = Number(process, "versionnumber"),
+                StateLabel = state
+            };
+        }).ToList();
     }
 
     private static PluginAssemblyRow MapAssembly(Entity entity) =>
