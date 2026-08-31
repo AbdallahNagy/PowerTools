@@ -17,17 +17,36 @@ export function RegistrationDetails({ node }: { node: CatalogTreeNode | null }) 
 
 function NodeDetails({ node }: { node: CatalogTreeNode }) {
   const rows = detailsForNode(node);
+  const workflow = node.kind === "workflowActivity" ? node.data : null;
   return (
     <div className="flex flex-col gap-4">
       <div>
         <p className="text-[11px] uppercase tracking-wider text-[#858585]">{kindLabel(node)}</p>
         <h2 className="mt-1 text-base font-semibold text-white break-words">{node.data.name}</h2>
       </div>
-      <dl className="grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-4 gap-y-2 text-sm">
-        {rows.map(([label, value]) => (
-          <DetailRow key={label} label={label} value={value} />
-        ))}
-      </dl>
+      <section aria-label="Properties">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-[#858585]">Properties</h3>
+        <dl className="mt-2 grid grid-cols-[minmax(7rem,auto)_1fr] gap-x-4 gap-y-2 text-sm">
+          {rows.map(([label, value]) => (
+            <DetailRow key={label} label={label} value={value} />
+          ))}
+        </dl>
+      </section>
+      {workflow ? <>
+        <section aria-label="Argument Contract" className="text-sm">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#858585]">Argument Contract</h3>
+          {workflow.workflowArguments.length ? <ul className="mt-2 space-y-1">{workflow.workflowArguments
+            .slice().sort((left, right) => left.position - right.position).map(argument => <li key={`${argument.position}:${argument.name}`}>
+              {argument.direction === "input" ? "Input" : "Output"} · {argument.displayName} · {argument.typeName} · {argument.isRequired ? "Required" : "Optional"}
+            </li>)}</ul> : <p className="mt-2 text-[#858585]">No workflow arguments are registered.</p>}
+        </section>
+        <section aria-label="Dependent Workflows/Actions" className="text-sm">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#858585]">Dependent Workflows/Actions</h3>
+          {workflow.dependencies.length ? <ul className="mt-2 space-y-1">{workflow.dependencies.map(dependency => <li key={dependency.componentId}>
+            {dependency.name} · {dependency.componentTypeLabel}{dependency.stateLabel ? ` · ${dependency.stateLabel}` : ""}
+          </li>)}</ul> : <p className="mt-2 text-[#858585]">No dependent workflows or actions were found.</p>}
+        </section>
+      </> : null}
     </div>
   );
 }

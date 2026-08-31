@@ -92,6 +92,7 @@ export interface ComponentDependency {
   isManaged: boolean;
   isCustomizable: boolean;
   versionNumber: number;
+  stateLabel?: string | null;
 }
 
 /** The JSON shape emitted by the ASP.NET sidecar's CatalogDtos.cs records. */

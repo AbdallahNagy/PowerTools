@@ -14,6 +14,7 @@ import { AssemblyDialog } from "./components/dialogs/AssemblyDialog";
 import { StepDialog } from "./components/dialogs/StepDialog";
 import { TypedNameConfirmationDialog } from "./components/dialogs/TypedNameConfirmationDialog";
 import { ImageDialog } from "./components/dialogs/ImageDialog";
+import { WorkflowActivityDialog } from "./components/dialogs/WorkflowActivityDialog";
 import { RegistrationWorkspace } from "./components/RegistrationWorkspace";
 import { buildCatalogTree, findCatalogNode, type CatalogTreeNode } from "./model/catalogTree";
 
@@ -70,6 +71,7 @@ function PluginRegistrationPage() {
     : dialogIntent?.kind === "createImage" ? findCatalogNode(nodes, `step:${dialogIntent.stepId}`) ?? null : null;
   const isImageDialog = Boolean(imageStepNode?.kind === "step" && (dialogIntent?.kind === "createImage"
     || dialogIntent?.kind === "unregisterImage" || dialogIntent?.kind === "update" && dialogNode?.kind === "image"));
+  const workflowActivityNode = dialogIntent?.kind === "update" && dialogNode?.kind === "workflowActivity" ? dialogNode : null;
 
   const changeConnection = (name: string) => {
     setSelectedNodeId(null);
@@ -159,7 +161,7 @@ function PluginRegistrationPage() {
         onClose={() => setContextMenu(null)}
       />
       <RegistrationDialogShell
-        intent={isAssemblyMutationDialog || isStepEditDialog || isStepConfirmation || isImageDialog ? null : dialogIntent}
+        intent={isAssemblyMutationDialog || isStepEditDialog || isStepConfirmation || isImageDialog || workflowActivityNode ? null : dialogIntent}
         node={dialogNode}
         onClose={() => setDialogIntent(null)}
       />
@@ -188,6 +190,10 @@ function PluginRegistrationPage() {
         <ImageDialog connectionName={connectionName || null} step={imageStepNode.data}
           image={imageNode?.kind === "image" ? imageNode.data : null}
           operation={dialogIntent?.kind === "createImage" ? "create" : dialogIntent?.kind === "unregisterImage" ? "unregister" : "update"}
+          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
+      ) : null}
+      {workflowActivityNode?.kind === "workflowActivity" ? (
+        <WorkflowActivityDialog connectionName={connectionName || null} activity={workflowActivityNode.data}
           onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
       ) : null}
     </div>

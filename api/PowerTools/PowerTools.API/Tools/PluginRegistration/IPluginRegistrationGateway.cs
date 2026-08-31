@@ -90,7 +90,13 @@ public sealed record PluginHandlerDependencyRow(
     string Name,
     string ComponentTypeLabel,
     bool IsCustomApi,
-    bool IsExternal);
+    bool IsExternal,
+    Guid ComponentId = default,
+    string? SolutionDisplayName = null,
+    bool IsManaged = false,
+    bool IsCustomizable = true,
+    long VersionNumber = 0,
+    string? StateLabel = null);
 
 public sealed record PluginWorkflowArgumentRow(
     Guid HandlerId,

@@ -407,23 +407,34 @@ public sealed class DataversePluginRegistrationGateway(
             PluginRegistrationCatalogQueries.CreateImageQuery(),
             cancellationToken);
 
-        return new PluginRegistrationRows(
-            MapDistinct(assemblies, MapAssembly, (row, solution) => row with
+        var mappedAssemblies = MapDistinct(assemblies, MapAssembly, (row, solution) => row with
             {
                 SolutionDisplayName = solution
-            }),
-            MapDistinct(types, MapType, (row, solution) => row with
+            });
+        var mappedTypes = MapDistinct(types, MapType, (row, solution) => row with
             {
                 SolutionDisplayName = solution
-            }),
-            MapDistinct(steps, MapStep, (row, solution) => row with
+            });
+        var mappedSteps = MapDistinct(steps, MapStep, (row, solution) => row with
             {
                 SolutionDisplayName = solution
-            }),
-            MapDistinct(images, MapImage, (row, solution) => row with
+            });
+        var mappedImages = MapDistinct(images, MapImage, (row, solution) => row with
             {
                 SolutionDisplayName = solution
-            }));
+            });
+
+        // Dependency records contain only component references and are read after the four
+        // catalog queries finish. A failure deliberately fails the entire catalog request:
+        // the renderer must never present workflow dependency data as complete when it is not.
+        var workflowDependencies = new List<PluginHandlerDependencyRow>();
+        foreach (var activity in mappedTypes.Where(type => type.IsWorkflowActivity))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            workflowDependencies.AddRange(await RetrieveWorkflowDependenciesAsync(activity.Id, cancellationToken));
+        }
+        return new PluginRegistrationRows(mappedAssemblies, mappedTypes, mappedSteps, mappedImages,
+            workflowDependencies, [], true);
     }
 
     private async Task<IReadOnlyList<Entity>> RetrieveAllPagesAsync(
@@ -469,9 +480,23 @@ public sealed class DataversePluginRegistrationGateway(
         var isCustomApi = reference?.LogicalName is "customapi"
             or "customapirequestparameter"
             or "customapiresponseproperty";
-        var label = isCustomApi ? "Custom API" : $"Component type {type}";
+        var label = isCustomApi ? "Custom API" : type == 29 ? "Workflow" : $"Component type {type}";
         var name = reference?.Name ?? (id == Guid.Empty ? "Unknown component" : id.ToString("D"));
-        return new PluginHandlerDependencyRow(handlerId, name, label, isCustomApi, id != Guid.Empty);
+        return new PluginHandlerDependencyRow(handlerId, name, label, isCustomApi, id != Guid.Empty, id);
+    }
+
+    private async Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveWorkflowDependenciesAsync(Guid handlerId,
+        CancellationToken cancellationToken)
+    {
+        var request = new OrganizationRequest("RetrieveDependenciesForDelete")
+        {
+            ["ComponentType"] = 90,
+            ["ObjectId"] = handlerId
+        };
+        var response = await service.ExecuteAsync(request, cancellationToken);
+        if (!response.Results.TryGetValue("EntityDependencies", out var value) || value is not EntityCollection dependencies)
+            return [];
+        return dependencies.Entities.Select(dependency => MapDependency(handlerId, dependency)).ToArray();
     }
 
     private static PluginAssemblyRow MapAssembly(Entity entity) =>

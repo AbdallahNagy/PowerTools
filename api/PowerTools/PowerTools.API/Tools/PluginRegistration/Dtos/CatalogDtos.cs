@@ -86,7 +86,8 @@ public sealed record ComponentDependencyDto(
     string? SolutionDisplayName,
     bool IsManaged,
     bool IsCustomizable,
-    long VersionNumber);
+    long VersionNumber,
+    string? StateLabel = null);
 
 public enum HandlerKind
 {
