@@ -15,7 +15,7 @@
     "test": "npm run transpile:electron && vitest run",
     "test:coverage": "npm run transpile:electron && vitest run --coverage",
     "test:smoke": "npm run transpile:electron && npm run build:renderer && npm run test:smoke:run",
-    "test:smoke:run": "playwright test test/smoke/app.spec.ts",
+    "test:smoke:run": "playwright test test/smoke/app.spec.ts test/smoke/pluginRegistration.spec.ts",
     "typecheck": "tsc -b && tsc --project tsconfig.test.json",
     "lint": "eslint .",
     "check": "npm run typecheck && npm run lint -- --max-warnings 0 && npm test && npm run build:renderer && npm run test:smoke:run",
