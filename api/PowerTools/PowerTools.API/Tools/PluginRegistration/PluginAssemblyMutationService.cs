@@ -6,8 +6,10 @@ namespace PowerTools.API.Tools.PluginRegistration;
 public sealed class PluginAssemblyMutationService(
     IPluginAssemblyInspector inspector,
     PluginRegistrationPreflightService preflight,
-    PluginRegistrationCatalogService catalogService)
+    PluginRegistrationCatalogService catalogService,
+    IVerifiedMutationExecutor? verifiedMutationExecutor = null)
 {
+    private readonly IVerifiedMutationExecutor mutationExecutor = verifiedMutationExecutor ?? new VerifiedMutationExecutor();
     public async Task<AssemblyMutationPreflightDto> CreatePreflightAsync(
         IPluginRegistrationGateway gateway,
         string environment,
@@ -68,26 +70,40 @@ public sealed class PluginAssemblyMutationService(
                 }, cancellationToken);
 
             var command = new PluginAssemblyMutationCommand(draft.AssemblyId, inspection, bytes, draft.RequestedIsolationMode, draft.RequestedSourceType);
-            var assemblyId = draft.Operation == "register"
-                ? await gateway.RegisterAssemblyAsync(command, cancellationToken)
-                : await gateway.UpdateAssemblyAsync(command, cancellationToken);
-            var catalog = await catalogService.RetrieveCatalogAsync(gateway, cancellationToken);
-            var verified = catalog.Assemblies.SingleOrDefault(assembly => assembly.Id == assemblyId);
-            var verifiedRow = (await gateway.RetrieveCatalogRowsAsync(cancellationToken)).Assemblies
-                .SingleOrDefault(assembly => assembly.Id == assemblyId);
-            var verifiedSnapshot = await LoadImpactSnapshotAsync(gateway, verifiedRow, [], cancellationToken);
-            if (verified is null || !string.Equals(verified.Name, inspection.Identity.Name, StringComparison.Ordinal)
-                || !string.Equals(verified.Version, inspection.Identity.Version, StringComparison.Ordinal)
-                || !string.Equals(verified.Culture ?? "neutral", inspection.Identity.Culture, StringComparison.Ordinal)
-                || !string.Equals(verified.PublicKeyToken ?? "", inspection.Identity.PublicKeyToken, StringComparison.Ordinal)
-                || verified.IsolationMode != draft.RequestedIsolationMode
-                || verified.SourceType != draft.RequestedSourceType
-                || !verifiedSnapshot.IsComplete
-                || !string.Equals(verifiedSnapshot.Sha256, inspection.Sha256, StringComparison.OrdinalIgnoreCase)
-                || verifiedSnapshot.Size != inspection.Size
-                || !TypesMatch(verified, inspection))
-                return new AssemblyMutationExecutionDto("verificationFailed", false, verified);
-            return new AssemblyMutationExecutionDto("succeededAndVerified", true, verified);
+            Guid? assemblyId = draft.AssemblyId;
+            PluginAssemblyDto? verified = null;
+            async Task<bool> Verify(CancellationToken ct)
+            {
+                if (assemblyId is null) return false;
+                var catalog = await catalogService.RetrieveCatalogAsync(gateway, ct);
+                verified = catalog.Assemblies.SingleOrDefault(assembly => assembly.Id == assemblyId);
+                var rows = await gateway.RetrieveCatalogRowsAsync(ct);
+                var verifiedRow = rows.Assemblies.SingleOrDefault(assembly => assembly.Id == assemblyId);
+                var verifiedSnapshot = await LoadImpactSnapshotAsync(gateway, verifiedRow,
+                    rows.Types.Where(type => type.AssemblyId == assemblyId).ToArray(), ct);
+                return verified is not null && AssemblyMatches(verified, verifiedSnapshot, draft, inspection);
+            }
+            async Task<MutationReconciliationResult> Reconcile(CancellationToken ct)
+            {
+                var rows = await gateway.RetrieveCatalogRowsAsync(ct);
+                var candidate = draft.AssemblyId is { } targetId
+                    ? rows.Assemblies.SingleOrDefault(value => value.Id == targetId)
+                    : rows.Assemblies.SingleOrDefault(value => string.Equals(value.Name, inspection.Identity.Name, StringComparison.Ordinal));
+                if (candidate is null)
+                    return draft.Operation == "register" ? MutationReconciliationResult.Rejected() : MutationReconciliationResult.Contradictory();
+                assemblyId = candidate.Id;
+                if (await Verify(ct)) return MutationReconciliationResult.Succeeded();
+                return submittedImpactState.Target is { } before && candidate.VersionNumber == before.VersionNumber
+                    ? MutationReconciliationResult.Rejected() : MutationReconciliationResult.Contradictory();
+            }
+            var execution = await mutationExecutor.ExecuteAsync(async ct =>
+            {
+                assemblyId = draft.Operation == "register"
+                    ? await gateway.RegisterAssemblyAsync(command, ct)
+                    : await gateway.UpdateAssemblyAsync(command, ct);
+            }, Reconcile, Verify, cancellationToken);
+            var success = execution.Outcome is "succeededAndVerified" or "reconciledAfterCommunicationFailure";
+            return new AssemblyMutationExecutionDto(execution.Outcome, success, verified, execution.Problem);
         }
         finally
         {
@@ -152,6 +168,18 @@ public sealed class PluginAssemblyMutationService(
             .SequenceEqual(inspection.Plugins.Select(plugin => plugin.TypeName).Order(), StringComparer.Ordinal)
         && assembly.Handlers.Where(handler => handler.Kind == HandlerKind.WorkflowActivity).Select(handler => handler.TypeName).Order()
             .SequenceEqual(inspection.WorkflowActivities.Select(activity => activity.TypeName).Order(), StringComparer.Ordinal);
+    private static bool AssemblyMatches(PluginAssemblyDto assembly, LoadedImpactSnapshot snapshot,
+        AssemblyMutationDraftDto draft, AssemblyInspectionDto inspection) =>
+        string.Equals(assembly.Name, inspection.Identity.Name, StringComparison.Ordinal)
+        && string.Equals(assembly.Version, inspection.Identity.Version, StringComparison.Ordinal)
+        && string.Equals(assembly.Culture ?? "neutral", inspection.Identity.Culture, StringComparison.Ordinal)
+        && string.Equals(assembly.PublicKeyToken ?? "", inspection.Identity.PublicKeyToken, StringComparison.Ordinal)
+        && assembly.IsolationMode == draft.RequestedIsolationMode
+        && assembly.SourceType == draft.RequestedSourceType
+        && snapshot.IsComplete
+        && string.Equals(snapshot.Sha256, inspection.Sha256, StringComparison.OrdinalIgnoreCase)
+        && snapshot.Size == inspection.Size
+        && TypesMatch(assembly, inspection);
     private static async Task<byte[]> ReadContentAsync(Stream content, long length, CancellationToken cancellationToken)
     {
         if (length <= 0 || length > PluginAssemblyInspector.MaxAssemblyBytes) throw new ArgumentException("The assembly content is invalid.");

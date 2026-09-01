@@ -113,6 +113,8 @@ export function clearTargetAuthCache(name: string) {
 
 declare module "axios" {
   interface AxiosRequestConfig {
+    /** Prevents the 401 interceptor from replaying a single-attempt mutation. */
+    noAuthRetry?: boolean;
     meta?: {
       /** Override the primary connection used for this request. Defaults to the active connection. */
       connectionName?: string;
@@ -159,7 +161,7 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config as RetriableConfig | undefined;
-    if (error.response?.status === 401 && original && !original._retry) {
+    if (error.response?.status === 401 && original && !original._retry && !original.noAuthRetry) {
       original._retry = true;
       try {
         if (original.meta?.connectionName) {

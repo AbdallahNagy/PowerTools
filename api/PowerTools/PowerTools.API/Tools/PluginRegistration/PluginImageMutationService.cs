@@ -2,8 +2,10 @@ using PowerTools.API.Tools.PluginRegistration.Dtos;
 
 namespace PowerTools.API.Tools.PluginRegistration;
 
-public sealed class PluginImageMutationService(PluginImageValidator validator, PluginRegistrationPreflightService preflight)
+public sealed class PluginImageMutationService(PluginImageValidator validator, PluginRegistrationPreflightService preflight,
+    IVerifiedMutationExecutor? verifiedMutationExecutor = null)
 {
+    private readonly IVerifiedMutationExecutor mutationExecutor = verifiedMutationExecutor ?? new VerifiedMutationExecutor();
     private static readonly HashSet<string> Operations = new(["create", "update", "unregister"], StringComparer.Ordinal);
 
     public async Task<ImageMutationPreflightDto> CreatePreflightAsync(IPluginRegistrationGateway gateway,
@@ -42,24 +44,50 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
             return Request(environment, operation, targetId, fresh.Validation.Draft, freshDependencies);
         }, cancellationToken);
 
-        var id = await gateway.MutateImageAsync(new(operation, targetId, initial.Validation.Draft,
-            submitted.ExpectedVersions[submitted.StepId], targetId is { } imageId ? submitted.ExpectedVersions[imageId] : null), cancellationToken);
-        var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
-        var row = rows.Images.SingleOrDefault(item => item.Id == id);
-        if (operation == "unregister")
-            return row is null ? new("succeededAndVerified", true, null) : new("verificationFailed", false, Map(row));
-        var parent = rows.Steps.SingleOrDefault(item => item.Id == submitted.StepId);
-        var verifiedState = row is null ? null : await gateway.RetrieveImagePreflightStateAsync(submitted.StepId, id,
-            initial.Validation.Draft, cancellationToken);
-        if (row is null || parent is null || parent.VersionNumber <= submitted.ExpectedVersions[submitted.StepId]
-            || verifiedState is null || row.PluginStepId != submitted.StepId
-            || !string.Equals(row.Name, initial.Validation.PublicAfter.Name, StringComparison.Ordinal)
-            || !string.Equals(row.EntityAlias, initial.Validation.Draft.Alias, StringComparison.Ordinal)
-            || !string.Equals(verifiedState.SupportedMessagePropertyName, initial.Validation.Draft.MessagePropertyName, StringComparison.OrdinalIgnoreCase)
-            || !row.Attributes.Order(StringComparer.OrdinalIgnoreCase).SequenceEqual(initial.Validation.Draft.Attributes, StringComparer.OrdinalIgnoreCase)
-            || !TypeMatches(row.ImageTypeLabel, initial.Validation.Draft.ImageType))
-            return new("verificationFailed", false, row is null ? null : Map(row));
-        return new("succeededAndVerified", true, Map(row));
+        Guid? id = targetId;
+        PluginImageDto? verifiedImage = null;
+        async Task<bool> Verify(CancellationToken ct)
+        {
+            var rows = await gateway.RetrieveCatalogRowsAsync(ct);
+            var row = id is null ? null : rows.Images.SingleOrDefault(item => item.Id == id);
+            verifiedImage = row is null ? null : Map(row);
+            if (operation == "unregister") return row is null;
+            var parent = rows.Steps.SingleOrDefault(item => item.Id == submitted.StepId);
+            var state = row is null ? null : await gateway.RetrieveImagePreflightStateAsync(submitted.StepId, row.Id,
+                initial.Validation.Draft, ct);
+            return row is not null && parent is not null
+                && parent.VersionNumber > submitted.ExpectedVersions[submitted.StepId]
+                && state is not null && ImageMatches(row, state, submitted.StepId, initial.Validation);
+        }
+        async Task<MutationReconciliationResult> Reconcile(CancellationToken ct)
+        {
+            var rows = await gateway.RetrieveCatalogRowsAsync(ct);
+            if (operation == "unregister")
+                return rows.Images.All(item => item.Id != targetId)
+                    ? MutationReconciliationResult.Succeeded() : MutationReconciliationResult.Rejected();
+            if (operation == "create")
+            {
+                var candidates = rows.Images.Where(item => item.PluginStepId == submitted.StepId
+                    && string.Equals(item.EntityAlias, initial.Validation.Draft.Alias, StringComparison.Ordinal)).ToArray();
+                if (candidates.Length == 0) return MutationReconciliationResult.Rejected();
+                if (candidates.Length != 1) return MutationReconciliationResult.Contradictory();
+                id = candidates[0].Id;
+                return await Verify(ct) ? MutationReconciliationResult.Succeeded() : MutationReconciliationResult.Contradictory();
+            }
+            var target = rows.Images.SingleOrDefault(item => item.Id == targetId);
+            if (target is null) return MutationReconciliationResult.Contradictory();
+            id = target.Id;
+            if (await Verify(ct)) return MutationReconciliationResult.Succeeded();
+            return target.VersionNumber == submitted.ExpectedVersions[target.Id]
+                ? MutationReconciliationResult.Rejected() : MutationReconciliationResult.Contradictory();
+        }
+        var execution = await mutationExecutor.ExecuteAsync(async ct =>
+        {
+            id = await gateway.MutateImageAsync(new(operation, targetId, initial.Validation.Draft,
+                submitted.ExpectedVersions[submitted.StepId], targetId is { } imageId ? submitted.ExpectedVersions[imageId] : null), ct);
+        }, Reconcile, Verify, cancellationToken);
+        var success = execution.Outcome is "succeededAndVerified" or "reconciledAfterCommunicationFailure";
+        return new(execution.Outcome, success, verifiedImage, execution.Problem);
     }
 
     private async Task<ValidatedState> ReadAndValidateAsync(IPluginRegistrationGateway gateway, string operation, Guid? targetId,
@@ -122,6 +150,15 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
     private static int ImageType(string label) => label.Contains("Both", StringComparison.OrdinalIgnoreCase) ? 2
         : label.Contains("Post", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
     private static bool TypeMatches(string label, int type) => ImageType(label) == type;
+    private static bool ImageMatches(PluginImageRow row, PluginImagePreflightState state, Guid stepId,
+        PluginImageValidationResult validation) =>
+        row.PluginStepId == stepId
+        && string.Equals(row.Name, validation.PublicAfter.Name, StringComparison.Ordinal)
+        && string.Equals(row.EntityAlias, validation.Draft.Alias, StringComparison.Ordinal)
+        && string.Equals(state.SupportedMessagePropertyName, validation.Draft.MessagePropertyName, StringComparison.OrdinalIgnoreCase)
+        && row.Attributes.Order(StringComparer.OrdinalIgnoreCase)
+            .SequenceEqual(validation.Draft.Attributes.Order(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase)
+        && TypeMatches(row.ImageTypeLabel, validation.Draft.ImageType);
     private static PluginImageDto Map(PluginImageRow row) => new(row.Id, row.PluginStepId ?? Guid.Empty, row.Name,
         row.Description, row.ImageTypeLabel, row.EntityAlias, row.Attributes, row.IsManaged, row.IsCustomizable,
         row.VersionNumber, row.SolutionDisplayName);

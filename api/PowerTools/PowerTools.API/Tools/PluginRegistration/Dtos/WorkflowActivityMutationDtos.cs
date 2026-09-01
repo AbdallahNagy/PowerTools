@@ -17,7 +17,8 @@ public sealed record WorkflowActivityMutationPreflightDto(
 public sealed record WorkflowActivityMutationExecutionDto(
     string Outcome,
     bool SucceededAndVerified,
-    PluginHandlerDto? WorkflowActivity);
+    PluginHandlerDto? WorkflowActivity,
+    PluginRegistrationProblemDto? Problem = null);
 
 public sealed record WorkflowActivityMutationCommand(
     Guid WorkflowActivityId,

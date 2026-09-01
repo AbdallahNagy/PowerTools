@@ -63,6 +63,25 @@ public sealed class WorkflowActivityMutationTests
         Assert.Equal(("New", "Friendly", "Group", "Description"), gateway.LastWrite);
     }
 
+    [Fact]
+    public async Task Lost_workflow_activity_response_is_reconciled_from_all_supported_metadata()
+    {
+        var id = Guid.NewGuid();
+        var gateway = new WorkflowActivityGateway(new PluginTypeRow(id, Guid.NewGuid(), "Contoso.Activity", "Old", null,
+            null, null, true, false, true, 5, null)) { LoseResponseAfterMutation = true };
+        var service = new WorkflowActivityMutationService(new PluginRegistrationPreflightService(
+            new PluginRegistrationPlanSigner("test-secret", TimeProvider.System)));
+        var draft = new WorkflowActivityDraftDto(id, "New", "Friendly", "Group", "Description",
+            new Dictionary<Guid, long> { [id] = 5 });
+        var preview = await service.CreatePreflightAsync(gateway, "https://org", draft, default);
+
+        var result = await service.ExecuteAsync(gateway, "https://org", draft, preview.Plan.Token, default);
+
+        Assert.Equal("reconciledAfterCommunicationFailure", result.Outcome);
+        Assert.True(result.SucceededAndVerified);
+        Assert.Equal(1, gateway.WriteCount);
+    }
+
     private sealed class WorkflowActivityGateway : IPluginRegistrationGateway
     {
         private PluginTypeRow _type;
@@ -75,6 +94,7 @@ public sealed class WorkflowActivityMutationTests
         public int WriteCount { get; private set; }
         public (string Name, string? FriendlyName, string? GroupName, string? Description) LastWrite { get; private set; }
         public long DependencyVersion { get; set; } = 7;
+        public bool LoseResponseAfterMutation { get; init; }
         public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) =>
             Task.FromResult(new PluginRegistrationRows([], [_type], [], [], _dependencyId is { } id
                 ? [new PluginHandlerDependencyRow(_type.Id, "Dependent action", "Workflow action", false, false, id,
@@ -87,6 +107,7 @@ public sealed class WorkflowActivityMutationTests
             _type = _type with { Name = command.Name, FriendlyName = command.FriendlyName,
                 WorkflowActivityGroupName = command.WorkflowActivityGroupName, Description = command.Description,
                 VersionNumber = _type.VersionNumber + 1 };
+            if (LoseResponseAfterMutation) throw new HttpRequestException("response lost");
             return Task.FromResult(command.WorkflowActivityId);
         }
     }

@@ -2,12 +2,13 @@ import { useMemo, useState } from "react";
 import { Button, Modal } from "../../../../shared/ui";
 import { useImageMutations, type ImageDraft, type ImageOperation, type ImagePreflight } from "../../api/useImageMutations";
 import type { PluginImage, PluginStep } from "../../model/contracts";
+import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 import { MutationImpactPreviewDialog } from "./ImpactPreviewDialog";
 
 interface Props { connectionName: string | null; step: PluginStep; image: PluginImage | null; operation: ImageOperation;
-  onClose: () => void; refreshCatalog: () => Promise<unknown>; }
-export function ImageDialog({ connectionName, step, image, operation, onClose, refreshCatalog }: Props) {
-  const mutations = useImageMutations(connectionName, refreshCatalog);
+  onClose: () => void; refreshCatalog: () => Promise<unknown>; onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure; }
+export function ImageDialog({ connectionName, step, image, operation, onClose, onMutationResult, onMutationFailure }: Props) {
+  const mutations = useImageMutations(connectionName);
   const [alias, setAlias] = useState(image?.entityAlias ?? image?.name ?? "");
   const [imageType, setImageType] = useState(() => image ? labelType(image.imageTypeLabel) : defaultType(step));
   const [columns, setColumns] = useState(image?.attributes.join(", ") ?? "");
@@ -18,10 +19,12 @@ export function ImageDialog({ connectionName, step, image, operation, onClose, r
   const draft: ImageDraft = { stepId: step.id, imageType, alias, messagePropertyName: "Target", attributes,
     expectedVersions: image ? { [step.id]: step.versionNumber, [image.id]: image.versionNumber } : { [step.id]: step.versionNumber } };
   const title = operation === "create" ? "Register image" : operation === "update" ? "Update image" : "Unregister image";
-  const submit = async () => setPreview(await mutations.preflight.mutateAsync({ operation, imageId: image?.id ?? null, draft }));
-  const confirm = async () => { if (!preview) return; const result = await mutations.execute.mutateAsync({ operation,
-    imageId: image?.id ?? null, draft, token: preview.plan.token, typedName: operation === "unregister" ? typedName : undefined });
-    if (result.succeededAndVerified) onClose(); };
+  const submit = async () => { try { setPreview(await mutations.preflight.mutateAsync({ operation, imageId: image?.id ?? null, draft })); }
+    catch (error) { await onMutationFailure(error, { phase: "read", affectedComponentId: image?.id ?? step.id, retry: () => void submit() }); } };
+  const confirm = async () => { if (!preview) return; try { const result = await mutations.execute.mutateAsync({ operation,
+      imageId: image?.id ?? null, draft, token: preview.plan.token, typedName: operation === "unregister" ? typedName : undefined });
+      await onMutationResult(result, result.image?.id ?? image?.id ?? step.id); }
+    catch (error) { await onMutationFailure(error, { phase: "execute", affectedComponentId: image?.id ?? step.id }); } };
   if (operation === "unregister") return <>{!preview ? <Modal open title={title} onClose={onClose} widthClass="max-w-lg"><div role="dialog" aria-label={title} className="flex flex-col gap-3">
     <Button onClick={() => void submit()}>Preview unregister</Button>
     <Button variant="secondary" onClick={onClose}>Cancel</Button></div></Modal> : null}{preview ? <MutationImpactPreviewDialog title="Image impact preview"

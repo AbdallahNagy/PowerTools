@@ -48,7 +48,7 @@ public sealed class PluginAssemblyMutationTests
             preflight.Draft, Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None);
 
         Assert.False(result.SucceededAndVerified);
-        Assert.Equal("verificationFailed", result.Outcome);
+        Assert.Equal("outcomeUncertain", result.Outcome);
         Assert.Equal(1, gateway.RegisterCalls);
     }
 
@@ -67,6 +67,27 @@ public sealed class PluginAssemblyMutationTests
 
         Assert.Equal(2, gateway.LastCommand?.IsolationMode);
         Assert.Equal(0, gateway.LastCommand?.SourceType);
+    }
+
+    [Theory]
+    [InlineData("register")]
+    [InlineData("update")]
+    public async Task Lost_assembly_response_is_reconciled_by_full_identity_hash_and_handlers(string operation)
+    {
+        var inspection = Inspection();
+        var existing = operation == "update" ? Assembly("1.0.0.0") : null;
+        var gateway = new StatefulAssemblyGateway(existing, inspection) { LoseResponseAfterMutation = true };
+        var service = Service(inspection);
+        var draft = Draft(operation, existing, inspection, 2, 0);
+        var preview = await service.CreatePreflightAsync(gateway, "https://contoso.test", draft,
+            Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None);
+
+        var result = await service.ExecuteAsync(gateway, "https://contoso.test", preview.Plan.Token,
+            preview.Draft, Bytes(), 3, new Dictionary<string, bool>(), CancellationToken.None);
+
+        Assert.Equal("reconciledAfterCommunicationFailure", result.Outcome);
+        Assert.True(result.SucceededAndVerified);
+        Assert.Equal(1, gateway.RegisterCalls + gateway.UpdateCalls);
     }
 
     [Fact]
@@ -235,6 +256,7 @@ public sealed class PluginAssemblyMutationTests
         public int UpdateCalls { get; private set; }
         public PluginAssemblyMutationCommand? LastCommand { get; private set; }
         public bool ReturnMismatchedVersion { get; init; }
+        public bool LoseResponseAfterMutation { get; init; }
 
         public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) =>
             Task.FromResult(new PluginRegistrationRows(current is null ? [] : [current], [], [], []));
@@ -249,6 +271,7 @@ public sealed class PluginAssemblyMutationTests
         {
             RegisterCalls++;
             Apply(command);
+            if (LoseResponseAfterMutation) throw new HttpRequestException("response lost");
             return Task.FromResult(assemblyId);
         }
 
@@ -256,6 +279,7 @@ public sealed class PluginAssemblyMutationTests
         {
             UpdateCalls++;
             Apply(command);
+            if (LoseResponseAfterMutation) throw new HttpRequestException("response lost");
             return Task.FromResult(assemblyId);
         }
 

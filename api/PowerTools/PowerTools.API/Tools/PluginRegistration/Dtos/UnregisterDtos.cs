@@ -32,7 +32,8 @@ public sealed record CascadeUnregisterExecuteRequestDto(
 public sealed record CascadeUnregisterExecutionDto(
     string Outcome,
     bool SucceededAndVerified,
-    CascadeImpactDto? RemainingImpact = null);
+    CascadeImpactDto? RemainingImpact = null,
+    PluginRegistrationProblemDto? Problem = null);
 
 public sealed record PluginRegistrationCapabilitiesDto(
     TransactionalCascadeUnregisterCapabilityDto TransactionalCascadeUnregister);

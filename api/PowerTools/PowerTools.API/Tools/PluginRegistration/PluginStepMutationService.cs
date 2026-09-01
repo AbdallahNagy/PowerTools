@@ -2,8 +2,10 @@ using PowerTools.API.Tools.PluginRegistration.Dtos;
 
 namespace PowerTools.API.Tools.PluginRegistration;
 
-public sealed class PluginStepMutationService(PluginStepValidator validator, PluginRegistrationPreflightService preflight)
+public sealed class PluginStepMutationService(PluginStepValidator validator, PluginRegistrationPreflightService preflight,
+    IVerifiedMutationExecutor? verifiedMutationExecutor = null)
 {
+    private readonly IVerifiedMutationExecutor mutationExecutor = verifiedMutationExecutor ?? new VerifiedMutationExecutor();
     private static readonly HashSet<string> Operations = new(["create", "update", "enable", "disable", "unregister"], StringComparer.Ordinal);
 
     public async Task<StepMutationPreflightDto> CreatePreflightAsync(IPluginRegistrationGateway gateway,
@@ -52,31 +54,51 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
             }, cancellationToken);
 
         var before = PublicBefore(initial.State);
-        var mutatedId = await gateway.MutateStepAsync(new PluginStepMutationCommand(operation, targetId,
-            initial.Validation.Draft, before, submitted.ExpectedVersions[submitted.PluginTypeId],
-            targetId is { } id ? submitted.ExpectedVersions[id] : null,
-            initial.State.SecureConfigId, initial.State.SecureConfigVersion), cancellationToken);
-        var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
-        var row = rows.Steps.SingleOrDefault(item => item.Id == mutatedId);
-        if (operation == "unregister")
-            return row is null ? new("succeededAndVerified", true, null) : new("verificationFailed", false, Map(row));
-        var verifiedState = row is null ? null : await gateway.RetrieveStepPreflightStateAsync(
-            submitted.PluginTypeId, mutatedId, initial.Validation.Draft, cancellationToken);
-        if (row is null || verifiedState is null || row.PluginTypeId != submitted.PluginTypeId
-            || operation == "enable" && !row.IsEnabled || operation == "disable" && row.IsEnabled
-            || row.Stage != initial.Validation.Draft.Stage || row.Mode != initial.Validation.Draft.Mode
-            || row.Rank != initial.Validation.Draft.Rank
-            || verifiedState.CurrentSdkMessageId != initial.Validation.Draft.SdkMessageId
-            || verifiedState.CurrentSdkMessageFilterId != initial.Validation.Draft.SdkMessageFilterId
-            || !(verifiedState.CurrentFilteringAttributes ?? []).Order(StringComparer.OrdinalIgnoreCase)
-                .SequenceEqual(initial.Validation.Draft.FilteringAttributes.Order(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase)
-            || verifiedState.CurrentImpersonatingUserId != initial.Validation.Draft.ImpersonatingUserId
-                && initial.Validation.Draft.ImpersonatingUserAction != "keep"
-            || initial.Validation.Draft.UnsecureConfigurationAction != "keep"
-                && !string.Equals(verifiedState.CurrentUnsecureConfiguration, initial.Validation.Draft.UnsecureConfiguration, StringComparison.Ordinal)
-            || initial.Validation.Draft.ReplacementSecureConfiguration is not null && !verifiedState.SecureConfigExists)
-            return new("verificationFailed", false, row is null ? null : Map(row));
-        return new("succeededAndVerified", true, Map(row));
+        Guid? mutatedId = targetId;
+        PluginStepDto? verifiedStep = null;
+        async Task<bool> Verify(CancellationToken ct)
+        {
+            var rows = await gateway.RetrieveCatalogRowsAsync(ct);
+            var row = mutatedId is null ? null : rows.Steps.SingleOrDefault(item => item.Id == mutatedId);
+            verifiedStep = row is null ? null : Map(row);
+            if (operation == "unregister") return row is null;
+            var verifiedState = row is null ? null : await gateway.RetrieveStepPreflightStateAsync(
+                submitted.PluginTypeId, row.Id, initial.Validation.Draft, ct);
+            return row is not null && verifiedState is not null && StepMatches(row, verifiedState,
+                operation, submitted, initial.Validation.Draft);
+        }
+        async Task<MutationReconciliationResult> Reconcile(CancellationToken ct)
+        {
+            var rows = await gateway.RetrieveCatalogRowsAsync(ct);
+            if (operation == "unregister")
+                return rows.Steps.All(item => item.Id != targetId)
+                    ? MutationReconciliationResult.Succeeded() : MutationReconciliationResult.Rejected();
+            if (operation == "create")
+            {
+                var candidates = rows.Steps.Where(item => item.PluginTypeId == submitted.PluginTypeId
+                    && item.Stage == initial.Validation.Draft.Stage && item.Mode == initial.Validation.Draft.Mode
+                    && item.Rank == initial.Validation.Draft.Rank).ToArray();
+                if (candidates.Length == 0) return MutationReconciliationResult.Rejected();
+                if (candidates.Length != 1) return MutationReconciliationResult.Contradictory();
+                mutatedId = candidates[0].Id;
+                return await Verify(ct) ? MutationReconciliationResult.Succeeded() : MutationReconciliationResult.Contradictory();
+            }
+            var target = rows.Steps.SingleOrDefault(item => item.Id == targetId);
+            if (target is null) return MutationReconciliationResult.Contradictory();
+            mutatedId = target.Id;
+            if (await Verify(ct)) return MutationReconciliationResult.Succeeded();
+            return target.VersionNumber == submitted.ExpectedVersions[target.Id]
+                ? MutationReconciliationResult.Rejected() : MutationReconciliationResult.Contradictory();
+        }
+        var execution = await mutationExecutor.ExecuteAsync(async ct =>
+        {
+            mutatedId = await gateway.MutateStepAsync(new PluginStepMutationCommand(operation, targetId,
+                initial.Validation.Draft, before, submitted.ExpectedVersions[submitted.PluginTypeId],
+                targetId is { } id ? submitted.ExpectedVersions[id] : null,
+                initial.State.SecureConfigId, initial.State.SecureConfigVersion), ct);
+        }, Reconcile, Verify, cancellationToken);
+        var success = execution.Outcome is "succeededAndVerified" or "reconciledAfterCommunicationFailure";
+        return new(execution.Outcome, success, verifiedStep, execution.Problem);
     }
 
     private async Task<ValidatedState> ReadAndValidateAsync(IPluginRegistrationGateway gateway, string operation, Guid? targetId,
@@ -168,5 +190,19 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
         row.Description, row.MessageLabel, row.PrimaryTableLabel, row.SecondaryTableLabel, row.StageLabel,
         row.ModeLabel, row.Stage, row.Mode, row.Rank, row.IsEnabled, row.IsManaged, row.IsCustomizable,
         row.VersionNumber, row.SecureConfigExists, [], row.SolutionDisplayName);
+    private static bool StepMatches(PluginStepRow row, PluginStepPreflightState state, string operation,
+        StepDraftDto submitted, StepDraftDto normalized) =>
+        row.PluginTypeId == submitted.PluginTypeId
+        && (operation != "enable" || row.IsEnabled)
+        && (operation != "disable" || !row.IsEnabled)
+        && row.Stage == normalized.Stage && row.Mode == normalized.Mode && row.Rank == normalized.Rank
+        && state.CurrentSdkMessageId == normalized.SdkMessageId
+        && state.CurrentSdkMessageFilterId == normalized.SdkMessageFilterId
+        && (state.CurrentFilteringAttributes ?? []).Order(StringComparer.OrdinalIgnoreCase)
+            .SequenceEqual(normalized.FilteringAttributes.Order(StringComparer.OrdinalIgnoreCase), StringComparer.OrdinalIgnoreCase)
+        && (normalized.ImpersonatingUserAction == "keep" || state.CurrentImpersonatingUserId == normalized.ImpersonatingUserId)
+        && (normalized.UnsecureConfigurationAction == "keep"
+            || string.Equals(state.CurrentUnsecureConfiguration, normalized.UnsecureConfiguration, StringComparison.Ordinal))
+        && (normalized.ReplacementSecureConfiguration is null || state.SecureConfigExists);
     private sealed record ValidatedState(PluginStepPreflightState State, PluginStepValidationResult Validation);
 }

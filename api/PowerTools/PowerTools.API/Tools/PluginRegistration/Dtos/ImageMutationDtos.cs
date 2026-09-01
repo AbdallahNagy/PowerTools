@@ -6,7 +6,8 @@ public sealed record ImagePublicValuesDto(string Name, int ImageType, string Ali
     IReadOnlyList<string> Attributes);
 public sealed record ImageMutationPreflightDto(ImageDraftDto Draft, MutationPlanDto Plan,
     ImagePublicValuesDto? Before, ImagePublicValuesDto After);
-public sealed record ImageMutationExecutionDto(string Outcome, bool SucceededAndVerified, PluginImageDto? Image);
+public sealed record ImageMutationExecutionDto(string Outcome, bool SucceededAndVerified, PluginImageDto? Image,
+    PluginRegistrationProblemDto? Problem = null);
 public sealed record ImageMutationExecuteRequestDto(ImageDraftDto Draft, string PlanToken, string? TypedName);
 public sealed record PluginImageValidationState(Guid? TargetImageId, string? ImageName, string Message, int Stage,
     string PrimaryTable, string SupportedMessagePropertyName, IReadOnlyList<string> AvailableAttributes,

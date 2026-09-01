@@ -45,6 +45,7 @@ builder.Services.AddSingleton<PluginRegistrationPlanSigner>(services =>
 builder.Services.AddSingleton<PluginRegistrationPreflightService>();
 builder.Services.AddSingleton<PluginRegistrationDependencyService>();
 builder.Services.AddSingleton<PluginRegistrationCapabilityService>();
+builder.Services.AddSingleton<IVerifiedMutationExecutor, VerifiedMutationExecutor>();
 builder.Services.AddSingleton<PluginRegistrationCascadeService>();
 builder.Services.AddSingleton<PluginStepValidator>();
 builder.Services.AddSingleton<PluginStepMutationService>();

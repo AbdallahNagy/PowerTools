@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Modal } from "../../../../shared/ui";
 import { useStepMutations, type StepDraft, type StepOperation } from "../../api/useStepMutations";
 import type { PluginHandler, PluginStep } from "../../model/contracts";
+import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 
 interface Props { connectionName: string | null; plugin: PluginHandler & { kind: "plugin" }; step: PluginStep;
-  operation: "enable" | "disable" | "unregister"; onClose: () => void; refreshCatalog: () => Promise<unknown>; }
-export function TypedNameConfirmationDialog({ connectionName, plugin, step, operation, onClose, refreshCatalog }: Props) {
-  const mutations = useStepMutations(connectionName, refreshCatalog);
+  operation: "enable" | "disable" | "unregister"; onClose: () => void; refreshCatalog: () => Promise<unknown>;
+  onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure; }
+export function TypedNameConfirmationDialog({ connectionName, plugin, step, operation, onClose, onMutationResult, onMutationFailure }: Props) {
+  const mutations = useStepMutations(connectionName);
   const [typedName, setTypedName] = useState("");
   const options = mutations.options.data;
   const message = options?.messages.find(item => item.name === step.messageLabel);
@@ -19,9 +21,20 @@ export function TypedNameConfirmationDialog({ connectionName, plugin, step, oper
     impersonatingUserAction: "keep", unsecureConfigurationAction: "keep",
     expectedVersions: { [plugin.id]: plugin.versionNumber, [step.id]: step.versionNumber } }) : null,
   [filter, message, plugin.id, plugin.versionNumber, step]);
-  useEffect(() => { if (draft && !mutations.preflight.data && !mutations.preflight.isPending) void mutations.preflight.mutateAsync({ operation, stepId: step.id, draft }); }, [draft, mutations.preflight, operation, step.id]);
+  useEffect(() => {
+    if (!draft || mutations.preflight.data || mutations.preflight.isPending) return;
+    const loadPreview = () => mutations.preflight.mutateAsync({ operation, stepId: step.id, draft });
+    void loadPreview().catch(error => onMutationFailure(error, {
+      phase: "read", affectedComponentId: step.id, retry: () => void loadPreview(),
+    }));
+  }, [draft, mutations.preflight, onMutationFailure, operation, step.id]);
   const title = operation === "unregister" ? "Unregister step" : `${operation === "enable" ? "Enable" : "Disable"} step`;
-  const execute = async () => { const plan = mutations.preflight.data; if (!draft || !plan) return; const result = await mutations.execute.mutateAsync({ operation: operation as StepOperation, stepId: step.id, draft, token: plan.plan.token, typedName: operation === "unregister" ? typedName : undefined }); if (result.succeededAndVerified) onClose(); };
+  const execute = async () => { const plan = mutations.preflight.data; if (!draft || !plan) return; try {
+    const result = await mutations.execute.mutateAsync({ operation: operation as StepOperation, stepId: step.id, draft, token: plan.plan.token, typedName: operation === "unregister" ? typedName : undefined });
+    await onMutationResult(result, result.step?.id ?? step.id);
+  } catch (error) {
+    await onMutationFailure(error, { phase: "execute", affectedComponentId: step.id });
+  } };
   const blocked = !mutations.preflight.data || mutations.preflight.data.plan.blockers.length > 0 || (operation === "unregister" && typedName !== step.name);
   return <Modal open title={title} onClose={onClose} widthClass="max-w-lg"><div role="dialog" aria-label={title} className="flex flex-col gap-3">
     {operation === "unregister" ? <TypedNameConfirmation componentLabel="step" requiredName={step.name} value={typedName} onChange={setTypedName} /> : <p>{connectionName}: {step.messageLabel} · {step.primaryTableLabel} · {step.stageLabel}. Execution is {operation === "enable" ? "starting" : "stopping"}.</p>}

@@ -174,8 +174,7 @@ describe("Assembly mutations", () => {
       });
       return Promise.reject(new Error(`Unexpected mutation request: ${url}`));
     });
-    const { queryClient } = renderPage();
-    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    renderPage();
     const user = userEvent.setup();
     const file = new File(["dll"], "Contoso.dll", { type: "application/octet-stream" });
 
@@ -193,9 +192,6 @@ describe("Assembly mutations", () => {
       fileName: "Contoso.dll",
       operation: "register",
       inspection: { sha256: "analysis-hash" },
-    });
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: ["plugin-registration", "catalog", "Development"],
     });
     await waitFor(() => expect(catalogReads).toBeGreaterThanOrEqual(2));
   });
@@ -216,7 +212,8 @@ describe("Assembly mutations", () => {
       new File(["dll"], "Contoso.dll", { type: "application/octet-stream" }),
     );
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("could not be analyzed");
+    const dialog = await screen.findByRole("dialog", { name: "Register assembly" });
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("could not be analyzed");
     expect(apiPostMock).toHaveBeenCalledTimes(1);
   });
 });

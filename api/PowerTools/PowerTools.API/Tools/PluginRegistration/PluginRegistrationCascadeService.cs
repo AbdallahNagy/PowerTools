@@ -5,8 +5,10 @@ namespace PowerTools.API.Tools.PluginRegistration;
 public sealed class PluginRegistrationCascadeService(
     PluginRegistrationDependencyService dependencies,
     PluginRegistrationCapabilityService capabilities,
-    PluginRegistrationPreflightService preflight)
+    PluginRegistrationPreflightService preflight,
+    IVerifiedMutationExecutor? verifiedMutationExecutor = null)
 {
+    private readonly IVerifiedMutationExecutor mutationExecutor = verifiedMutationExecutor ?? new VerifiedMutationExecutor();
     public async Task<CascadeUnregisterPreflightDto> CreatePreflightAsync(IPluginRegistrationGateway gateway,
         string environment, CascadeUnregisterDraftDto draft, CancellationToken cancellationToken)
     {
@@ -39,10 +41,24 @@ public sealed class PluginRegistrationCascadeService(
             EnsureExecutable(fresh, capability, draft, typedName, acknowledged);
             return Request(environment, draft, freshPlan, fresh.ExternalDependencies, capability);
         }, cancellationToken);
-        await gateway.ExecuteCascadeTransactionAsync(initialPlan, cancellationToken);
-        var verified = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
-        var remaining = PlannedIds(initialPlan).Intersect(AllIds(verified)).ToArray();
-        return remaining.Length == 0 ? new("succeededAndVerified", true) : new("verificationFailed", false, MapImpact(initial));
+        async Task<bool> Verify(CancellationToken ct)
+        {
+            var verified = await gateway.RetrieveCatalogRowsAsync(ct);
+            return !PlannedIds(initialPlan).Intersect(AllIds(verified)).Any();
+        }
+        async Task<MutationReconciliationResult> Reconcile(CancellationToken ct)
+        {
+            var rows = await gateway.RetrieveCatalogRowsAsync(ct);
+            var current = CurrentVersions(rows, initialPlan);
+            if (current.Count == 0) return MutationReconciliationResult.Succeeded();
+            if (current.Count != initialPlan.Count) return MutationReconciliationResult.Contradictory();
+            return initialPlan.All(item => current.TryGetValue(item.Id, out var version) && version == item.VersionNumber)
+                ? MutationReconciliationResult.Rejected() : MutationReconciliationResult.Contradictory();
+        }
+        var execution = await mutationExecutor.ExecuteAsync(
+            ct => gateway.ExecuteCascadeTransactionAsync(initialPlan, ct), Reconcile, Verify, cancellationToken);
+        var success = execution.Outcome is "succeededAndVerified" or "reconciledAfterCommunicationFailure";
+        return new(execution.Outcome, success, success ? null : MapImpact(initial), execution.Problem);
     }
 
     private async Task<CascadeDependencySnapshot> BuildSnapshotAsync(IPluginRegistrationGateway gateway,
@@ -112,4 +128,15 @@ public sealed class PluginRegistrationCascadeService(
         snapshot.Steps.Count(value => value.IsEnabled));
     private static IEnumerable<Guid> PlannedIds(IEnumerable<CascadeDeleteRequestDto> plan) => plan.Select(value => value.Id);
     private static IEnumerable<Guid> AllIds(PluginRegistrationRows rows) => rows.Assemblies.Select(value => value.Id).Concat(rows.Types.Select(value => value.Id)).Concat(rows.Steps.Select(value => value.Id)).Concat(rows.Images.Select(value => value.Id));
+    private static IReadOnlyDictionary<Guid, long> CurrentVersions(PluginRegistrationRows rows,
+        IReadOnlyList<CascadeDeleteRequestDto> plan)
+    {
+        var planned = plan.Select(item => item.Id).ToHashSet();
+        return rows.Assemblies.Select(value => (value.Id, value.VersionNumber))
+            .Concat(rows.Types.Select(value => (value.Id, value.VersionNumber)))
+            .Concat(rows.Steps.Select(value => (value.Id, value.VersionNumber)))
+            .Concat(rows.Images.Select(value => (value.Id, value.VersionNumber)))
+            .Where(value => planned.Contains(value.Id))
+            .ToDictionary(value => value.Id, value => value.VersionNumber);
+    }
 }

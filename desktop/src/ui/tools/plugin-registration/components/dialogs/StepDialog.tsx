@@ -3,12 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Modal } from "../../../../shared/ui";
 import { useStepEditDetails, useStepMutations, type StepDraft, type StepPreflight } from "../../api/useStepMutations";
 import type { PluginHandler, PluginStep } from "../../model/contracts";
+import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 
 interface Props { connectionName: string | null; plugin: PluginHandler & { kind: "plugin" }; step?: PluginStep | null;
-  operation: "create" | "update"; onClose: () => void; refreshCatalog: () => Promise<unknown>; }
+  operation: "create" | "update"; onClose: () => void; refreshCatalog: () => Promise<unknown>;
+  onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure; }
 
-export function StepDialog({ connectionName, plugin, step, operation, onClose, refreshCatalog }: Props) {
-  const mutations = useStepMutations(connectionName, refreshCatalog);
+export function StepDialog({ connectionName, plugin, step, operation, onClose, onMutationResult, onMutationFailure }: Props) {
+  const mutations = useStepMutations(connectionName);
   const editDetails = useStepEditDetails(connectionName, operation === "update" ? step?.id ?? null : null);
   const options = mutations.options.data;
   const [messageId, setMessageId] = useState("");
@@ -45,8 +47,11 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, r
       : unsecure === (editDetails.data?.unsecureConfiguration ?? "") ? "keep" : unsecure ? "set" : "clear",
   } : null;
   const title = operation === "create" ? "Register step" : "Update step";
-  const submit = async () => { if (!draft) return; setPreview(await mutations.preflight.mutateAsync({ operation, stepId: step?.id ?? null, draft })); };
-  const confirm = async () => { if (!draft || !preview) return; const result = await mutations.execute.mutateAsync({ operation, stepId: step?.id ?? null, draft, token: preview.plan.token }); if (result.succeededAndVerified) onClose(); };
+  const submit = async () => { if (!draft) return; try { setPreview(await mutations.preflight.mutateAsync({ operation, stepId: step?.id ?? null, draft })); }
+    catch (error) { await onMutationFailure(error, { phase: "read", affectedComponentId: step?.id ?? plugin.id, retry: () => void submit() }); } };
+  const confirm = async () => { if (!draft || !preview) return; try { const result = await mutations.execute.mutateAsync({ operation, stepId: step?.id ?? null, draft, token: preview.plan.token });
+      await onMutationResult(result, result.step?.id ?? step?.id ?? plugin.id); }
+    catch (error) { await onMutationFailure(error, { phase: "execute", affectedComponentId: step?.id ?? plugin.id }); } };
   return <>
     <Modal open title={title} onClose={onClose} widthClass="max-w-xl"><div role="dialog" aria-label={title} className="flex flex-col gap-3">
       <fieldset disabled={operation === "update" && !editDetails.isSuccess} className="contents">

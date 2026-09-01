@@ -79,8 +79,9 @@ public sealed class PluginStepMutationTests
         Assert.DoesNotContain(preflight.Plan.Blockers, item => item.Code == "dependency");
         gateway.WriteRace = true;
 
-        await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => service.ExecuteAsync(gateway,
-            "https://contoso.test", "update", preflight.Plan.Token, draft, null, CancellationToken.None));
+        var result = await service.ExecuteAsync(gateway,
+            "https://contoso.test", "update", preflight.Plan.Token, draft, null, CancellationToken.None);
+        Assert.Equal("rejectedBeforeCompletion", result.Outcome);
         Assert.Equal(0, gateway.MutationCalls);
     }
 
@@ -120,6 +121,24 @@ public sealed class PluginStepMutationTests
         Assert.Equal("public", preflight.Draft.UnsecureConfiguration);
     }
 
+    [Theory]
+    [InlineData("update")]
+    [InlineData("disable")]
+    public async Task Lost_step_response_is_reconciled_from_normalized_fields_and_state(string operation)
+    {
+        var gateway = new StatefulStepGateway(operation) { LoseResponseAfterMutation = true };
+        var service = Service();
+        var draft = gateway.Draft(operation);
+        var preview = await service.CreatePreflightAsync(gateway, "https://contoso.test", operation, draft, default);
+
+        var result = await service.ExecuteAsync(gateway, "https://contoso.test", operation,
+            preview.Plan.Token, draft, null, default);
+
+        Assert.Equal("reconciledAfterCommunicationFailure", result.Outcome);
+        Assert.True(result.SucceededAndVerified);
+        Assert.Equal(1, gateway.MutationCalls);
+    }
+
     private static PluginStepMutationService Service() => new(new PluginStepValidator(),
         new PluginRegistrationPreflightService(new PluginRegistrationPlanSigner("test-secret", TimeProvider.System)));
 
@@ -135,6 +154,7 @@ public sealed class PluginStepMutationTests
         public string StepName => "Update account";
         public bool HasDependency { get; init; }
         public bool WriteRace { get; set; }
+        public bool LoseResponseAfterMutation { get; init; }
         public int MutationCalls { get; private set; }
         public int ReadsAfterMutation { get; private set; }
         public PluginStepMutationCommand? LastCommand { get; private set; }
@@ -187,6 +207,7 @@ public sealed class PluginStepMutationTests
                 UnsecureConfiguration = command.Draft.UnsecureConfigurationAction == "clear" ? null : command.Draft.UnsecureConfiguration };
             exists = command.Operation != "unregister";
             enabled = command.Operation == "enable" || (command.Operation != "disable" && enabled);
+            if (LoseResponseAfterMutation) throw new HttpRequestException("response lost");
             return Task.FromResult(stepId);
         }
     }

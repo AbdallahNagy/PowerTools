@@ -11,6 +11,7 @@ import {
 } from "../src/ui/tools/registry";
 import { fetchXmlBuilderTool } from "../src/ui/tools/fetchxml-builder/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
+import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 
 function TestTool() {
   return null;
@@ -71,14 +72,17 @@ describe("tool registry", () => {
     expect(BUILT_IN_TOOLS.map((tool) => tool.id)).toEqual([
       "welcome",
       "data-migration",
+      "plugin-registration",
       "fetchxml-builder",
     ]);
     expect(ACTIVITY_BAR_TOOLS.map((tool) => tool.id)).toEqual([
       "data-migration",
+      "plugin-registration",
       "fetchxml-builder",
     ]);
     expect(TOOL_REGISTRY.welcome.allowMultipleInstances).toBe(false);
     expect(TOOL_REGISTRY["data-migration"]).toBe(dataMigrationTool);
+    expect(TOOL_REGISTRY["plugin-registration"]).toBe(pluginRegistrationTool);
     expect(TOOL_REGISTRY["fetchxml-builder"]).toBe(fetchXmlBuilderTool);
   });
 });

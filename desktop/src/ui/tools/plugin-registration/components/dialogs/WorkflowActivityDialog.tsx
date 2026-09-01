@@ -3,10 +3,11 @@ import { useState } from "react";
 import { Button, Modal } from "../../../../shared/ui";
 import { type WorkflowActivityDraft, type WorkflowActivityPreflight, useWorkflowActivityMutations } from "../../api/useWorkflowActivityMutations";
 import type { PluginHandler } from "../../model/contracts";
+import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 import { MutationImpactPreviewDialog } from "./ImpactPreviewDialog";
 
-export function WorkflowActivityDialog({ connectionName, activity, onClose, refreshCatalog }: { connectionName: string | null; activity: PluginHandler & { kind: "workflowActivity" }; onClose: () => void; refreshCatalog: () => Promise<unknown> }) {
-  const mutations = useWorkflowActivityMutations(connectionName, refreshCatalog);
+export function WorkflowActivityDialog({ connectionName, activity, onClose, onMutationResult, onMutationFailure }: { connectionName: string | null; activity: PluginHandler & { kind: "workflowActivity" }; onClose: () => void; refreshCatalog: () => Promise<unknown>; onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure }) {
+  const mutations = useWorkflowActivityMutations(connectionName);
   const [name, setName] = useState(activity.name);
   const [friendlyName, setFriendlyName] = useState(activity.friendlyName ?? "");
   const [group, setGroup] = useState(activity.workflowActivityGroupName ?? "");
@@ -14,8 +15,11 @@ export function WorkflowActivityDialog({ connectionName, activity, onClose, refr
   const [preview, setPreview] = useState<WorkflowActivityPreflight | null>(null);
   const draft: WorkflowActivityDraft = { workflowActivityId: activity.id, name, friendlyName: friendlyName || null,
     workflowActivityGroupName: group || null, description: description || null, expectedVersions: { [activity.id]: activity.versionNumber } };
-  const submit = async () => setPreview(await mutations.preflight.mutateAsync(draft));
-  const confirm = async () => { if (!preview) return; const result = await mutations.execute.mutateAsync({ draft, token: preview.plan.token }); if (result.succeededAndVerified) onClose(); };
+  const submit = async () => { try { setPreview(await mutations.preflight.mutateAsync(draft)); }
+    catch (error) { await onMutationFailure(error, { phase: "read", affectedComponentId: activity.id, retry: () => void submit() }); } };
+  const confirm = async () => { if (!preview) return; try { const result = await mutations.execute.mutateAsync({ draft, token: preview.plan.token });
+      await onMutationResult(result, result.workflowActivity?.id ?? activity.id); }
+    catch (error) { await onMutationFailure(error, { phase: "execute", affectedComponentId: activity.id }); } };
   return <>
     <Modal open title="Update workflow activity" onClose={onClose} widthClass="max-w-lg"><div role="dialog" aria-label="Update workflow activity" className="flex flex-col gap-3">
       <p className="text-sm text-[#858585]">Registration metadata only. Workflow definitions and arguments are read-only.</p>

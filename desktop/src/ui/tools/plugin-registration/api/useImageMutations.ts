@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../shared/api/client";
 import type { PluginImage } from "../model/contracts";
 
@@ -15,15 +15,12 @@ function route(operation: ImageOperation, imageId: string | null, action: "prefl
     : `/api/plugin-registration/images/${imageId}/${operation}/${action}`;
 }
 
-export function useImageMutations(connectionName: string | null, refreshCatalog: () => Promise<unknown>) {
-  const client = useQueryClient();
+export function useImageMutations(connectionName: string | null) {
   const meta = { connectionName: connectionName ?? undefined };
   const preflight = useMutation({ mutationFn: ({ operation, imageId, draft }: { operation: ImageOperation; imageId: string | null; draft: ImageDraft }) =>
-    apiPost<ImagePreflight>(route(operation, imageId, "preflight"), draft, { meta }), retry: false });
+    apiPost<ImagePreflight>(route(operation, imageId, "preflight"), draft, { meta, noAuthRetry: true }), retry: false });
   const execute = useMutation({ mutationFn: ({ operation, imageId, draft, token, typedName }: { operation: ImageOperation; imageId: string | null; draft: ImageDraft; token: string; typedName?: string }) =>
     apiPost<{ outcome: string; succeededAndVerified: boolean; image: PluginImage | null }>(route(operation, imageId, "execute"),
-      { draft, planToken: token, typedName: typedName ?? null }, { meta }), retry: false,
-    onSuccess: async result => { if (!result.succeededAndVerified || !connectionName) return;
-      await client.invalidateQueries({ queryKey: ["plugin-registration", "catalog", connectionName] }); await refreshCatalog(); } });
+      { draft, planToken: token, typedName: typedName ?? null }, { meta, noAuthRetry: true }), retry: false });
   return { preflight, execute };
 }

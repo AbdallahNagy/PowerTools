@@ -19,6 +19,14 @@ import { CascadeConfirmationDialog } from "./components/dialogs/CascadeConfirmat
 import { useUnregisterMutations, type CascadeDraft } from "./api/useUnregisterMutations";
 import { RegistrationWorkspace } from "./components/RegistrationWorkspace";
 import { buildCatalogTree, findCatalogNode, type CatalogTreeNode } from "./model/catalogTree";
+import { MutationOutcomeBanner } from "./components/MutationOutcomeBanner";
+import {
+  parseMutationOutcome,
+  parsePluginRegistrationProblem,
+  type MutationOutcome,
+  type ReportMutationFailure,
+  type ReportMutationResult,
+} from "./model/pluginRegistrationError";
 
 export type DialogIntent =
   | { kind: "registerAssembly" }
@@ -43,11 +51,14 @@ function PluginRegistrationPage() {
   const { connectionName, setConnectionName } = useConnectionSelection();
   const { connections } = useConnections();
   const catalogQuery = useRegistrationCatalog(connectionName || null);
-  const cascades = useUnregisterMutations(connectionName || null, () => catalogQuery.refetch());
+  const cascades = useUnregisterMutations(connectionName || null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(new Set());
   const [dialogIntent, setDialogIntent] = useState<DialogIntent>(null);
   const [contextMenu, setContextMenu] = useState<RegistrationContextMenuState | null>(null);
+  const [mutationOutcome, setMutationOutcome] = useState<MutationOutcome | null>(null);
+  const [retryRead, setRetryRead] = useState<(() => void) | null>(null);
+  const [mutationRefreshPending, setMutationRefreshPending] = useState(false);
 
   const nodes = useMemo(
     () => (catalogQuery.data ? buildCatalogTree(catalogQuery.data) : []),
@@ -86,10 +97,50 @@ function PluginRegistrationPage() {
     setExpandedNodeIds(new Set());
     setContextMenu(null);
     setDialogIntent(null);
+    setMutationOutcome(null);
+    setRetryRead(null);
     setConnectionName(name);
   };
 
+  const refreshAfterMutation = async (affectedComponentId?: string | null) => {
+    setMutationRefreshPending(true);
+    try {
+      const refreshed = await catalogQuery.refetch();
+      if (!affectedComponentId || !refreshed.data) return;
+      const affectedNode = findNodeByComponentId(buildCatalogTree(refreshed.data), affectedComponentId);
+      if (affectedNode) setSelectedNodeId(affectedNode.id);
+    } finally {
+      setMutationRefreshPending(false);
+    }
+  };
+
+  const reportMutationResult: ReportMutationResult = async (value, affectedComponentId) => {
+    const parsed = parseMutationOutcome(value);
+    setDialogIntent(null);
+    setContextMenu(null);
+    setRetryRead(null);
+    setMutationOutcome({ ...parsed, targetId: parsed.targetId ?? affectedComponentId ?? null });
+    await refreshAfterMutation(parsed.targetId ?? affectedComponentId);
+  };
+
+  const reportMutationFailure: ReportMutationFailure = async (error, context) => {
+    const problem = parsePluginRegistrationProblem(error);
+    const uncertain = context.phase === "execute" && problem.category === "communication";
+    setMutationOutcome({
+      outcome: uncertain ? "outcomeUncertain" : "rejectedBeforeCompletion",
+      targetId: context.affectedComponentId ?? null,
+      problem,
+    });
+    setRetryRead(() => context.phase === "read" ? context.retry ?? null : null);
+    if (uncertain || problem.category === "concurrency") {
+      setDialogIntent(null);
+      setContextMenu(null);
+      await refreshAfterMutation(context.affectedComponentId);
+    }
+  };
+
   const selectAndToggleNode = (node: CatalogTreeNode) => {
+    if (mutationRefreshPending) return;
     setSelectedNodeId(node.id);
     setExpandedNodeIds((current) => {
       if (node.children.length === 0) return current;
@@ -101,6 +152,7 @@ function PluginRegistrationPage() {
   };
 
   const openNodeDialog = (node: CatalogTreeNode) => {
+    if (mutationRefreshPending) return;
     setSelectedNodeId(node.id);
     setContextMenu(null);
     setDialogIntent({ kind: "update", nodeId: node.id });
@@ -111,11 +163,13 @@ function PluginRegistrationPage() {
     position: { x: number; y: number },
     anchor: HTMLButtonElement,
   ) => {
+    if (mutationRefreshPending) return;
     setSelectedNodeId(node.id);
     setContextMenu({ node, ...position, anchor });
   };
 
   const handleActionIntent = (intent: RegistrationActionIntent) => {
+    if (mutationRefreshPending) return;
     switch (intent.kind) {
       case "update":
         setDialogIntent({ kind: "update", nodeId: intent.nodeId });
@@ -148,8 +202,10 @@ function PluginRegistrationPage() {
         }}
         refreshDisabled={!connectionName || catalogQuery.isFetching}
         onRegisterAssembly={() => setDialogIntent({ kind: "registerAssembly" })}
-        registerDisabled={!connectionName}
+        registerDisabled={!connectionName || mutationRefreshPending}
       />
+
+      <MutationOutcomeBanner outcome={mutationOutcome} retryRead={retryRead} refreshPending={mutationRefreshPending} />
 
       <RegistrationWorkspace
         connectionName={connectionName}
@@ -181,41 +237,55 @@ function PluginRegistrationPage() {
           onClose={() => setDialogIntent(null)}
           onVerified={(assembly) => setSelectedNodeId(`assembly:${assembly.id}`)}
           refreshCatalog={() => catalogQuery.refetch()}
+          onMutationResult={reportMutationResult}
+          onMutationFailure={reportMutationFailure}
         />
       ) : null}
       {isStepEditDialog && pluginNode?.kind === "plugin" ? (
         <StepDialog connectionName={connectionName || null} plugin={pluginNode.data}
           step={stepNode?.kind === "step" ? stepNode.data : null}
           operation={stepNode?.kind === "step" ? "update" : "create"}
-          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
+          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()}
+          onMutationResult={reportMutationResult} onMutationFailure={reportMutationFailure} />
       ) : null}
       {isStepConfirmation && pluginNode?.kind === "plugin" && stepNode?.kind === "step"
         && (dialogIntent?.kind === "unregisterStep" || dialogIntent?.kind === "toggleStep") ? (
         <TypedNameConfirmationDialog connectionName={connectionName || null} plugin={pluginNode.data}
           step={stepNode.data} operation={dialogIntent.kind === "unregisterStep" ? "unregister" : dialogIntent.enable ? "enable" : "disable"}
-          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
+          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()}
+          onMutationResult={reportMutationResult} onMutationFailure={reportMutationFailure} />
       ) : null}
       {isImageDialog && imageStepNode?.kind === "step" ? (
         <ImageDialog connectionName={connectionName || null} step={imageStepNode.data}
           image={imageNode?.kind === "image" ? imageNode.data : null}
           operation={dialogIntent?.kind === "createImage" ? "create" : dialogIntent?.kind === "unregisterImage" ? "unregister" : "update"}
-          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
+          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()}
+          onMutationResult={reportMutationResult} onMutationFailure={reportMutationFailure} />
       ) : null}
       {workflowActivityNode?.kind === "workflowActivity" ? (
         <WorkflowActivityDialog connectionName={connectionName || null} activity={workflowActivityNode.data}
-          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()} />
+          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()}
+          onMutationResult={reportMutationResult} onMutationFailure={reportMutationFailure} />
       ) : null}
       {cascadeNode && cascadeDraft ? <CascadeUnregisterFlow node={cascadeNode} draft={cascadeDraft} connectionName={connectionName || null}
-        mutations={cascades} onClose={() => setDialogIntent(null)} /> : null}
+        mutations={cascades} onClose={() => setDialogIntent(null)} onMutationResult={reportMutationResult}
+        onMutationFailure={reportMutationFailure} /> : null}
     </div>
   );
 }
 
-function CascadeUnregisterFlow({ node, draft, connectionName, mutations, onClose }: { node: CatalogTreeNode; draft: CascadeDraft; connectionName: string | null;
-  mutations: ReturnType<typeof useUnregisterMutations>; onClose: () => void }) {
+function CascadeUnregisterFlow({ node, draft, connectionName, mutations, onClose, onMutationResult, onMutationFailure }: { node: CatalogTreeNode; draft: CascadeDraft; connectionName: string | null;
+  mutations: ReturnType<typeof useUnregisterMutations>; onClose: () => void; onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure }) {
   const preview = mutations.preflight.data;
+  const previewUnregister = async () => {
+    try {
+      await mutations.preflight.mutateAsync(draft);
+    } catch (error) {
+      await onMutationFailure(error, { phase: "read", affectedComponentId: draft.targetId, retry: () => void previewUnregister() });
+    }
+  };
   if (!preview) return <Modal open title="Cascade unregister" onClose={onClose} widthClass="max-w-lg"><div role="dialog" aria-label="Cascade unregister" className="flex flex-col gap-3">
-    <p>Review the exact owned registration impact before deleting this component.</p><div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={() => void mutations.preflight.mutateAsync(draft)}>Preview unregister</Button></div>
+    <p>Review the exact owned registration impact before deleting this component.</p><div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={() => void previewUnregister()}>Preview unregister</Button></div>
   </div></Modal>;
   const isAssembly = node.kind === "assembly";
   const handlerClassName = node.kind === "plugin" || node.kind === "workflowActivity" ? node.data.typeName : null;
@@ -230,7 +300,18 @@ function CascadeUnregisterFlow({ node, draft, connectionName, mutations, onClose
         ...preview.impact.images.map(value => `Image: ${value.name}`),
       ] }}
     blockers={preview.plan.blockers} executing={mutations.execute.isPending} onCancel={onClose}
-    onConfirm={(typedName, acknowledged) => void mutations.execute.mutateAsync({ draft, token: preview.plan.token, typedName, acknowledged }).then(result => { if (result.succeededAndVerified) onClose(); })} />;
+    onConfirm={(typedName, acknowledged) => void mutations.execute.mutateAsync({ draft, token: preview.plan.token, typedName, acknowledged })
+      .then(result => onMutationResult(result, draft.targetId))
+      .catch(error => onMutationFailure(error, { phase: "execute", affectedComponentId: draft.targetId }))} />;
+}
+
+function findNodeByComponentId(nodes: CatalogTreeNode[], componentId: string): CatalogTreeNode | null {
+  for (const node of nodes) {
+    if ("data" in node && node.data.id === componentId) return node;
+    const child = findNodeByComponentId(node.children, componentId);
+    if (child) return child;
+  }
+  return null;
 }
 
 function collectHandlerVersions(handler: { id: string; versionNumber: number; steps: { id: string; versionNumber: number; images: { id: string; versionNumber: number }[] }[] }): Record<string, number> {

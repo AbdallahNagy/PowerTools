@@ -38,6 +38,8 @@ function dialogTitle(intent: NonNullable<DialogIntent>, node: CatalogTreeNode | 
       return "Unregister step";
     case "unregisterImage":
       return "Unregister image";
+    case "cascadeUnregister":
+      return `Unregister ${nodeKindLabel(node)}`;
     case "toggleStep":
       return `${intent.enable ? "Enable" : "Disable"} step`;
     case "update":

@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 
 import { apiPost } from "../../../shared/api/client";
 import type { PluginAssembly } from "../model/contracts";
@@ -54,16 +54,13 @@ function formData(file: File, draft: AssemblyMutationDraft, planToken?: string) 
 
 export function useAssemblyMutations(
   connectionName: string | null,
-  refreshCatalog: () => Promise<unknown>,
-  onVerified: (assembly: PluginAssembly) => void,
 ) {
-  const queryClient = useQueryClient();
   const meta = { connectionName: connectionName ?? undefined };
   const analyze = useMutation({
     mutationFn: (file: File) => {
       const form = new FormData();
       form.append("assembly", file);
-      return apiPost<AssemblyInspection>("/api/plugin-registration/assemblies/analyze", form, { meta });
+      return apiPost<AssemblyInspection>("/api/plugin-registration/assemblies/analyze", form, { meta, noAuthRetry: true });
     },
     retry: false,
   });
@@ -73,7 +70,7 @@ export function useAssemblyMutations(
         draft.operation === "register"
           ? "/api/plugin-registration/assemblies/register/preflight"
           : `/api/plugin-registration/assemblies/${draft.assemblyId}/update/preflight`,
-        formData(file, draft), { meta },
+        formData(file, draft), { meta, noAuthRetry: true },
       ),
     retry: false,
   });
@@ -83,15 +80,9 @@ export function useAssemblyMutations(
         draft.operation === "register"
           ? "/api/plugin-registration/assemblies/register/execute"
           : `/api/plugin-registration/assemblies/${draft.assemblyId}/update/execute`,
-        formData(file, draft, token), { meta },
+        formData(file, draft, token), { meta, noAuthRetry: true },
       ),
     retry: false,
-    onSuccess: async (result) => {
-      if (!result.succeededAndVerified || !result.assembly || !connectionName) return;
-      onVerified(result.assembly);
-      await queryClient.invalidateQueries({ queryKey: ["plugin-registration", "catalog", connectionName] });
-      await refreshCatalog();
-    },
   });
   return { analyze, preflight, execute };
 }

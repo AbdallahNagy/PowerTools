@@ -250,6 +250,32 @@ describe("Axios API client", () => {
     expect(refreshToken).toHaveBeenCalledTimes(1);
   });
 
+  it("does not replay a POST mutation when auth retry is explicitly disabled", async () => {
+    const refreshToken = vi.fn<DesktopBridge["refreshToken"]>(async () => ONLINE_PRIMARY);
+    installDesktopBridge(createFakeDesktopBridge({
+      getApiBaseUrl: async () => SIDECAR_BASE_URL,
+      getLocalSecret: async () => "local-secret",
+      getActiveConnection: async () => ONLINE_PRIMARY,
+      refreshToken,
+    }));
+
+    let attempts = 0;
+    httpServer.use(
+      http.post(`${SIDECAR_BASE_URL}/single-attempt-mutation`, () => {
+        attempts += 1;
+        return HttpResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }),
+    );
+
+    const { api } = await import("../../src/ui/shared/api/client");
+    await expect(api.post("/single-attempt-mutation", {}, { noAuthRetry: true })).rejects.toMatchObject({
+      response: { status: 401 },
+    });
+
+    expect(attempts).toBe(1);
+    expect(refreshToken).not.toHaveBeenCalled();
+  });
+
   it("rejects an always-401 response after one refresh and one retry", async () => {
     const refreshedPrimary = {
       name: "Primary Online",
@@ -333,7 +359,7 @@ describe("Axios API client", () => {
     expect(attempts).toBe(6);
   });
 
-  it("shares one transport and query cache across canonical and legacy entry points", async () => {
+  it("shares one transport across the direct client and API helpers", async () => {
     const getActiveConnection = vi.fn<DesktopBridge["getActiveConnection"]>(
       async () => ONLINE_PRIMARY,
     );
@@ -348,15 +374,10 @@ describe("Axios API client", () => {
     );
 
     const canonicalTransport = await import("../../src/ui/shared/api/client");
-    const legacyTransport = await import("../../src/ui/api/client");
-    const canonicalQueries = await import("../../src/ui/shared/api/queryClient");
-    const legacyQueries = await import("../../src/ui/api/queryClient");
 
     await canonicalTransport.api.get("/shared-transport");
-    await legacyTransport.api.get("/shared-transport");
+    await canonicalTransport.apiGet("/shared-transport");
 
     expect(getActiveConnection).toHaveBeenCalledTimes(1);
-    expect(legacyTransport.api).toBe(canonicalTransport.api);
-    expect(legacyQueries.queryClient).toBe(canonicalQueries.queryClient);
   });
 });

@@ -2,8 +2,10 @@ using PowerTools.API.Tools.PluginRegistration.Dtos;
 
 namespace PowerTools.API.Tools.PluginRegistration;
 
-public sealed class WorkflowActivityMutationService(PluginRegistrationPreflightService preflight)
+public sealed class WorkflowActivityMutationService(PluginRegistrationPreflightService preflight,
+    IVerifiedMutationExecutor? verifiedMutationExecutor = null)
 {
+    private readonly IVerifiedMutationExecutor mutationExecutor = verifiedMutationExecutor ?? new VerifiedMutationExecutor();
     public async Task<WorkflowActivityMutationPreflightDto> CreatePreflightAsync(IPluginRegistrationGateway gateway,
         string environment, WorkflowActivityDraftDto draft, CancellationToken cancellationToken)
     {
@@ -30,12 +32,31 @@ public sealed class WorkflowActivityMutationService(PluginRegistrationPreflightS
             if (Blockers(fresh.Activity).Count > 0) throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
             return Request(environment, draft, fresh);
         }, cancellationToken);
-        await gateway.MutateWorkflowActivityAsync(new(draft.WorkflowActivityId, draft.Name, draft.FriendlyName,
-            draft.WorkflowActivityGroupName, draft.Description, current.VersionNumber), cancellationToken);
-        var verified = (await ReadStateAsync(gateway, draft with { ExpectedVersions = new Dictionary<Guid, long>() }, cancellationToken)).Activity;
-        var match = verified.Name == draft.Name && verified.FriendlyName == draft.FriendlyName
-            && verified.WorkflowActivityGroupName == draft.WorkflowActivityGroupName && verified.Description == draft.Description;
-        return new(match ? "succeededAndVerified" : "verificationFailed", match, match ? Map(verified) : null);
+        PluginHandlerDto? verifiedActivity = null;
+        async Task<bool> Verify(CancellationToken ct)
+        {
+            var rows = await gateway.RetrieveCatalogRowsAsync(ct);
+            var verified = rows.Types.SingleOrDefault(type => type.Id == draft.WorkflowActivityId && type.IsWorkflowActivity);
+            if (verified is null) return false;
+            verifiedActivity = Map(verified);
+            return WorkflowActivityMatches(verified, draft);
+        }
+        async Task<MutationReconciliationResult> Reconcile(CancellationToken ct)
+        {
+            var rows = await gateway.RetrieveCatalogRowsAsync(ct);
+            var candidate = rows.Types.SingleOrDefault(type => type.Id == draft.WorkflowActivityId && type.IsWorkflowActivity);
+            if (candidate is null) return MutationReconciliationResult.Contradictory();
+            if (WorkflowActivityMatches(candidate, draft)) return MutationReconciliationResult.Succeeded();
+            return candidate.VersionNumber == current.VersionNumber
+                ? MutationReconciliationResult.Rejected() : MutationReconciliationResult.Contradictory();
+        }
+        var execution = await mutationExecutor.ExecuteAsync(async ct =>
+        {
+            await gateway.MutateWorkflowActivityAsync(new(draft.WorkflowActivityId, draft.Name, draft.FriendlyName,
+                draft.WorkflowActivityGroupName, draft.Description, current.VersionNumber), ct);
+        }, Reconcile, Verify, cancellationToken);
+        var success = execution.Outcome is "succeededAndVerified" or "reconciledAfterCommunicationFailure";
+        return new(execution.Outcome, success, verifiedActivity, execution.Problem);
     }
 
     private static async Task<WorkflowActivityMutationState> ReadStateAsync(IPluginRegistrationGateway gateway, WorkflowActivityDraftDto draft, CancellationToken cancellationToken)
@@ -91,6 +112,10 @@ public sealed class WorkflowActivityMutationService(PluginRegistrationPreflightS
     private static PluginHandlerDto Map(PluginTypeRow row) => new(row.Id, HandlerKind.WorkflowActivity, row.TypeName, row.Name,
         row.FriendlyName, row.Description, row.WorkflowActivityGroupName, row.IsManaged, row.IsCustomizable,
         row.VersionNumber, [], [], [], row.AssemblyId, row.SolutionDisplayName);
+    private static bool WorkflowActivityMatches(PluginTypeRow row, WorkflowActivityDraftDto draft) =>
+        row.Name == draft.Name && row.FriendlyName == draft.FriendlyName
+        && row.WorkflowActivityGroupName == draft.WorkflowActivityGroupName
+        && row.Description == draft.Description;
 
     private sealed record WorkflowActivityMutationState(
         PluginTypeRow Activity,

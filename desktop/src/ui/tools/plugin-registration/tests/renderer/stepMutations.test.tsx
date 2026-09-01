@@ -77,8 +77,7 @@ describe("Step mutations", () => {
       after: { message: "Update", primaryTable: "account", stage: 40, mode: 0, rank: 3, filteringAttributes: ["name"], impersonatingUserId: "user-1", unsecureConfiguration: "public-config", secureConfigExists: true, isEnabled: true },
       plan: { token: "signed", blockers: [], warnings: [], changes: [{ field: "rank", before: "3", after: "3" }, { field: "secureConfigurationAction", before: null, after: "keep" }], confirmation: { message: "Confirm" } },
     }) : Promise.resolve({ outcome: "succeededAndVerified", succeededAndVerified: true, step: catalog.assemblies[0].handlers[0].steps[0] }));
-    const { queryClient } = renderPage();
-    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    renderPage();
     await openStep();
     fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
     const dialog = await screen.findByRole("dialog", { name: "Update step" });
@@ -91,8 +90,7 @@ describe("Step mutations", () => {
     expect(preview).toHaveTextContent("Rank: 3 → 3");
     expect(preview).toHaveTextContent("Secure configuration: Keep");
     await userEvent.click(within(preview).getByRole("button", { name: "Confirm" }));
-    await waitFor(() => expect(invalidate).toHaveBeenCalledWith({ queryKey: ["plugin-registration", "catalog", "Development"] }));
-    expect(catalogReads).toBeGreaterThanOrEqual(2);
+    await waitFor(() => expect(catalogReads).toBeGreaterThanOrEqual(2));
   });
 
   it("blocks update preview until safe edit details load and shows a sanitized load failure", async () => {

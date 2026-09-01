@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Modal } from "../../../../shared/ui";
 import { type AssemblyInspection, type AssemblyMutationPreflight, useAssemblyMutations } from "../../api/useAssemblyMutations";
 import type { PluginAssembly } from "../../model/contracts";
+import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 import { ImpactPreviewDialog } from "./ImpactPreviewDialog";
 
 interface AssemblyDialogProps {
@@ -11,14 +12,16 @@ interface AssemblyDialogProps {
   onClose: () => void;
   onVerified: (assembly: PluginAssembly) => void;
   refreshCatalog: () => Promise<unknown>;
+  onMutationResult: ReportMutationResult;
+  onMutationFailure: ReportMutationFailure;
 }
 
-export function AssemblyDialog({ assembly, connectionName, onClose, onVerified, refreshCatalog }: AssemblyDialogProps) {
+export function AssemblyDialog({ assembly, connectionName, onClose, onVerified, onMutationResult, onMutationFailure }: AssemblyDialogProps) {
   const [file, setFile] = useState<File | null>(null);
   const [inspection, setInspection] = useState<AssemblyInspection | null>(null);
   const [preflight, setPreflight] = useState<AssemblyMutationPreflight | null>(null);
   const [hashMismatch, setHashMismatch] = useState(false);
-  const mutations = useAssemblyMutations(connectionName, refreshCatalog, onVerified);
+  const mutations = useAssemblyMutations(connectionName);
   const operation = assembly ? "update" : "register";
   const draft = useMemo(() => !file || !inspection ? null : ({
     fileName: file.name, operation, assemblyId: assembly?.id ?? null,
@@ -36,23 +39,32 @@ export function AssemblyDialog({ assembly, connectionName, onClose, onVerified, 
     try {
       const result = await mutations.analyze.mutateAsync(selected);
       setInspection(result);
-    } catch {
-      // The mutation exposes its sanitized error state in the dialog.
+    } catch (error) {
+      await onMutationFailure(error, { phase: "read", affectedComponentId: assembly?.id, retry: () => void selectFile(selected) });
     }
   };
   const preview = async () => {
     if (!file || !draft || !inspection) return;
-    const result = await mutations.preflight.mutateAsync({ file, draft });
-    if (result.draft.inspection.sha256 !== inspection.sha256) {
-      setHashMismatch(true);
-      return;
+    try {
+      const result = await mutations.preflight.mutateAsync({ file, draft });
+      if (result.draft.inspection.sha256 !== inspection.sha256) {
+        setHashMismatch(true);
+        return;
+      }
+      setPreflight(result);
+    } catch (error) {
+      await onMutationFailure(error, { phase: "read", affectedComponentId: assembly?.id, retry: () => void preview() });
     }
-    setPreflight(result);
   };
   const confirm = async () => {
     if (!file || !draft || !preflight) return;
-    const result = await mutations.execute.mutateAsync({ file, draft, token: preflight.plan.token });
-    if (result.succeededAndVerified) close();
+    try {
+      const result = await mutations.execute.mutateAsync({ file, draft, token: preflight.plan.token });
+      if (result.assembly) onVerified(result.assembly);
+      await onMutationResult(result, result.assembly?.id ?? assembly?.id);
+    } catch (error) {
+      await onMutationFailure(error, { phase: "execute", affectedComponentId: assembly?.id });
+    }
   };
   const title = assembly ? "Update assembly" : "Register assembly";
   return <>

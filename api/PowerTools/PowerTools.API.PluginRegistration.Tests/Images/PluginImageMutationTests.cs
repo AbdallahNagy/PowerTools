@@ -52,6 +52,26 @@ public sealed class PluginImageMutationTests
         Assert.Equal(["accountnumber"], gateway.LastCommand.Draft.Attributes);
     }
 
+    [Theory]
+    [InlineData("update")]
+    [InlineData("unregister")]
+    public async Task Lost_image_response_is_reconciled_from_normalized_update_or_absence(string operation)
+    {
+        var gateway = new FakeGateway { ExistingImage = Image(), LoseResponseAfterMutation = true };
+        var service = Service();
+        var draft = operation == "update"
+            ? new ImageDraftDto(StepId, 0, "After", "Target", ["accountnumber"],
+                new Dictionary<Guid, long> { [StepId] = 11, [ImageId] = 22 })
+            : Draft(ImageId, ["name"]);
+        var preview = await service.CreatePreflightAsync(gateway, "Dev", operation, draft, default);
+
+        var result = await service.ExecuteAsync(gateway, "Dev", operation, preview.Plan.Token, draft,
+            operation == "unregister" ? "PreImage" : null, default);
+
+        Assert.Equal("reconciledAfterCommunicationFailure", result.Outcome);
+        Assert.True(result.SucceededAndVerified);
+    }
+
     [Fact]
     public async Task Rejects_target_image_owned_by_a_different_step_before_preflight()
     {
@@ -176,6 +196,7 @@ public sealed class PluginImageMutationTests
         public bool ParentManaged { get; set; }
         public IReadOnlyList<ComponentDependencyDto> Dependencies { get; set; } = [];
         public int DependenciesAfterStateRead { get; set; }
+        public bool LoseResponseAfterMutation { get; init; }
         private int stateReads;
         private bool mutated;
         public PluginImageMutationCommand? LastCommand { get; private set; }
@@ -194,10 +215,16 @@ public sealed class PluginImageMutationTests
         {
             LastCommand = command;
             mutated = true;
-            if (command.Operation == "unregister") { ExistingImage = null; return Task.FromResult(command.TargetImageId!.Value); }
+            if (command.Operation == "unregister")
+            {
+                ExistingImage = null;
+                if (LoseResponseAfterMutation) throw new HttpRequestException("response lost");
+                return Task.FromResult(command.TargetImageId!.Value);
+            }
             ExistingImage = new PluginImageRow(command.TargetImageId ?? ImageId, StepId,
                 command.Operation == "update" ? ExistingImage?.Name ?? command.Draft.Alias : command.Draft.Alias, null,
                 command.Draft.ImageType == 0 ? "Pre Image" : "Post Image", command.Draft.Alias, command.Draft.Attributes, false, true, 23, null);
+            if (LoseResponseAfterMutation) throw new HttpRequestException("response lost");
             return Task.FromResult(ExistingImage.Id);
         }
     }

@@ -92,6 +92,22 @@ public sealed class PluginRegistrationCascadeServiceTests
         Assert.DoesNotContain(preview.DeletePlan, item => fixture.Gateway.CascadeDependencies.Any(dependency => dependency.ComponentId == item.Id));
     }
 
+    [Fact]
+    public async Task Lost_cascade_response_is_reconciled_only_when_target_and_every_owned_descendant_are_absent()
+    {
+        var fixture = CascadeFixture.Create();
+        fixture.Gateway.LoseResponseAfterTransaction = true;
+        var preview = await fixture.Service.CreatePreflightAsync(fixture.Gateway, "Dev", new CascadeUnregisterDraftDto(
+            CascadeTargetKind.Assembly, fixture.Assembly.Id, fixture.ExpectedVersions), default);
+
+        var result = await fixture.Service.ExecuteAsync(fixture.Gateway, "Dev", preview.Plan.Token,
+            preview.Draft, fixture.Assembly.Name, true, default);
+
+        Assert.Equal("reconciledAfterCommunicationFailure", result.Outcome);
+        Assert.True(result.SucceededAndVerified);
+        Assert.Equal(1, fixture.Gateway.TransactionCount);
+    }
+
     private sealed class CascadeFixture
     {
         public required PluginRegistrationCascadeService Service { get; init; }
@@ -137,6 +153,7 @@ public sealed class PluginRegistrationCascadeServiceTests
     {
         private PluginRegistrationRows current = rows;
         public int TransactionCount { get; private set; }
+        public bool LoseResponseAfterTransaction { get; set; }
         public IReadOnlyList<PluginHandlerDependencyRow> CascadeDependencies { get; set; } = [];
         public List<IReadOnlyList<CascadeDeleteRequestDto>> CascadeRequests { get; } = [];
         public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) => Task.FromResult(current);
@@ -152,6 +169,7 @@ public sealed class PluginRegistrationCascadeServiceTests
             TransactionCount++;
             var ids = deletes.Select(delete => delete.Id).ToHashSet();
             current = current with { Assemblies = current.Assemblies.Where(row => !ids.Contains(row.Id)).ToArray(), Types = current.Types.Where(row => !ids.Contains(row.Id)).ToArray(), Steps = current.Steps.Where(row => !ids.Contains(row.Id)).ToArray(), Images = current.Images.Where(row => !ids.Contains(row.Id)).ToArray() };
+            if (LoseResponseAfterTransaction) throw new HttpRequestException("response lost");
             return Task.CompletedTask;
         }
     }

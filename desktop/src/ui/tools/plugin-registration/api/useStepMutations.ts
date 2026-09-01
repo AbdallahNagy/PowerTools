@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { apiGet, apiPost } from "../../../shared/api/client";
 import type { PluginStep } from "../model/contracts";
@@ -38,8 +38,7 @@ function route(operation: StepOperation, stepId: string | null, action: "preflig
     : `/api/plugin-registration/steps/${stepId}/${operation}/${action}`;
 }
 
-export function useStepMutations(connectionName: string | null, refreshCatalog: () => Promise<unknown>) {
-  const queryClient = useQueryClient();
+export function useStepMutations(connectionName: string | null) {
   const meta = { connectionName: connectionName ?? undefined };
   const options = useQuery({
     queryKey: ["plugin-registration", "step-options", connectionName],
@@ -48,18 +47,13 @@ export function useStepMutations(connectionName: string | null, refreshCatalog: 
   });
   const preflight = useMutation({
     mutationFn: ({ operation, stepId, draft }: { operation: StepOperation; stepId: string | null; draft: StepDraft }) =>
-      apiPost<StepPreflight>(route(operation, stepId, "preflight"), draft, { meta }), retry: false,
+      apiPost<StepPreflight>(route(operation, stepId, "preflight"), draft, { meta, noAuthRetry: true }), retry: false,
   });
   const execute = useMutation({
     mutationFn: ({ operation, stepId, draft, token, typedName }: { operation: StepOperation; stepId: string | null; draft: StepDraft; token: string; typedName?: string }) =>
       apiPost<{ outcome: string; succeededAndVerified: boolean; step: PluginStep | null }>(
-        route(operation, stepId, "execute"), { draft, planToken: token, typedName: typedName ?? null }, { meta }),
+        route(operation, stepId, "execute"), { draft, planToken: token, typedName: typedName ?? null }, { meta, noAuthRetry: true }),
     retry: false,
-    onSuccess: async (result) => {
-      if (!result.succeededAndVerified || !connectionName) return;
-      await queryClient.invalidateQueries({ queryKey: ["plugin-registration", "catalog", connectionName] });
-      await refreshCatalog();
-    },
   });
   return { options, preflight, execute };
 }
