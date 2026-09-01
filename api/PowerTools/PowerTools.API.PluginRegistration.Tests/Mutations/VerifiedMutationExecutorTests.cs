@@ -1,3 +1,4 @@
+using System.Net;
 using PowerTools.API.Tools.PluginRegistration;
 using Xunit;
 
@@ -108,6 +109,30 @@ public sealed class VerifiedMutationExecutorTests
 
         Assert.Equal("outcomeUncertain", result.Outcome);
         Assert.Equal(1, mutations);
+    }
+
+    [Theory]
+    [InlineData("permission")]
+    [InlineData("authentication")]
+    [InlineData("concurrency")]
+    public async Task Deterministic_failures_keep_their_structured_category(string expectedCategory)
+    {
+        Exception exception = expectedCategory switch
+        {
+            "permission" => new UnauthorizedAccessException(),
+            "authentication" => new HttpRequestException("unauthorized", null, HttpStatusCode.Unauthorized),
+            _ => new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch)
+        };
+        var reconciliations = 0;
+
+        var result = await Executor().ExecuteAsync(
+            _ => throw exception,
+            _ => { reconciliations++; return Task.FromResult(MutationReconciliationResult.Insufficient()); },
+            _ => Task.FromResult(false), default);
+
+        Assert.Equal("rejectedBeforeCompletion", result.Outcome);
+        Assert.Equal(expectedCategory, result.Problem?.Category);
+        Assert.Equal(0, reconciliations);
     }
 
     private static VerifiedMutationExecutor Executor() => new(TimeSpan.FromSeconds(1));

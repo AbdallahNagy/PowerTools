@@ -193,6 +193,7 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
     private static bool StepMatches(PluginStepRow row, PluginStepPreflightState state, string operation,
         StepDraftDto submitted, StepDraftDto normalized) =>
         row.PluginTypeId == submitted.PluginTypeId
+        && row.VersionNumber > (submitted.ExpectedVersions.TryGetValue(row.Id, out var expectedVersion) ? expectedVersion : 0)
         && (operation != "enable" || row.IsEnabled)
         && (operation != "disable" || !row.IsEnabled)
         && row.Stage == normalized.Stage && row.Mode == normalized.Mode && row.Rank == normalized.Rank

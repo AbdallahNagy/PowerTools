@@ -91,6 +91,24 @@ public sealed class PluginAssemblyMutationTests
     }
 
     [Fact]
+    public async Task Update_readback_requires_the_assembly_row_version_to_advance()
+    {
+        var inspection = Inspection();
+        var existing = Assembly("1.0.0.0");
+        var gateway = new StatefulAssemblyGateway(existing, inspection) { KeepVersionAfterMutation = true };
+        var service = Service(inspection);
+        var draft = Draft("update", existing, inspection, 2, 0);
+        var preview = await service.CreatePreflightAsync(gateway, "https://contoso.test", draft,
+            Bytes(), 3, new Dictionary<string, bool>(), default);
+
+        var result = await service.ExecuteAsync(gateway, "https://contoso.test", preview.Plan.Token,
+            preview.Draft, Bytes(), 3, new Dictionary<string, bool>(), default);
+
+        Assert.Equal("outcomeUncertain", result.Outcome);
+        Assert.False(result.SucceededAndVerified);
+    }
+
+    [Fact]
     public async Task Non_default_on_premises_options_are_rejected_unless_the_capability_is_bound()
     {
         var inspection = Inspection();
@@ -257,6 +275,7 @@ public sealed class PluginAssemblyMutationTests
         public PluginAssemblyMutationCommand? LastCommand { get; private set; }
         public bool ReturnMismatchedVersion { get; init; }
         public bool LoseResponseAfterMutation { get; init; }
+        public bool KeepVersionAfterMutation { get; init; }
 
         public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) =>
             Task.FromResult(new PluginRegistrationRows(current is null ? [] : [current], [], [], []));
@@ -296,7 +315,7 @@ public sealed class PluginAssemblyMutationTests
                 command.IsolationMode,
                 false,
                 true,
-                (current?.VersionNumber ?? 0) + 1,
+                KeepVersionAfterMutation ? current?.VersionNumber ?? 0 : (current?.VersionNumber ?? 0) + 1,
                 null);
         }
     }

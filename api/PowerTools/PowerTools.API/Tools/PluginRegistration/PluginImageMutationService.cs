@@ -153,6 +153,7 @@ public sealed class PluginImageMutationService(PluginImageValidator validator, P
     private static bool ImageMatches(PluginImageRow row, PluginImagePreflightState state, Guid stepId,
         PluginImageValidationResult validation) =>
         row.PluginStepId == stepId
+        && row.VersionNumber > (validation.Draft.ExpectedVersions.TryGetValue(row.Id, out var expectedVersion) ? expectedVersion : 0)
         && string.Equals(row.Name, validation.PublicAfter.Name, StringComparison.Ordinal)
         && string.Equals(row.EntityAlias, validation.Draft.Alias, StringComparison.Ordinal)
         && string.Equals(state.SupportedMessagePropertyName, validation.Draft.MessagePropertyName, StringComparison.OrdinalIgnoreCase)

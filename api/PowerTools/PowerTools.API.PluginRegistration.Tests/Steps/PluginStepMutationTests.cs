@@ -139,6 +139,21 @@ public sealed class PluginStepMutationTests
         Assert.Equal(1, gateway.MutationCalls);
     }
 
+    [Fact]
+    public async Task Update_readback_requires_the_step_row_version_to_advance()
+    {
+        var gateway = new StatefulStepGateway("update") { KeepVersionAfterMutation = true };
+        var service = Service();
+        var draft = gateway.Draft("update");
+        var preview = await service.CreatePreflightAsync(gateway, "https://contoso.test", "update", draft, default);
+
+        var result = await service.ExecuteAsync(gateway, "https://contoso.test", "update",
+            preview.Plan.Token, draft, null, default);
+
+        Assert.Equal("outcomeUncertain", result.Outcome);
+        Assert.False(result.SucceededAndVerified);
+    }
+
     private static PluginStepMutationService Service() => new(new PluginStepValidator(),
         new PluginRegistrationPreflightService(new PluginRegistrationPlanSigner("test-secret", TimeProvider.System)));
 
@@ -155,6 +170,7 @@ public sealed class PluginStepMutationTests
         public bool HasDependency { get; init; }
         public bool WriteRace { get; set; }
         public bool LoseResponseAfterMutation { get; init; }
+        public bool KeepVersionAfterMutation { get; init; }
         public int MutationCalls { get; private set; }
         public int ReadsAfterMutation { get; private set; }
         public PluginStepMutationCommand? LastCommand { get; private set; }
@@ -170,7 +186,8 @@ public sealed class PluginStepMutationTests
             var plugin = new PluginTypeRow(pluginId, Guid.NewGuid(), "Contoso.Plugin", "Plugin", null, null, null,
                 false, false, true, 4, null);
             var step = exists ? new PluginStepRow(stepId, pluginId, StepName, null, "Update", "account", null,
-                "PostOperation", "Synchronous", 40, 0, 1, enabled, false, true, mutated ? 8 : 7, true, null) : null;
+                "PostOperation", "Synchronous", 40, 0, 1, enabled, false, true,
+                mutated && !KeepVersionAfterMutation ? 8 : 7, true, null) : null;
             return Task.FromResult(new PluginRegistrationRows([], [plugin], step is null ? [] : [step], []));
         }
 

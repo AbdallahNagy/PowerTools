@@ -52,9 +52,10 @@ public sealed class VerifiedMutationExecutor(TimeSpan? reconciliationTimeout = n
         {
             return await ReconcileAsync(reconcile, verify);
         }
-        catch
+        catch (Exception exception)
         {
-            return Result("rejectedBeforeCompletion");
+            var mapped = PluginRegistrationProblem.FromException(exception, "Dataverse environment");
+            return Result("rejectedBeforeCompletion", mapped.Problem);
         }
 
         try
@@ -91,16 +92,21 @@ public sealed class VerifiedMutationExecutor(TimeSpan? reconciliationTimeout = n
         }
     }
 
-    private static bool IsCommunicationFailure(Exception exception) => exception is
-        HttpRequestException or TimeoutException or TaskCanceledException;
+    private static bool IsCommunicationFailure(Exception exception) => exception switch
+    {
+        HttpRequestException { StatusCode: System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden } => false,
+        HttpRequestException or TimeoutException or TaskCanceledException => true,
+        _ => false
+    };
 
-    private static MutationExecutionResultDto Result(string outcome) => outcome switch
+    private static MutationExecutionResultDto Result(string outcome, PluginRegistrationProblemDto? problem = null) => outcome switch
     {
         "outcomeUncertain" => new(outcome, null, new PluginRegistrationProblemDto(
             "verification", "outcome-uncertain",
             "The mutation response could not be reconciled with the current Dataverse state.",
             "Dataverse environment", null, null,
             "Refresh and inspect before trying again.")),
+        "rejectedBeforeCompletion" when problem is not null => new(outcome, null, problem),
         "rejectedBeforeCompletion" => new(outcome, null, new PluginRegistrationProblemDto(
             "validation", "rejected-before-completion",
             "The mutation was rejected before completion.",

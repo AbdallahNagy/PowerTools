@@ -73,6 +73,22 @@ public sealed class PluginImageMutationTests
     }
 
     [Fact]
+    public async Task Update_readback_requires_the_image_row_version_to_advance()
+    {
+        var gateway = new FakeGateway { ExistingImage = Image(), KeepImageVersionAfterMutation = true };
+        var service = Service();
+        var draft = new ImageDraftDto(StepId, 0, "After", "Target", ["accountnumber"],
+            new Dictionary<Guid, long> { [StepId] = 11, [ImageId] = 22 });
+        var preview = await service.CreatePreflightAsync(gateway, "Dev", "update", draft, default);
+
+        var result = await service.ExecuteAsync(gateway, "Dev", "update",
+            preview.Plan.Token, draft, null, default);
+
+        Assert.Equal("outcomeUncertain", result.Outcome);
+        Assert.False(result.SucceededAndVerified);
+    }
+
+    [Fact]
     public async Task Rejects_target_image_owned_by_a_different_step_before_preflight()
     {
         var gateway = new FakeGateway { ExistingImage = Image() with { PluginStepId = Guid.NewGuid() } };
@@ -197,6 +213,7 @@ public sealed class PluginImageMutationTests
         public IReadOnlyList<ComponentDependencyDto> Dependencies { get; set; } = [];
         public int DependenciesAfterStateRead { get; set; }
         public bool LoseResponseAfterMutation { get; init; }
+        public bool KeepImageVersionAfterMutation { get; init; }
         private int stateReads;
         private bool mutated;
         public PluginImageMutationCommand? LastCommand { get; private set; }
@@ -223,7 +240,8 @@ public sealed class PluginImageMutationTests
             }
             ExistingImage = new PluginImageRow(command.TargetImageId ?? ImageId, StepId,
                 command.Operation == "update" ? ExistingImage?.Name ?? command.Draft.Alias : command.Draft.Alias, null,
-                command.Draft.ImageType == 0 ? "Pre Image" : "Post Image", command.Draft.Alias, command.Draft.Attributes, false, true, 23, null);
+                command.Draft.ImageType == 0 ? "Pre Image" : "Post Image", command.Draft.Alias, command.Draft.Attributes, false, true,
+                KeepImageVersionAfterMutation ? ExistingImage?.VersionNumber ?? 0 : 23, null);
             if (LoseResponseAfterMutation) throw new HttpRequestException("response lost");
             return Task.FromResult(ExistingImage.Id);
         }

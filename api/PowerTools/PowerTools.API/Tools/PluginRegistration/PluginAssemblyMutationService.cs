@@ -176,6 +176,7 @@ public sealed class PluginAssemblyMutationService(
         && string.Equals(assembly.PublicKeyToken ?? "", inspection.Identity.PublicKeyToken, StringComparison.Ordinal)
         && assembly.IsolationMode == draft.RequestedIsolationMode
         && assembly.SourceType == draft.RequestedSourceType
+        && assembly.VersionNumber > (draft.ExpectedAssemblyVersionNumber ?? 0)
         && snapshot.IsComplete
         && string.Equals(snapshot.Sha256, inspection.Sha256, StringComparison.OrdinalIgnoreCase)
         && snapshot.Size == inspection.Size

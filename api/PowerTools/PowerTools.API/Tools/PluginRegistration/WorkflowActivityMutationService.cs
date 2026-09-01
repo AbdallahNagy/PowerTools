@@ -39,14 +39,14 @@ public sealed class WorkflowActivityMutationService(PluginRegistrationPreflightS
             var verified = rows.Types.SingleOrDefault(type => type.Id == draft.WorkflowActivityId && type.IsWorkflowActivity);
             if (verified is null) return false;
             verifiedActivity = Map(verified);
-            return WorkflowActivityMatches(verified, draft);
+            return WorkflowActivityMatches(verified, draft, current.VersionNumber);
         }
         async Task<MutationReconciliationResult> Reconcile(CancellationToken ct)
         {
             var rows = await gateway.RetrieveCatalogRowsAsync(ct);
             var candidate = rows.Types.SingleOrDefault(type => type.Id == draft.WorkflowActivityId && type.IsWorkflowActivity);
             if (candidate is null) return MutationReconciliationResult.Contradictory();
-            if (WorkflowActivityMatches(candidate, draft)) return MutationReconciliationResult.Succeeded();
+            if (WorkflowActivityMatches(candidate, draft, current.VersionNumber)) return MutationReconciliationResult.Succeeded();
             return candidate.VersionNumber == current.VersionNumber
                 ? MutationReconciliationResult.Rejected() : MutationReconciliationResult.Contradictory();
         }
@@ -112,8 +112,9 @@ public sealed class WorkflowActivityMutationService(PluginRegistrationPreflightS
     private static PluginHandlerDto Map(PluginTypeRow row) => new(row.Id, HandlerKind.WorkflowActivity, row.TypeName, row.Name,
         row.FriendlyName, row.Description, row.WorkflowActivityGroupName, row.IsManaged, row.IsCustomizable,
         row.VersionNumber, [], [], [], row.AssemblyId, row.SolutionDisplayName);
-    private static bool WorkflowActivityMatches(PluginTypeRow row, WorkflowActivityDraftDto draft) =>
-        row.Name == draft.Name && row.FriendlyName == draft.FriendlyName
+    private static bool WorkflowActivityMatches(PluginTypeRow row, WorkflowActivityDraftDto draft, long expectedVersion) =>
+        row.VersionNumber > expectedVersion
+        && row.Name == draft.Name && row.FriendlyName == draft.FriendlyName
         && row.WorkflowActivityGroupName == draft.WorkflowActivityGroupName
         && row.Description == draft.Description;
 
