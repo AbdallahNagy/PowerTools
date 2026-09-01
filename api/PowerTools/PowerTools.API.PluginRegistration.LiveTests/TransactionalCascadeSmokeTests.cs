@@ -50,6 +50,7 @@ public sealed class TransactionalCascadeSmokeTests
         var assemblyId = Guid.Empty;
         var stepId = Guid.Empty;
         var imageId = Guid.Empty;
+        var workflowId = Guid.Empty;
         IReadOnlyList<Guid> handlerIds = [];
         try
         {
@@ -63,10 +64,16 @@ public sealed class TransactionalCascadeSmokeTests
             Assert.Equal(2, client.Retrieve("sdkmessageprocessingstep", stepId, new ColumnSet("rank"))
                 .GetAttributeValue<int>("rank"));
 
-            AssertReferencedBreakingContractIsBlocked(inspection);
+            Assert.Contains(inspection.WorkflowActivities, item => item.Arguments.Count > 0);
+            var activity = inspection.WorkflowActivities.First(item => item.Arguments.Count > 0);
+            workflowId = CreateReferencedWorkflow(client, inspection.Identity.Name, activity.TypeName);
+            await AssertReferencedBreakingContractIsBlocked(client, assemblyId, workflowId, inspection, bytes);
             ProveRollback(client, imageId);
 
-            ExecuteCascade(client, imageId, stepId, handlerIds, assemblyId);
+            client.Delete("workflow", workflowId);
+            AssertAbsent(client, "workflow", workflowId);
+            workflowId = Guid.Empty;
+            await ExecuteCascadeThroughService(client, assemblyId, imageId, stepId, handlerIds);
             AssertAbsent(client, "sdkmessageprocessingstepimage", imageId);
             AssertAbsent(client, "sdkmessageprocessingstep", stepId);
             foreach (var handlerId in handlerIds) AssertAbsent(client, "plugintype", handlerId);
@@ -75,6 +82,7 @@ public sealed class TransactionalCascadeSmokeTests
         }
         finally
         {
+            TryDelete(client, "workflow", workflowId);
             CleanupOwnedRegistration(client, imageId, stepId, handlerIds, assemblyId);
         }
     }
@@ -199,13 +207,78 @@ public sealed class TransactionalCascadeSmokeTests
             ["attributes"] = "name"
         });
 
-    private static void AssertReferencedBreakingContractIsBlocked(AssemblyInspectionDto inspection)
+    private static Guid CreateReferencedWorkflow(ServiceClient client, string assemblyName, string activityTypeName)
     {
-        var activity = Assert.Single(inspection.WorkflowActivities.Where(item => item.Arguments.Count > 0).Take(1));
-        var existing = new WorkflowContractSnapshot(activity.TypeName,
-            activity.Arguments.Select((argument, position) => new WorkflowArgumentDto(argument.Name, argument.Name,
-                argument.TypeName, argument.Direction, argument.IsRequired, position)).ToArray(), true);
-        Assert.True(WorkflowContractComparer.Compare(existing, []).HasBreakingChanges);
+        var separator = activityTypeName.LastIndexOf('.');
+        Assert.True(separator > 0, "The workflow activity fixture must have a namespace-qualified type name.");
+        var typeNamespace = activityTypeName[..separator];
+        var typeName = activityTypeName[(separator + 1)..];
+        var xaml = $"""
+            <Activity xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
+                      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                      xmlns:fixture="clr-namespace:{System.Security.SecurityElement.Escape(typeNamespace)};assembly={System.Security.SecurityElement.Escape(assemblyName)}">
+              <Sequence>
+                <fixture:{typeName} />
+              </Sequence>
+            </Activity>
+            """;
+        return client.Create(new Entity("workflow")
+        {
+            ["name"] = $"PowerTools disposable workflow blocker {Guid.NewGuid():N}",
+            ["category"] = new OptionSetValue(0),
+            ["type"] = new OptionSetValue(1),
+            ["mode"] = new OptionSetValue(0),
+            ["scope"] = new OptionSetValue(4),
+            ["primaryentity"] = "account",
+            ["ondemand"] = true,
+            ["subprocess"] = false,
+            ["xaml"] = xaml
+        });
+    }
+
+    private static async Task AssertReferencedBreakingContractIsBlocked(ServiceClient client, Guid assemblyId,
+        Guid workflowId, AssemblyInspectionDto inspection, byte[] bytes)
+    {
+        var realGateway = new DataversePluginRegistrationGateway(client);
+        var rows = await realGateway.RetrieveCatalogRowsAsync(CancellationToken.None);
+        var assembly = Assert.Single(rows.Assemblies, item => item.Id == assemblyId);
+        Assert.Contains(inspection.WorkflowActivities, item => item.Arguments.Count > 0);
+        var activityInspection = inspection.WorkflowActivities.First(item => item.Arguments.Count > 0);
+        var activityRow = Assert.Single(rows.Types, item => item.AssemblyId == assemblyId
+            && item.TypeName == activityInspection.TypeName && item.IsWorkflowActivity);
+        Assert.Contains(rows.Dependencies, dependency => dependency.HandlerId == activityRow.Id
+            && dependency.ComponentId == workflowId && dependency.IsExternal);
+
+        var removedArgument = activityInspection.Arguments[0];
+        var breakingInspection = inspection with
+        {
+            WorkflowActivities = inspection.WorkflowActivities.Select(activity =>
+                activity.TypeName == activityInspection.TypeName
+                    ? activity with { Arguments = activity.Arguments.Where(argument => argument.Name != removedArgument.Name).ToArray() }
+                    : activity).ToArray()
+        };
+        var observer = new ObservingAssemblyGateway(realGateway);
+        var realInspector = new PluginAssemblyInspector();
+        var signer = new PluginRegistrationPlanSigner($"live-contract-{Guid.NewGuid():N}", TimeProvider.System);
+        var service = new PluginAssemblyMutationService(
+            new SubmittedThenStoredInspector(breakingInspection, realInspector),
+            new PluginRegistrationPreflightService(signer),
+            new PluginRegistrationCatalogService(realInspector));
+        var draft = new AssemblyMutationDraftDto(Path.GetFileName(LiveInputs.Require().FixturePath), "update",
+            assemblyId, 2, 0, assembly.VersionNumber,
+            rows.Types.Where(item => item.AssemblyId == assemblyId).ToDictionary(item => item.Id, item => item.VersionNumber),
+            breakingInspection);
+        await using var stream = new MemoryStream(bytes, writable: false);
+
+        var preview = await service.CreatePreflightAsync(observer,
+            client.ConnectedOrgUriActual?.ToString() ?? "disposable-live", draft, stream, bytes.Length,
+            new Dictionary<string, bool>(), CancellationToken.None);
+
+        Assert.Contains(preview.Impact.WorkflowContractDifferences, difference =>
+            difference.TypeName == activityInspection.TypeName && difference.ArgumentName == removedArgument.Name
+            && difference.IsBreaking && difference.IsReferenced);
+        Assert.Contains(preview.Plan.Blockers, blocker => blocker.Code == "assembly_workflow_contract_breaking");
+        Assert.Equal(0, observer.AssemblyWriteCount);
     }
 
     private static void ProveRollback(ServiceClient client, Guid imageId)
@@ -217,16 +290,44 @@ public sealed class TransactionalCascadeSmokeTests
         AssertPresent(client, "sdkmessageprocessingstepimage", imageId);
     }
 
-    private static void ExecuteCascade(ServiceClient client, Guid imageId, Guid stepId,
-        IReadOnlyList<Guid> handlerIds, Guid assemblyId)
+    private static async Task ExecuteCascadeThroughService(ServiceClient client, Guid assemblyId, Guid imageId,
+        Guid stepId, IReadOnlyList<Guid> handlerIds)
     {
-        var request = new ExecuteTransactionRequest { ReturnResponses = true };
-        request.Requests.Add(new DeleteRequest { Target = new EntityReference("sdkmessageprocessingstepimage", imageId) });
-        request.Requests.Add(new DeleteRequest { Target = new EntityReference("sdkmessageprocessingstep", stepId) });
-        foreach (var handlerId in handlerIds)
-            request.Requests.Add(new DeleteRequest { Target = new EntityReference("plugintype", handlerId) });
-        request.Requests.Add(new DeleteRequest { Target = new EntityReference("pluginassembly", assemblyId) });
-        _ = (ExecuteTransactionResponse)client.Execute(request);
+        var gateway = new CascadeApprovedGateway(new DataversePluginRegistrationGateway(client));
+        var rows = await gateway.RetrieveCatalogRowsAsync(CancellationToken.None);
+        var assembly = Assert.Single(rows.Assemblies, item => item.Id == assemblyId);
+        var expectedVersions = rows.Assemblies.Where(item => item.Id == assemblyId).Select(item => (item.Id, item.VersionNumber))
+            .Concat(rows.Types.Where(item => item.AssemblyId == assemblyId).Select(item => (item.Id, item.VersionNumber)))
+            .Concat(rows.Steps.Where(item => handlerIds.Contains(item.PluginTypeId ?? Guid.Empty)).Select(item => (item.Id, item.VersionNumber)))
+            .Concat(rows.Images.Where(item => item.PluginStepId == stepId).Select(item => (item.Id, item.VersionNumber)))
+            .ToDictionary(item => item.Id, item => item.VersionNumber);
+        var signer = new PluginRegistrationPlanSigner($"live-cascade-{Guid.NewGuid():N}", TimeProvider.System);
+        var service = new PluginRegistrationCascadeService(new PluginRegistrationDependencyService(),
+            new PluginRegistrationCapabilityService(transactionalCascadeReleaseApproved: true),
+            new PluginRegistrationPreflightService(signer));
+        var draft = new CascadeUnregisterDraftDto(CascadeTargetKind.Assembly, assemblyId, expectedVersions);
+
+        var preview = await service.CreatePreflightAsync(gateway,
+            client.ConnectedOrgUriActual?.ToString() ?? "disposable-live", draft, CancellationToken.None);
+
+        Assert.Empty(preview.Plan.Blockers);
+        Assert.Equal(imageId, preview.DeletePlan[0].Id);
+        Assert.Equal("sdkmessageprocessingstepimage", preview.DeletePlan[0].LogicalName);
+        Assert.Equal(stepId, preview.DeletePlan[1].Id);
+        Assert.Equal("sdkmessageprocessingstep", preview.DeletePlan[1].LogicalName);
+        Assert.Equal(handlerIds.Order().ToArray(), preview.DeletePlan
+            .Where(item => item.LogicalName == "plugintype").Select(item => item.Id).Order().ToArray());
+        Assert.Equal(assemblyId, preview.DeletePlan[^1].Id);
+        Assert.Equal("pluginassembly", preview.DeletePlan[^1].LogicalName);
+        Assert.Single(preview.Impact.Images);
+        Assert.Single(preview.Impact.Steps);
+        Assert.Equal(handlerIds.Count, preview.Impact.Handlers.Count);
+
+        var result = await service.ExecuteAsync(gateway,
+            client.ConnectedOrgUriActual?.ToString() ?? "disposable-live", preview.Plan.Token, preview.Draft,
+            assembly.Name, acknowledged: true, CancellationToken.None);
+        Assert.True(result.SucceededAndVerified);
+        Assert.Equal("succeededAndVerified", result.Outcome);
     }
 
     private static Guid CreateExternalCustomApi(ServiceClient client, Guid pluginId)
@@ -276,6 +377,53 @@ public sealed class TransactionalCascadeSmokeTests
         var query = new QueryExpression(logicalName) { ColumnSet = new ColumnSet(false), TopCount = 1 };
         query.Criteria.AddCondition($"{logicalName}id", ConditionOperator.Equal, id);
         Assert.Empty(client.RetrieveMultiple(query).Entities);
+    }
+
+    private sealed class SubmittedThenStoredInspector(
+        AssemblyInspectionDto submittedInspection,
+        IPluginAssemblyInspector storedInspector) : IPluginAssemblyInspector
+    {
+        private int calls;
+
+        public Task<AssemblyInspectionDto> InspectAsync(Stream assembly, string fileName, long length,
+            CancellationToken cancellationToken) =>
+            Interlocked.Increment(ref calls) == 1
+                ? Task.FromResult(submittedInspection)
+                : storedInspector.InspectAsync(assembly, fileName, length, cancellationToken);
+    }
+
+    private sealed class ObservingAssemblyGateway(IPluginRegistrationGateway inner) : IPluginRegistrationGateway
+    {
+        public int AssemblyWriteCount { get; private set; }
+
+        public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) =>
+            inner.RetrieveCatalogRowsAsync(cancellationToken);
+
+        public Task<PluginAssemblyImpactSnapshot> RetrieveAssemblyImpactSnapshotAsync(PluginAssemblyRow assembly,
+            IReadOnlyList<PluginTypeRow> handlers, CancellationToken cancellationToken) =>
+            inner.RetrieveAssemblyImpactSnapshotAsync(assembly, handlers, cancellationToken);
+
+        public Task<Guid> UpdateAssemblyAsync(PluginAssemblyMutationCommand command,
+            CancellationToken cancellationToken)
+        {
+            AssemblyWriteCount++;
+            return inner.UpdateAssemblyAsync(command, cancellationToken);
+        }
+    }
+
+    private sealed class CascadeApprovedGateway(IPluginRegistrationGateway inner) : IPluginRegistrationGateway
+    {
+        public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) =>
+            inner.RetrieveCatalogRowsAsync(cancellationToken);
+
+        public Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveCascadeDependenciesAsync(
+            IReadOnlyList<CascadeDeleteRequestDto> deletes, CancellationToken cancellationToken) =>
+            inner.RetrieveCascadeDependenciesAsync(deletes, cancellationToken);
+
+        public Task ExecuteCascadeTransactionAsync(IReadOnlyList<CascadeDeleteRequestDto> deletes,
+            CancellationToken cancellationToken) => inner.ExecuteCascadeTransactionAsync(deletes, cancellationToken);
+
+        public Task<bool> SupportsCascadeTransactionAsync(CancellationToken cancellationToken) => Task.FromResult(true);
     }
 }
 
