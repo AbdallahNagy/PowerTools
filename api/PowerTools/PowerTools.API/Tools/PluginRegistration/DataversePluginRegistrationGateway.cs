@@ -52,7 +52,8 @@ public sealed class DataversePluginRegistrationGateway(
             dependencies.AddRange(await RetrieveDependenciesForDeleteAsync(delete.Id,
                 CascadeComponentType(delete.LogicalName), cancellationToken));
         }
-        return dependencies;
+        var enriched = await EnrichWorkflowDependenciesAsync(dependencies, cancellationToken);
+        return NormalizeDependencies(enriched);
     }
 
     public async Task<StepOptionsDto> RetrieveStepOptionsAsync(CancellationToken cancellationToken)
@@ -461,18 +462,8 @@ public sealed class DataversePluginRegistrationGateway(
                 SolutionDisplayName = solution
             });
 
-        // Dependencies are part of the delete-safety boundary. Read every handler, not only
-        // workflow activities, so ordinary plug-ins cannot bypass Custom API or external
-        // component blockers during a cascade unregister.
-        var dependencies = new List<PluginHandlerDependencyRow>();
-        foreach (var handler in mappedTypes)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            dependencies.AddRange(await RetrieveDependenciesForDeleteAsync(handler.Id, 90, cancellationToken));
-        }
-        dependencies = await EnrichWorkflowDependenciesAsync(dependencies, cancellationToken);
         return new PluginRegistrationRows(mappedAssemblies, mappedTypes, mappedSteps, mappedImages,
-            dependencies, [], true);
+            [], [], true);
     }
 
     private async Task<IReadOnlyList<Entity>> RetrieveAllPagesAsync(
@@ -534,7 +525,7 @@ public sealed class DataversePluginRegistrationGateway(
         };
         var response = await service.ExecuteAsync(request, cancellationToken);
         if (!response.Results.TryGetValue("EntityDependencies", out var value) || value is not EntityCollection dependencies)
-            return [];
+            throw new InvalidOperationException("Dataverse returned an invalid dependency response.");
         return dependencies.Entities.Select(dependency => MapDependency(componentId, dependency)).ToArray();
     }
 
@@ -556,11 +547,21 @@ public sealed class DataversePluginRegistrationGateway(
         var ids = workflowDependencies.Select(dependency => dependency.ComponentId).Distinct().ToArray();
         var processes = await RetrieveAllPagesAsync(
             PluginRegistrationCatalogQueries.CreateWorkflowDependencyQuery(ids), cancellationToken);
-        var byId = processes.ToDictionary(process => process.Id);
+        var byId = processes.GroupBy(process => process.Id).ToDictionary(group => group.Key);
+        foreach (var id in ids)
+        {
+            if (!byId.TryGetValue(id, out var rows))
+                throw new InvalidOperationException("Dataverse did not return metadata for every workflow dependency.");
+            var versions = rows.Select(process => process.GetAttributeValue<long?>("versionnumber"))
+                .Distinct().ToArray();
+            if (versions is not [{ } version] || version <= 0)
+                throw new InvalidOperationException("Dataverse returned conflicting or missing workflow dependency versions.");
+        }
         return dependencies.Select(dependency =>
         {
             if (!string.Equals(dependency.ComponentTypeLabel, "Workflow", StringComparison.Ordinal)
-                || !byId.TryGetValue(dependency.ComponentId, out var process)) return dependency;
+                || !byId.TryGetValue(dependency.ComponentId, out var processRows)) return dependency;
+            var process = processRows.First();
             var category = FormattedOrOption(process, "category");
             var state = FormattedOrOption(process, "statecode");
             return dependency with
@@ -571,13 +572,34 @@ public sealed class DataversePluginRegistrationGateway(
                 // A workflow/action dependency is not an owned registration child and must
                 // remain an explicit blocker, even after its display metadata is enriched.
                 IsExternal = true,
-                SolutionDisplayName = SolutionDisplay([process]),
+                SolutionDisplayName = SolutionDisplay(processRows),
                 IsManaged = process.GetAttributeValue<bool>("ismanaged"),
                 IsCustomizable = ManagedBoolean(process, "iscustomizable"),
                 VersionNumber = Number(process, "versionnumber"),
                 StateLabel = state
             };
         }).ToList();
+    }
+
+    private static IReadOnlyList<PluginHandlerDependencyRow> NormalizeDependencies(
+        IReadOnlyList<PluginHandlerDependencyRow> dependencies)
+    {
+        var normalized = new List<PluginHandlerDependencyRow>();
+        foreach (var group in dependencies.Where(dependency => dependency.ComponentId != Guid.Empty)
+                     .GroupBy(dependency => (dependency.HandlerId, dependency.ComponentId)))
+        {
+            var distinct = group.Distinct().ToArray();
+            if (distinct.Length != 1)
+                throw new InvalidOperationException("Dataverse returned conflicting dependency metadata.");
+            normalized.Add(distinct[0]);
+        }
+        normalized.AddRange(dependencies.Where(dependency => dependency.ComponentId == Guid.Empty).Distinct());
+        return normalized
+            .OrderBy(dependency => dependency.HandlerId)
+            .ThenBy(dependency => dependency.ComponentId)
+            .ThenBy(dependency => dependency.ComponentTypeLabel, StringComparer.Ordinal)
+            .ThenBy(dependency => dependency.Name, StringComparer.Ordinal)
+            .ToArray();
     }
 
     private static PluginAssemblyRow MapAssembly(Entity entity) =>

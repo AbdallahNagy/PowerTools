@@ -168,7 +168,7 @@ public sealed class PluginRegistrationCatalogQueriesTests
     }
 
     [Fact]
-    public async Task Gateway_reads_and_preserves_delete_dependencies_for_ordinary_plugin_types()
+    public async Task Gateway_catalog_does_not_retrieve_delete_dependencies()
     {
         var assemblyId = Guid.NewGuid();
         var pluginTypeId = Guid.NewGuid();
@@ -190,13 +190,8 @@ public sealed class PluginRegistrationCatalogQueriesTests
 
         var rows = await new DataversePluginRegistrationGateway(proxy).RetrieveCatalogRowsAsync(CancellationToken.None);
 
-        var dependency = Assert.Single(rows.Dependencies);
-        Assert.Equal(pluginTypeId, dependency.HandlerId);
-        Assert.True(dependency.IsCustomApi);
-        Assert.True(dependency.IsExternal);
-        Assert.Equal("Custom API", dependency.ComponentTypeLabel);
-        Assert.Equal(customApiId, dependency.ComponentId);
-        Assert.Equal([pluginTypeId], handler.DependencyObjectIds);
+        Assert.Empty(rows.Dependencies);
+        Assert.Empty(handler.DependencyObjectIds);
     }
 
     [Fact]
@@ -215,6 +210,113 @@ public sealed class PluginRegistrationCatalogQueriesTests
         ], CancellationToken.None);
 
         Assert.Equal([(image, 93), (step, 92), (handler, 90), (assembly, 91)], recorder.DependencyRequests);
+    }
+
+    [Fact]
+    public async Task Gateway_enriches_workflow_dependencies_requested_by_preflight()
+    {
+        var handlerId = Guid.NewGuid();
+        var workflowId = Guid.NewGuid();
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var recorder = (PagedOrganizationServiceProxy)(object)proxy;
+        recorder.DependencyResponses.Enqueue(Dependencies(new Entity("dependency")
+        {
+            ["dependentcomponenttype"] = new OptionSetValue(29),
+            ["dependentcomponentobjectid"] = new EntityReference("workflow", workflowId) { Name = "Old display name" }
+        }));
+        recorder.Responses["workflow"] = new Queue<EntityCollection>([Page(WithSolution(new Entity("workflow", workflowId)
+        {
+            ["name"] = "Account approval",
+            ["category"] = new OptionSetValue(0),
+            ["statecode"] = new OptionSetValue(1),
+            ["versionnumber"] = 12L
+        }, "Core"))]);
+
+        var dependencies = await new DataversePluginRegistrationGateway(proxy).RetrieveCascadeDependenciesAsync(
+            [new(handlerId, "plugintype", 5)], CancellationToken.None);
+
+        var dependency = Assert.Single(dependencies);
+        Assert.Equal("Account approval", dependency.Name);
+        Assert.Equal("Workflow/action (0)", dependency.ComponentTypeLabel);
+        Assert.Equal("1", dependency.StateLabel);
+        Assert.Equal(12, dependency.VersionNumber);
+        Assert.Equal("Core", dependency.SolutionDisplayName);
+    }
+
+    [Fact]
+    public async Task Gateway_rejects_a_missing_dependency_payload()
+    {
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var recorder = (PagedOrganizationServiceProxy)(object)proxy;
+        recorder.OmitNextDependencyPayload = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            new DataversePluginRegistrationGateway(proxy).RetrieveCascadeDependenciesAsync(
+                [new(Guid.NewGuid(), "plugintype", 1)], CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Gateway_rejects_a_malformed_dependency_payload()
+    {
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var recorder = (PagedOrganizationServiceProxy)(object)proxy;
+        recorder.UseNextDependencyPayload = true;
+        recorder.NextDependencyPayload = "not an entity collection";
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            new DataversePluginRegistrationGateway(proxy).RetrieveCascadeDependenciesAsync(
+                [new(Guid.NewGuid(), "plugintype", 1)], CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Gateway_aggregates_duplicate_workflow_solution_rows_and_dependencies()
+    {
+        var handlerId = Guid.NewGuid();
+        var workflowId = Guid.NewGuid();
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var recorder = (PagedOrganizationServiceProxy)(object)proxy;
+        recorder.DependencyResponses.Enqueue(Dependencies(
+            WorkflowDependency(workflowId), WorkflowDependency(workflowId)));
+        recorder.Responses["workflow"] = new Queue<EntityCollection>([PageOf(
+            WithSolution(Workflow(workflowId, 12), "Zeta"),
+            WithSolution(Workflow(workflowId, 12), "Alpha"))]);
+
+        var dependencies = await new DataversePluginRegistrationGateway(proxy).RetrieveCascadeDependenciesAsync(
+            [new(handlerId, "plugintype", 5)], CancellationToken.None);
+
+        var dependency = Assert.Single(dependencies);
+        Assert.Equal("Alpha, Zeta", dependency.SolutionDisplayName);
+        Assert.Equal(12, dependency.VersionNumber);
+    }
+
+    [Fact]
+    public async Task Gateway_rejects_an_unresolved_workflow_dependency()
+    {
+        var workflowId = Guid.NewGuid();
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var recorder = (PagedOrganizationServiceProxy)(object)proxy;
+        recorder.DependencyResponses.Enqueue(Dependencies(WorkflowDependency(workflowId)));
+        recorder.Responses["workflow"] = new Queue<EntityCollection>([Page()]);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            new DataversePluginRegistrationGateway(proxy).RetrieveCascadeDependenciesAsync(
+                [new(Guid.NewGuid(), "plugintype", 5)], CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Gateway_rejects_conflicting_workflow_versions()
+    {
+        var workflowId = Guid.NewGuid();
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var recorder = (PagedOrganizationServiceProxy)(object)proxy;
+        recorder.DependencyResponses.Enqueue(Dependencies(WorkflowDependency(workflowId)));
+        recorder.Responses["workflow"] = new Queue<EntityCollection>([PageOf(
+            WithSolution(Workflow(workflowId, 12), "Alpha"),
+            WithSolution(Workflow(workflowId, 13), "Zeta"))]);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            new DataversePluginRegistrationGateway(proxy).RetrieveCascadeDependenciesAsync(
+                [new(Guid.NewGuid(), "plugintype", 5)], CancellationToken.None));
     }
 
     private static void AssertQuery(
@@ -293,6 +395,27 @@ public sealed class PluginRegistrationCatalogQueriesTests
         return page;
     }
 
+    private static EntityCollection PageOf(params Entity[] entities)
+    {
+        var page = new EntityCollection();
+        page.Entities.AddRange(entities);
+        return page;
+    }
+
+    private static Entity Workflow(Guid id, long version) => new("workflow", id)
+    {
+        ["name"] = "Account approval",
+        ["category"] = new OptionSetValue(0),
+        ["statecode"] = new OptionSetValue(1),
+        ["versionnumber"] = version
+    };
+
+    private static Entity WorkflowDependency(Guid id) => new("dependency")
+    {
+        ["dependentcomponenttype"] = new OptionSetValue(29),
+        ["dependentcomponentobjectid"] = new EntityReference("workflow", id) { Name = "Account approval" }
+    };
+
     private static EntityCollection Dependencies(params Entity[] dependencies) => new(dependencies);
 
     public class PagedOrganizationServiceProxy : DispatchProxy
@@ -302,6 +425,9 @@ public sealed class PluginRegistrationCatalogQueriesTests
         public Queue<EntityCollection> DependencyResponses { get; } = [];
         public List<Guid> DependencyObjectIds { get; } = [];
         public List<(Guid Id, int ComponentType)> DependencyRequests { get; } = [];
+        public bool OmitNextDependencyPayload { get; set; }
+        public bool UseNextDependencyPayload { get; set; }
+        public object? NextDependencyPayload { get; set; }
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
@@ -327,9 +453,21 @@ public sealed class PluginRegistrationCatalogQueriesTests
                 DependencyObjectIds.Add((Guid)request.Parameters["ObjectId"]);
                 DependencyRequests.Add(((Guid)request.Parameters["ObjectId"], (int)request.Parameters["ComponentType"]));
                 var response = new OrganizationResponse();
-                response.Results["EntityDependencies"] = DependencyResponses.Count > 0
-                    ? DependencyResponses.Dequeue()
-                    : new EntityCollection();
+                if (OmitNextDependencyPayload)
+                {
+                    OmitNextDependencyPayload = false;
+                }
+                else if (UseNextDependencyPayload)
+                {
+                    UseNextDependencyPayload = false;
+                    response.Results["EntityDependencies"] = NextDependencyPayload;
+                }
+                else
+                {
+                    response.Results["EntityDependencies"] = DependencyResponses.Count > 0
+                        ? DependencyResponses.Dequeue()
+                        : new EntityCollection();
+                }
                 return Task.FromResult(response);
             }
 

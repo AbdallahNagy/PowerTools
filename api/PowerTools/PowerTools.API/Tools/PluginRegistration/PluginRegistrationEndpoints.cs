@@ -25,12 +25,20 @@ public static class PluginRegistrationEndpoints
             PluginRegistrationCatalogService catalogService,
             CancellationToken cancellationToken) =>
         {
-            var dataverseClient = ctx.CreateDataverseClient(clientFactory);
-            var gateway = gatewayFactory.Create(dataverseClient);
-            var catalog = await catalogService.RetrieveCatalogAsync(
-                gateway,
-                cancellationToken);
-            return Results.Ok(catalog);
+            try
+            {
+                var dataverseClient = ctx.CreateDataverseClient(clientFactory);
+                var gateway = gatewayFactory.Create(dataverseClient);
+                var catalog = await catalogService.RetrieveCatalogAsync(
+                    gateway,
+                    cancellationToken);
+                return Results.Ok(catalog);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                var problem = PluginRegistrationProblem.FromException(error, ctx.GetEnvironmentUrl());
+                return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+            }
         }).WithName("GetPluginRegistrationCatalog");
 
         group.MapGet("/capabilities", async (HttpContext context,

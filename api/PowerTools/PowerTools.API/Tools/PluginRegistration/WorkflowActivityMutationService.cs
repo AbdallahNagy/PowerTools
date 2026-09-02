@@ -67,7 +67,14 @@ public sealed class WorkflowActivityMutationService(PluginRegistrationPreflightS
             ?? throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
         if (draft.ExpectedVersions.TryGetValue(current.Id, out var expected) && expected != current.VersionNumber)
             throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
-        var dependencies = Dependencies(rows, current);
+        var dependencies = (await gateway.RetrieveCascadeDependenciesAsync(
+                [new CascadeDeleteRequestDto(current.Id, "plugintype", current.VersionNumber)],
+                cancellationToken))
+            .Where(dependency => dependency.HandlerId == current.Id)
+            .OrderBy(dependency => dependency.ComponentTypeLabel, StringComparer.Ordinal)
+            .ThenBy(dependency => dependency.Name, StringComparer.Ordinal)
+            .ThenBy(dependency => dependency.ComponentId)
+            .ToArray();
         foreach (var dependency in dependencies)
         {
             if (draft.ExpectedVersions.TryGetValue(dependency.ComponentId, out expected)
@@ -94,13 +101,6 @@ public sealed class WorkflowActivityMutationService(PluginRegistrationPreflightS
                 .Select(dependency => new KeyValuePair<Guid, long>(dependency.ComponentId, dependency.VersionNumber)))
             .OrderBy(pair => pair.Key)
             .ToDictionary(pair => pair.Key, pair => pair.Value);
-
-    private static IReadOnlyList<PluginHandlerDependencyRow> Dependencies(PluginRegistrationRows rows, PluginTypeRow activity) =>
-        rows.Dependencies.Where(dependency => dependency.HandlerId == activity.Id)
-            .OrderBy(dependency => dependency.ComponentTypeLabel, StringComparer.Ordinal)
-            .ThenBy(dependency => dependency.Name, StringComparer.Ordinal)
-            .ThenBy(dependency => dependency.ComponentId)
-            .ToArray();
 
     private static string DependencyLabel(PluginHandlerDependencyRow dependency) =>
         $"{dependency.ComponentTypeLabel}: {dependency.Name}";

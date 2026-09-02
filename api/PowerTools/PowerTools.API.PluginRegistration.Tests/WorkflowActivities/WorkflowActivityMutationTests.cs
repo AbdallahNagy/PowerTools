@@ -44,6 +44,25 @@ public sealed class WorkflowActivityMutationTests
     }
 
     [Fact]
+    public async Task Execute_aborts_before_writing_when_dependency_verification_fails()
+    {
+        var activityId = Guid.NewGuid();
+        var gateway = new WorkflowActivityGateway(new PluginTypeRow(activityId, Guid.NewGuid(), "Contoso.Activity", "Old", null,
+            null, null, true, false, true, 5, null));
+        var service = new WorkflowActivityMutationService(new PluginRegistrationPreflightService(
+            new PluginRegistrationPlanSigner("test-secret", TimeProvider.System)));
+        var draft = new WorkflowActivityDraftDto(activityId, "New", null, null, null,
+            new Dictionary<Guid, long> { [activityId] = 5 });
+        var preflight = await service.CreatePreflightAsync(gateway, "https://org", draft, CancellationToken.None);
+        gateway.ThrowOnDependencyRead = true;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            service.ExecuteAsync(gateway, "https://org", draft, preflight.Plan.Token, CancellationToken.None));
+
+        Assert.Equal(0, gateway.WriteCount);
+    }
+
+    [Fact]
     public async Task Execute_updates_only_the_four_supported_registration_fields_and_verifies_readback()
     {
         var id = Guid.NewGuid();
@@ -114,11 +133,19 @@ public sealed class WorkflowActivityMutationTests
         public long DependencyVersion { get; set; } = 7;
         public bool LoseResponseAfterMutation { get; init; }
         public bool KeepVersionAfterMutation { get; init; }
+        public bool ThrowOnDependencyRead { get; set; }
         public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) =>
-            Task.FromResult(new PluginRegistrationRows([], [_type], [], [], _dependencyId is { } id
+            Task.FromResult(new PluginRegistrationRows([], [_type], [], []));
+        public Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveCascadeDependenciesAsync(
+            IReadOnlyList<CascadeDeleteRequestDto> deletes, CancellationToken cancellationToken)
+        {
+            if (ThrowOnDependencyRead)
+                throw new InvalidOperationException("Invalid dependency response.");
+            return Task.FromResult<IReadOnlyList<PluginHandlerDependencyRow>>(_dependencyId is { } id
                 ? [new PluginHandlerDependencyRow(_type.Id, "Dependent action", "Workflow action", false, false, id,
                     "Core", false, true, DependencyVersion, "Activated")]
-                : []));
+                : []);
+        }
         public Task<Guid> MutateWorkflowActivityAsync(WorkflowActivityMutationCommand command, CancellationToken cancellationToken)
         {
             WriteCount++;
