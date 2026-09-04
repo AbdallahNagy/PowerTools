@@ -57,4 +57,5 @@ public sealed record PluginAssemblyMutationCommand(
     AssemblyInspectionDto Inspection,
     byte[] Content,
     int IsolationMode,
-    int SourceType);
+    int SourceType,
+    long? ExpectedVersion);

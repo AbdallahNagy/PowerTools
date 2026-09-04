@@ -6,7 +6,7 @@ import type { PluginHandler } from "../../model/contracts";
 import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 import { MutationImpactPreviewDialog } from "./ImpactPreviewDialog";
 
-export function WorkflowActivityDialog({ connectionName, activity, onClose, onMutationResult, onMutationFailure }: { connectionName: string | null; activity: PluginHandler & { kind: "workflowActivity" }; onClose: () => void; refreshCatalog: () => Promise<unknown>; onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure }) {
+export function WorkflowActivityDialog({ connectionName, activity, onClose, onMutationResult, onMutationFailure }: { connectionName: string | null; activity: PluginHandler & { kind: "workflowActivity" }; onClose: () => void; onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure }) {
   const mutations = useWorkflowActivityMutations(connectionName);
   const [name, setName] = useState(activity.name);
   const [friendlyName, setFriendlyName] = useState(activity.friendlyName ?? "");

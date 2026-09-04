@@ -124,7 +124,7 @@ export function normalizePluginRegistrationCatalog(
   };
 }
 
-function normalizePluginHandler(handler: PluginHandlerDto): PluginHandler {
+export function normalizePluginHandler(handler: PluginHandlerDto): PluginHandler {
   const { kind, workflowArguments, ...rest } = handler;
   const normalizedArguments = workflowArguments.map(normalizeWorkflowArgument);
 

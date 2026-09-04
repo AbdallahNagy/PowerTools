@@ -2,6 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { apiGet, apiPost } from "../../../shared/api/client";
 import type { PluginStep } from "../model/contracts";
+import type { MutationPlan } from "../model/mutationContracts";
 
 export type StepOperation = "create" | "update" | "enable" | "disable" | "unregister";
 export interface StepDraft {
@@ -27,7 +28,7 @@ export interface StepPublicValues {
 }
 export interface StepPreflight {
   draft: StepDraft;
-  plan: { token: string; blockers: { code: string; message: string }[]; warnings: { code: string; message: string }[]; changes: { field: string; before: string | null; after: string | null }[]; confirmation: { message: string; requiredText?: string | null } };
+  plan: MutationPlan;
   before: StepPublicValues | null;
   after: StepPublicValues;
 }

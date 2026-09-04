@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
 using PowerTools.API.Tools.PluginRegistration;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
 using Xunit;
@@ -194,6 +195,28 @@ public sealed class PluginAssemblyMutationTests
         Array.Clear(snapshot.Content);
     }
 
+    [Fact]
+    public async Task Gateway_assembly_update_uses_the_bound_row_version_for_optimistic_concurrency()
+    {
+        var assemblyId = Guid.NewGuid();
+        var service = DispatchProxy.Create<IOrganizationServiceAsync2, AssemblyUpdateServiceProxy>();
+        var recorder = (AssemblyUpdateServiceProxy)(object)service;
+        var command = new PluginAssemblyMutationCommand(
+            assemblyId,
+            Inspection(),
+            [1, 2, 3],
+            2,
+            0,
+            7);
+
+        await new DataversePluginRegistrationGateway(service)
+            .UpdateAssemblyAsync(command, CancellationToken.None);
+
+        var update = Assert.IsType<UpdateRequest>(recorder.Request);
+        Assert.Equal(ConcurrencyBehavior.IfRowVersionMatches, update.ConcurrencyBehavior);
+        Assert.Equal("7", update.Target.RowVersion);
+    }
+
     private class ImpactServiceProxy : DispatchProxy
     {
         public Entity AssemblyContent { get; } = new("pluginassembly");
@@ -218,6 +241,23 @@ public sealed class PluginAssemblyMutationTests
         {
             Request = args?.OfType<OrganizationRequest>().Single();
             return Task.FromResult(Response());
+        }
+    }
+
+    private class AssemblyUpdateServiceProxy : DispatchProxy
+    {
+        public OrganizationRequest? Request { get; private set; }
+
+        protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
+        {
+            if (targetMethod?.Name == nameof(IOrganizationServiceAsync2.ExecuteAsync)
+                && args is [OrganizationRequest request, CancellationToken])
+            {
+                Request = request;
+                return Task.FromResult(new OrganizationResponse());
+            }
+
+            throw new NotSupportedException(targetMethod?.Name);
         }
     }
 

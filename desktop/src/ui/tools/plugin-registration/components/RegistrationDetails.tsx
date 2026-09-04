@@ -2,14 +2,25 @@ import type { ReactNode } from "react";
 
 import type { CatalogTreeNode } from "../model/catalogTree";
 
-export function RegistrationDetails({ node }: { node: CatalogTreeNode | null }) {
+export function RegistrationDetails({
+  node,
+  isLoading = false,
+  error = null,
+}: {
+  node: CatalogTreeNode | null;
+  isLoading?: boolean;
+  error?: unknown;
+}) {
   return (
     <section role="region" aria-label="Registration details" className="flex flex-col min-h-0 h-full">
       <div className="px-4 py-2.5 border-b border-[#3c3c3c] text-xs font-semibold uppercase tracking-wider text-[#858585]">
         Details
       </div>
       <div className="flex-1 min-h-0 overflow-auto p-4">
-        {node ? <NodeDetails node={node} /> : <p className="text-sm text-[#858585]">Select a registration to view details.</p>}
+        {isLoading ? <p className="text-sm text-[#858585]">Loading workflow details…</p>
+          : error ? <p role="status" className="text-sm text-red-300">Unable to load workflow details.</p>
+          : node ? <NodeDetails node={node} />
+          : <p className="text-sm text-[#858585]">Select a registration to view details.</p>}
       </div>
     </section>
   );

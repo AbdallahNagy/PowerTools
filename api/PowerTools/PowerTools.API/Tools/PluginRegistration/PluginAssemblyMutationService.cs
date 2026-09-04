@@ -69,7 +69,8 @@ public sealed class PluginAssemblyMutationService(
                     return BuildRequest(environment, draft, current, impactState.Target, impactState.Impact, capabilities);
                 }, cancellationToken);
 
-            var command = new PluginAssemblyMutationCommand(draft.AssemblyId, inspection, bytes, draft.RequestedIsolationMode, draft.RequestedSourceType);
+            var command = new PluginAssemblyMutationCommand(draft.AssemblyId, inspection, bytes,
+                draft.RequestedIsolationMode, draft.RequestedSourceType, draft.ExpectedAssemblyVersionNumber);
             Guid? assemblyId = draft.AssemblyId;
             PluginAssemblyDto? verified = null;
             async Task<bool> Verify(CancellationToken ct)

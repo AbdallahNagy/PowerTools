@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useConnections, useConnectionSelection } from "../../shared/connections";
 import { Button, Modal, ToastProvider } from "../../shared/ui";
 import { useRegistrationCatalog } from "./api/useRegistrationCatalog";
+import { useWorkflowActivityDetails } from "./api/useWorkflowActivityDetails";
 import { PluginRegistrationHeader } from "./components/PluginRegistrationHeader";
 import {
   RegistrationContextMenu,
@@ -18,7 +19,14 @@ import { WorkflowActivityDialog } from "./components/dialogs/WorkflowActivityDia
 import { CascadeConfirmationDialog } from "./components/dialogs/CascadeConfirmationDialog";
 import { useUnregisterMutations, type CascadeDraft } from "./api/useUnregisterMutations";
 import { RegistrationWorkspace } from "./components/RegistrationWorkspace";
-import { buildCatalogTree, findCatalogNode, type CatalogTreeNode } from "./model/catalogTree";
+import {
+  buildCatalogTree,
+  catalogNodeId,
+  findCatalogNode,
+  parseCatalogNodeId,
+  type CatalogNodeId,
+  type CatalogTreeNode,
+} from "./model/catalogTree";
 import { MutationOutcomeBanner } from "./components/MutationOutcomeBanner";
 import {
   parseMutationOutcome,
@@ -30,13 +38,13 @@ import {
 
 export type DialogIntent =
   | { kind: "registerAssembly" }
-  | { kind: "update"; nodeId: string }
+  | { kind: "update"; nodeId: CatalogNodeId }
   | { kind: "createStep"; pluginId: string }
   | { kind: "createImage"; stepId: string }
   | { kind: "unregisterStep"; stepId: string }
   | { kind: "toggleStep"; stepId: string; enable: boolean }
   | { kind: "unregisterImage"; imageId: string }
-  | { kind: "cascadeUnregister"; nodeId: string }
+  | { kind: "cascadeUnregister"; nodeId: CatalogNodeId }
   | null;
 
 export default function PluginRegistration() {
@@ -52,7 +60,7 @@ function PluginRegistrationPage() {
   const { connections } = useConnections();
   const catalogQuery = useRegistrationCatalog(connectionName || null);
   const cascades = useUnregisterMutations(connectionName || null);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<CatalogNodeId | null>(null);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(new Set());
   const [dialogIntent, setDialogIntent] = useState<DialogIntent>(null);
   const [contextMenu, setContextMenu] = useState<RegistrationContextMenuState | null>(null);
@@ -65,25 +73,44 @@ function PluginRegistrationPage() {
     [catalogQuery.data],
   );
   const selectedNode = selectedNodeId ? findCatalogNode(nodes, selectedNodeId) ?? null : null;
+  const selectedWorkflowActivityId = selectedNode?.kind === "workflowActivity"
+    ? selectedNode.data.id
+    : null;
+  const workflowDetailsQuery = useWorkflowActivityDetails(
+    connectionName || null,
+    selectedWorkflowActivityId,
+  );
+  const selectedNodeWithDetails = selectedNode?.kind === "workflowActivity"
+    && workflowDetailsQuery.data?.kind === "workflowActivity"
+    && workflowDetailsQuery.data.id === selectedNode.data.id
+    ? {
+        ...selectedNode,
+        data: {
+          ...selectedNode.data,
+          workflowArguments: workflowDetailsQuery.data.workflowArguments,
+          dependencies: workflowDetailsQuery.data.dependencies,
+        },
+      }
+    : selectedNode;
   const dialogNode = dialogIntent?.kind === "update"
     ? findCatalogNode(nodes, dialogIntent.nodeId) ?? null
     : null;
   const isAssemblyMutationDialog = dialogIntent?.kind === "registerAssembly"
     || (dialogIntent?.kind === "update" && dialogNode?.kind === "assembly");
   const stepNode = dialogIntent?.kind === "unregisterStep" || dialogIntent?.kind === "toggleStep"
-    ? findCatalogNode(nodes, `step:${dialogIntent.stepId}`) ?? null
+    ? findCatalogNode(nodes, catalogNodeId("step", dialogIntent.stepId)) ?? null
     : dialogNode?.kind === "step" ? dialogNode : null;
   const pluginId = dialogIntent?.kind === "createStep" ? dialogIntent.pluginId
     : stepNode?.kind === "step" ? stepNode.data.pluginHandlerId : null;
-  const pluginNode = pluginId ? findCatalogNode(nodes, `plugin:${pluginId}`) ?? null : null;
+  const pluginNode = pluginId ? findCatalogNode(nodes, catalogNodeId("plugin", pluginId)) ?? null : null;
   const isStepEditDialog = Boolean(pluginNode?.kind === "plugin"
     && (dialogIntent?.kind === "createStep" || dialogIntent?.kind === "update" && dialogNode?.kind === "step"));
   const isStepConfirmation = Boolean(pluginNode?.kind === "plugin" && stepNode?.kind === "step"
     && (dialogIntent?.kind === "unregisterStep" || dialogIntent?.kind === "toggleStep"));
-  const imageNode = dialogIntent?.kind === "unregisterImage" ? findCatalogNode(nodes, `image:${dialogIntent.imageId}`) ?? null
+  const imageNode = dialogIntent?.kind === "unregisterImage" ? findCatalogNode(nodes, catalogNodeId("image", dialogIntent.imageId)) ?? null
     : dialogNode?.kind === "image" ? dialogNode : null;
-  const imageStepNode = imageNode?.kind === "image" ? findCatalogNode(nodes, `step:${imageNode.data.pluginStepId}`) ?? null
-    : dialogIntent?.kind === "createImage" ? findCatalogNode(nodes, `step:${dialogIntent.stepId}`) ?? null : null;
+  const imageStepNode = imageNode?.kind === "image" ? findCatalogNode(nodes, catalogNodeId("step", imageNode.data.pluginStepId)) ?? null
+    : dialogIntent?.kind === "createImage" ? findCatalogNode(nodes, catalogNodeId("step", dialogIntent.stepId)) ?? null : null;
   const isImageDialog = Boolean(imageStepNode?.kind === "step" && (dialogIntent?.kind === "createImage"
     || dialogIntent?.kind === "unregisterImage" || dialogIntent?.kind === "update" && dialogNode?.kind === "image"));
   const workflowActivityNode = dialogIntent?.kind === "update" && dialogNode?.kind === "workflowActivity" ? dialogNode : null;
@@ -181,9 +208,16 @@ function PluginRegistrationPage() {
         setDialogIntent({ kind: "createImage", stepId: intent.stepId });
         break;
       case "unregister":
-        if (intent.nodeId.startsWith("assembly:") || intent.nodeId.startsWith("plugin:") || intent.nodeId.startsWith("workflowActivity:")) setDialogIntent({ kind: "cascadeUnregister", nodeId: intent.nodeId });
-        else if (intent.nodeId.startsWith("step:")) setDialogIntent({ kind: "unregisterStep", stepId: intent.nodeId.slice(5) });
-        else if (intent.nodeId.startsWith("image:")) setDialogIntent({ kind: "unregisterImage", imageId: intent.nodeId.slice(6) });
+        {
+          const target = parseCatalogNodeId(intent.nodeId);
+          if (target.kind === "assembly" || target.kind === "plugin" || target.kind === "workflowActivity") {
+            setDialogIntent({ kind: "cascadeUnregister", nodeId: intent.nodeId });
+          } else if (target.kind === "step") {
+            setDialogIntent({ kind: "unregisterStep", stepId: target.componentId });
+          } else {
+            setDialogIntent({ kind: "unregisterImage", imageId: target.componentId });
+          }
+        }
         break;
       case "toggleStep":
         setDialogIntent({ kind: "toggleStep", stepId: intent.stepId, enable: intent.enable });
@@ -210,7 +244,9 @@ function PluginRegistrationPage() {
       <RegistrationWorkspace
         connectionName={connectionName}
         nodes={nodes}
-        selectedNode={selectedNode}
+        selectedNode={selectedNodeWithDetails}
+        detailsLoading={Boolean(selectedWorkflowActivityId && workflowDetailsQuery.isLoading)}
+        detailsError={selectedWorkflowActivityId ? workflowDetailsQuery.error : null}
         selectedNodeId={selectedNodeId}
         expandedNodeIds={expandedNodeIds}
         isLoading={catalogQuery.isLoading}
@@ -235,8 +271,7 @@ function PluginRegistrationPage() {
           assembly={dialogNode?.kind === "assembly" ? dialogNode.data : null}
           connectionName={connectionName || null}
           onClose={() => setDialogIntent(null)}
-          onVerified={(assembly) => setSelectedNodeId(`assembly:${assembly.id}`)}
-          refreshCatalog={() => catalogQuery.refetch()}
+          onVerified={(assembly) => setSelectedNodeId(catalogNodeId("assembly", assembly.id))}
           onMutationResult={reportMutationResult}
           onMutationFailure={reportMutationFailure}
         />
@@ -245,26 +280,26 @@ function PluginRegistrationPage() {
         <StepDialog connectionName={connectionName || null} plugin={pluginNode.data}
           step={stepNode?.kind === "step" ? stepNode.data : null}
           operation={stepNode?.kind === "step" ? "update" : "create"}
-          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()}
+          onClose={() => setDialogIntent(null)}
           onMutationResult={reportMutationResult} onMutationFailure={reportMutationFailure} />
       ) : null}
       {isStepConfirmation && pluginNode?.kind === "plugin" && stepNode?.kind === "step"
         && (dialogIntent?.kind === "unregisterStep" || dialogIntent?.kind === "toggleStep") ? (
         <TypedNameConfirmationDialog connectionName={connectionName || null} plugin={pluginNode.data}
           step={stepNode.data} operation={dialogIntent.kind === "unregisterStep" ? "unregister" : dialogIntent.enable ? "enable" : "disable"}
-          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()}
+          onClose={() => setDialogIntent(null)}
           onMutationResult={reportMutationResult} onMutationFailure={reportMutationFailure} />
       ) : null}
       {isImageDialog && imageStepNode?.kind === "step" ? (
         <ImageDialog connectionName={connectionName || null} step={imageStepNode.data}
           image={imageNode?.kind === "image" ? imageNode.data : null}
           operation={dialogIntent?.kind === "createImage" ? "create" : dialogIntent?.kind === "unregisterImage" ? "unregister" : "update"}
-          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()}
+          onClose={() => setDialogIntent(null)}
           onMutationResult={reportMutationResult} onMutationFailure={reportMutationFailure} />
       ) : null}
       {workflowActivityNode?.kind === "workflowActivity" ? (
         <WorkflowActivityDialog connectionName={connectionName || null} activity={workflowActivityNode.data}
-          onClose={() => setDialogIntent(null)} refreshCatalog={() => catalogQuery.refetch()}
+          onClose={() => setDialogIntent(null)}
           onMutationResult={reportMutationResult} onMutationFailure={reportMutationFailure} />
       ) : null}
       {cascadeNode && cascadeDraft ? <CascadeUnregisterFlow node={cascadeNode} draft={cascadeDraft} connectionName={connectionName || null}

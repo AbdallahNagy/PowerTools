@@ -14,7 +14,40 @@ public sealed class PluginRegistrationCatalogService(IPluginAssemblyInspector? i
         CancellationToken cancellationToken)
     {
         var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
-        return Assemble(await EnrichWorkflowContractsAsync(gateway, rows, cancellationToken));
+        return Assemble(rows);
+    }
+
+    public async Task<PluginHandlerDto> RetrieveWorkflowActivityAsync(
+        IPluginRegistrationGateway gateway,
+        Guid workflowActivityId,
+        CancellationToken cancellationToken)
+    {
+        var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
+        var activity = rows.Types.SingleOrDefault(type =>
+            type.Id == workflowActivityId && type.IsWorkflowActivity)
+            ?? throw new KeyNotFoundException("The workflow activity was not found.");
+        var assembly = rows.Assemblies.SingleOrDefault(item => item.Id == activity.AssemblyId)
+            ?? throw new InvalidOperationException("The workflow activity assembly was not found.");
+        var detailRows = new PluginRegistrationRows(
+            [assembly],
+            [activity],
+            [],
+            [],
+            rows.Dependencies.Where(dependency => dependency.HandlerId == activity.Id).ToArray(),
+            [],
+            rows.HasCompleteAssemblyImpactData);
+        var enriched = await EnrichWorkflowContractsAsync(gateway, detailRows, cancellationToken);
+        return AssertSingleWorkflowActivity(Assemble(enriched), activity.Id);
+    }
+
+    private static PluginHandlerDto AssertSingleWorkflowActivity(
+        PluginRegistrationCatalogDto catalog,
+        Guid workflowActivityId)
+    {
+        var activity = catalog.Assemblies.Single().Handlers.Single();
+        if (activity.Id != workflowActivityId || activity.Kind != HandlerKind.WorkflowActivity)
+            throw new InvalidOperationException("The workflow activity details are incomplete.");
+        return activity;
     }
 
     private async Task<PluginRegistrationRows> EnrichWorkflowContractsAsync(IPluginRegistrationGateway gateway,
@@ -22,6 +55,7 @@ public sealed class PluginRegistrationCatalogService(IPluginAssemblyInspector? i
     {
         if (inspector is null || !rows.Types.Any(type => type.IsWorkflowActivity)) return rows;
         var arguments = new List<PluginWorkflowArgumentRow>();
+        var dependencies = new List<PluginHandlerDependencyRow>(rows.Dependencies);
         foreach (var assembly in rows.Assemblies)
         {
             var activities = rows.Types.Where(type => type.AssemblyId == assembly.Id && type.IsWorkflowActivity).ToArray();
@@ -29,6 +63,7 @@ public sealed class PluginRegistrationCatalogService(IPluginAssemblyInspector? i
             var snapshot = await gateway.RetrieveAssemblyImpactSnapshotAsync(assembly, activities, cancellationToken);
             if (!snapshot.IsComplete || snapshot.Content.Length == 0)
                 throw new InvalidOperationException("Workflow argument metadata could not be retrieved safely.");
+            dependencies.AddRange(snapshot.Dependencies);
             try
             {
                 await using var content = new MemoryStream(snapshot.Content, writable: false);
@@ -43,7 +78,14 @@ public sealed class PluginRegistrationCatalogService(IPluginAssemblyInspector? i
             }
             finally { CryptographicOperations.ZeroMemory(snapshot.Content); }
         }
-        return rows with { WorkflowArgumentRows = arguments };
+        return new PluginRegistrationRows(
+            rows.Assemblies,
+            rows.Types,
+            rows.Steps,
+            rows.Images,
+            dependencies.Distinct().ToArray(),
+            arguments,
+            rows.HasCompleteAssemblyImpactData);
     }
 
     private static PluginRegistrationCatalogDto Assemble(PluginRegistrationRows rows)

@@ -11,7 +11,6 @@ interface AssemblyDialogProps {
   connectionName: string | null;
   onClose: () => void;
   onVerified: (assembly: PluginAssembly) => void;
-  refreshCatalog: () => Promise<unknown>;
   onMutationResult: ReportMutationResult;
   onMutationFailure: ReportMutationFailure;
 }

@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { apiPost } from "../../../shared/api/client";
 import type { PluginHandler } from "../model/contracts";
+import type { MutationPlan } from "../model/mutationContracts";
 
 export interface WorkflowActivityDraft {
   workflowActivityId: string;
@@ -16,7 +17,7 @@ export interface WorkflowActivityPreflight {
   draft: WorkflowActivityDraft;
   before: PluginHandler;
   after: PluginHandler;
-  plan: { token: string; blockers: { code: string; message: string }[]; warnings: { code: string; message: string }[]; changes: { field: string; before: string | null; after: string | null }[]; confirmation: { message: string } };
+  plan: MutationPlan;
 }
 
 export function useWorkflowActivityMutations(connectionName: string | null) {

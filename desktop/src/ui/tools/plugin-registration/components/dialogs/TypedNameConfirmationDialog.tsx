@@ -6,7 +6,7 @@ import type { PluginHandler, PluginStep } from "../../model/contracts";
 import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 
 interface Props { connectionName: string | null; plugin: PluginHandler & { kind: "plugin" }; step: PluginStep;
-  operation: "enable" | "disable" | "unregister"; onClose: () => void; refreshCatalog: () => Promise<unknown>;
+  operation: "enable" | "disable" | "unregister"; onClose: () => void;
   onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure; }
 export function TypedNameConfirmationDialog({ connectionName, plugin, step, operation, onClose, onMutationResult, onMutationFailure }: Props) {
   const mutations = useStepMutations(connectionName);

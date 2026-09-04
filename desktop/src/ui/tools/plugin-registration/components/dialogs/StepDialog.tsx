@@ -6,7 +6,7 @@ import type { PluginHandler, PluginStep } from "../../model/contracts";
 import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 
 interface Props { connectionName: string | null; plugin: PluginHandler & { kind: "plugin" }; step?: PluginStep | null;
-  operation: "create" | "update"; onClose: () => void; refreshCatalog: () => Promise<unknown>;
+  operation: "create" | "update"; onClose: () => void;
   onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure; }
 
 export function StepDialog({ connectionName, plugin, step, operation, onClose, onMutationResult, onMutationFailure }: Props) {

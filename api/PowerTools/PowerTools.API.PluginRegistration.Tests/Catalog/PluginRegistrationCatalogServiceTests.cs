@@ -102,6 +102,73 @@ public sealed class PluginRegistrationCatalogServiceTests
         Assert.Equal(["Alpha image", "z image"], steps[0].Images.Select(image => image.Name));
     }
 
+    [Fact]
+    public async Task RetrieveWorkflowActivity_preserves_enriched_workflow_dependencies()
+    {
+        var assembly = Assembly(Guid.NewGuid(), "Workflow Assembly");
+        var workflow = Type(Guid.NewGuid(), assembly.Id, "Contoso.Calculate", true);
+        var dependencyId = Guid.NewGuid();
+        var dependency = new PluginHandlerDependencyRow(
+            workflow.Id,
+            "Account approval",
+            "Workflow/action",
+            false,
+            true,
+            dependencyId,
+            "Core Solution",
+            false,
+            true,
+            12,
+            "Activated");
+        var gateway = new WorkflowEnrichmentGateway(
+            new PluginRegistrationRows([assembly], [workflow], [], []),
+            new PluginAssemblyImpactSnapshot([1, 2, 3], [dependency], true));
+        var inspector = new FixedWorkflowInspector(new AssemblyInspectionDto(
+            "Workflow Assembly.dll",
+            3,
+            "sha256",
+            new AssemblyIdentityInspectionDto("Workflow Assembly", "1.0.0.0", "neutral", "token"),
+            ".NETFramework,Version=v4.6.2",
+            "v4.0.30319",
+            [],
+            [],
+            [new WorkflowActivityInspectionDto(workflow.TypeName, [])]));
+
+        var displayed = await new PluginRegistrationCatalogService(inspector)
+            .RetrieveWorkflowActivityAsync(gateway, workflow.Id, CancellationToken.None);
+
+        var actual = Assert.Single(displayed.Dependencies);
+        Assert.Equal(dependencyId, actual.ComponentId);
+        Assert.Equal("Account approval", actual.Name);
+        Assert.Equal("Activated", actual.StateLabel);
+    }
+
+    [Fact]
+    public async Task RetrieveCatalog_does_not_load_workflow_assembly_content()
+    {
+        var assembly = Assembly(Guid.NewGuid(), "Workflow Assembly");
+        var workflow = Type(Guid.NewGuid(), assembly.Id, "Contoso.Calculate", true);
+        var gateway = new WorkflowEnrichmentGateway(
+            new PluginRegistrationRows([assembly], [workflow], [], []),
+            new PluginAssemblyImpactSnapshot([1, 2, 3], [], true));
+        var inspector = new FixedWorkflowInspector(new AssemblyInspectionDto(
+            "Workflow Assembly.dll",
+            3,
+            "sha256",
+            new AssemblyIdentityInspectionDto("Workflow Assembly", "1.0.0.0", "neutral", "token"),
+            ".NETFramework,Version=v4.6.2",
+            "v4.0.30319",
+            [],
+            [],
+            [new WorkflowActivityInspectionDto(workflow.TypeName, [])]));
+
+        var catalog = await new PluginRegistrationCatalogService(inspector)
+            .RetrieveCatalogAsync(gateway, CancellationToken.None);
+
+        Assert.Single(Assert.Single(catalog.Assemblies).Handlers);
+        Assert.Equal(0, gateway.SnapshotCallCount);
+    }
+
     private static PluginAssemblyRow Assembly(Guid id, string name) =>
         new(id, name, "1.0.0.0", "neutral", "token", 0, 2, false, true, 1,
             SolutionDisplayName: "Core Solution");
@@ -127,4 +194,32 @@ public sealed class PluginRegistrationCatalogServiceTests
     private static PluginImageRow Image(Guid id, Guid stepId, string name) =>
         new(id, stepId, name, null, "PreImage", "target", ["name", "emailaddress1"],
             false, true, 1, "Core Solution");
+
+    private sealed class WorkflowEnrichmentGateway(
+        PluginRegistrationRows rows,
+        PluginAssemblyImpactSnapshot snapshot) : IPluginRegistrationGateway
+    {
+        public int SnapshotCallCount { get; private set; }
+
+        public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken) =>
+            Task.FromResult(rows);
+
+        public Task<PluginAssemblyImpactSnapshot> RetrieveAssemblyImpactSnapshotAsync(
+            PluginAssemblyRow assembly,
+            IReadOnlyList<PluginTypeRow> handlers,
+            CancellationToken cancellationToken)
+        {
+            SnapshotCallCount++;
+            return Task.FromResult(snapshot);
+        }
+    }
+
+    private sealed class FixedWorkflowInspector(AssemblyInspectionDto inspection) : IPluginAssemblyInspector
+    {
+        public Task<AssemblyInspectionDto> InspectAsync(
+            Stream assembly,
+            string fileName,
+            long length,
+            CancellationToken cancellationToken) => Task.FromResult(inspection);
+    }
 }

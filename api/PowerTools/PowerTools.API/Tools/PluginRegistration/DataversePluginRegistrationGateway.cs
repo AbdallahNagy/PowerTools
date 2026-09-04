@@ -423,9 +423,16 @@ public sealed class DataversePluginRegistrationGateway(
         ArgumentNullException.ThrowIfNull(command);
         if (command.AssemblyId is not { } id || id == Guid.Empty)
             throw new ArgumentException("An assembly id is required for update.", nameof(command));
+        if (command.ExpectedVersion is not { } expectedVersion || expectedVersion <= 0)
+            throw new ArgumentException("An expected assembly version is required for update.", nameof(command));
         var entity = CreateAssemblyEntity(command);
         entity.Id = id;
-        await service.UpdateAsync(entity, cancellationToken);
+        entity.RowVersion = expectedVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
+        await service.ExecuteAsync(new UpdateRequest
+        {
+            Target = entity,
+            ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
+        }, cancellationToken);
         return id;
     }
 

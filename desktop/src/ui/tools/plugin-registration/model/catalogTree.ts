@@ -7,9 +7,10 @@ import type {
 } from "./contracts";
 
 export type CatalogNodeKind = "assembly" | "plugin" | "workflowActivity" | "step" | "image";
+export type CatalogNodeId = `${CatalogNodeKind}:${string}`;
 
 interface CatalogTreeNodeBase<TKind extends CatalogNodeKind, TData> {
-  id: string;
+  id: CatalogNodeId;
   kind: TKind;
   label: string;
   data: TData;
@@ -25,7 +26,7 @@ export type CatalogTreeNode =
 
 export function buildCatalogTree(catalog: PluginRegistrationCatalog): CatalogTreeNode[] {
   return catalog.assemblies.map((assembly) => ({
-    id: `assembly:${assembly.id}`,
+    id: catalogNodeId("assembly", assembly.id),
     kind: "assembly",
     label: assembly.name,
     data: assembly,
@@ -58,10 +59,25 @@ export function findCatalogNode(
   return undefined;
 }
 
+export function catalogNodeId(kind: CatalogNodeKind, componentId: string): CatalogNodeId {
+  return `${kind}:${componentId}`;
+}
+
+export function parseCatalogNodeId(nodeId: CatalogNodeId): {
+  kind: CatalogNodeKind;
+  componentId: string;
+} {
+  const separator = nodeId.indexOf(":");
+  return {
+    kind: nodeId.slice(0, separator) as CatalogNodeKind,
+    componentId: nodeId.slice(separator + 1),
+  };
+}
+
 function buildHandlerNode(handler: PluginHandler): CatalogTreeNode {
   if (handler.kind === "workflowActivity") {
     return {
-      id: `workflowActivity:${handler.id}`,
+      id: catalogNodeId("workflowActivity", handler.id),
       kind: "workflowActivity",
       label: `(Workflow Activity) ${handler.name}`,
       data: handler,
@@ -70,17 +86,17 @@ function buildHandlerNode(handler: PluginHandler): CatalogTreeNode {
   }
 
   return {
-    id: `plugin:${handler.id}`,
+    id: catalogNodeId("plugin", handler.id),
     kind: "plugin",
     label: `(Plugin) ${handler.name}`,
     data: handler,
     children: handler.steps.map((step) => ({
-      id: `step:${step.id}`,
+      id: catalogNodeId("step", step.id),
       kind: "step",
       label: `(Step) ${step.name}`,
       data: step,
       children: step.images.map((image) => ({
-        id: `image:${image.id}`,
+        id: catalogNodeId("image", image.id),
         kind: "image",
         label: `(Image) ${image.name}`,
         data: image,

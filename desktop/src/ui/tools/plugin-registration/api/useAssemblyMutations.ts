@@ -2,6 +2,7 @@ import { useMutation } from "@tanstack/react-query";
 
 import { apiPost } from "../../../shared/api/client";
 import type { PluginAssembly } from "../model/contracts";
+import type { MutationIssue, MutationPlan } from "../model/mutationContracts";
 
 export interface AssemblyInspection {
   fileName: string;
@@ -25,7 +26,7 @@ export interface AssemblyMutationDraft {
 
 export interface AssemblyMutationPreflight {
   draft: AssemblyMutationDraft;
-  plan: { token: string; blockers: { code: string; message: string }[]; warnings: { code: string; message: string }[]; confirmation: { level: string; message: string; requiredText?: string | null; requiresAcknowledgement: boolean } };
+  plan: MutationPlan;
   impact: {
     previousIdentity: AssemblyInspection["identity"] | null; currentIdentity: AssemblyInspection["identity"];
     previousSha256: string | null; currentSha256: string; previousSize: number | null; currentSize: number;
@@ -34,7 +35,7 @@ export interface AssemblyMutationPreflight {
     addedWorkflowActivities: string[]; changedWorkflowActivities: string[]; removedWorkflowActivities: string[];
     ownedStepsAndImages: string[]; dependencies: string[];
     workflowContractDifferences: { typeName: string; argumentName: string; change: string; isBreaking: boolean; isReferenced: boolean }[];
-    warnings: { code: string; message: string }[]; blockers: { code: string; message: string }[];
+    warnings: MutationIssue[]; blockers: MutationIssue[];
   };
 }
 

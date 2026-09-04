@@ -11,6 +11,8 @@ interface RegistrationWorkspaceProps {
   nodes: CatalogTreeNode[];
   selectedNode: CatalogTreeNode | null;
   selectedNodeId: string | null;
+  detailsLoading: boolean;
+  detailsError: unknown;
   expandedNodeIds: Set<string>;
   isLoading: boolean;
   error: unknown;
@@ -28,6 +30,8 @@ export function RegistrationWorkspace({
   nodes,
   selectedNode,
   selectedNodeId,
+  detailsLoading,
+  detailsError,
   expandedNodeIds,
   isLoading,
   error,
@@ -104,7 +108,7 @@ export function RegistrationWorkspace({
         minSize="20%"
         className="flex flex-col min-h-0 min-w-0 overflow-hidden border border-[#3c3c3c] bg-[#252526]"
       >
-        <RegistrationDetails node={selectedNode} />
+        <RegistrationDetails node={selectedNode} isLoading={detailsLoading} error={detailsError} />
       </Panel>
     </Group>
   );

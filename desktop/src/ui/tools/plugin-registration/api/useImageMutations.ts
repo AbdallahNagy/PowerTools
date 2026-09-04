@@ -1,13 +1,13 @@
 import { useMutation } from "@tanstack/react-query";
 import { apiPost } from "../../../shared/api/client";
 import type { PluginImage } from "../model/contracts";
+import type { MutationPlan } from "../model/mutationContracts";
 
 export type ImageOperation = "create" | "update" | "unregister";
 export interface ImageDraft { stepId: string; imageType: number; alias: string; messagePropertyName: string;
   attributes: string[]; expectedVersions: Record<string, number>; }
 export interface ImagePreflight { draft: ImageDraft; before: ImageValues | null; after: ImageValues;
-  plan: { token: string; blockers: { code: string; message: string }[]; warnings: { code: string; message: string }[];
-    changes: { field: string; before: string | null; after: string | null }[]; confirmation: { message: string; requiredText?: string | null } }; }
+  plan: MutationPlan; }
 interface ImageValues { name: string; imageType: number; alias: string; messagePropertyName: string; attributes: string[]; }
 
 function route(operation: ImageOperation, imageId: string | null, action: "preflight" | "execute") {

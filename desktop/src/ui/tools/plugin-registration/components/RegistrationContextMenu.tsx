@@ -1,12 +1,12 @@
 import { useEffect, useRef } from "react";
 
-import type { CatalogTreeNode } from "../model/catalogTree";
+import type { CatalogNodeId, CatalogTreeNode } from "../model/catalogTree";
 
 export type RegistrationActionIntent =
-  | { kind: "update"; nodeId: string }
+  | { kind: "update"; nodeId: CatalogNodeId }
   | { kind: "createStep"; pluginId: string }
   | { kind: "createImage"; stepId: string }
-  | { kind: "unregister"; nodeId: string }
+  | { kind: "unregister"; nodeId: CatalogNodeId }
   | { kind: "toggleStep"; stepId: string; enable: boolean };
 
 export interface RegistrationContextMenuState {

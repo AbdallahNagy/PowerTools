@@ -41,6 +41,31 @@ public static class PluginRegistrationEndpoints
             }
         }).WithName("GetPluginRegistrationCatalog");
 
+        group.MapGet("/workflow-activities/{workflowActivityId:guid}/details", async (
+            Guid workflowActivityId,
+            HttpContext ctx,
+            DataverseClientFactory clientFactory,
+            IPluginRegistrationGatewayFactory gatewayFactory,
+            PluginRegistrationCatalogService catalogService,
+            CancellationToken cancellationToken) =>
+        {
+            try
+            {
+                var dataverseClient = ctx.CreateDataverseClient(clientFactory);
+                var gateway = gatewayFactory.Create(dataverseClient);
+                var activity = await catalogService.RetrieveWorkflowActivityAsync(
+                    gateway,
+                    workflowActivityId,
+                    cancellationToken);
+                return Results.Ok(activity);
+            }
+            catch (Exception error) when (error is not OperationCanceledException)
+            {
+                var problem = PluginRegistrationProblem.FromException(error, ctx.GetEnvironmentUrl());
+                return Results.Json(problem.Problem, statusCode: problem.StatusCode);
+            }
+        }).WithName("GetPluginRegistrationWorkflowActivityDetails");
+
         group.MapGet("/capabilities", async (HttpContext context,
             IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
             PluginRegistrationCapabilityService capabilities, CancellationToken cancellationToken) =>
@@ -84,46 +109,23 @@ public static class PluginRegistrationEndpoints
             }
         }).WithName("ExecutePluginRegistrationCascadeUnregister");
 
-        group.MapPost("/assemblies/analyze", AnalyzeAssemblyAsync)
-            .DisableAntiforgery()
-            .WithMetadata(new RequestSizeLimitAttribute(
-                PluginAssemblyInspector.MaxAssemblyBytes
-                + MultipartRequestOverheadBytes))
-            .WithMetadata(new RequestFormLimitsAttribute
-            {
-                MultipartBodyLengthLimit =
-                    PluginAssemblyInspector.MaxAssemblyBytes
-                    + MultipartRequestOverheadBytes,
-                MemoryBufferThreshold = (int)PluginAssemblyInspector.MaxAssemblyBytes
-            })
+        ConfigureAssemblyUpload(group.MapPost("/assemblies/analyze", AnalyzeAssemblyAsync))
             .WithName("AnalyzePluginAssembly");
 
-        group.MapPost("/assemblies/register/preflight", (HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
-            CreateAssemblyPreflightAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), null, cancellationToken))
-            .DisableAntiforgery()
-            .WithMetadata(new RequestSizeLimitAttribute(PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes))
-            .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes, MemoryBufferThreshold = (int)PluginAssemblyInspector.MaxAssemblyBytes })
+        ConfigureAssemblyUpload(group.MapPost("/assemblies/register/preflight", (HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
+            CreateAssemblyPreflightAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), null, cancellationToken)))
             .WithName("PreflightRegisterPluginAssembly");
 
-        group.MapPost("/assemblies/{assemblyId:guid}/update/preflight", (Guid assemblyId, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
-            CreateAssemblyPreflightAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), assemblyId, cancellationToken))
-            .DisableAntiforgery()
-            .WithMetadata(new RequestSizeLimitAttribute(PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes))
-            .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes, MemoryBufferThreshold = (int)PluginAssemblyInspector.MaxAssemblyBytes })
+        ConfigureAssemblyUpload(group.MapPost("/assemblies/{assemblyId:guid}/update/preflight", (Guid assemblyId, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
+            CreateAssemblyPreflightAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), assemblyId, cancellationToken)))
             .WithName("PreflightUpdatePluginAssembly");
 
-        group.MapPost("/assemblies/register/execute", (HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
-            ExecuteAssemblyMutationAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), null, cancellationToken))
-            .DisableAntiforgery()
-            .WithMetadata(new RequestSizeLimitAttribute(PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes))
-            .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes, MemoryBufferThreshold = (int)PluginAssemblyInspector.MaxAssemblyBytes })
+        ConfigureAssemblyUpload(group.MapPost("/assemblies/register/execute", (HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
+            ExecuteAssemblyMutationAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), null, cancellationToken)))
             .WithName("ExecuteRegisterPluginAssembly");
 
-        group.MapPost("/assemblies/{assemblyId:guid}/update/execute", (Guid assemblyId, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
-            ExecuteAssemblyMutationAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), assemblyId, cancellationToken))
-            .DisableAntiforgery()
-            .WithMetadata(new RequestSizeLimitAttribute(PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes))
-            .WithMetadata(new RequestFormLimitsAttribute { MultipartBodyLengthLimit = PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes, MemoryBufferThreshold = (int)PluginAssemblyInspector.MaxAssemblyBytes })
+        ConfigureAssemblyUpload(group.MapPost("/assemblies/{assemblyId:guid}/update/execute", (Guid assemblyId, HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory, ICurrentConnection connection, CancellationToken cancellationToken) =>
+            ExecuteAssemblyMutationAsync(context, gatewayFactory, clientFactory, connection, CreateMutationService(context), assemblyId, cancellationToken)))
             .WithName("ExecuteUpdatePluginAssembly");
 
         group.MapGet("/step-options", async (HttpContext context, IPluginRegistrationGatewayFactory gatewayFactory,
@@ -226,6 +228,18 @@ public static class PluginRegistrationEndpoints
 
         return app;
     }
+
+    private static RouteHandlerBuilder ConfigureAssemblyUpload(RouteHandlerBuilder builder) =>
+        builder
+            .DisableAntiforgery()
+            .WithMetadata(new RequestSizeLimitAttribute(
+                PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes))
+            .WithMetadata(new RequestFormLimitsAttribute
+            {
+                MultipartBodyLengthLimit =
+                    PluginAssemblyInspector.MaxAssemblyBytes + MultipartRequestOverheadBytes,
+                MemoryBufferThreshold = (int)PluginAssemblyInspector.MaxAssemblyBytes
+            });
 
     private static async Task<IResult> AnalyzeAssemblyAsync(
         HttpRequest request,

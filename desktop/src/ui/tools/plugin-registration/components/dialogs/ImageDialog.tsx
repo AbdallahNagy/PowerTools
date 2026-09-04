@@ -6,7 +6,7 @@ import type { ReportMutationFailure, ReportMutationResult } from "../../model/pl
 import { MutationImpactPreviewDialog } from "./ImpactPreviewDialog";
 
 interface Props { connectionName: string | null; step: PluginStep; image: PluginImage | null; operation: ImageOperation;
-  onClose: () => void; refreshCatalog: () => Promise<unknown>; onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure; }
+  onClose: () => void; onMutationResult: ReportMutationResult; onMutationFailure: ReportMutationFailure; }
 export function ImageDialog({ connectionName, step, image, operation, onClose, onMutationResult, onMutationFailure }: Props) {
   const mutations = useImageMutations(connectionName);
   const [alias, setAlias] = useState(image?.entityAlias ?? image?.name ?? "");
