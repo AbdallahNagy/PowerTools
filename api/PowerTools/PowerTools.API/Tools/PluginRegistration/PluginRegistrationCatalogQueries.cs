@@ -22,7 +22,7 @@ public static class PluginRegistrationCatalogQueries
             "plugintype",
             "plugintypeid", "pluginassemblyid", "typename", "name", "friendlyname",
             "description", "workflowactivitygroupname", "isworkflowactivity", "ismanaged",
-            "iscustomizable", "versionnumber"),
+            "versionnumber"),
             "plugintypeid",
             90);
 

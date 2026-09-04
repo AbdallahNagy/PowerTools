@@ -628,7 +628,7 @@ public sealed class DataversePluginRegistrationGateway(
             NullableText(entity, "workflowactivitygroupname"),
             entity.GetAttributeValue<bool>("isworkflowactivity"),
             entity.GetAttributeValue<bool>("ismanaged"),
-            ManagedBoolean(entity, "iscustomizable"),
+            !entity.GetAttributeValue<bool>("ismanaged"),
             Number(entity, "versionnumber"),
             null);
 

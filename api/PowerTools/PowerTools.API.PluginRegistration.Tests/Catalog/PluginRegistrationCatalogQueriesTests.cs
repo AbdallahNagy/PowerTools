@@ -23,7 +23,7 @@ public sealed class PluginRegistrationCatalogQueriesTests
             "plugintype",
             "plugintypeid", "pluginassemblyid", "typename", "name", "friendlyname",
             "description", "workflowactivitygroupname", "isworkflowactivity", "ismanaged",
-            "iscustomizable", "versionnumber");
+            "versionnumber");
         AssertQuery(
             PluginRegistrationCatalogQueries.CreateStepQuery(),
             "sdkmessageprocessingstep",
@@ -192,6 +192,27 @@ public sealed class PluginRegistrationCatalogQueriesTests
 
         Assert.Empty(rows.Dependencies);
         Assert.Empty(handler.DependencyObjectIds);
+    }
+
+    [Fact]
+    public async Task Gateway_derives_plugin_type_customizability_from_managed_state()
+    {
+        var unmanagedId = Guid.NewGuid();
+        var managedId = Guid.NewGuid();
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var handler = (PagedOrganizationServiceProxy)(object)proxy;
+        handler.Responses["pluginassembly"] = new Queue<EntityCollection>([Page()]);
+        handler.Responses["plugintype"] = new Queue<EntityCollection>([PageOf(
+            new Entity("plugintype", unmanagedId) { ["name"] = "Unmanaged", ["ismanaged"] = false },
+            new Entity("plugintype", managedId) { ["name"] = "Managed", ["ismanaged"] = true })]);
+        handler.Responses["sdkmessageprocessingstep"] = new Queue<EntityCollection>([Page()]);
+        handler.Responses["sdkmessageprocessingstepimage"] = new Queue<EntityCollection>([Page()]);
+
+        var rows = await new DataversePluginRegistrationGateway(proxy)
+            .RetrieveCatalogRowsAsync(CancellationToken.None);
+
+        Assert.True(rows.Types.Single(type => type.Id == unmanagedId).IsCustomizable);
+        Assert.False(rows.Types.Single(type => type.Id == managedId).IsCustomizable);
     }
 
     [Fact]
