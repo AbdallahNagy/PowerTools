@@ -69,9 +69,15 @@ export function AssemblyDialog({ assembly, connectionName, onClose, onVerified, 
   return <>
     <Modal open title={title} onClose={close} widthClass="max-w-lg">
       <div role="dialog" aria-label={title} className="flex flex-col gap-4">
-        <label className="flex flex-col gap-1 text-sm">Assembly DLL
-          <input aria-label="Assembly DLL" type="file" accept=".dll" onChange={(event) => void selectFile(event.target.files?.[0] ?? null)} />
-        </label>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm font-medium">Upload assembly DLL</span>
+          <label className="relative flex cursor-pointer items-center gap-3 rounded-sm border border-dashed border-[#555] bg-[#2a2d2e] px-3 py-3 text-sm transition-colors hover:border-[#007fd4] focus-within:border-[#007fd4]">
+            <input className="absolute inset-0 h-full w-full cursor-pointer opacity-0" aria-label="Assembly DLL" type="file" accept=".dll" onChange={(event) => void selectFile(event.target.files?.[0] ?? null)} />
+            <span className="rounded-sm bg-[#007fd4] px-3 py-1.5 font-medium text-white">Choose DLL file</span>
+            <span className="truncate text-[#cccccc]">{file?.name ?? "No file selected"}</span>
+          </label>
+          <p className="text-xs text-[#858585]">DLL files only</p>
+        </div>
         <p className="text-sm text-[#858585]">Isolation: Sandbox · Storage: Database</p>
         {inspection ? <p role="status" className="text-sm">{inspection.identity.name} {inspection.identity.version}</p> : null}
         {mutations.analyze.error || mutations.preflight.error ? <p role="alert">The assembly could not be analyzed.</p> : null}

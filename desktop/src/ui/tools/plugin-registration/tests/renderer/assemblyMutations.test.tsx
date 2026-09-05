@@ -36,7 +36,7 @@ beforeEach(() => {
 });
 
 describe("Assembly mutations", () => {
-  it("starts registration with a DLL file selection", async () => {
+  it("presents an explicit DLL upload control when registering an assembly", async () => {
     renderWithProviders(
       <ConnectionsProvider>
         <PluginRegistration />
@@ -66,7 +66,9 @@ describe("Assembly mutations", () => {
     await waitFor(() => expect(register).toBeEnabled());
     fireEvent.click(register);
 
-    expect(await screen.findByLabelText("Assembly DLL")).toHaveAttribute("type", "file");
+    expect(await screen.findByText("Upload assembly DLL")).toBeVisible();
+    expect(screen.getByText("Choose DLL file")).toBeVisible();
+    expect(screen.getByLabelText("Assembly DLL")).toHaveAttribute("type", "file");
   });
 
   it("blocks confirmation when preflight reinspection reports a different SHA-256", async () => {

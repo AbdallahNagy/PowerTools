@@ -81,7 +81,9 @@ public sealed class DataversePluginRegistrationGateway(
         var primaryIds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var availableAttributes = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
         foreach (var logicalName in filters.Select(row => Text(row, "primaryobjecttypecode"))
-            .Where(value => value.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase))
+            // Dataverse uses "none" for filters without a primary table; it has no entity metadata.
+            .Where(value => value.Length > 0 && !string.Equals(value, "none", StringComparison.OrdinalIgnoreCase))
+            .Distinct(StringComparer.OrdinalIgnoreCase))
         {
             var response = (RetrieveEntityResponse)await service.ExecuteAsync(new RetrieveEntityRequest
             {
@@ -477,6 +479,9 @@ public sealed class DataversePluginRegistrationGateway(
         QueryExpression query,
         CancellationToken cancellationToken)
     {
+        // Unspecified paging starts at 0; incrementing it would request page 1 twice.
+        if (query.PageInfo.PageNumber < 1) query.PageInfo.PageNumber = 1;
+        if (query.PageInfo.Count < 1) query.PageInfo.Count = 5000;
         var entities = new List<Entity>();
         while (true)
         {
