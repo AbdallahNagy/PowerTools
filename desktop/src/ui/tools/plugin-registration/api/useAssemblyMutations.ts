@@ -9,6 +9,9 @@ export interface AssemblyInspection {
   size: number;
   sha256: string;
   identity: { name: string; version: string; culture: string; publicKeyToken: string };
+  targetFramework: string | null;
+  runtimeVersion: string;
+  diagnostics: { code: string; message: string; severity: "Warning" | "Error" | 0 | 1 }[];
   plugins: { typeName: string }[];
   workflowActivities: { typeName: string; arguments: unknown[] }[];
 }

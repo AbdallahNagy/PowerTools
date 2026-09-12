@@ -273,6 +273,30 @@ public sealed class PluginAssemblyInspectorTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Analyze_endpoint_returns_compatibility_diagnostics_in_the_public_contract()
+    {
+        using var factory = new PluginRegistrationApplicationFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Local-Secret", "test-secret");
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "test-token");
+        client.DefaultRequestHeaders.Add("X-Environment-Url", "https://example.crm.dynamics.com");
+
+        using var content = new MultipartFormDataContent();
+        await using var fixture = File.OpenRead(FixturePath("UnsupportedTargetFrameworkAssembly.dll"));
+        content.Add(new StreamContent(fixture), "assembly", "UnsupportedTargetFrameworkAssembly.dll");
+
+        var response = await client.PostAsync("/api/plugin-registration/assemblies/analyze", content);
+        var inspection = await response.Content.ReadFromJsonAsync<AssemblyInspectionDto>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.NotNull(inspection);
+        Assert.Contains(inspection.Diagnostics, diagnostic =>
+            diagnostic.Code == "target_framework_unsupported"
+            && diagnostic.Severity == AssemblyInspectionDiagnosticSeverity.Error);
+    }
+
     private static async Task<AssemblyInspectionDto> InspectAsync(string path)
     {
         await using var stream = File.OpenRead(path);

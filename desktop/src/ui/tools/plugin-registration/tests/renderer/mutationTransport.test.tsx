@@ -30,7 +30,7 @@ it("marks every plug-in registration POST as a single-attempt request", async ()
   const cascadeHook = renderHook(() => useUnregisterMutations("Development"), { wrapper });
 
   const file = new File(["dll"], "Contoso.dll");
-  const inspection = { fileName: file.name, size: 3, sha256: "abc", identity: { name: "Contoso", version: "1", culture: "neutral", publicKeyToken: "token" }, plugins: [], workflowActivities: [] };
+  const inspection = { fileName: file.name, size: 3, sha256: "abc", identity: { name: "Contoso", version: "1", culture: "neutral", publicKeyToken: "token" }, targetFramework: ".NETFramework,Version=v4.6.2", runtimeVersion: "v4.0.30319", diagnostics: [], plugins: [], workflowActivities: [] };
   const assemblyDraft: AssemblyMutationDraft = { fileName: file.name, operation: "register", assemblyId: null,
     requestedIsolationMode: 2, requestedSourceType: 0, expectedAssemblyVersionNumber: null,
     expectedHandlerVersionNumbers: {}, inspection };

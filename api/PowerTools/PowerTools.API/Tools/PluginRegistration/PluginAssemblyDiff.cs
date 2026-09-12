@@ -31,10 +31,26 @@ public static class PluginAssemblyDiff
         if (differences.Any(difference => difference.IsBreaking && difference.IsReferenced)) blockers.Add(new("assembly_workflow_contract_breaking", "A referenced workflow activity has a breaking argument contract change."));
         if (!hasCompleteImpactData && (removedPlugins.Length > 0 || removedActivities.Length > 0 || differences.Any(difference => difference.IsBreaking))) blockers.Add(new("assembly_impact_data_incomplete", "Dependency and workflow-reference data could not be verified."));
         var warnings = new List<MutationWarningDto>();
+        foreach (var diagnostic in inspection.Diagnostics)
+        {
+            var code = $"assembly_compatibility_{diagnostic.Code}";
+            if (diagnostic.Severity == AssemblyInspectionDiagnosticSeverity.Error)
+                blockers.Add(new MutationBlockerDto(code, CompatibilityMessage(diagnostic.Code)));
+            else
+                warnings.Add(new MutationWarningDto(code, CompatibilityMessage(diagnostic.Code)));
+        }
         if (existing?.IsManaged == true) warnings.Add(new("assembly_managed", "The existing assembly is managed."));
         if (!hasCompleteImpactData) warnings.Add(new("assembly_impact_data_unavailable", "Dependency impact data is unavailable; removals are blocked."));
         return new AssemblyMutationImpactDto(existing is null ? null : new(existing.Name, existing.Version, existing.Culture ?? "neutral", existing.PublicKeyToken ?? ""), inspection.Identity, existing?.SourceHash, inspection.Sha256, existing?.ContentSize, inspection.Size, existing?.IsolationMode, existing is null ? 2 : existing.IsolationMode, existing?.SourceType, existing is null ? 0 : existing.SourceType, newPlugins.Where(name => !oldPlugins.ContainsKey(name)).Order().ToArray(), newPlugins.Where(name => oldPlugins.ContainsKey(name) && !changedPlugins.Contains(name, StringComparer.Ordinal)).Order().ToArray(), changedPlugins, removedPlugins, newActivities.Keys.Where(name => !oldActivities.ContainsKey(name)).Order().ToArray(), differences.Select(difference => difference.TypeName).Distinct().Order().ToArray(), removedActivities, owned, affectedDependencies, differences, warnings, blockers);
     }
+
+    private static string CompatibilityMessage(string code) => code switch
+    {
+        "target_framework_unsupported" => "The assembly target framework is not supported. Build it for .NET Framework 4.6.2 and select the rebuilt DLL.",
+        "runtime_version_unsupported" => "The assembly metadata runtime is not supported. Build it for the supported .NET Framework runtime and select the rebuilt DLL.",
+        "target_framework_unknown" => "The assembly does not declare a target framework. Confirm that it targets .NET Framework 4.6.2 before registering it.",
+        _ => "The assembly has an incompatible runtime requirement. Select a compatible DLL and create a new preview."
+    };
 
     private static string[] OwnedRecords(IReadOnlyList<string> removedPlugins, IReadOnlyDictionary<string, PluginTypeRow> oldPlugins, IReadOnlyList<PluginStepRow> steps, IReadOnlyList<PluginImageRow> images) => removedPlugins.SelectMany(name =>
     {

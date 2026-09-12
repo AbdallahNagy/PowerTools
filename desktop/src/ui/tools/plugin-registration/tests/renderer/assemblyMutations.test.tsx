@@ -114,6 +114,33 @@ describe("Assembly mutations", () => {
     expect(screen.queryByRole("dialog", { name: "Assembly impact preview" })).not.toBeInTheDocument();
   });
 
+  it("shows a safe compatibility diagnostic and blocks preview for an incompatible DLL", async () => {
+    const inspection = {
+      ...inspectionFixture(),
+      targetFramework: ".NETFramework,Version=v4.8",
+      runtimeVersion: "v4.0.30319",
+      diagnostics: [{
+        code: "target_framework_unsupported",
+        message: "Metadata value that must not be rendered",
+        severity: 1 as const,
+      }],
+    };
+    httpServer.use(http.get("http://localhost/api/plugin-registration/catalog", () =>
+      HttpResponse.json({ assemblies: [] })));
+    apiPostMock.mockImplementation((url: string) =>
+      url.endsWith("/analyze") ? Promise.resolve(inspection) : Promise.reject(new Error(`Unexpected mutation request: ${url}`)));
+    renderPage();
+    const user = userEvent.setup();
+
+    await openAndAnalyze(user, new File(["dll"], "Contoso.dll", { type: "application/octet-stream" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("target framework is not supported");
+    expect(screen.queryByText("Metadata value that must not be rendered")).not.toBeInTheDocument();
+    expect(screen.getByText("Select a compatible DLL and analyze it again.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Preview impact" })).toBeDisabled();
+    expect(apiPostMock).toHaveBeenCalledTimes(1);
+  });
+
   it("shows the complete impact, keeps blockers from executing, and supports Cancel", async () => {
     const inspection = inspectionFixture();
     httpServer.use(

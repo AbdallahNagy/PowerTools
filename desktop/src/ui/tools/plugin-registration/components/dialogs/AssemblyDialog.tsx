@@ -22,6 +22,8 @@ export function AssemblyDialog({ assembly, connectionName, onClose, onVerified, 
   const [hashMismatch, setHashMismatch] = useState(false);
   const mutations = useAssemblyMutations(connectionName);
   const operation = assembly ? "update" : "register";
+  const diagnostics = inspection?.diagnostics ?? [];
+  const hasCompatibilityError = diagnostics.some(isCompatibilityError);
   const draft = useMemo(() => !file || !inspection ? null : ({
     fileName: file.name, operation, assemblyId: assembly?.id ?? null,
     requestedIsolationMode: 2, requestedSourceType: 0,
@@ -80,14 +82,37 @@ export function AssemblyDialog({ assembly, connectionName, onClose, onVerified, 
         </div>
         <p className="text-sm text-[#858585]">Isolation: Sandbox · Storage: Database</p>
         {inspection ? <p role="status" className="text-sm">{inspection.identity.name} {inspection.identity.version}</p> : null}
+        {diagnostics.map((diagnostic) => (
+          <div key={diagnostic.code} role={isCompatibilityError(diagnostic) ? "alert" : "status"} className="text-sm">
+            <p>{safeCompatibilityMessage(diagnostic.code)}</p>
+            {isCompatibilityError(diagnostic) ? <p className="text-xs text-[#858585]">Select a compatible DLL and analyze it again.</p> : null}
+          </div>
+        ))}
         {mutations.analyze.error || mutations.preflight.error ? <p role="alert">The assembly could not be analyzed.</p> : null}
         {hashMismatch ? <p role="alert">The uploaded DLL changed after analysis. Select it again and create a new preview.</p> : null}
         <div className="flex justify-end gap-2">
           <Button type="button" variant="secondary" onClick={close}>Cancel</Button>
-          <Button type="button" onClick={() => void preview()} disabled={!draft || mutations.preflight.isPending}>Preview impact</Button>
+          <Button type="button" onClick={() => void preview()} disabled={!draft || hasCompatibilityError || mutations.preflight.isPending}>Preview impact</Button>
         </div>
       </div>
     </Modal>
     <ImpactPreviewDialog preflight={preflight} executing={mutations.execute.isPending} onCancel={() => setPreflight(null)} onConfirm={() => void confirm()} />
   </>;
+}
+
+function isCompatibilityError(diagnostic: AssemblyInspection["diagnostics"][number]): boolean {
+  return diagnostic.severity === "Error" || diagnostic.severity === 1;
+}
+
+function safeCompatibilityMessage(code: string): string {
+  switch (code) {
+    case "target_framework_unsupported":
+      return "The assembly target framework is not supported. Build it for .NET Framework 4.6.2 and select the rebuilt DLL.";
+    case "runtime_version_unsupported":
+      return "The assembly metadata runtime is not supported. Build it for the supported .NET Framework runtime and select the rebuilt DLL.";
+    case "target_framework_unknown":
+      return "The assembly does not declare a target framework. Confirm that it targets .NET Framework 4.6.2 before registering it.";
+    default:
+      return "The assembly has a compatibility issue. Select a compatible DLL and analyze it again.";
+  }
 }

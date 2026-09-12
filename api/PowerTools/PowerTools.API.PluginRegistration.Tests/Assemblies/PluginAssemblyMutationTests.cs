@@ -134,6 +134,39 @@ public sealed class PluginAssemblyMutationTests
     }
 
     [Fact]
+    public async Task Unsupported_target_framework_fixture_creates_a_blocked_preflight_and_execution_rechecks_it()
+    {
+        var fixturePath = FixturePath("UnsupportedTargetFrameworkAssembly.dll");
+        var inspector = new PluginAssemblyInspector();
+        await using var inspectionContent = File.OpenRead(fixturePath);
+        var inspection = await inspector.InspectAsync(inspectionContent, Path.GetFileName(fixturePath),
+            inspectionContent.Length, CancellationToken.None);
+        var gateway = new StatefulAssemblyGateway(null, inspection);
+        var service = Service(inspector);
+        var draft = Draft("register", null, inspection, 2, 0);
+
+        await using var preflightContent = File.OpenRead(fixturePath);
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", draft,
+            preflightContent, preflightContent.Length, new Dictionary<string, bool>(), CancellationToken.None);
+
+        Assert.Contains(preflight.Draft.Inspection.Diagnostics, diagnostic =>
+            diagnostic.Code == "target_framework_unsupported"
+            && diagnostic.Severity == AssemblyInspectionDiagnosticSeverity.Error);
+        Assert.Contains(preflight.Impact.Blockers, blocker =>
+            blocker.Code == "assembly_compatibility_target_framework_unsupported");
+        Assert.Contains(preflight.Plan.Blockers, blocker =>
+            blocker.Code == "assembly_compatibility_target_framework_unsupported");
+
+        await using var executionContent = File.OpenRead(fixturePath);
+        await Assert.ThrowsAsync<PluginRegistrationPreflightException>(() => service.ExecuteAsync(
+            gateway, "https://contoso.test", preflight.Plan.Token, preflight.Draft,
+            executionContent, executionContent.Length, new Dictionary<string, bool>(), CancellationToken.None));
+
+        Assert.Equal(0, gateway.RegisterCalls);
+        Assert.Equal(0, gateway.UpdateCalls);
+    }
+
+    [Fact]
     public async Task Execute_rejects_a_new_dependency_before_the_single_update_attempt_when_versions_are_unchanged()
     {
         var assembly = new PluginAssemblyRow(Guid.NewGuid(), "Contoso", "1.0.0.0", "neutral", "token", 0, 2, false, true, 1, null);
@@ -164,7 +197,7 @@ public sealed class PluginAssemblyMutationTests
     public void Assembly_mutation_service_is_available_to_execute_a_verified_plan()
     {
         var type = typeof(Program).Assembly.GetType(
-            "PowerTools.API.Tools.PluginRegistration.PluginAssemblyMutationService");
+            "PowerTools.API.Tools.PluginRegistration.Services.PluginAssemblyMutationService");
 
         Assert.NotNull(type);
     }
@@ -272,6 +305,14 @@ public sealed class PluginAssemblyMutationTests
         new FixedInspector(inspection),
         new PluginRegistrationPreflightService(new PluginRegistrationPlanSigner("test-secret", TimeProvider.System)),
         new PluginRegistrationCatalogService());
+
+    private static PluginAssemblyMutationService Service(IPluginAssemblyInspector inspector) => new(
+        inspector,
+        new PluginRegistrationPreflightService(new PluginRegistrationPlanSigner("test-secret", TimeProvider.System)),
+        new PluginRegistrationCatalogService());
+
+    private static string FixturePath(string fileName) =>
+        Path.Combine(AppContext.BaseDirectory, "Fixtures", fileName);
 
     private static AssemblyInspectionDto Inspection() => new(
         "Contoso.dll",

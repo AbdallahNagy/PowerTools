@@ -129,7 +129,7 @@ public sealed class PluginAssemblyMutationService(
 
     private static MutationPreflightRequest BuildRequest(string environment, AssemblyMutationDraftDto draft, PluginRegistrationRows rows, PluginAssemblyRow? target, AssemblyMutationImpactDto impact, IReadOnlyDictionary<string, bool> capabilities) =>
         new(environment, $"assemblies.{draft.Operation}", draft.AssemblyId,
-            new AssemblyMutationPlanRequest(draft with { Inspection = draft.Inspection with { Diagnostics = [], Plugins = [], WorkflowActivities = [] } }, impact),
+            new AssemblyMutationPlanRequest(draft with { Inspection = draft.Inspection with { Plugins = [], WorkflowActivities = [] } }, impact),
             BuildVersions(rows, target), draft.Inspection.Sha256, capabilities);
 
     private static IReadOnlyDictionary<Guid, long> BuildVersions(PluginRegistrationRows rows, PluginAssemblyRow? target)
