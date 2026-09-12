@@ -107,6 +107,95 @@ describe("Step mutations", () => {
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("Unable to load step details");
     expect(dialog).not.toHaveTextContent("stored-secret backend detail");
   });
+
+  it("explains a step-choice failure and retries it without reopening the update dialog", async () => {
+    let choiceReads = 0;
+    httpServer.use(http.get("http://localhost/api/plugin-registration/step-options", () => {
+      choiceReads++;
+      return choiceReads === 1
+        ? HttpResponse.json({ detail: "secret choice failure" }, { status: 500 })
+        : HttpResponse.json({
+          messages: [{ id: "message-update", name: "Update" }],
+          filters: [{ id: "filter-account", messageId: "message-update", primaryTable: "account", secondaryTable: null, primaryIdAttribute: "accountid" }],
+          enabledUsers: [],
+        });
+    }));
+    renderPage();
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Update step" });
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Unable to load step choices");
+    expect(dialog).not.toHaveTextContent("secret choice failure");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Retry step choices" }));
+
+    expect(await within(dialog).findByLabelText("Message")).toHaveValue("message-update");
+    expect(choiceReads).toBe(2);
+  });
+
+  it("explains a step-details failure and retries it without exposing backend error text", async () => {
+    let detailReads = 0;
+    httpServer.use(http.get("http://localhost/api/plugin-registration/steps/step-1/edit-details", () => {
+      detailReads++;
+      return detailReads === 1
+        ? HttpResponse.json({ detail: "stored-secret backend detail" }, { status: 500 })
+        : HttpResponse.json({
+          stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
+          primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 1, filteringAttributes: ["name"],
+          impersonatingUserId: null, unsecureConfiguration: null, secureConfigExists: true,
+          expectedVersions: { "plugin-1": 4, "step-1": 7 },
+        });
+    }));
+    renderPage();
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Update step" });
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Unable to load step details");
+    expect(dialog).not.toHaveTextContent("stored-secret backend detail");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Retry step details" }));
+
+    expect(await within(dialog).findByLabelText("Filtering attributes")).toHaveValue("name");
+    expect(detailReads).toBe(2);
+  });
+
+  it("discards a late step-details response after the update dialog closes", async () => {
+    let resolveDetails!: (response: HttpResponse) => void;
+    httpServer.use(http.get("http://localhost/api/plugin-registration/steps/step-1/edit-details", () =>
+      new Promise<HttpResponse>((resolve) => { resolveDetails = resolve; })));
+    renderPage();
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Update step" });
+    expect(within(dialog).getByText("Loading current step details…")).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    resolveDetails(HttpResponse.json({
+      stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
+      primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 1, filteringAttributes: ["name"],
+      impersonatingUserId: null, unsecureConfiguration: null, secureConfigExists: true,
+      expectedVersions: { "plugin-1": 4, "step-1": 7 },
+    }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Update step" })).not.toBeInTheDocument());
+  });
+
+  it("keeps a managed step inspectable while explaining why its update controls are disabled", async () => {
+    const managedCatalog = structuredClone(catalog);
+    managedCatalog.assemblies[0].handlers[0].steps[0].isManaged = true;
+    managedCatalog.assemblies[0].handlers[0].steps[0].isCustomizable = false;
+    httpServer.use(http.get("http://localhost/api/plugin-registration/catalog", () => HttpResponse.json(managedCatalog)));
+    renderPage();
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Update step" });
+    expect(await within(dialog).findByText("This step is managed or not customizable, so it can be inspected but not updated.")).toBeInTheDocument();
+    expect(await within(dialog).findByLabelText("Filtering attributes")).toHaveValue("");
+    expect(within(dialog).getByLabelText("Message")).toHaveValue("message-update");
+    expect(within(dialog).getByLabelText("Filtering attributes")).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Preview changes" })).toBeDisabled();
+  });
 });
 
 function useResponses() {

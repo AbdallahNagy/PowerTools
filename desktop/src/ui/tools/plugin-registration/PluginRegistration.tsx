@@ -289,7 +289,7 @@ function PluginRegistrationPage() {
         />
       ) : null}
       {isStepEditDialog && pluginNode?.kind === "plugin" ? (
-        <StepDialog connectionName={connectionName || null} plugin={pluginNode.data}
+        <StepDialog key={`${connectionName}:${stepNode?.kind === "step" ? stepNode.data.id : pluginNode.data.id}`} connectionName={connectionName || null} plugin={pluginNode.data}
           step={stepNode?.kind === "step" ? stepNode.data : null}
           operation={stepNode?.kind === "step" ? "update" : "create"}
           onClose={closeDialog}

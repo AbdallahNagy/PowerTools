@@ -26,6 +26,8 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, o
   const [userId, setUserId] = useState("");
   const [unsecure, setUnsecure] = useState("");
   const [preview, setPreview] = useState<StepPreflight | null>(null);
+  const isReadOnly = operation === "update" && Boolean(step?.isManaged || !step?.isCustomizable);
+  const canEdit = mutations.options.isSuccess && (operation === "create" || editDetails.isSuccess) && !isReadOnly;
   useEffect(() => {
     const value = editDetails.data; if (!value) return;
     setMessageId(value.sdkMessageId); setFilterId(value.sdkMessageFilterId); setStage(value.stage);
@@ -35,6 +37,17 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, o
   const attributes = useMemo(() => attributesText.split(",").map(value => value.trim().toLowerCase()).filter(Boolean), [attributesText]);
   const primaryKeySelected = Boolean(selectedFilter && attributes.includes(selectedFilter.primaryIdAttribute.toLowerCase()));
   const updateWithoutFilters = options?.messages.find(item => item.id === selectedMessageId)?.name === "Update" && attributes.length === 0;
+  const previewDisabledReason = isReadOnly
+    ? "This step cannot be updated."
+    : mutations.preflight.isPending
+      ? "Preparing the preview…"
+      : !mutations.options.isSuccess || operation === "update" && !editDetails.isSuccess
+        ? "Step details and choices must load before a preview can be created."
+        : !selectedFilter
+          ? "No available message filter matches this step."
+          : primaryKeySelected
+            ? "Remove the primary key from filtering attributes before creating a preview."
+            : null;
   const draft: StepDraft | null = selectedFilter ? {
     pluginTypeId: plugin.id, sdkMessageId: selectedMessageId, sdkMessageFilterId: selectedFilter.id,
     primaryTable: selectedFilter.primaryTable, secondaryTable: selectedFilter.secondaryTable,
@@ -54,7 +67,13 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, o
     catch (error) { await onMutationFailure(error, { phase: "execute", affectedComponentId: step?.id ?? plugin.id }); } };
   return <>
     <Modal open title={title} onClose={onClose} widthClass="max-w-xl"><div role="dialog" aria-label={title} className="flex flex-col gap-3">
-      <fieldset disabled={operation === "update" && !editDetails.isSuccess} className="contents">
+      {operation === "update" && editDetails.isPending ? <p role="status">Loading current step details…</p> : null}
+      {mutations.options.isPending ? <p role="status">Loading step choices…</p> : null}
+      {operation === "update" && editDetails.isError ? <div role="alert" className="text-red-300"><p>Unable to load step details.</p><Button type="button" variant="secondary" onClick={() => void editDetails.refetch()}>Retry step details</Button></div> : null}
+      {mutations.options.isError ? <div role="alert" className="text-red-300"><p>Unable to load step choices.</p><Button type="button" variant="secondary" onClick={() => void mutations.options.refetch()}>Retry step choices</Button></div> : null}
+      {isReadOnly ? <p role="status">This step is managed or not customizable, so it can be inspected but not updated.</p> : null}
+      {previewDisabledReason ? <p role="status">{previewDisabledReason}</p> : null}
+      <fieldset disabled={!canEdit} className="contents">
       <label className="text-sm">Message<select aria-label="Message" value={selectedMessageId} onChange={event => { setMessageId(event.target.value); setFilterId(""); }} className="w-full bg-[#3c3c3c] p-2">{options?.messages.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label className="text-sm">Primary table<select aria-label="Primary table" value={selectedFilter?.primaryTable ?? ""} onChange={event => setFilterId(matchingFilters.find(item => item.primaryTable === event.target.value)?.id ?? "")} className="w-full bg-[#3c3c3c] p-2">{matchingFilters.map(item => <option key={item.id} value={item.primaryTable}>{item.primaryTable}</option>)}</select></label>
       <div className="grid grid-cols-3 gap-2"><label>Stage<select aria-label="Stage" value={stage} onChange={event => setStage(Number(event.target.value))}><option value={10}>PreValidation</option><option value={20}>PreOperation</option><option value={40}>PostOperation</option></select></label><label>Mode<select aria-label="Mode" value={mode} onChange={event => setMode(Number(event.target.value))}><option value={0}>Synchronous</option>{stage === 40 ? <option value={1}>Asynchronous</option> : null}</select></label><label>Rank<input aria-label="Rank" type="number" value={rank} onChange={event => setRank(Number(event.target.value))} /></label></div>
@@ -66,8 +85,7 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, o
       <label>Unsecure configuration<textarea aria-label="Unsecure configuration" value={unsecure} onChange={event => setUnsecure(event.target.value)} className="w-full bg-[#3c3c3c] p-2" /></label>
       <label>Replacement secure configuration<input aria-label="Replacement secure configuration" type="password" value={secureReplacement} onChange={event => setSecureReplacement(event.target.value)} className="w-full bg-[#3c3c3c] p-2" /></label>
       </fieldset>
-      {operation === "update" && editDetails.isError ? <p role="alert" className="text-red-300">Unable to load step details. Close this dialog and try again.</p> : null}
-      <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={() => void submit()} disabled={!draft || primaryKeySelected || mutations.preflight.isPending || operation === "update" && !editDetails.isSuccess}>Preview changes</Button></div>
+      <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>Cancel</Button><Button onClick={() => void submit()} disabled={!draft || !canEdit || primaryKeySelected || mutations.preflight.isPending}>Preview changes</Button></div>
     </div></Modal>
     {preview ? <Modal open title="Step impact preview" onClose={() => setPreview(null)} widthClass="max-w-lg"><div role="dialog" aria-label="Step impact preview" className="flex flex-col gap-3"><p>{preview.after.message} {preview.after.primaryTable}</p><dl>{(preview.plan.changes ?? []).map(item => <div key={item.field}><dt className="font-semibold">{label(item.field)}: {item.field === "secureConfigurationAction" ? display(item.after, "Keep") : `${display(item.before, "New")} → ${display(item.after, "Empty")}`}</dt></div>)}</dl>{preview.plan.warnings.map(item => <p key={item.code} role="status" className="text-amber-300">{item.message}</p>)}{preview.plan.blockers.map(item => <p key={item.code} role="alert" className="text-red-300">{item.message}</p>)}<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setPreview(null)}>Cancel</Button><Button disabled={preview.plan.blockers.length > 0 || mutations.execute.isPending} onClick={() => void confirm()}>Confirm</Button></div></div></Modal> : null}
   </>;
