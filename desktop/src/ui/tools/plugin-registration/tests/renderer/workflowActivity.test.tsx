@@ -40,8 +40,7 @@ it("shows workflow contract and dependent processes read-only, then updates only
   expect(details).toHaveTextContent("Account approval · Workflow · Active");
   expect(within(details).queryByRole("button")).not.toBeInTheDocument();
 
-  fireEvent.contextMenu(activity);
-  await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Update workflow activity" }));
+  fireEvent.doubleClick(activity);
   const dialog = await screen.findByRole("dialog", { name: "Update workflow activity" });
   expect(within(dialog).getByLabelText("Name")).toHaveValue("Validate Account");
   expect(within(dialog).queryByLabelText(/workflow definition/i)).not.toBeInTheDocument();

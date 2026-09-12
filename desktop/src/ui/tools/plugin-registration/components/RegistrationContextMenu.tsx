@@ -1,13 +1,10 @@
 import { useEffect, useRef } from "react";
 
-import type { CatalogNodeId, CatalogTreeNode } from "../model/catalogTree";
-
-export type RegistrationActionIntent =
-  | { kind: "update"; nodeId: CatalogNodeId }
-  | { kind: "createStep"; pluginId: string }
-  | { kind: "createImage"; stepId: string }
-  | { kind: "unregister"; nodeId: CatalogNodeId }
-  | { kind: "toggleStep"; stepId: string; enable: boolean };
+import type { CatalogTreeNode } from "../model/catalogTree";
+import {
+  registrationActionsForNode,
+  type RegistrationActionIntent,
+} from "../model/registrationActions";
 
 export interface RegistrationContextMenuState {
   node: CatalogTreeNode;
@@ -20,11 +17,6 @@ interface RegistrationContextMenuProps {
   state: RegistrationContextMenuState | null;
   onAction: (intent: RegistrationActionIntent) => void;
   onClose: () => void;
-}
-
-interface MenuItem {
-  label: string;
-  intent: RegistrationActionIntent;
 }
 
 export function RegistrationContextMenu({ state, onAction, onClose }: RegistrationContextMenuProps) {
@@ -53,7 +45,7 @@ export function RegistrationContextMenu({ state, onAction, onClose }: Registrati
 
   if (!state) return null;
 
-  const items = menuItemsForNode(state.node);
+  const items = registrationActionsForNode(state.node);
   const left = Math.min(Math.max(8, state.x), Math.max(8, window.innerWidth - 232));
   const estimatedHeight = items.length * 32 + 16;
   const top = Math.min(Math.max(8, state.y), Math.max(8, window.innerHeight - estimatedHeight));
@@ -82,33 +74,4 @@ export function RegistrationContextMenu({ state, onAction, onClose }: Registrati
       ))}
     </div>
   );
-}
-
-function menuItemsForNode(node: CatalogTreeNode): MenuItem[] {
-  const update = (label: string): MenuItem => ({ label, intent: { kind: "update", nodeId: node.id } });
-  const unregister = (label: string): MenuItem => ({ label, intent: { kind: "unregister", nodeId: node.id } });
-
-  switch (node.kind) {
-    case "assembly":
-      return [update("Update assembly"), unregister("Unregister assembly")];
-    case "plugin":
-      return [
-        { label: "Register step", intent: { kind: "createStep", pluginId: node.data.id } },
-        unregister("Unregister plug-in"),
-      ];
-    case "workflowActivity":
-      return [update("Update workflow activity"), unregister("Unregister workflow activity")];
-    case "step":
-      return [
-        update("Update step"),
-        { label: "Register image", intent: { kind: "createImage", stepId: node.data.id } },
-        {
-          label: node.data.isEnabled ? "Disable step" : "Enable step",
-          intent: { kind: "toggleStep", stepId: node.data.id, enable: !node.data.isEnabled },
-        },
-        unregister("Unregister step"),
-      ];
-    case "image":
-      return [update("Update image"), unregister("Unregister image")];
-  }
 }

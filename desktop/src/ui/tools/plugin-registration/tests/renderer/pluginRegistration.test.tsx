@@ -293,7 +293,7 @@ describe("Plugin Registration workspace", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("selects and immediately expands once on click while double click opens the node shell", async () => {
+  it("selects and immediately expands a plug-in without opening an unsupported dialog on double click", async () => {
     useCatalogResponse();
     renderPluginRegistration();
     await waitForCatalog();
@@ -310,7 +310,7 @@ describe("Plugin Registration workspace", () => {
     fireEvent.doubleClick(plugin, { detail: 2 });
     expect(plugin).toHaveAttribute("aria-selected", "true");
     expect(plugin).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("dialog", { name: "Update plug-in" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it.each([
@@ -393,7 +393,7 @@ describe("Plugin Registration workspace", () => {
     expect(within(details).queryByRole("button", { name: /unregister/i })).not.toBeInTheDocument();
   });
 
-  it("clears old selection, expansion, menu, and dialog before a new connection renders", async () => {
+  it("clears old selection, expansion, and dialog before a new connection renders", async () => {
     let productionRequested = false;
     httpServer.use(
       http.get("http://localhost/api/plugin-registration/catalog", async ({ request }) => {
@@ -410,19 +410,13 @@ describe("Plugin Registration workspace", () => {
 
     const assembly = screen.getByRole("treeitem", { name: "Contoso.Plugins" });
     fireEvent.click(assembly, { detail: 1 });
-    const plugin = screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" });
-    fireEvent.click(plugin, { detail: 1 });
-    fireEvent.click(plugin, { detail: 2 });
-    fireEvent.doubleClick(plugin, { detail: 2 });
-    fireEvent.contextMenu(assembly, { clientX: 20, clientY: 20 });
-    expect(screen.getByRole("menu")).toBeInTheDocument();
-    expect(screen.getByRole("dialog", { name: "Update plug-in" })).toBeInTheDocument();
+    fireEvent.doubleClick(assembly, { detail: 2 });
+    expect(screen.getByRole("dialog", { name: "Update assembly" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("Connection"), { target: { value: "Production" } });
     await waitFor(() => expect(productionRequested).toBe(true));
 
     expect(screen.queryByRole("treeitem", { name: "Contoso.Plugins" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByText("Loading registrations…")).toBeInTheDocument();
     expect(screen.getByText("Select a registration to view details.")).toBeInTheDocument();

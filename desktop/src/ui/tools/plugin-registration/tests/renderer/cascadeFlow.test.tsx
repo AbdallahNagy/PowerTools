@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeAll, beforeEach, expect, it, vi } from "vitest";
@@ -31,6 +32,8 @@ it("opens cascade unregister from the assembly menu and explains an unsupported 
   const assembly = await screen.findByRole("treeitem", { name: "Contoso" });
   fireEvent.contextMenu(assembly);
   await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Unregister assembly" }));
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  expect(screen.queryByRole("dialog", { name: "Unregister assembly" })).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole("button", { name: "Preview unregister" }));
 
   const dialog = await screen.findByRole("dialog", { name: "Unregister assembly" });
@@ -64,11 +67,99 @@ it("executes a verified cascade once and refreshes the catalog so its tree is re
   ]);
 });
 
-function renderPage() {
-  return renderWithProviders(<ConnectionsProvider><PluginRegistration /></ConnectionsProvider>, { bridgeOverrides: {
-    listConnections: async () => [{ name: "Development", envUrl: "https://development.test", crmType: "online" }],
+it("reports a completed cascade from a StrictMode-mounted operation", async () => {
+  apiPostMock.mockResolvedValueOnce(preflight([])).mockResolvedValueOnce({
+    outcome: "succeededAndVerified",
+    succeededAndVerified: true,
+  });
+  renderPage(true);
+  const assembly = await screen.findByRole("treeitem", { name: "Contoso" });
+  fireEvent.contextMenu(assembly);
+  await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Unregister assembly" }));
+  await userEvent.click(screen.getByRole("button", { name: "Preview unregister" }));
+  const dialog = await screen.findByRole("dialog", { name: "Unregister assembly" });
+  await userEvent.click(within(dialog).getByLabelText("Acknowledge assembly unregister"));
+  await userEvent.type(within(dialog).getByLabelText("Type Contoso to confirm"), "Contoso");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Delete assembly, 1 handler, 0 steps, and 0 images" }));
+
+  expect(await screen.findByRole("status")).toHaveTextContent("succeeded and was verified");
+});
+
+it("discards a cascade preview when the dialog target changes", async () => {
+  apiPostMock.mockResolvedValueOnce(preflight([]));
+  renderPage();
+
+  const assembly = await screen.findByRole("treeitem", { name: "Contoso" });
+  fireEvent.contextMenu(assembly);
+  await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Unregister assembly" }));
+  await userEvent.click(screen.getByRole("button", { name: "Preview unregister" }));
+  await screen.findByRole("dialog", { name: "Unregister assembly" });
+  await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+  await userEvent.click(assembly);
+  const plugin = screen.getByRole("treeitem", { name: "(Plugin) Plugin" });
+  fireEvent.contextMenu(plugin);
+  await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Unregister plug-in" }));
+
+  expect(screen.getByRole("button", { name: "Preview unregister" })).toBeInTheDocument();
+  expect(apiPostMock).toHaveBeenCalledTimes(1);
+});
+
+it("ignores a pending cascade preview failure after the connection changes", async () => {
+  let rejectPreflight!: (reason: unknown) => void;
+  apiPostMock.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectPreflight = reject; }));
+  renderPage();
+
+  const assembly = await screen.findByRole("treeitem", { name: "Contoso" });
+  fireEvent.contextMenu(assembly);
+  await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Unregister assembly" }));
+  await userEvent.click(screen.getByRole("button", { name: "Preview unregister" }));
+  await vi.waitFor(() => expect(apiPostMock).toHaveBeenCalledTimes(1));
+
+  fireEvent.change(screen.getByLabelText("Connection"), { target: { value: "Production" } });
+  rejectPreflight(new Error("Old environment failed"));
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  await vi.waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+
+  const productionAssembly = await screen.findByRole("treeitem", { name: "Contoso" });
+  fireEvent.contextMenu(productionAssembly);
+  await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Unregister assembly" }));
+  expect(screen.getByRole("button", { name: "Preview unregister" })).toBeInTheDocument();
+});
+
+it("ignores a completed cascade execute after the connection changes", async () => {
+  let resolveExecute!: (value: { outcome: string; succeededAndVerified: boolean }) => void;
+  apiPostMock.mockResolvedValueOnce(preflight([])).mockImplementationOnce(() => new Promise((resolve) => { resolveExecute = resolve; }));
+  renderPage();
+
+  const assembly = await screen.findByRole("treeitem", { name: "Contoso" });
+  fireEvent.contextMenu(assembly);
+  await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Unregister assembly" }));
+  await userEvent.click(screen.getByRole("button", { name: "Preview unregister" }));
+  const dialog = await screen.findByRole("dialog", { name: "Unregister assembly" });
+  await userEvent.click(within(dialog).getByLabelText("Acknowledge assembly unregister"));
+  await userEvent.type(within(dialog).getByLabelText("Type Contoso to confirm"), "Contoso");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Delete assembly, 1 handler, 0 steps, and 0 images" }));
+  await vi.waitFor(() => expect(apiPostMock).toHaveBeenCalledTimes(2));
+
+  fireEvent.change(screen.getByLabelText("Connection"), { target: { value: "Production" } });
+  resolveExecute({ outcome: "succeededAndVerified", succeededAndVerified: true });
+  await new Promise((resolve) => setTimeout(resolve, 20));
+
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+});
+
+function renderPage(strictMode = false) {
+  const page = <ConnectionsProvider><PluginRegistration /></ConnectionsProvider>;
+  return renderWithProviders(strictMode ? <StrictMode>{page}</StrictMode> : page, { bridgeOverrides: {
+    listConnections: async () => [
+      { name: "Development", envUrl: "https://development.test", crmType: "online" },
+      { name: "Production", envUrl: "https://production.test", crmType: "online" },
+    ],
     getActiveConnectionName: async () => "Development",
-    getConnection: async name => ({ name, envUrl: "https://development.test", crmType: "online", token: "token", expiresOn: "2099-01-01T00:00:00Z" })
+    getConnection: async name => ({ name, envUrl: `https://${name.toLowerCase()}.test`, crmType: "online", token: "token", expiresOn: "2099-01-01T00:00:00Z" })
   } });
 }
 
