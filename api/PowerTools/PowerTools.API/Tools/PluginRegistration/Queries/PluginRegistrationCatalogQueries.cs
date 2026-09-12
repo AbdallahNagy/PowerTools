@@ -1,6 +1,7 @@
 using Microsoft.Xrm.Sdk.Query;
+using PowerTools.API.Tools.PluginRegistration.Enums;
 
-namespace PowerTools.API.Tools.PluginRegistration;
+namespace PowerTools.API.Tools.PluginRegistration.Queries;
 
 public static class PluginRegistrationCatalogQueries
 {
@@ -9,31 +10,37 @@ public static class PluginRegistrationCatalogQueries
     public static QueryExpression CreateAssemblyQuery() =>
         AddSolutionDisplayLink(
             CreatePagedQuery(
-            "pluginassembly",
-            "pluginassemblyid", "name", "version", "culture", "publickeytoken",
-            "sourcetype", "isolationmode", "ismanaged", "iscustomizable",
-            "versionnumber", "description"),
+                "pluginassembly",
+                [
+                    "pluginassemblyid", "name", "version", "culture", "publickeytoken",
+                    "sourcetype", "isolationmode", "ismanaged", "iscustomizable",
+                    "versionnumber", "description"
+                ]),
             "pluginassemblyid",
-            91);
+            SolutionComponentType.PluginAssembly);
 
     public static QueryExpression CreateTypeQuery() =>
         AddSolutionDisplayLink(
             CreatePagedQuery(
-            "plugintype",
-            "plugintypeid", "pluginassemblyid", "typename", "name", "friendlyname",
-            "description", "workflowactivitygroupname", "isworkflowactivity", "ismanaged",
-            "versionnumber"),
+                "plugintype",
+                [
+                    "plugintypeid", "pluginassemblyid", "typename", "name", "friendlyname",
+                    "description", "workflowactivitygroupname", "isworkflowactivity", "ismanaged",
+                    "versionnumber"
+                ]),
             "plugintypeid",
-            90);
+            SolutionComponentType.PluginType);
 
     public static QueryExpression CreateStepQuery()
     {
         var query = CreatePagedQuery(
             "sdkmessageprocessingstep",
-            "sdkmessageprocessingstepid", "plugintypeid", "name", "description",
-            "sdkmessageid", "sdkmessagefilterid", "stage", "mode", "rank", "statecode",
-            "ismanaged", "iscustomizable", "versionnumber",
-            "sdkmessageprocessingstepsecureconfigid");
+            [
+                "sdkmessageprocessingstepid", "plugintypeid", "name", "description",
+                "sdkmessageid", "sdkmessagefilterid", "stage", "mode", "rank", "statecode",
+                "ismanaged", "iscustomizable", "versionnumber",
+                "sdkmessageprocessingstepsecureconfigid"
+            ]);
         query.AddLink(
             "sdkmessage",
             "sdkmessageid",
@@ -48,26 +55,30 @@ public static class PluginRegistrationCatalogQueries
         query.LinkEntities[^1].Columns = new ColumnSet(
             "primaryobjecttypecode",
             "secondaryobjecttypecode");
-        return AddSolutionDisplayLink(query, "sdkmessageprocessingstepid", 92);
+        return AddSolutionDisplayLink(query, "sdkmessageprocessingstepid",
+            SolutionComponentType.SdkMessageProcessingStep);
     }
 
     public static QueryExpression CreateImageQuery() =>
         AddSolutionDisplayLink(
             CreatePagedQuery(
-            "sdkmessageprocessingstepimage",
-            "sdkmessageprocessingstepimageid", "sdkmessageprocessingstepid", "name",
-            "description", "imagetype", "entityalias", "attributes", "ismanaged",
-            "iscustomizable", "versionnumber"),
+                "sdkmessageprocessingstepimage",
+                [
+                    "sdkmessageprocessingstepimageid", "sdkmessageprocessingstepid", "name",
+                    "description", "imagetype", "entityalias", "attributes", "ismanaged",
+                    "iscustomizable", "versionnumber"
+                ]),
             "sdkmessageprocessingstepimageid",
-            93);
+            SolutionComponentType.SdkMessageProcessingStepImage);
 
     /// <summary>Reads registration-facing workflow/action metadata only; never a process definition.</summary>
     public static QueryExpression CreateWorkflowDependencyQuery(IReadOnlyCollection<Guid> processIds)
     {
         ArgumentNullException.ThrowIfNull(processIds);
-        var query = AddSolutionDisplayLink(CreatePagedQuery("workflow",
-                "workflowid", "name", "category", "statecode", "ismanaged", "iscustomizable", "versionnumber"),
-            "workflowid", 29);
+        var query = AddSolutionDisplayLink(CreatePagedQuery(
+                "workflow",
+                ["workflowid", "name", "category", "statecode", "ismanaged", "iscustomizable", "versionnumber"]),
+            "workflowid", SolutionComponentType.Workflow);
         if (processIds.Count > 0)
             query.Criteria.AddCondition("workflowid", ConditionOperator.In, processIds.Cast<object>().ToArray());
         return query;
@@ -76,7 +87,7 @@ public static class PluginRegistrationCatalogQueries
     private static QueryExpression AddSolutionDisplayLink(
         QueryExpression query,
         string rootIdAttribute,
-        int componentType)
+        SolutionComponentType componentType)
     {
         var componentLink = query.AddLink(
             "solutioncomponent",
@@ -87,7 +98,7 @@ public static class PluginRegistrationCatalogQueries
         componentLink.LinkCriteria.AddCondition(
             "componenttype",
             ConditionOperator.Equal,
-            componentType);
+            (int)componentType);
 
         var solutionLink = componentLink.AddLink(
             "solution",
@@ -101,7 +112,7 @@ public static class PluginRegistrationCatalogQueries
 
     private static QueryExpression CreatePagedQuery(
         string entityName,
-        params string[] columns) =>
+        string[] columns) =>
         new(entityName)
         {
             ColumnSet = new ColumnSet(columns),

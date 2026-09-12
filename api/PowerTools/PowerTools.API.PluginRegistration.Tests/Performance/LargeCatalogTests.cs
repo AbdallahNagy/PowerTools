@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using PowerTools.API.PluginRegistration.Tests.Support;
 using PowerTools.API.Tools.PluginRegistration;
+using PowerTools.API.Tools.PluginRegistration.Services;
 using Xunit;
 
 namespace PowerTools.API.PluginRegistration.Tests.Performance;

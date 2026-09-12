@@ -3,6 +3,7 @@ using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.PluginRegistration;
+using PowerTools.API.Tools.PluginRegistration.Queries;
 using Xunit;
 
 namespace PowerTools.API.PluginRegistration.Tests.Catalog;

@@ -1,8 +1,7 @@
+using System.Security.Cryptography;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
 
-using System.Security.Cryptography;
-
-namespace PowerTools.API.Tools.PluginRegistration;
+namespace PowerTools.API.Tools.PluginRegistration.Services;
 
 public sealed class PluginRegistrationCatalogService(IPluginAssemblyInspector? inspector = null)
 {

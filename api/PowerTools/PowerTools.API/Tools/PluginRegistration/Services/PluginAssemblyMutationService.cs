@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
 
-namespace PowerTools.API.Tools.PluginRegistration;
+namespace PowerTools.API.Tools.PluginRegistration.Services;
 
 public sealed class PluginAssemblyMutationService(
     IPluginAssemblyInspector inspector,

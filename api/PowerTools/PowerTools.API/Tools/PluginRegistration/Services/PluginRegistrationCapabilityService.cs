@@ -1,6 +1,6 @@
 using PowerTools.API.Tools.PluginRegistration.Dtos;
 
-namespace PowerTools.API.Tools.PluginRegistration;
+namespace PowerTools.API.Tools.PluginRegistration.Services;
 
 // Deliberately disabled until Task 13 proves this request shape in a disposable environment.
 public sealed class PluginRegistrationCapabilityService(bool transactionalCascadeReleaseApproved = false)

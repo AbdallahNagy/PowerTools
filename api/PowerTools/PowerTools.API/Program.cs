@@ -6,6 +6,8 @@ using PowerTools.API.Tools.DataMigration;
 using PowerTools.API.Tools.Fetch;
 using PowerTools.API.Tools.Metadata;
 using PowerTools.API.Tools.PluginRegistration;
+using PowerTools.API.Tools.PluginRegistration.Endpoints;
+using PowerTools.API.Tools.PluginRegistration.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 

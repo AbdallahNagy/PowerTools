@@ -5,6 +5,9 @@ using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
+using PowerTools.API.Tools.PluginRegistration.Enums;
+using PowerTools.API.Tools.PluginRegistration.Queries;
+using PowerTools.API.Tools.PluginRegistration.Services;
 
 namespace PowerTools.API.Tools.PluginRegistration;
 
@@ -527,12 +530,12 @@ public sealed class DataversePluginRegistrationGateway(
     }
 
     private async Task<IReadOnlyList<PluginHandlerDependencyRow>> RetrieveDependenciesForDeleteAsync(Guid componentId,
-        int componentType,
+        SolutionComponentType componentType,
         CancellationToken cancellationToken)
     {
         var request = new OrganizationRequest("RetrieveDependenciesForDelete")
         {
-            ["ComponentType"] = componentType,
+            ["ComponentType"] = (int)componentType,
             ["ObjectId"] = componentId
         };
         var response = await service.ExecuteAsync(request, cancellationToken);
@@ -541,12 +544,12 @@ public sealed class DataversePluginRegistrationGateway(
         return dependencies.Entities.Select(dependency => MapDependency(componentId, dependency)).ToArray();
     }
 
-    private static int CascadeComponentType(string logicalName) => logicalName switch
+    private static SolutionComponentType CascadeComponentType(string logicalName) => logicalName switch
     {
-        "pluginassembly" => 91,
-        "plugintype" => 90,
-        "sdkmessageprocessingstep" => 92,
-        "sdkmessageprocessingstepimage" => 93,
+        "pluginassembly" => SolutionComponentType.PluginAssembly,
+        "plugintype" => SolutionComponentType.PluginType,
+        "sdkmessageprocessingstep" => SolutionComponentType.SdkMessageProcessingStep,
+        "sdkmessageprocessingstepimage" => SolutionComponentType.SdkMessageProcessingStepImage,
         _ => throw new ArgumentException("The cascade delete plan contains an unsupported component type.", nameof(logicalName))
     };
 
@@ -689,7 +692,7 @@ public sealed class DataversePluginRegistrationGateway(
             Number(entity, "versionnumber"),
             null);
 
-    private static IReadOnlyList<TRow> MapDistinct<TRow>(
+    private static TRow[] MapDistinct<TRow>(
         IReadOnlyList<Entity> entities,
         Func<Entity, TRow> map,
         Func<TRow, string?, TRow> withSolutionDisplay)

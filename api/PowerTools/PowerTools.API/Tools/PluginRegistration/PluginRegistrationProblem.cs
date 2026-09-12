@@ -4,6 +4,7 @@ using System.Security.Authentication;
 using System.ServiceModel;
 using Microsoft.Xrm.Sdk;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
+using PowerTools.API.Tools.PluginRegistration.Services;
 
 namespace PowerTools.API.Tools.PluginRegistration;
 

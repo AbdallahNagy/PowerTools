@@ -5,6 +5,7 @@ using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.PluginRegistration;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
+using PowerTools.API.Tools.PluginRegistration.Services;
 using Xunit;
 
 namespace PowerTools.API.PluginRegistration.LiveTests;

@@ -4,9 +4,10 @@ using Microsoft.AspNetCore.Mvc;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
+using PowerTools.API.Tools.PluginRegistration.Services;
 using PowerTools.API.Utils;
 
-namespace PowerTools.API.Tools.PluginRegistration;
+namespace PowerTools.API.Tools.PluginRegistration.Endpoints;
 
 public static class PluginRegistrationEndpoints
 {

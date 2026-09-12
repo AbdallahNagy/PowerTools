@@ -1,10 +1,9 @@
 using System.Buffers;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using PowerTools.API.Tools.PluginRegistration.Dtos;
 
-namespace PowerTools.API.Tools.PluginRegistration;
+namespace PowerTools.API.Tools.PluginRegistration.Services;
 
 public sealed class PluginRegistrationPreflightService(PluginRegistrationPlanSigner signer)
 {
