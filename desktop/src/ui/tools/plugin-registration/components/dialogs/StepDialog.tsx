@@ -35,7 +35,8 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, o
     setUserId(value.impersonatingUserId ?? ""); setUnsecure(value.unsecureConfiguration ?? "");
   }, [editDetails.data]);
   const attributes = useMemo(() => attributesText.split(",").map(value => value.trim().toLowerCase()).filter(Boolean), [attributesText]);
-  const primaryKeySelected = Boolean(selectedFilter && attributes.includes(selectedFilter.primaryIdAttribute.toLowerCase()));
+  const primaryKeySelected = Boolean(selectedFilter?.availableAttributes.length
+    && attributes.includes(selectedFilter.primaryIdAttribute.toLowerCase()));
   const updateWithoutFilters = options?.messages.find(item => item.id === selectedMessageId)?.name === "Update" && attributes.length === 0;
   const previewDisabledReason = isReadOnly
     ? "This step cannot be updated."
@@ -75,7 +76,7 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, o
       {previewDisabledReason ? <p role="status">{previewDisabledReason}</p> : null}
       <fieldset disabled={!canEdit} className="contents">
       <label className="text-sm">Message<select aria-label="Message" value={selectedMessageId} onChange={event => { setMessageId(event.target.value); setFilterId(""); }} className="w-full bg-[#3c3c3c] p-2">{options?.messages.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-      <label className="text-sm">Primary table<select aria-label="Primary table" value={selectedFilter?.primaryTable ?? ""} onChange={event => setFilterId(matchingFilters.find(item => item.primaryTable === event.target.value)?.id ?? "")} className="w-full bg-[#3c3c3c] p-2">{matchingFilters.map(item => <option key={item.id} value={item.primaryTable}>{item.primaryTable}</option>)}</select></label>
+      <label className="text-sm">Message filter<select aria-label="Message filter" value={selectedFilter?.id ?? ""} onChange={event => setFilterId(event.target.value)} className="w-full bg-[#3c3c3c] p-2">{matchingFilters.map(item => <option key={item.id} value={item.id}>{filterLabel(item)}</option>)}</select></label>
       <div className="grid grid-cols-3 gap-2"><label>Stage<select aria-label="Stage" value={stage} onChange={event => setStage(Number(event.target.value))}><option value={10}>PreValidation</option><option value={20}>PreOperation</option><option value={40}>PostOperation</option></select></label><label>Mode<select aria-label="Mode" value={mode} onChange={event => setMode(Number(event.target.value))}><option value={0}>Synchronous</option>{stage === 40 ? <option value={1}>Asynchronous</option> : null}</select></label><label>Rank<input aria-label="Rank" type="number" value={rank} onChange={event => setRank(Number(event.target.value))} /></label></div>
       <label>Filtering attributes<input aria-label="Filtering attributes" value={attributesText} onChange={event => setAttributesText(event.target.value)} className="w-full bg-[#3c3c3c] p-2" /></label>
       {updateWithoutFilters ? <p role="status" className="text-amber-300">Update steps should select filtering attributes.</p> : null}
@@ -99,4 +100,8 @@ function label(value: string) {
   if (value === "rank") return "Rank";
   if (value === "secureConfigurationAction") return "Secure configuration";
   return value;
+}
+
+function filterLabel(filter: { primaryTable: string; secondaryTable: string | null }) {
+  return filter.secondaryTable ? `${filter.primaryTable} · ${filter.secondaryTable}` : filter.primaryTable;
 }

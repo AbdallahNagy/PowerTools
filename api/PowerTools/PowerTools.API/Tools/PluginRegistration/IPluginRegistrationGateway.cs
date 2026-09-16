@@ -29,6 +29,9 @@ public interface IPluginRegistrationGateway
     Task<StepOptionsDto> RetrieveStepOptionsAsync(CancellationToken cancellationToken) =>
         Task.FromResult(new StepOptionsDto([], [], []));
 
+    Task<StepFilterMetadataDto> RetrieveStepFilterMetadataAsync(Guid filterId, CancellationToken cancellationToken) =>
+        Task.FromResult(new StepFilterMetadataDto(filterId, "", []));
+
     Task<PluginStepPreflightState> RetrieveStepPreflightStateAsync(
         Guid pluginTypeId, Guid? targetStepId, StepDraftDto draft, CancellationToken cancellationToken) =>
         Task.FromException<PluginStepPreflightState>(new NotSupportedException("Step preflight is not supported by this gateway."));

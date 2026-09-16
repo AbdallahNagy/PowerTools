@@ -47,6 +47,7 @@ public sealed record PluginStepPreflightState(string Message, string PrimaryTabl
     public bool IsParentCustomizable { get; init; }
     public Guid? SecureConfigId { get; init; }
     public long? SecureConfigVersion { get; init; }
+    public long? ParentVersion { get; init; }
 }
 
 public sealed record StepMutationPreflightDto(StepDraftDto Draft, MutationPlanDto Plan,
@@ -57,6 +58,8 @@ public sealed record StepMutationExecuteRequestDto(StepDraftDto Draft, string Pl
 public sealed record StepOptionDto(Guid Id, string Name);
 public sealed record StepMessageFilterOptionDto(Guid Id, Guid MessageId, string PrimaryTable,
     string? SecondaryTable, string PrimaryIdAttribute, IReadOnlyList<string> AvailableAttributes);
+public sealed record StepFilterMetadataDto(Guid FilterId, string PrimaryIdAttribute,
+    IReadOnlyList<string> AvailableAttributes);
 public sealed record StepOptionsDto(IReadOnlyList<StepOptionDto> Messages,
     IReadOnlyList<StepMessageFilterOptionDto> Filters, IReadOnlyList<StepOptionDto> EnabledUsers);
 

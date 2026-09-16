@@ -27,7 +27,7 @@ describe("Step mutations", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Register step" });
     expect(within(dialog).getByLabelText("Message")).toHaveValue("message-update");
-    expect(within(dialog).getByLabelText("Primary table")).toHaveValue("account");
+    expect(within(dialog).getByLabelText("Message filter")).toHaveValue("filter-account");
     expect(dialog).toHaveTextContent("Stored secure configuration is not displayed");
     expect(dialog).not.toHaveTextContent("stored-secret");
     expect(dialog).toHaveTextContent("Update steps should select filtering attributes");
@@ -41,6 +41,29 @@ describe("Step mutations", () => {
     expect(apiPostMock).toHaveBeenCalledWith("/api/plugin-registration/steps/create/preflight",
       expect.objectContaining({ replacementSecureConfiguration: "new-secret" }), expect.anything());
     expect(await screen.findByRole("dialog", { name: "Step impact preview" })).toHaveTextContent("Update account");
+  });
+
+  it("keeps same-table message filters separately selectable by their Dataverse identities", async () => {
+    httpServer.use(http.get("http://localhost/api/plugin-registration/step-options", () => HttpResponse.json({
+      messages: [{ id: "message-update", name: "Update" }],
+      filters: [
+        { id: "filter-account-primary", messageId: "message-update", primaryTable: "account", secondaryTable: null, primaryIdAttribute: "accountid" },
+        { id: "filter-account-related", messageId: "message-update", primaryTable: "account", secondaryTable: "contact", primaryIdAttribute: "accountid" },
+      ],
+      enabledUsers: [],
+    })));
+    renderPage();
+    await openPlugin();
+    fireEvent.contextMenu(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }));
+    await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register step" }));
+
+    const dialog = await screen.findByRole("dialog", { name: "Register step" });
+    const filter = within(dialog).getByLabelText("Message filter");
+    await userEvent.selectOptions(filter, "filter-account-related");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Preview changes" }));
+
+    expect(apiPostMock).toHaveBeenCalledWith("/api/plugin-registration/steps/create/preflight",
+      expect.objectContaining({ sdkMessageFilterId: "filter-account-related", secondaryTable: "contact" }), expect.anything());
   });
 
   it("requires exact name for delete and identifies environment, message, table, and stage for disable", async () => {

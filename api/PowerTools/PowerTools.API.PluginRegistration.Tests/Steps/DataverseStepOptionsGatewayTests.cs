@@ -15,7 +15,7 @@ public sealed class DataverseStepOptionsGatewayTests
     [Theory]
     [InlineData("none")]
     [InlineData("None")]
-    public async Task Options_load_real_table_metadata_when_a_no_table_filter_exists(string noTable)
+    public async Task Options_stay_lightweight_and_selected_filter_metadata_skips_no_table_filters(string noTable)
     {
         var service = DispatchProxy.Create<IOrganizationServiceAsync2, OptionsServiceProxy>();
         var proxy = (OptionsServiceProxy)(object)service;
@@ -25,9 +25,12 @@ public sealed class DataverseStepOptionsGatewayTests
             .RetrieveStepOptionsAsync(CancellationToken.None);
 
         var account = Assert.Single(options.Filters, filter => filter.PrimaryTable == "account");
-        Assert.Equal("accountid", account.PrimaryIdAttribute);
-        Assert.Equal(new[] { "accountid", "name" }, account.AvailableAttributes);
+        Assert.Empty(account.AvailableAttributes);
         Assert.Empty(Assert.Single(options.Filters, filter => filter.PrimaryTable == noTable).AvailableAttributes);
+        var metadata = await new DataversePluginRegistrationGateway(service)
+            .RetrieveStepFilterMetadataAsync(account.Id, CancellationToken.None);
+        Assert.Equal("accountid", metadata.PrimaryIdAttribute);
+        Assert.Equal(new[] { "accountid", "name" }, metadata.AvailableAttributes);
         Assert.Single(options.Messages);
     }
 
@@ -121,11 +124,25 @@ public sealed class DataverseStepOptionsGatewayTests
                 return Task.FromResult(page);
             }
             if (targetMethod?.Name == "RetrieveAsync")
-                return Task.FromResult(new Entity("sdkmessageprocessingstep", StepId)
+            {
+                var logicalName = Assert.IsType<string>(args![0]);
+                return Task.FromResult(logicalName switch
                 {
-                    ["sdkmessageid"] = new EntityReference("sdkmessage", MessageId),
-                    ["sdkmessagefilterid"] = new EntityReference("sdkmessagefilter", FilterId)
+                    "plugintype" => new Entity("plugintype", PluginId) { ["versionnumber"] = 4L },
+                    "sdkmessagefilter" => new Entity("sdkmessagefilter", FilterId)
+                    {
+                        ["primaryobjecttypecode"] = "account"
+                    },
+                    _ => new Entity("sdkmessageprocessingstep", StepId)
+                    {
+                        ["plugintypeid"] = new EntityReference("plugintype", PluginId),
+                        ["sdkmessageid"] = new EntityReference("sdkmessage", MessageId),
+                        ["sdkmessagefilterid"] = new EntityReference("sdkmessagefilter", FilterId),
+                        ["stage"] = new OptionSetValue(40), ["mode"] = new OptionSetValue(0),
+                        ["rank"] = 1, ["versionnumber"] = 7L
+                    }
                 });
+            }
             if (targetMethod?.Name == "ExecuteAsync")
             {
                 var request = Assert.IsType<RetrieveEntityRequest>(args![0]);

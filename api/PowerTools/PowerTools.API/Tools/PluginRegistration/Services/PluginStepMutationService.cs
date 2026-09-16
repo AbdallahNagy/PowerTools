@@ -104,14 +104,13 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
     private async Task<ValidatedState> ReadAndValidateAsync(IPluginRegistrationGateway gateway, string operation, Guid? targetId,
         StepDraftDto draft, CancellationToken cancellationToken)
     {
-        var rows = await gateway.RetrieveCatalogRowsAsync(cancellationToken);
+        var state = await gateway.RetrieveStepPreflightStateAsync(draft.PluginTypeId, targetId, draft, cancellationToken);
         foreach (var expected in draft.ExpectedVersions)
         {
-            var actual = rows.Types.Where(item => item.Id == expected.Key).Select(item => (long?)item.VersionNumber)
-                .Concat(rows.Steps.Where(item => item.Id == expected.Key).Select(item => (long?)item.VersionNumber)).SingleOrDefault();
+            var actual = expected.Key == state.PluginTypeId ? state.ParentVersion
+                : expected.Key == state.TargetStepId ? state.CurrentVersion : null;
             if (actual != expected.Value) throw new PluginRegistrationPreflightException(PlanValidationFailure.BindingMismatch);
         }
-        var state = await gateway.RetrieveStepPreflightStateAsync(draft.PluginTypeId, targetId, draft, cancellationToken);
         var operationNormalized = operation is "enable" or "disable" or "unregister" ? operationDraft(targetId, draft, state) : draft;
         var normalizedDraft = NormalizeNullableDraft(operationNormalized, state);
         var validation = validator.Validate(normalizedDraft, new(state.StepName, state.Message, state.PrimaryTable, state.SecondaryTable,

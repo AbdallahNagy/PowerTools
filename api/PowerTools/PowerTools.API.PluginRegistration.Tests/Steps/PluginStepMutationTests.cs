@@ -30,6 +30,17 @@ public sealed class PluginStepMutationTests
     }
 
     [Fact]
+    public async Task Preflight_uses_the_targeted_state_without_loading_the_complete_catalog()
+    {
+        var gateway = new StatefulStepGateway("update") { ThrowOnCatalogRead = true };
+
+        var preflight = await Service().CreatePreflightAsync(gateway, "https://contoso.test", "update",
+            gateway.Draft("update"), CancellationToken.None);
+
+        Assert.Empty(preflight.Plan.Blockers);
+    }
+
+    [Fact]
     public async Task Unregister_requires_exact_step_name_and_external_dependencies_block_before_send()
     {
         var gateway = new StatefulStepGateway("unregister") { HasDependency = true };
@@ -169,6 +180,7 @@ public sealed class PluginStepMutationTests
         public Guid SecureConfigId { get; } = Guid.NewGuid();
         public string StepName => "Update account";
         public bool HasDependency { get; init; }
+        public bool ThrowOnCatalogRead { get; init; }
         public bool WriteRace { get; set; }
         public bool LoseResponseAfterMutation { get; init; }
         public bool KeepVersionAfterMutation { get; init; }
@@ -183,6 +195,7 @@ public sealed class PluginStepMutationTests
 
         public Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(CancellationToken cancellationToken)
         {
+            if (ThrowOnCatalogRead) throw new InvalidOperationException("The complete catalog must not be loaded.");
             if (mutated) ReadsAfterMutation++;
             var plugin = new PluginTypeRow(pluginId, Guid.NewGuid(), "Contoso.Plugin", "Plugin", null, null, null,
                 false, false, true, 4, null);
@@ -208,7 +221,8 @@ public sealed class PluginStepMutationTests
                 IsOrdinaryPlugin = true,
                 IsParentCustomizable = true,
                 SecureConfigId = SecureConfigId,
-                SecureConfigVersion = 11
+                SecureConfigVersion = 11,
+                ParentVersion = 4
             });
 
         public Task<StepEditDetailsDto> RetrieveStepEditDetailsAsync(Guid requestedStepId, CancellationToken cancellationToken) =>
