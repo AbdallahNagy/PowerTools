@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useConnections, useConnectionSelection } from "../../shared/connections";
 import { Button, Modal, ToastProvider } from "../../shared/ui";
+import { usePluginRegistrationCapabilities, cascadeCapabilityFromQuery } from "./api/usePluginRegistrationCapabilities";
 import { useRegistrationCatalog } from "./api/useRegistrationCatalog";
 import { useWorkflowActivityDetails } from "./api/useWorkflowActivityDetails";
 import { PluginRegistrationHeader } from "./components/PluginRegistrationHeader";
@@ -62,6 +63,8 @@ function PluginRegistrationPage() {
   const { connectionName, setConnectionName } = useConnectionSelection();
   const { connections } = useConnections();
   const catalogQuery = useRegistrationCatalog(connectionName || null);
+  const capabilitiesQuery = usePluginRegistrationCapabilities(connectionName || null);
+  const cascadeUnregister = cascadeCapabilityFromQuery(capabilitiesQuery.data);
   const [selectedNodeId, setSelectedNodeId] = useState<CatalogNodeId | null>(null);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(new Set());
   const [dialogIntent, setDialogIntent] = useState<DialogIntent>(null);
@@ -216,7 +219,7 @@ function PluginRegistrationPage() {
     if (mutationRefreshPending) return;
     const actionNode = findActionTargetNode(nodes, intent);
     const owner = dialogOwnerForIntent(intent);
-    if (!actionNode || !owner || !isRegistrationActionSupported(actionNode, intent)) return;
+    if (!actionNode || !owner || !isRegistrationActionSupported(actionNode, intent, { cascadeUnregister })) return;
     setContextMenu(null);
     switch (intent.kind) {
       case "update":
@@ -278,6 +281,7 @@ function PluginRegistrationPage() {
 
       <RegistrationContextMenu
         state={contextMenu}
+        actionContext={{ cascadeUnregister }}
         onAction={handleActionIntent}
         onClose={() => setContextMenu(null)}
       />

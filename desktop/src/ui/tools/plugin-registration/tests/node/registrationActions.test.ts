@@ -166,4 +166,18 @@ describe("registration action policy", () => {
     expect(owners.every(Boolean)).toBe(true);
     expect(new Set(owners).size).toBe(owners.length);
   });
+
+  it("disables cascade unregister with the proven-safety reason while leaving other actions enabled", () => {
+    const context = {
+      cascadeUnregister: {
+        supported: false,
+        reason: "Transactional cascade unregister is not release-approved yet. Transactional safety has not yet been proven.",
+      },
+    };
+    const unregister = registrationActionsForNode(assembly, context).find((action) => action.label === "Unregister assembly");
+    expect(unregister?.enabled).toBe(false);
+    expect(unregister?.disabledReason).toContain("not yet been proven");
+    expect(registrationActionsForNode(assembly, context).find((action) => action.label === "Update assembly")?.enabled).toBe(true);
+    expect(registrationActionsForNode(step, context).find((action) => action.label === "Unregister step")?.enabled).toBe(true);
+  });
 });

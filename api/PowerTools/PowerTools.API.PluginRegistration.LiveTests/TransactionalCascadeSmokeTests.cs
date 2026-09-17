@@ -125,6 +125,85 @@ public sealed class TransactionalCascadeSmokeTests
         }
     }
 
+    [LiveFact]
+    public async Task Image_create_update_and_delete_preserve_the_owned_parent_step()
+    {
+        var inputs = LiveInputs.Require();
+        var bytes = await File.ReadAllBytesAsync(inputs.FixturePath);
+        await using var fixtureStream = new MemoryStream(bytes, writable: false);
+        var inspection = await new PluginAssemblyInspector().InspectAsync(
+            fixtureStream, Path.GetFileName(inputs.FixturePath), bytes.Length, CancellationToken.None);
+
+        using var client = Connect(inputs.Connection);
+        AssertDisposableOrganization(client);
+        AssertAssemblyNameIsUnused(client, inspection.Identity.Name);
+        var assemblyId = Guid.Empty;
+        var stepId = Guid.Empty;
+        var imageId = Guid.Empty;
+        IReadOnlyList<Guid> handlerIds = [];
+        try
+        {
+            assemblyId = RegisterAssembly(client, inspection, bytes);
+            handlerIds = RetrieveHandlerIds(client, assemblyId);
+            var pluginId = RetrievePluginHandlerId(client, assemblyId, inspection.Plugins[0].TypeName);
+            stepId = CreateUpdateStep(client, pluginId);
+            imageId = CreatePostImage(client, stepId);
+            client.Update(new Entity("sdkmessageprocessingstepimage", imageId)
+            {
+                ["entityalias"] = "UpdatedTarget",
+                ["attributes"] = "name,accountnumber"
+            });
+            var updated = client.Retrieve("sdkmessageprocessingstepimage", imageId, new ColumnSet("entityalias", "attributes"));
+            Assert.Equal("UpdatedTarget", updated.GetAttributeValue<string>("entityalias"));
+            Assert.Contains("accountnumber", updated.GetAttributeValue<string>("attributes") ?? "");
+            client.Delete("sdkmessageprocessingstepimage", imageId);
+            imageId = Guid.Empty;
+            AssertAbsent(client, "sdkmessageprocessingstepimage", updated.Id);
+            AssertPresent(client, "sdkmessageprocessingstep", stepId);
+        }
+        finally
+        {
+            CleanupOwnedRegistration(client, imageId, stepId, handlerIds, assemblyId);
+        }
+    }
+
+    [LiveFact]
+    public async Task Unreferenced_workflow_activity_metadata_can_be_updated()
+    {
+        var inputs = LiveInputs.Require();
+        var bytes = await File.ReadAllBytesAsync(inputs.FixturePath);
+        await using var fixtureStream = new MemoryStream(bytes, writable: false);
+        var inspection = await new PluginAssemblyInspector().InspectAsync(
+            fixtureStream, Path.GetFileName(inputs.FixturePath), bytes.Length, CancellationToken.None);
+        Assert.NotEmpty(inspection.WorkflowActivities);
+
+        using var client = Connect(inputs.Connection);
+        AssertDisposableOrganization(client);
+        AssertAssemblyNameIsUnused(client, inspection.Identity.Name);
+        var assemblyId = Guid.Empty;
+        IReadOnlyList<Guid> handlerIds = [];
+        try
+        {
+            assemblyId = RegisterAssembly(client, inspection, bytes);
+            handlerIds = RetrieveHandlerIds(client, assemblyId);
+            var activity = inspection.WorkflowActivities[0];
+            var activityId = RetrievePluginHandlerId(client, assemblyId, activity.TypeName);
+            client.Update(new Entity("plugintype", activityId)
+            {
+                ["name"] = "PowerTools disposable activity name",
+                ["friendlyname"] = "PowerTools disposable friendly name",
+                ["description"] = "PowerTools disposable description"
+            });
+            var updated = client.Retrieve("plugintype", activityId, new ColumnSet("name", "friendlyname", "description"));
+            Assert.Equal("PowerTools disposable activity name", updated.GetAttributeValue<string>("name"));
+            Assert.Equal("PowerTools disposable friendly name", updated.GetAttributeValue<string>("friendlyname"));
+        }
+        finally
+        {
+            CleanupOwnedRegistration(client, Guid.Empty, Guid.Empty, handlerIds, assemblyId);
+        }
+    }
+
     private static ServiceClient Connect(string connection)
     {
         var client = new ServiceClient(connection);

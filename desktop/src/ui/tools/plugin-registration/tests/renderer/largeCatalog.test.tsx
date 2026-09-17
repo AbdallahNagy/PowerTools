@@ -33,7 +33,7 @@ describe("large complete registration catalogs", () => {
   });
 });
 
-function createLargeCatalog(): PluginRegistrationCatalog {
+export function createLargeCatalog(): PluginRegistrationCatalog {
   let handlerNumber = 0;
   let stepNumber = 0;
   let imageNumber = 0;

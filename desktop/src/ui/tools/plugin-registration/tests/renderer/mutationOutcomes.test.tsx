@@ -19,7 +19,12 @@ vi.mock("../../../../shared/api/client", async (original) => ({
 const originalResizeObserver = window.ResizeObserver;
 beforeAll(() => { window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} }; });
 afterAll(() => { if (originalResizeObserver) window.ResizeObserver = originalResizeObserver; else Reflect.deleteProperty(window, "ResizeObserver"); });
-beforeEach(() => apiPost.mockReset());
+beforeEach(() => {
+  apiPost.mockReset();
+  httpServer.use(http.get("http://localhost/api/plugin-registration/capabilities", () => HttpResponse.json({
+    transactionalCascadeUnregister: { supported: true, reason: "Transactional cascade unregister is available." },
+  })));
+});
 
 describe("mutation outcome presentation", () => {
   it("distinguishes verified and reconciled success", () => {

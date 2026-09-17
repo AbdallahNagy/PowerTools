@@ -19,8 +19,15 @@ interface RegistrationActionPolicy {
   doubleClickIntent: Extract<RegistrationActionIntent, { kind: "update" }> | null;
 }
 
-export function registrationActionsForNode(node: CatalogTreeNode): RegistrationAction[] {
-  return registrationActionPolicyForNode(node).contextActions;
+export interface RegistrationActionContext {
+  cascadeUnregister?: { supported: boolean; reason: string };
+}
+
+export function registrationActionsForNode(
+  node: CatalogTreeNode,
+  context: RegistrationActionContext = {},
+): RegistrationAction[] {
+  return registrationActionPolicyForNode(node, context).contextActions;
 }
 
 export function doubleClickIntentForNode(
@@ -32,9 +39,10 @@ export function doubleClickIntentForNode(
 export function isRegistrationActionSupported(
   node: CatalogTreeNode,
   intent: RegistrationActionIntent,
+  context: RegistrationActionContext = {},
 ): boolean {
-  return registrationActionPolicyForNode(node).contextActions.some(
-    (action) => sameIntent(action.intent, intent),
+  return registrationActionPolicyForNode(node, context).contextActions.some(
+    (action) => sameIntent(action.intent, intent) && action.enabled,
   );
 }
 
@@ -60,28 +68,37 @@ export function dialogOwnerForIntent(intent: RegistrationActionIntent): string |
   }
 }
 
-function registrationActionPolicyForNode(node: CatalogTreeNode): RegistrationActionPolicy {
+function registrationActionPolicyForNode(
+  node: CatalogTreeNode,
+  context: RegistrationActionContext = {},
+): RegistrationActionPolicy {
   const update = (label: string): RegistrationAction & {
     intent: Extract<RegistrationActionIntent, { kind: "update" }>;
-  } => action(label, { kind: "update", nodeId: node.id });
-  const unregister = (label: string): RegistrationAction =>
-    action(label, { kind: "unregister", nodeId: node.id });
+  } => {
+    const created = action(label, { kind: "update", nodeId: node.id });
+    return { ...created, intent: { kind: "update", nodeId: node.id } };
+  };
+  const cascadeUnavailable = context.cascadeUnregister && !context.cascadeUnregister.supported
+    ? { enabled: false as const, disabledReason: context.cascadeUnregister.reason }
+    : {};
+  const unregister = (label: string, cascade = false): RegistrationAction =>
+    action(label, { kind: "unregister", nodeId: node.id }, cascade ? cascadeUnavailable : {});
 
   switch (node.kind) {
     case "assembly":
-      return editablePolicy(update("Update assembly"), unregister("Unregister assembly"));
+      return editablePolicy(update("Update assembly"), unregister("Unregister assembly", true));
     case "plugin":
       return {
         contextActions: [
           action("Register New Step", { kind: "createStep", pluginId: node.data.id }),
-          unregister("Unregister plug-in"),
+          unregister("Unregister plug-in", true),
         ],
         doubleClickIntent: null,
       };
     case "workflowActivity":
       return editablePolicy(
         update("Update workflow activity"),
-        unregister("Unregister workflow activity"),
+        unregister("Unregister workflow activity", true),
       );
     case "step":
       return editablePolicy(

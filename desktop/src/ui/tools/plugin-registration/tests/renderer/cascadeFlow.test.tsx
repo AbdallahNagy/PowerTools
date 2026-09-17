@@ -20,10 +20,32 @@ beforeEach(() => {
   deleted = false;
   catalogReads = 0;
   apiPostMock.mockReset();
-  httpServer.use(http.get("http://localhost/api/plugin-registration/catalog", () => {
+  httpServer.use(
+    http.get("http://localhost/api/plugin-registration/capabilities", () => HttpResponse.json({
+      transactionalCascadeUnregister: { supported: true, reason: "Transactional cascade unregister is available." },
+    })),
+    http.get("http://localhost/api/plugin-registration/catalog", () => {
     catalogReads++;
     return HttpResponse.json(deleted ? { assemblies: [] } : catalog);
   }));
+});
+
+it("disables assembly cascade unregister before the workflow starts when the capability is unproven", async () => {
+  httpServer.use(http.get("http://localhost/api/plugin-registration/capabilities", () => HttpResponse.json({
+    transactionalCascadeUnregister: {
+      supported: false,
+      reason: "Transactional cascade unregister is not release-approved yet. Transactional safety has not yet been proven.",
+    },
+  })));
+  renderPage();
+  const assembly = await screen.findByRole("treeitem", { name: "Contoso" });
+  fireEvent.contextMenu(assembly);
+  const item = within(screen.getByRole("menu")).getByRole("menuitem", { name: "Unregister assembly" });
+  expect(item).toBeDisabled();
+  expect(item).toHaveAttribute("title", expect.stringContaining("not yet been proven"));
+  await userEvent.click(item);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(apiPostMock).not.toHaveBeenCalled();
 });
 
 it("opens cascade unregister from the assembly menu and explains an unsupported transaction", async () => {

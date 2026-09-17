@@ -3,6 +3,7 @@ import { useEffect, useRef } from "react";
 import type { CatalogTreeNode } from "../model/catalogTree";
 import {
   registrationActionsForNode,
+  type RegistrationActionContext,
   type RegistrationActionIntent,
 } from "../model/registrationActions";
 
@@ -17,9 +18,12 @@ interface RegistrationContextMenuProps {
   state: RegistrationContextMenuState | null;
   onAction: (intent: RegistrationActionIntent) => void;
   onClose: () => void;
+  actionContext?: RegistrationActionContext;
 }
 
-export function RegistrationContextMenu({ state, onAction, onClose }: RegistrationContextMenuProps) {
+export function RegistrationContextMenu({
+  state, onAction, onClose, actionContext,
+}: RegistrationContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,7 +49,7 @@ export function RegistrationContextMenu({ state, onAction, onClose }: Registrati
 
   if (!state) return null;
 
-  const items = registrationActionsForNode(state.node);
+  const items = registrationActionsForNode(state.node, actionContext);
   const left = Math.min(Math.max(8, state.x), Math.max(8, window.innerWidth - 232));
   const estimatedHeight = items.length * 32 + 16;
   const top = Math.min(Math.max(8, state.y), Math.max(8, window.innerHeight - estimatedHeight));
