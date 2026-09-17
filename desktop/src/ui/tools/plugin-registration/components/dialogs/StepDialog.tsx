@@ -35,7 +35,7 @@ export function StepDialog({ connectionName, plugin, step, operation, onClose, o
     setUserId(value.impersonatingUserId ?? ""); setUnsecure(value.unsecureConfiguration ?? "");
   }, [editDetails.data]);
   const attributes = useMemo(() => attributesText.split(",").map(value => value.trim().toLowerCase()).filter(Boolean), [attributesText]);
-  const primaryKeySelected = Boolean(selectedFilter?.availableAttributes.length
+  const primaryKeySelected = Boolean(selectedFilter?.primaryIdAttribute
     && attributes.includes(selectedFilter.primaryIdAttribute.toLowerCase()));
   const updateWithoutFilters = options?.messages.find(item => item.id === selectedMessageId)?.name === "Update" && attributes.length === 0;
   const previewDisabledReason = isReadOnly

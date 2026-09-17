@@ -63,8 +63,16 @@ export function RegistrationContextMenu({ state, onAction, onClose }: Registrati
           key={item.label}
           type="button"
           role="menuitem"
-          className="w-full px-3 py-1.5 text-left text-sm text-[#cccccc] hover:bg-[#094771] hover:text-white focus:outline-none focus:bg-[#094771] focus:text-white"
+          disabled={!item.enabled}
+          title={item.disabledReason ?? undefined}
+          aria-disabled={!item.enabled}
+          className={`w-full px-3 py-1.5 text-left text-sm focus:outline-none ${
+            item.enabled
+              ? "text-[#cccccc] hover:bg-[#094771] hover:text-white focus:bg-[#094771] focus:text-white"
+              : "text-[#858585] cursor-not-allowed"
+          }`}
           onClick={() => {
+            if (!item.enabled) return;
             onAction(item.intent);
             onClose();
           }}

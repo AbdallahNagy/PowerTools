@@ -23,7 +23,7 @@ describe("Step mutations", () => {
     renderPage();
     await openPlugin();
     fireEvent.contextMenu(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }));
-    await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register step" }));
+    await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register New Step" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Register step" });
     expect(within(dialog).getByLabelText("Message")).toHaveValue("message-update");
@@ -55,7 +55,7 @@ describe("Step mutations", () => {
     renderPage();
     await openPlugin();
     fireEvent.contextMenu(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }));
-    await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register step" }));
+    await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register New Step" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Register step" });
     const filter = within(dialog).getByLabelText("Message filter");
@@ -139,7 +139,7 @@ describe("Step mutations", () => {
         ? HttpResponse.json({ detail: "secret choice failure" }, { status: 500 })
         : HttpResponse.json({
           messages: [{ id: "message-update", name: "Update" }],
-          filters: [{ id: "filter-account", messageId: "message-update", primaryTable: "account", secondaryTable: null, primaryIdAttribute: "accountid" }],
+          filters: [{ id: "filter-account", messageId: "message-update", primaryTable: "account", secondaryTable: null, primaryIdAttribute: "accountid", availableAttributes: ["accountid", "name"] }],
           enabledUsers: [],
         });
     }));
@@ -226,7 +226,7 @@ function useResponses() {
     http.get("http://localhost/api/plugin-registration/catalog", () => HttpResponse.json(catalog)),
     http.get("http://localhost/api/plugin-registration/step-options", () => HttpResponse.json({
       messages: [{ id: "message-update", name: "Update" }],
-      filters: [{ id: "filter-account", messageId: "message-update", primaryTable: "account", secondaryTable: null, primaryIdAttribute: "accountid" }],
+      filters: [{ id: "filter-account", messageId: "message-update", primaryTable: "account", secondaryTable: null, primaryIdAttribute: "accountid", availableAttributes: ["accountid", "name"] }],
       enabledUsers: [{ id: "user-1", name: "Service User" }],
     })),
     http.get("http://localhost/api/plugin-registration/steps/:stepId/edit-details", () => HttpResponse.json({

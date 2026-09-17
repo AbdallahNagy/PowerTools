@@ -10,6 +10,8 @@ export type RegistrationActionIntent =
 export interface RegistrationAction {
   label: string;
   intent: RegistrationActionIntent;
+  enabled: boolean;
+  disabledReason: string | null;
 }
 
 interface RegistrationActionPolicy {
@@ -36,17 +38,34 @@ export function isRegistrationActionSupported(
   );
 }
 
+export function dialogOwnerForIntent(intent: RegistrationActionIntent): string | null {
+  switch (intent.kind) {
+    case "update": {
+      const [kind] = intent.nodeId.split(":");
+      if (kind === "plugin") return null;
+      return `update:${intent.nodeId}`;
+    }
+    case "createStep":
+      return `step:create:${intent.pluginId}`;
+    case "createImage":
+      return `image:create:${intent.stepId}`;
+    case "toggleStep":
+      return `step:${intent.enable ? "enable" : "disable"}:${intent.stepId}`;
+    case "unregister": {
+      const [kind, id] = intent.nodeId.split(":");
+      if (kind === "step") return `step:unregister:${id}`;
+      if (kind === "image") return `image:unregister:${id}`;
+      return `cascade:${intent.nodeId}`;
+    }
+  }
+}
+
 function registrationActionPolicyForNode(node: CatalogTreeNode): RegistrationActionPolicy {
   const update = (label: string): RegistrationAction & {
     intent: Extract<RegistrationActionIntent, { kind: "update" }>;
-  } => ({
-    label,
-    intent: { kind: "update", nodeId: node.id },
-  });
-  const unregister = (label: string): RegistrationAction => ({
-    label,
-    intent: { kind: "unregister", nodeId: node.id },
-  });
+  } => action(label, { kind: "update", nodeId: node.id });
+  const unregister = (label: string): RegistrationAction =>
+    action(label, { kind: "unregister", nodeId: node.id });
 
   switch (node.kind) {
     case "assembly":
@@ -54,7 +73,7 @@ function registrationActionPolicyForNode(node: CatalogTreeNode): RegistrationAct
     case "plugin":
       return {
         contextActions: [
-          { label: "Register step", intent: { kind: "createStep", pluginId: node.data.id } },
+          action("Register New Step", { kind: "createStep", pluginId: node.data.id }),
           unregister("Unregister plug-in"),
         ],
         doubleClickIntent: null,
@@ -67,11 +86,12 @@ function registrationActionPolicyForNode(node: CatalogTreeNode): RegistrationAct
     case "step":
       return editablePolicy(
         update("Update step"),
-        { label: "Register image", intent: { kind: "createImage", stepId: node.data.id } },
-        {
-          label: node.data.isEnabled ? "Disable step" : "Enable step",
-          intent: { kind: "toggleStep", stepId: node.data.id, enable: !node.data.isEnabled },
-        },
+        action("Register image", { kind: "createImage", stepId: node.data.id }),
+        action(node.data.isEnabled ? "Disable step" : "Enable step", {
+          kind: "toggleStep",
+          stepId: node.data.id,
+          enable: !node.data.isEnabled,
+        }),
         unregister("Unregister step"),
       );
     case "image":
@@ -88,6 +108,20 @@ function editablePolicy(
   return {
     contextActions: [updateAction, ...otherActions],
     doubleClickIntent: updateAction.intent,
+  };
+}
+
+function action(
+  label: string,
+  intent: RegistrationActionIntent,
+  availability: { enabled?: boolean; disabledReason?: string | null } = {},
+): RegistrationAction {
+  const enabled = availability.enabled ?? true;
+  return {
+    label,
+    intent,
+    enabled,
+    disabledReason: enabled ? null : availability.disabledReason ?? "This action is unavailable.",
   };
 }
 

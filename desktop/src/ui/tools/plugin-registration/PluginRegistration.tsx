@@ -25,6 +25,7 @@ import {
   type CatalogTreeNode,
 } from "./model/catalogTree";
 import {
+  dialogOwnerForIntent,
   doubleClickIntentForNode,
   isRegistrationActionSupported,
   type RegistrationActionIntent,
@@ -214,7 +215,9 @@ function PluginRegistrationPage() {
   function handleActionIntent(intent: RegistrationActionIntent) {
     if (mutationRefreshPending) return;
     const actionNode = findActionTargetNode(nodes, intent);
-    if (!actionNode || !isRegistrationActionSupported(actionNode, intent)) return;
+    const owner = dialogOwnerForIntent(intent);
+    if (!actionNode || !owner || !isRegistrationActionSupported(actionNode, intent)) return;
+    setContextMenu(null);
     switch (intent.kind) {
       case "update":
         openDialog({ kind: "update", nodeId: intent.nodeId });
