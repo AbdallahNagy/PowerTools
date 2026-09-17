@@ -13,6 +13,7 @@ export interface StepDraft {
   expectedVersions: Record<string, number>;
   impersonatingUserAction: "keep" | "set" | "clear";
   unsecureConfigurationAction: "keep" | "set" | "clear";
+  secureConfigurationAction: "keep" | "set" | "clear";
 }
 export interface StepOptions {
   messages: { id: string; name: string }[];
@@ -24,7 +25,7 @@ export interface StepPublicValues {
   name: string; message: string; primaryTable: string; secondaryTable: string | null;
   stage: number; mode: number; rank: number; filteringAttributes: string[];
   impersonatingUserId: string | null; unsecureConfiguration: string | null;
-  secureConfigExists: boolean; isEnabled: boolean; secureConfigurationAction: "keep" | "set";
+  secureConfigExists: boolean; isEnabled: boolean; secureConfigurationAction: "keep" | "set" | "clear";
 }
 export interface StepPreflight {
   draft: StepDraft;
@@ -57,6 +58,16 @@ export function useStepMutations(connectionName: string | null) {
     retry: false,
   });
   return { options, preflight, execute };
+}
+
+export function useStepFilterMetadata(connectionName: string | null, filterId: string | null) {
+  const meta = { connectionName: connectionName ?? undefined };
+  return useQuery({
+    queryKey: ["plugin-registration", "step-filter-metadata", connectionName, filterId],
+    queryFn: () => apiGet<{ filterId: string; primaryIdAttribute: string; availableAttributes: string[] }>(
+      `/api/plugin-registration/step-filters/${filterId}/metadata`, { meta }),
+    enabled: Boolean(connectionName && filterId), staleTime: 0,
+  });
 }
 
 export function useStepEditDetails(connectionName: string | null, stepId: string | null) {

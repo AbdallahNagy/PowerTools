@@ -19,6 +19,7 @@ export function TypedNameConfirmationDialog({ connectionName, plugin, step, oper
     stage: step.stage, mode: step.mode, rank: step.rank, filteringAttributes: [], impersonatingUserId: null,
     unsecureConfiguration: null, replacementSecureConfiguration: null,
     impersonatingUserAction: "keep", unsecureConfigurationAction: "keep",
+    secureConfigurationAction: "keep",
     expectedVersions: { [plugin.id]: plugin.versionNumber, [step.id]: step.versionNumber } }) : null,
   [filter, message, plugin.id, plugin.versionNumber, step]);
   useEffect(() => {

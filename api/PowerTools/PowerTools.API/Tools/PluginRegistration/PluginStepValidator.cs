@@ -13,14 +13,21 @@ public sealed class PluginStepValidator
             .Order(StringComparer.OrdinalIgnoreCase).ToArray();
         var draft = submitted with { PrimaryTable = submitted.PrimaryTable.Trim().ToLowerInvariant(),
             SecondaryTable = string.IsNullOrWhiteSpace(submitted.SecondaryTable) ? null : submitted.SecondaryTable.Trim().ToLowerInvariant(),
-            FilteringAttributes = attributes };
+            FilteringAttributes = attributes,
+            SecureConfigurationAction = submitted.SecureConfigurationAction == "keep"
+                && submitted.ReplacementSecureConfiguration is not null
+                    ? "set"
+                    : submitted.SecureConfigurationAction };
         var warnings = new List<MutationWarningDto>();
         var blockers = new List<MutationBlockerDto>();
         if (!NullableActions.Contains(draft.ImpersonatingUserAction) || !NullableActions.Contains(draft.UnsecureConfigurationAction)
+            || !NullableActions.Contains(draft.SecureConfigurationAction)
             || draft.ImpersonatingUserAction == "set" && draft.ImpersonatingUserId is null
             || draft.ImpersonatingUserAction == "clear" && draft.ImpersonatingUserId is not null
             || draft.UnsecureConfigurationAction == "set" && draft.UnsecureConfiguration is null
-            || draft.UnsecureConfigurationAction == "clear" && draft.UnsecureConfiguration is not null)
+            || draft.UnsecureConfigurationAction == "clear" && draft.UnsecureConfiguration is not null
+            || draft.SecureConfigurationAction == "set" && draft.ReplacementSecureConfiguration is null
+            || draft.SecureConfigurationAction is "keep" or "clear" && draft.ReplacementSecureConfiguration is not null)
             blockers.Add(new("invalidNullableAction", "Nullable step fields require keep, set, or clear semantics."));
         if (!state.MessageIsSupported || !state.FilterIsSupported
             || !string.Equals(draft.PrimaryTable, state.PrimaryTable, StringComparison.OrdinalIgnoreCase))
@@ -55,8 +62,11 @@ public sealed class PluginStepValidator
         }
         return new(draft, new(state.StepName ?? "New step", state.Message, state.PrimaryTable, draft.SecondaryTable, draft.Stage, draft.Mode,
             draft.Rank, attributes, draft.ImpersonatingUserId, draft.UnsecureConfiguration,
-            state.SecureConfigExists || !string.IsNullOrEmpty(draft.ReplacementSecureConfiguration), state.CurrentEnabled,
-            draft.ReplacementSecureConfiguration is null ? "keep" : "set"), warnings, blockers);
+            draft.SecureConfigurationAction == "clear"
+                ? false
+                : state.SecureConfigExists || draft.SecureConfigurationAction == "set",
+            state.CurrentEnabled,
+            draft.SecureConfigurationAction), warnings, blockers);
     }
 
     private static readonly HashSet<string> NullableActions = new(["keep", "set", "clear"], StringComparer.Ordinal);

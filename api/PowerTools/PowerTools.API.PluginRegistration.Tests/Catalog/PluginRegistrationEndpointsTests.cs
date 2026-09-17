@@ -36,6 +36,25 @@ public sealed class PluginRegistrationEndpointsTests
     }
 
     [Fact]
+    public void Application_maps_one_get_step_filter_metadata_endpoint()
+    {
+        using var factory = new PluginRegistrationApplicationFactory();
+        _ = factory.Server;
+
+        var matches = factory.Services
+            .GetServices<EndpointDataSource>()
+            .SelectMany(source => source.Endpoints)
+            .OfType<RouteEndpoint>()
+            .Where(endpoint =>
+                endpoint.RoutePattern.RawText == "/api/plugin-registration/step-filters/{filterId:guid}/metadata"
+                && endpoint.Metadata.GetMetadata<HttpMethodMetadata>()?.HttpMethods
+                    .Contains("GET", StringComparer.OrdinalIgnoreCase) == true)
+            .ToArray();
+
+        Assert.Single(matches);
+    }
+
+    [Fact]
     public async Task Catalog_returns_a_sanitized_problem_when_loading_fails()
     {
         using var factory = new PluginRegistrationApplicationFactory(useThrowingGateway: true);

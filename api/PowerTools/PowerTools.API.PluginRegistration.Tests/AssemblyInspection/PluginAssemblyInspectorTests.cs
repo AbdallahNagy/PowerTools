@@ -273,6 +273,49 @@ public sealed class PluginAssemblyInspectorTests
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    [Theory]
+    [InlineData("UnsignedPluginAssembly.dll", AssemblyInspectionValidationCodes.Unsigned)]
+    [InlineData("not-a-pe", AssemblyInspectionValidationCodes.InvalidPe)]
+    public async Task Analyze_endpoint_rejects_unsigned_and_malformed_assemblies_without_raw_bytes(
+        string fixture, string expectedCode)
+    {
+        using var factory = new PluginRegistrationApplicationFactory();
+        using var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Local-Secret", "test-secret");
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", "test-token");
+        client.DefaultRequestHeaders.Add("X-Environment-Url", "https://example.crm.dynamics.com");
+
+        using var content = new MultipartFormDataContent();
+        if (fixture == "not-a-pe")
+            content.Add(new ByteArrayContent("not a PE file"u8.ToArray()), "assembly", "corrupt.dll");
+        else
+        {
+            await using var stream = File.OpenRead(FixturePath(fixture));
+            content.Add(new StreamContent(stream), "assembly", fixture);
+            var response = await client.PostAsync("/api/plugin-registration/assemblies/analyze", content);
+            var body = await response.Content.ReadAsStringAsync();
+            var error = await response.Content.ReadFromJsonAsync<AssemblyInspectionErrorDto>();
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.NotNull(error);
+            Assert.Equal(expectedCode, error.Code);
+            Assert.DoesNotContain("d2997b4d969e30c1", body, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain("stack", body, StringComparison.OrdinalIgnoreCase);
+            return;
+        }
+
+        {
+            var response = await client.PostAsync("/api/plugin-registration/assemblies/analyze", content);
+            var body = await response.Content.ReadAsStringAsync();
+            var error = await response.Content.ReadFromJsonAsync<AssemblyInspectionErrorDto>();
+            Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+            Assert.NotNull(error);
+            Assert.Equal(expectedCode, error.Code);
+            Assert.DoesNotContain("not a PE file", body, StringComparison.Ordinal);
+            Assert.DoesNotContain("stack", body, StringComparison.OrdinalIgnoreCase);
+        }
+    }
+
     [Fact]
     public async Task Analyze_endpoint_returns_compatibility_diagnostics_in_the_public_contract()
     {

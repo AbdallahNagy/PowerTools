@@ -8,6 +8,7 @@ public sealed record StepDraftDto(Guid PluginTypeId, Guid SdkMessageId, Guid Sdk
 {
     public string ImpersonatingUserAction { get; init; } = "keep";
     public string UnsecureConfigurationAction { get; init; } = "keep";
+    public string SecureConfigurationAction { get; init; } = "keep";
 }
 
 public sealed record StepPublicValuesDto(string Name, string Message, string PrimaryTable, string? SecondaryTable,

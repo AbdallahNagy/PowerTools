@@ -219,6 +219,63 @@ describe("Step mutations", () => {
     expect(within(dialog).getByLabelText("Filtering attributes")).toBeDisabled();
     expect(within(dialog).getByRole("button", { name: "Preview changes" })).toBeDisabled();
   });
+
+  it("loads selected-filter metadata once and keeps a missing current filter selectable as unavailable", async () => {
+    let metadataReads = 0;
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/step-options", () => HttpResponse.json({
+        messages: [{ id: "message-update", name: "Update" }],
+        filters: [
+          { id: "filter-account-related", messageId: "message-update", primaryTable: "account", secondaryTable: "contact", primaryIdAttribute: "accountid" },
+        ],
+        enabledUsers: [],
+      })),
+      http.get("http://localhost/api/plugin-registration/steps/step-1/edit-details", () => HttpResponse.json({
+        stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-retired",
+        primaryTable: "account", secondaryTable: "lead", stage: 40, mode: 0, rank: 1, filteringAttributes: ["name"],
+        impersonatingUserId: "user-retired", unsecureConfiguration: null, secureConfigExists: true,
+        expectedVersions: { "plugin-1": 4, "step-1": 7 },
+      })),
+      http.get("http://localhost/api/plugin-registration/step-filters/:filterId/metadata", ({ params }) => {
+        metadataReads += 1;
+        return HttpResponse.json({ filterId: params.filterId, primaryIdAttribute: "accountid", availableAttributes: ["accountid", "name"] });
+      }),
+    );
+    renderPage();
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Update step" });
+    const filter = await within(dialog).findByLabelText("Message filter");
+    expect(filter).toHaveValue("filter-retired");
+    expect(filter).toHaveTextContent("unavailable");
+    expect(within(dialog).getByLabelText("Impersonating user")).toHaveTextContent("unavailable");
+    await waitFor(() => expect(metadataReads).toBeGreaterThanOrEqual(1));
+    const readsAfterLoad = metadataReads;
+    await userEvent.selectOptions(filter, "filter-account-related");
+    await waitFor(() => expect(metadataReads).toBeGreaterThan(readsAfterLoad));
+  });
+
+  it("requires an explicit clear action to remove stored secure configuration", async () => {
+    renderPage();
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Update step" });
+    expect(await within(dialog).findByLabelText("Keep stored secure configuration")).toBeChecked();
+    expect(within(dialog).queryByLabelText("Replacement secure configuration")).not.toBeInTheDocument();
+    await userEvent.click(within(dialog).getByLabelText("Clear stored secure configuration"));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Preview changes" }));
+    expect(apiPostMock).toHaveBeenCalledWith("/api/plugin-registration/steps/step-1/update/preflight",
+      expect.objectContaining({ secureConfigurationAction: "clear", replacementSecureConfiguration: null }), expect.anything());
+  });
+
+  it("discards a pending step dialog after the connection changes", async () => {
+    renderPage();
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+    expect(await screen.findByRole("dialog", { name: "Update step" })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Connection"), { target: { value: "Production" } });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Update step" })).not.toBeInTheDocument());
+  });
 });
 
 function useResponses() {
@@ -244,9 +301,12 @@ function useResponses() {
 
 function renderPage() {
   return renderWithProviders(<ConnectionsProvider><PluginRegistration /></ConnectionsProvider>, { bridgeOverrides: {
-    listConnections: async () => [{ name: "Development", envUrl: "https://development.test", crmType: "online" }],
+    listConnections: async () => [
+      { name: "Development", envUrl: "https://development.test", crmType: "online" },
+      { name: "Production", envUrl: "https://production.test", crmType: "online" },
+    ],
     getActiveConnectionName: async () => "Development",
-    getConnection: async (name) => ({ name, envUrl: "https://development.test", crmType: "online", token: "token", expiresOn: "2099-01-01T00:00:00Z" }),
+    getConnection: async (name) => ({ name, envUrl: `https://${name.toLowerCase()}.test`, crmType: "online", token: "token", expiresOn: "2099-01-01T00:00:00Z" }),
   } });
 }
 async function openPlugin() {

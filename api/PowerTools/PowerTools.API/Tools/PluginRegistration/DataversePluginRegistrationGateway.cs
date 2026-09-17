@@ -114,15 +114,31 @@ public sealed class DataversePluginRegistrationGateway(
         var message = options.Messages.SingleOrDefault(item => item.Id == draft.SdkMessageId);
         var filter = options.Filters.SingleOrDefault(item => item.Id == draft.SdkMessageFilterId
             && item.MessageId == draft.SdkMessageId);
-        var filterMetadata = filter is null ? null : await RetrieveStepFilterMetadataAsync(filter.Id, cancellationToken);
-        var userValid = !draft.ImpersonatingUserId.HasValue || options.EnabledUsers.Any(item => item.Id == draft.ImpersonatingUserId);
-        var plugin = await service.RetrieveAsync("plugintype", pluginTypeId,
-            new ColumnSet("isworkflowactivity", "ismanaged", "iscustomizable", "versionnumber"), cancellationToken);
         Entity? targetDetails = null;
         if (targetStepId is { } detailId)
             targetDetails = await service.RetrieveAsync("sdkmessageprocessingstep", detailId,
                 new ColumnSet("sdkmessageid", "sdkmessagefilterid", "filteringattributes", "impersonatinguserid", "plugintypeid",
                     "configuration", "sdkmessageprocessingstepsecureconfigid", "name", "stage", "mode", "rank", "statecode", "ismanaged", "iscustomizable", "versionnumber"), cancellationToken);
+        var currentMessageId = targetDetails is null ? null : LookupId(targetDetails, "sdkmessageid");
+        var currentFilterId = targetDetails is null ? null : LookupId(targetDetails, "sdkmessagefilterid");
+        var keepingCurrentFilter = currentFilterId == draft.SdkMessageFilterId;
+        var keepingCurrentMessage = currentMessageId == draft.SdkMessageId;
+        var resolvedFilter = filter;
+        if (resolvedFilter is null && keepingCurrentFilter && draft.SdkMessageFilterId != Guid.Empty)
+        {
+            var currentFilter = await service.RetrieveAsync("sdkmessagefilter", draft.SdkMessageFilterId,
+                new ColumnSet("sdkmessageid", "primaryobjecttypecode", "secondaryobjecttypecode"), cancellationToken);
+            resolvedFilter = new StepMessageFilterOptionDto(currentFilter.Id, LookupId(currentFilter, "sdkmessageid") ?? Guid.Empty,
+                Text(currentFilter, "primaryobjecttypecode"), NullableText(currentFilter, "secondaryobjecttypecode"),
+                $"{Text(currentFilter, "primaryobjecttypecode")}id", []);
+        }
+        var filterMetadata = resolvedFilter is null ? null : await RetrieveStepFilterMetadataAsync(resolvedFilter.Id, cancellationToken);
+        var currentUserId = targetDetails is null ? null : LookupId(targetDetails, "impersonatinguserid");
+        var userValid = !draft.ImpersonatingUserId.HasValue
+            || options.EnabledUsers.Any(item => item.Id == draft.ImpersonatingUserId)
+            || draft.ImpersonatingUserAction == "keep" && currentUserId == draft.ImpersonatingUserId;
+        var plugin = await service.RetrieveAsync("plugintype", pluginTypeId,
+            new ColumnSet("isworkflowactivity", "ismanaged", "iscustomizable", "versionnumber"), cancellationToken);
         var secureConfigId = targetDetails is null ? null : LookupId(targetDetails, "sdkmessageprocessingstepsecureconfigid");
         long? secureConfigVersion = null;
         if (secureConfigId is { } secureId)
@@ -148,8 +164,8 @@ public sealed class DataversePluginRegistrationGateway(
         var dependencies = targetStepId is { } stepId
             ? await RetrieveDependenciesAsync(stepId, 92, cancellationToken)
             : [];
-        return new(message?.Name ?? "", filter?.PrimaryTable ?? draft.PrimaryTable,
-            filterMetadata?.PrimaryIdAttribute ?? $"{draft.PrimaryTable}id", message is not null, filter is not null,
+        return new(message?.Name ?? "", resolvedFilter?.PrimaryTable ?? draft.PrimaryTable,
+            filterMetadata?.PrimaryIdAttribute ?? $"{draft.PrimaryTable}id", message is not null || keepingCurrentMessage, resolvedFilter is not null && (filter is not null || keepingCurrentFilter),
             userValid, duplicate, targetDetails?.GetAttributeValue<bool>("ismanaged") ?? false, targetDetails is null || ManagedBoolean(targetDetails, "iscustomizable"),
             targetDetails is not null && LookupId(targetDetails, "sdkmessageprocessingstepsecureconfigid").HasValue,
             targetDetails is null ? null : Number(targetDetails, "versionnumber"), pluginTypeId, targetStepId, targetDetails is null ? null : Text(targetDetails, "name"), dependencies,
@@ -162,7 +178,7 @@ public sealed class DataversePluginRegistrationGateway(
             targetDetails is null ? draft.Stage : Option(targetDetails, "stage"), targetDetails is null ? draft.Mode : Option(targetDetails, "mode"), targetDetails?.GetAttributeValue<int?>("rank") ?? draft.Rank,
             targetDetails is null || Option(targetDetails, "statecode") == 0)
         {
-            SecondaryTable = filter?.SecondaryTable,
+            SecondaryTable = resolvedFilter?.SecondaryTable,
             AvailableAttributes = filterMetadata?.AvailableAttributes ?? [],
             IsOrdinaryPlugin = !plugin.GetAttributeValue<bool>("isworkflowactivity"),
             IsParentManaged = plugin.GetAttributeValue<bool>("ismanaged"),
@@ -240,7 +256,19 @@ public sealed class DataversePluginRegistrationGateway(
                 }
                 requests.Add(new UpdateRequest { Target = entity, ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches });
             }
-            if (draft.ReplacementSecureConfiguration is not null)
+            if (draft.SecureConfigurationAction == "clear" && command.ExpectedSecureConfigId is { } clearSecureId)
+            {
+                entity["sdkmessageprocessingstepsecureconfigid"] = null;
+                requests.Add(new DeleteRequest
+                {
+                    Target = new EntityReference("sdkmessageprocessingstepsecureconfig", clearSecureId)
+                    {
+                        RowVersion = command.ExpectedSecureConfigVersion?.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    },
+                    ConcurrencyBehavior = ConcurrencyBehavior.IfRowVersionMatches
+                });
+            }
+            else if (draft.ReplacementSecureConfiguration is not null || draft.SecureConfigurationAction == "set")
             {
                 var existingSecureId = command.ExpectedSecureConfigId;
                 var secureId = existingSecureId ?? Guid.NewGuid();

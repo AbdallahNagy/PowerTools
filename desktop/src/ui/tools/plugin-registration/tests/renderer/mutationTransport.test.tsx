@@ -38,7 +38,8 @@ it("marks every plug-in registration POST as a single-attempt request", async ()
     primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 1,
     filteringAttributes: ["name"], impersonatingUserId: null, unsecureConfiguration: null,
     replacementSecureConfiguration: null, expectedVersions: { plugin: 1 },
-    impersonatingUserAction: "keep" as const, unsecureConfigurationAction: "keep" as const };
+    impersonatingUserAction: "keep" as const, unsecureConfigurationAction: "keep" as const,
+    secureConfigurationAction: "keep" as const };
   const imageDraft = { stepId: "step", imageType: 0, alias: "PreImage", messagePropertyName: "Target",
     attributes: ["name"], expectedVersions: { step: 1 } };
   const workflowDraft = { workflowActivityId: "workflow", name: "Activity", friendlyName: null,
