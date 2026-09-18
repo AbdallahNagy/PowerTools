@@ -61,26 +61,32 @@ public sealed class DataversePluginRegistrationGateway(
 
     public async Task<StepOptionsDto> RetrieveStepOptionsAsync(CancellationToken cancellationToken)
     {
-        var messagesTask = RetrieveAllPagesAsync(new QueryExpression("sdkmessage")
+        var messagesQuery = new QueryExpression("sdkmessage")
         {
             ColumnSet = new ColumnSet("sdkmessageid", "name"),
             Criteria = new FilterExpression(LogicalOperator.And)
             {
                 Conditions = { new("isprivate", ConditionOperator.Equal, false) }
             }
-        }, cancellationToken);
-        var filtersTask = RetrieveAllPagesAsync(new QueryExpression("sdkmessagefilter")
+        };
+        messagesQuery.AddOrder("sdkmessageid", OrderType.Ascending);
+        var filtersQuery = new QueryExpression("sdkmessagefilter")
         {
             ColumnSet = new ColumnSet("sdkmessagefilterid", "sdkmessageid", "primaryobjecttypecode", "secondaryobjecttypecode")
-        }, cancellationToken);
-        var usersTask = RetrieveAllPagesAsync(new QueryExpression("systemuser")
+        };
+        filtersQuery.AddOrder("sdkmessagefilterid", OrderType.Ascending);
+        var usersQuery = new QueryExpression("systemuser")
         {
             ColumnSet = new ColumnSet("systemuserid", "fullname"),
             Criteria = new FilterExpression(LogicalOperator.And)
             {
                 Conditions = { new("isdisabled", ConditionOperator.Equal, false), new("accessmode", ConditionOperator.NotEqual, 3) }
             }
-        }, cancellationToken);
+        };
+        usersQuery.AddOrder("systemuserid", OrderType.Ascending);
+        var messagesTask = RetrieveAllPagesAsync(messagesQuery, cancellationToken);
+        var filtersTask = RetrieveAllPagesAsync(filtersQuery, cancellationToken);
+        var usersTask = RetrieveAllPagesAsync(usersQuery, cancellationToken);
         await Task.WhenAll(messagesTask, filtersTask, usersTask);
         return new(
             messagesTask.Result.Select(row => new StepOptionDto(row.Id, Text(row, "name"))).OrderBy(row => row.Name).ToArray(),

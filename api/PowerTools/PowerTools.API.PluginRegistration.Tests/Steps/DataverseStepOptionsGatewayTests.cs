@@ -62,6 +62,7 @@ public sealed class DataverseStepOptionsGatewayTests
             .RetrieveStepOptionsAsync(CancellationToken.None);
 
         Assert.Equal(2, options.Filters.Count);
+        Assert.Contains(proxy.LastFilterQuery!.Orders, order => order.AttributeName == "sdkmessagefilterid");
         Assert.Single(options.Filters, filter => filter.Id == proxy.FilterId);
         Assert.Single(options.Filters, filter => filter.PrimaryTable == "none");
     }
@@ -97,6 +98,7 @@ public sealed class DataverseStepOptionsGatewayTests
     {
         public string NoTable { get; set; } = "none";
         public bool PageFilters { get; set; }
+        public QueryExpression? LastFilterQuery { get; private set; }
         public Guid StepId { get; } = Guid.NewGuid();
         public Guid FilterId { get; } = Guid.NewGuid();
         public Guid SecureConfigId { get; } = Guid.NewGuid();
@@ -110,6 +112,7 @@ public sealed class DataverseStepOptionsGatewayTests
             if (targetMethod?.Name == "RetrieveMultipleAsync")
             {
                 var query = Assert.IsType<QueryExpression>(args![0]);
+                if (query.EntityName == "sdkmessagefilter") LastFilterQuery = query;
                 Entity[] rows = query.EntityName switch
                 {
                     "sdkmessage" => [new("sdkmessage", MessageId) { ["name"] = "Update" }],

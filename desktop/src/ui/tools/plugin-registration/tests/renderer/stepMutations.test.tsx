@@ -322,10 +322,39 @@ describe("Step mutations", () => {
     await within(dialog).findByLabelText("Message");
     await userEvent.click(within(dialog).getByLabelText("Entity"));
     const entityDialog = await screen.findByRole("dialog", { name: "Select entity" });
-    expect(within(entityDialog).getByText("Loading entities…")).toBeInTheDocument();
-    expect(within(entityDialog).queryByRole("option")).not.toBeInTheDocument();
+    expect(within(entityDialog).getByText("Loading entity names…")).toBeInTheDocument();
+    expect(await within(entityDialog).findByRole("option", { name: /account account/i })).toBeInTheDocument();
     releaseEntities();
     expect(await within(entityDialog).findByRole("option", { name: /Account account/i })).toBeInTheDocument();
+  });
+
+  it("defaults a new step to Update and lists every entity for that message", async () => {
+    httpServer.use(http.get("http://localhost/api/plugin-registration/step-options", () => HttpResponse.json({
+      messages: [
+        { id: "message-additem", name: "AddItem" },
+        { id: "message-update", name: "Update" },
+      ],
+      filters: [
+        { id: "filter-quotedetail", messageId: "message-additem", primaryTable: "quotedetail", secondaryTable: "none", primaryIdAttribute: "quotedetailid" },
+        { id: "filter-account", messageId: "message-update", primaryTable: "account", secondaryTable: "none", primaryIdAttribute: "accountid" },
+        { id: "filter-contact", messageId: "message-update", primaryTable: "contact", secondaryTable: null, primaryIdAttribute: "contactid" },
+        { id: "filter-none", messageId: "message-update", primaryTable: "none", secondaryTable: "none", primaryIdAttribute: "noneid" },
+      ],
+      enabledUsers: [],
+    })));
+    renderPage();
+    await openPlugin();
+    fireEvent.contextMenu(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }));
+    await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register New Step" }));
+    const dialog = await screen.findByRole("dialog", { name: "Register step" });
+    expect(await within(dialog).findByLabelText("Message")).toHaveTextContent("Update");
+    await userEvent.click(within(dialog).getByLabelText("Entity"));
+    const entityDialog = await screen.findByRole("dialog", { name: "Select entity" });
+    expect(await within(entityDialog).findByRole("option", { name: /^None none$/i })).toBeInTheDocument();
+    expect(within(entityDialog).getByRole("option", { name: /^Account account$/i })).toBeInTheDocument();
+    expect(within(entityDialog).getByRole("option", { name: /^Contact contact$/i })).toBeInTheDocument();
+    expect(within(entityDialog).queryByRole("option", { name: /quotedetail/i })).not.toBeInTheDocument();
+    expect(within(entityDialog).getAllByRole("option")).toHaveLength(3);
   });
 
   it("keeps filled step form data when the modal overlay is clicked", async () => {

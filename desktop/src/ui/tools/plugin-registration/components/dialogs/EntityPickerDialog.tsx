@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button, Modal, Spinner } from "../../../../shared/ui";
 import {
@@ -26,6 +26,9 @@ export function EntityPickerDialog({
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
+  useEffect(() => {
+    if (open) setQuery("");
+  }, [open]);
   const filtered = useMemo(() => {
     const term = query.trim().toLocaleLowerCase();
     if (!term) return options;
@@ -34,8 +37,13 @@ export function EntityPickerDialog({
 
   if (!open) return null;
 
+  const close = () => {
+    setQuery("");
+    onClose();
+  };
+
   return (
-    <Modal open title="Select entity" onClose={() => { setQuery(""); onClose(); }} widthClass="max-w-3xl">
+    <Modal open title="Select entity" onClose={close} widthClass="max-w-3xl">
       <div role="dialog" aria-label="Select entity" className="flex flex-col gap-3">
         <input
           aria-label="Search entities"
@@ -46,56 +54,54 @@ export function EntityPickerDialog({
           autoFocus
         />
         {loading ? (
-          <div role="status" className="flex min-h-40 items-center justify-center gap-2 text-sm text-[#858585]">
+          <div role="status" className="flex items-center gap-2 text-sm text-[#858585]">
             <Spinner />
-            Loading entities…
+            Loading entity names…
           </div>
-        ) : (
-          <div className="max-h-96 overflow-auto rounded-sm border border-[#3c3c3c]">
-            <table className="w-full border-collapse text-sm text-[var(--color-text-gray)]">
-              <thead className="sticky top-0 bg-[#252526]">
+        ) : null}
+        <div className="max-h-96 overflow-auto rounded-sm border border-[#3c3c3c]">
+          <table className="w-full border-collapse text-sm text-[var(--color-text-gray)]">
+            <thead className="sticky top-0 bg-[#252526]">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-[#858585]">Name</th>
+                <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-[#858585]">Logical name</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length === 0 ? (
                 <tr>
-                  <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-[#858585]">Name</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider text-[#858585]">Logical name</th>
+                  <td colSpan={2} className="px-3 py-6 text-center text-xs text-[#858585]">No matching entities.</td>
                 </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
-                  <tr>
-                    <td colSpan={2} className="px-3 py-6 text-center text-xs text-[#858585]">No matching entities.</td>
+              ) : filtered.map((option) => {
+                const selected = option.id === value;
+                return (
+                  <tr key={option.id} className={selected ? "bg-[var(--color-hover-bg)]" : ""}>
+                    <td colSpan={2} className="p-0">
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        aria-label={entityOptionLabel(option)}
+                        className="grid w-full grid-cols-2 px-3 py-2 text-left hover:bg-[var(--color-hover-bg)]"
+                        onClick={() => {
+                          onSelect(option.id);
+                          close();
+                        }}
+                      >
+                        <span className="truncate text-[var(--color-text-white)]">
+                          {entityDisplayName(option)}{option.unavailable ? " (unavailable)" : ""}
+                        </span>
+                        <span className="truncate font-mono text-xs text-[#858585]">{entityLogicalName(option)}</span>
+                      </button>
+                    </td>
                   </tr>
-                ) : filtered.map((option) => {
-                  const selected = option.id === value;
-                  return (
-                    <tr key={option.id} className={selected ? "bg-[var(--color-hover-bg)]" : ""}>
-                      <td colSpan={2} className="p-0">
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={selected}
-                          aria-label={entityOptionLabel(option)}
-                          className="grid w-full grid-cols-2 px-3 py-2 text-left hover:bg-[var(--color-hover-bg)]"
-                          onClick={() => {
-                            onSelect(option.id);
-                            setQuery("");
-                            onClose();
-                          }}
-                        >
-                          <span className="truncate text-[var(--color-text-white)]">
-                            {entityDisplayName(option)}{option.unavailable ? " (unavailable)" : ""}
-                          </span>
-                          <span className="truncate font-mono text-xs text-[#858585]">{entityLogicalName(option)}</span>
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
         <div className="flex justify-end">
-          <Button type="button" variant="secondary" onClick={() => { setQuery(""); onClose(); }}>Cancel</Button>
+          <Button type="button" variant="secondary" onClick={close}>Cancel</Button>
         </div>
       </div>
     </Modal>

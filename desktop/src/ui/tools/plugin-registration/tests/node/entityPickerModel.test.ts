@@ -40,4 +40,17 @@ describe("entity picker labels", () => {
     expect(entityDisplayName(option)).toBe("Account · Contact");
     expect(entityLogicalName(option)).toBe("account · contact");
   });
+
+  it("labels an any-table filter as None without a suffix", () => {
+    const option = {
+      id: "filter-none",
+      logicalName: "none",
+      displayName: "None",
+      secondaryLogicalName: null,
+      secondaryDisplayName: null,
+    };
+
+    expect(entityDisplayName(option)).toBe("None");
+    expect(entityLogicalName(option)).toBe("none");
+  });
 });

@@ -55,9 +55,12 @@ export function StepDialog({
   const isReadOnly = operation === "update" && Boolean(step?.isManaged || !step?.isCustomizable);
   const detailsReady = operation === "create" || editDetails.isSuccess;
   const optionsReady = mutations.options.isSuccess;
-  const selectedMessageId = messageId || options?.messages[0]?.id || "";
+  const selectedMessageId = messageId
+    || options?.messages.find((item) => item.name.toLowerCase() === "update")?.id
+    || options?.messages[0]?.id
+    || "";
   const matchingFilters = useMemo(
-    () => options?.filters.filter((item) => item.messageId === selectedMessageId) ?? [],
+    () => options?.filters.filter((item) => item.messageId.toLowerCase() === selectedMessageId.toLowerCase()) ?? [],
     [options?.filters, selectedMessageId],
   );
   const currentFilterId = editDetails.data?.sdkMessageFilterId ?? "";
@@ -66,7 +69,9 @@ export function StepDialog({
     currentFilterId && !matchingFilters.some((item) => item.id === currentFilterId),
   );
   const selectedFilter = matchingFilters.find((item) => item.id === (filterId || currentFilterId))
-    ?? (currentFilterUnavailable ? undefined : matchingFilters[0]);
+    ?? (currentFilterUnavailable
+      ? undefined
+      : matchingFilters.find((item) => isPresentTable(item.primaryTable)) ?? matchingFilters[0]);
   const activeFilterId = filterId || (currentFilterUnavailable ? currentFilterId : selectedFilter?.id || "");
   const filterMetadata = useStepFilterMetadata(connectionName, activeFilterId || null);
   const entityCatalog = useEntityDisplayNames(connectionName, true);
@@ -108,7 +113,7 @@ export function StepDialog({
   );
   const availableAttributes = attributeRows.map((attribute) => attribute.logicalName.toLowerCase());
   const primaryKeySelected = Boolean(primaryIdAttribute && attributes.includes(primaryIdAttribute.toLowerCase()));
-  const selectedMessageName = options?.messages.find((item) => item.id === selectedMessageId)?.name
+  const selectedMessageName = options?.messages.find((item) => item.id.toLowerCase() === selectedMessageId.toLowerCase())?.name
     ?? step?.messageLabel
     ?? "Message";
   const updateWithoutFilters = selectedMessageName === "Update" && attributes.length === 0;
@@ -199,10 +204,10 @@ export function StepDialog({
       ));
     }
     for (const item of matchingFilters) {
-      if (!item.primaryTable || item.primaryTable.toLowerCase() === "none") continue;
+      if (!item.primaryTable) continue;
       rows.push(toEntityOption(item.id, item.primaryTable, item.secondaryTable, entityByLogicalName, false));
     }
-    return rows;
+    return rows.sort((left, right) => compareEntityOptions(left, right));
   }, [currentFilterId, currentFilterUnavailable, editDetails.data?.primaryTable, editDetails.data?.secondaryTable, entityByLogicalName, matchingFilters]);
   const selectedEntity = entityOptions.find((option) => option.id === activeFilterId);
   const selectedEntityLabel = selectedEntity
@@ -419,17 +424,25 @@ function toEntityOption(
   entities: Map<string, EntityInfo>,
   unavailable: boolean,
 ): EntityPickerOption {
-  const primary = entities.get(primaryTable.toLowerCase());
+  const hasPrimary = isPresentTable(primaryTable);
+  const primary = hasPrimary ? entities.get(primaryTable.toLowerCase()) : undefined;
   const secondaryName = isPresentTable(secondaryTable) ? secondaryTable : null;
   const secondary = secondaryName ? entities.get(secondaryName.toLowerCase()) : undefined;
   return {
     id,
-    logicalName: primaryTable,
-    displayName: primary?.displayName || primaryTable,
+    logicalName: hasPrimary ? primaryTable : "none",
+    displayName: primary?.displayName || (hasPrimary ? primaryTable : "None"),
     secondaryLogicalName: secondaryName,
     secondaryDisplayName: secondary?.displayName || secondaryName,
     unavailable,
   };
+}
+
+function compareEntityOptions(left: EntityPickerOption, right: EntityPickerOption) {
+  const leftNone = !isPresentTable(left.logicalName);
+  const rightNone = !isPresentTable(right.logicalName);
+  if (leftNone !== rightNone) return leftNone ? -1 : 1;
+  return entityDisplayName(left).localeCompare(entityDisplayName(right), undefined, { sensitivity: "base" });
 }
 
 function toAttributeRows(
