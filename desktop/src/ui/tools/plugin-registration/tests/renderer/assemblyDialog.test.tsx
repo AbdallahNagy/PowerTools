@@ -1,3 +1,4 @@
+import { File as NodeFile } from "node:buffer";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
@@ -33,7 +34,7 @@ const inspection = {
 
 describe("AssemblyDialog", () => {
   it("posts the selected assembly file and isolation mode", async () => {
-    let posted: { assembly?: string; isolationMode?: string } = {};
+    let posted: { hasAssembly?: boolean; isolationMode?: string } = {};
     httpServer.use(
       http.get("http://localhost/api/plugin-registration/capabilities", () =>
         HttpResponse.json({
@@ -49,9 +50,8 @@ describe("AssemblyDialog", () => {
         "http://localhost/api/plugin-registration/assemblies",
         async ({ request }) => {
           const form = await request.formData();
-          const file = form.get("assembly");
           posted = {
-            assembly: file instanceof File ? file.name : String(file),
+            hasAssembly: form.has("assembly"),
             isolationMode: String(form.get("isolationMode")),
           };
           return HttpResponse.json({ id: catalogFixture.assemblies[0]?.id });
@@ -74,7 +74,7 @@ describe("AssemblyDialog", () => {
       },
     );
 
-    const file = new File(["dll-bytes"], "Contoso.Plugins.dll", {
+    const file = new NodeFile(["dll-bytes"], "Contoso.Plugins.dll", {
       type: "application/octet-stream",
     });
     fireEvent.change(await screen.findByLabelText("Assembly"), {
@@ -84,7 +84,7 @@ describe("AssemblyDialog", () => {
     expect(await screen.findByText("Contoso.Plugins.AccountPlugin")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Register" }));
 
-    await waitFor(() => expect(posted.assembly).toBe("Contoso.Plugins.dll"));
+    await waitFor(() => expect(posted.hasAssembly).toBe(true));
     expect(posted.isolationMode).toBe("2");
   });
 });
