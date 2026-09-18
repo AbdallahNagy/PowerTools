@@ -96,16 +96,29 @@ public sealed class DataversePluginRegistrationGateway(
             new ColumnSet("primaryobjecttypecode"), cancellationToken);
         var logicalName = Text(filter, "primaryobjecttypecode");
         if (logicalName.Length == 0 || string.Equals(logicalName, "none", StringComparison.OrdinalIgnoreCase))
-            return new(filterId, $"{logicalName}id", []);
+            return new(filterId, $"{logicalName}id", []) { LogicalName = logicalName, DisplayName = logicalName };
         var response = (RetrieveEntityResponse)await service.ExecuteAsync(new RetrieveEntityRequest
         {
             LogicalName = logicalName,
             EntityFilters = EntityFilters.Entity | EntityFilters.Attributes,
             RetrieveAsIfPublished = true
         }, cancellationToken);
+        var attributes = response.EntityMetadata.Attributes
+            .Where(attribute => attribute.AttributeOf is null && !string.IsNullOrWhiteSpace(attribute.LogicalName))
+            .OrderBy(attribute => attribute.DisplayName?.UserLocalizedLabel?.Label ?? attribute.LogicalName)
+            .Select(attribute => new StepAttributeMetadataDto(
+                attribute.LogicalName!,
+                attribute.DisplayName?.UserLocalizedLabel?.Label ?? attribute.LogicalName!,
+                attribute.AttributeType?.ToString() ?? "Unknown",
+                attribute.IsPrimaryId == true))
+            .ToArray();
         return new(filterId, response.EntityMetadata.PrimaryIdAttribute,
-            response.EntityMetadata.Attributes.Select(attribute => attribute.LogicalName)
-                .Where(name => !string.IsNullOrWhiteSpace(name)).ToArray()!);
+            attributes.Select(attribute => attribute.LogicalName).ToArray())
+        {
+            Attributes = attributes,
+            LogicalName = logicalName,
+            DisplayName = response.EntityMetadata.DisplayName?.UserLocalizedLabel?.Label ?? logicalName
+        };
     }
 
     public async Task<PluginStepPreflightState> RetrieveStepPreflightStateAsync(Guid pluginTypeId,

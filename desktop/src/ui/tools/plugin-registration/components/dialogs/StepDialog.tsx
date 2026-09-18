@@ -1,16 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button, Modal, Spinner } from "../../../../shared/ui";
+import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import {
+  useEntityDisplayNames,
   useStepEditDetails,
   useStepFilterMetadata,
   useStepMutations,
   type StepDraft,
+  type StepFilterAttribute,
 } from "../../api/useStepMutations";
 import type { PluginHandler, PluginStep } from "../../model/contracts";
 import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
-import { SearchableMultiSelect, SearchableSelect } from "../SearchableSelect";
+import { closeExclusiveSelects, SearchableSelect } from "../SearchableSelect";
 import { fieldClass } from "../formStyles";
+import { AttributePickerDialog } from "./AttributePickerDialog";
+import { EntityPickerDialog, entityDisplayName, type EntityPickerOption } from "./EntityPickerDialog";
 
 interface Props {
   connectionName: string | null;
@@ -43,6 +48,8 @@ export function StepDialog({
   const [showAllAttributesWarning, setShowAllAttributesWarning] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [initialReady, setInitialReady] = useState(false);
+  const [entityPickerOpen, setEntityPickerOpen] = useState(false);
+  const [attributePickerOpen, setAttributePickerOpen] = useState(false);
   const isReadOnly = operation === "update" && Boolean(step?.isManaged || !step?.isCustomizable);
   const detailsReady = operation === "create" || editDetails.isSuccess;
   const optionsReady = mutations.options.isSuccess;
@@ -57,6 +64,7 @@ export function StepDialog({
     ?? (currentFilterUnavailable ? undefined : matchingFilters[0]);
   const activeFilterId = filterId || (currentFilterUnavailable ? currentFilterId : selectedFilter?.id || "");
   const filterMetadata = useStepFilterMetadata(connectionName, activeFilterId || null);
+  const entityCatalog = useEntityDisplayNames(connectionName, entityPickerOpen);
   const metadataReady = !activeFilterId || filterMetadata.isSuccess || filterMetadata.isError;
   const formError = mutations.options.isError || (operation === "update" && editDetails.isError);
   useEffect(() => {
@@ -88,8 +96,12 @@ export function StepDialog({
   const primaryIdAttribute = filterMetadata.data?.primaryIdAttribute
     || selectedFilter?.primaryIdAttribute
     || "";
-  const availableAttributes = (filterMetadata.data?.availableAttributes ?? selectedFilter?.availableAttributes ?? [])
-    .filter((name) => name.length > 0);
+  const attributeRows = useMemo(
+    () => toAttributeRows(filterMetadata.data?.attributes, filterMetadata.data?.availableAttributes
+      ?? selectedFilter?.availableAttributes ?? [], primaryIdAttribute),
+    [filterMetadata.data?.attributes, filterMetadata.data?.availableAttributes, primaryIdAttribute, selectedFilter?.availableAttributes],
+  );
+  const availableAttributes = attributeRows.map((attribute) => attribute.logicalName.toLowerCase());
   const primaryKeySelected = Boolean(primaryIdAttribute && attributes.includes(primaryIdAttribute.toLowerCase()));
   const selectedMessageName = options?.messages.find((item) => item.id === selectedMessageId)?.name
     ?? step?.messageLabel
@@ -166,25 +178,65 @@ export function StepDialog({
     void save();
   };
 
-  const entityOptions = [
-    ...(currentFilterUnavailable ? [{
-      id: currentFilterId,
-      label: entityLabel(editDetails.data?.primaryTable ?? "entity", editDetails.data?.secondaryTable ?? null),
-      unavailable: true,
-    }] : []),
-    ...matchingFilters
-      .filter((item) => item.primaryTable && item.primaryTable.toLowerCase() !== "none")
-      .map((item) => ({
-        id: item.id,
-        label: entityLabel(item.primaryTable, item.secondaryTable),
-      })),
-  ];
+  const entityByLogicalName = useMemo(
+    () => new Map((entityCatalog.data ?? []).map((entity) => [entity.logicalName.toLowerCase(), entity])),
+    [entityCatalog.data],
+  );
+  const entityOptions = useMemo(() => {
+    const rows: EntityPickerOption[] = [];
+    if (currentFilterUnavailable) {
+      rows.push(toEntityOption(
+        currentFilterId,
+        editDetails.data?.primaryTable ?? "entity",
+        editDetails.data?.secondaryTable ?? null,
+        entityByLogicalName,
+        true,
+      ));
+    }
+    for (const item of matchingFilters) {
+      if (!item.primaryTable || item.primaryTable.toLowerCase() === "none") continue;
+      rows.push(toEntityOption(item.id, item.primaryTable, item.secondaryTable, entityByLogicalName, false));
+    }
+    return rows;
+  }, [currentFilterId, currentFilterUnavailable, editDetails.data?.primaryTable, editDetails.data?.secondaryTable, entityByLogicalName, matchingFilters]);
+  const selectedEntity = entityOptions.find((option) => option.id === activeFilterId);
+  const selectedEntityLabel = selectedEntity
+    ? `${entityDisplayName(selectedEntity)}${selectedEntity.unavailable ? " (unavailable)" : ""}`
+    : "Select entity";
   const messageOptions = (options?.messages ?? []).map((item) => ({ id: item.id, label: item.name }));
   const userOptions = [
     { id: "", label: "Calling user" },
     ...(currentUserUnavailable ? [{ id: currentUserId, label: "Current user", unavailable: true }] : []),
     ...(options?.enabledUsers ?? []).map((item) => ({ id: item.id, label: item.name })),
   ];
+  const attributesLoading = Boolean(activeFilterId) && (filterMetadata.isPending || filterMetadata.isFetching);
+  const attributeSummary = attributes.length === 0
+    ? "None selected"
+    : attributes.length === nonPrimaryAttributes.length && nonPrimaryAttributes.length > 0
+      ? "All attributes"
+      : `${attributes.length} selected`;
+
+  const openEntityPicker = () => {
+    closeExclusiveSelects();
+    setAttributePickerOpen(false);
+    setEntityPickerOpen(true);
+  };
+  const openAttributePicker = () => {
+    closeExclusiveSelects();
+    setEntityPickerOpen(false);
+    setAttributePickerOpen(true);
+  };
+  const changeMessage = (id: string) => {
+    setMessageId(id);
+    setFilterId("");
+    setAttributes([]);
+    setAttributePickerOpen(false);
+  };
+  const changeEntity = (id: string) => {
+    setFilterId(id);
+    setAttributes([]);
+    setAttributePickerOpen(false);
+  };
 
   return (
     <>
@@ -211,23 +263,35 @@ export function StepDialog({
                     label="Message"
                     value={selectedMessageId}
                     options={messageOptions}
-                    onChange={(id) => { setMessageId(id); setFilterId(""); setAttributes([]); }}
+                    onChange={changeMessage}
                     disabled={!canEdit}
                   />
-                  <SearchableSelect
-                    label="Entity"
-                    value={activeFilterId}
-                    options={entityOptions}
-                    onChange={(id) => { setFilterId(id); setAttributes([]); }}
-                    disabled={!canEdit}
-                  />
-                  <SearchableMultiSelect
-                    label="Filtering attributes"
-                    values={attributes}
-                    options={availableAttributes.map((name) => ({ id: name, label: name }))}
-                    onChange={(ids) => setAttributes(ids.map((value) => value.toLowerCase()))}
-                    disabled={!canEdit}
-                  />
+                  <div className="flex flex-col gap-1 text-xs tracking-wider text-[#858585]">
+                    <span>Entity</span>
+                    <button
+                      type="button"
+                      aria-label="Entity"
+                      aria-haspopup="dialog"
+                      disabled={!canEdit}
+                      className={`${fieldClass} text-left truncate`}
+                      onClick={openEntityPicker}
+                    >
+                      {selectedEntityLabel}
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-1 text-xs tracking-wider text-[#858585]">
+                    <span>Filtering attributes</span>
+                    <button
+                      type="button"
+                      aria-label="Filtering attributes"
+                      aria-haspopup="dialog"
+                      disabled={!canEdit}
+                      className={`${fieldClass} text-left truncate`}
+                      onClick={openAttributePicker}
+                    >
+                      {attributeSummary}
+                    </button>
+                  </div>
                   {updateWithoutFilters ? <p role="status" className="text-amber-300">Update steps should select filtering attributes.</p> : null}
                   {primaryKeySelected ? <p role="alert" className="text-red-300">The primary key cannot be used as an Update filtering attribute.</p> : null}
                   <SearchableSelect
@@ -237,36 +301,46 @@ export function StepDialog({
                     onChange={setUserId}
                     disabled={!canEdit}
                   />
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-xs tracking-wider text-[#858585]">Stage</legend>
-                    <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
-                      <input type="radio" name="step-stage" aria-label="PreValidation" checked={stage === 10} onChange={() => { setStage(10); setMode(0); }} />
-                      PreValidation
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
-                      <input type="radio" name="step-stage" aria-label="PreOperation" checked={stage === 20} onChange={() => { setStage(20); setMode(0); }} />
-                      PreOperation
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
-                      <input type="radio" name="step-stage" aria-label="PostOperation" checked={stage === 40} onChange={() => setStage(40)} />
-                      PostOperation
-                    </label>
-                  </fieldset>
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="text-xs tracking-wider text-[#858585]">Execution mode</legend>
-                    <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
-                      <input type="radio" name="step-mode" aria-label="Synchronous" checked={mode === 0} onChange={() => setMode(0)} />
-                      Synchronous
-                    </label>
-                    <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
-                      <input type="radio" name="step-mode" aria-label="Asynchronous" checked={mode === 1} disabled={stage !== 40} onChange={() => setMode(1)} />
-                      Asynchronous
-                    </label>
-                  </fieldset>
                   <label className="flex flex-col gap-1 text-xs tracking-wider text-[#858585]">
-                    Rank
-                    <input aria-label="Rank" type="number" value={rank} onChange={(event) => setRank(Number(event.target.value))} className={fieldClass} />
+                    Execution order
+                    <input
+                      aria-label="Execution order"
+                      type="number"
+                      min={1}
+                      max={1000000}
+                      value={rank}
+                      onChange={(event) => setRank(Number(event.target.value))}
+                      className={fieldClass}
+                    />
                   </label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <fieldset className="flex flex-col gap-2">
+                      <legend className="text-xs tracking-wider text-[#858585]">Stage</legend>
+                      <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+                        <input type="radio" name="step-stage" aria-label="PreValidation" checked={stage === 10} onChange={() => { setStage(10); setMode(0); }} />
+                        PreValidation
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+                        <input type="radio" name="step-stage" aria-label="PreOperation" checked={stage === 20} onChange={() => { setStage(20); setMode(0); }} />
+                        PreOperation
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+                        <input type="radio" name="step-stage" aria-label="PostOperation" checked={stage === 40} onChange={() => setStage(40)} />
+                        PostOperation
+                      </label>
+                    </fieldset>
+                    <fieldset className="flex flex-col gap-2">
+                      <legend className="text-xs tracking-wider text-[#858585]">Execution mode</legend>
+                      <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+                        <input type="radio" name="step-mode" aria-label="Synchronous" checked={mode === 0} onChange={() => setMode(0)} />
+                        Synchronous
+                      </label>
+                      <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+                        <input type="radio" name="step-mode" aria-label="Asynchronous" checked={mode === 1} disabled={stage !== 40} onChange={() => setMode(1)} />
+                        Asynchronous
+                      </label>
+                    </fieldset>
+                  </div>
                 </div>
                 <div className="flex flex-col gap-3">
                   <label className="flex flex-col gap-1 text-xs tracking-wider text-[#858585]">
@@ -300,6 +374,22 @@ export function StepDialog({
           ) : null}
         </div>
       </Modal>
+      <EntityPickerDialog
+        open={entityPickerOpen}
+        options={entityOptions}
+        value={activeFilterId}
+        onSelect={changeEntity}
+        onClose={() => setEntityPickerOpen(false)}
+      />
+      <AttributePickerDialog
+        open={attributePickerOpen}
+        attributes={attributeRows}
+        selected={attributes}
+        loading={attributesLoading}
+        disabled={!canEdit}
+        onChange={(ids) => setAttributes(ids.map((value) => value.toLowerCase()))}
+        onClose={() => setAttributePickerOpen(false)}
+      />
       {showAllAttributesWarning ? (
         <Modal open title="All attributes selected" onClose={() => setShowAllAttributesWarning(false)} widthClass="max-w-md">
           <div role="dialog" aria-label="All attributes selected" className="flex flex-col gap-3">
@@ -315,6 +405,39 @@ export function StepDialog({
   );
 }
 
-function entityLabel(primaryTable: string, secondaryTable: string | null) {
-  return secondaryTable ? `${primaryTable} · ${secondaryTable}` : primaryTable;
+function toEntityOption(
+  id: string,
+  primaryTable: string,
+  secondaryTable: string | null,
+  entities: Map<string, EntityInfo>,
+  unavailable: boolean,
+): EntityPickerOption {
+  const primary = entities.get(primaryTable.toLowerCase());
+  const secondary = secondaryTable ? entities.get(secondaryTable.toLowerCase()) : undefined;
+  return {
+    id,
+    logicalName: primaryTable,
+    displayName: primary?.displayName || primaryTable,
+    secondaryLogicalName: secondaryTable,
+    secondaryDisplayName: secondary?.displayName || secondaryTable,
+    unavailable,
+  };
+}
+
+function toAttributeRows(
+  attributes: StepFilterAttribute[] | undefined,
+  availableAttributes: string[],
+  primaryIdAttribute: string,
+): StepFilterAttribute[] {
+  if (attributes && attributes.length > 0) {
+    return attributes.filter((attribute) => attribute.logicalName.length > 0);
+  }
+  return availableAttributes
+    .filter((name) => name.length > 0)
+    .map((name) => ({
+      logicalName: name,
+      displayName: name,
+      attributeType: "",
+      isPrimaryId: Boolean(primaryIdAttribute) && name.toLowerCase() === primaryIdAttribute.toLowerCase(),
+    }));
 }

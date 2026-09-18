@@ -1,10 +1,42 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fieldClass } from "./formStyles";
 
 export interface SearchableOption {
   id: string;
   label: string;
   unavailable?: boolean;
+}
+
+const exclusiveListeners = new Set<(openedId: number) => void>();
+let nextSelectId = 0;
+
+export function closeExclusiveSelects() {
+  for (const listener of exclusiveListeners) listener(-1);
+}
+
+function useExclusiveOpen() {
+  const id = useRef(0);
+  if (id.current === 0) id.current = ++nextSelectId;
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    const listener = (openedId: number) => {
+      if (openedId !== id.current) setOpen(false);
+    };
+    exclusiveListeners.add(listener);
+    return () => { exclusiveListeners.delete(listener); };
+  }, []);
+
+  const setExclusiveOpen = useCallback((next: boolean) => {
+    if (next) {
+      for (const listener of exclusiveListeners) listener(id.current);
+      setOpen(true);
+      return;
+    }
+    setOpen(false);
+  }, []);
+
+  return [open, setExclusiveOpen] as const;
 }
 
 export function SearchableSelect({
@@ -24,7 +56,7 @@ export function SearchableSelect({
   disabled?: boolean;
   emptyLabel?: string;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useExclusiveOpen();
   const [query, setQuery] = useState("");
   const root = useRef<HTMLDivElement>(null);
   const selected = options.find((option) => option.id === value);
@@ -41,7 +73,7 @@ export function SearchableSelect({
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
-  }, [open]);
+  }, [open, setOpen]);
 
   return (
     <label className="flex flex-col gap-1 text-xs tracking-wider text-[#858585]">
@@ -56,7 +88,7 @@ export function SearchableSelect({
           className={`${fieldClass} text-left truncate`}
           onClick={() => {
             setQuery("");
-            setOpen((current) => !current);
+            setOpen(!open);
           }}
         >
           {selected ? `${selected.label}${selected.unavailable ? " (unavailable)" : ""}` : placeholder}
@@ -113,7 +145,7 @@ export function SearchableMultiSelect({
   onChange: (ids: string[]) => void;
   disabled?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useExclusiveOpen();
   const [query, setQuery] = useState("");
   const root = useRef<HTMLDivElement>(null);
   const selected = new Set(values);
@@ -135,7 +167,7 @@ export function SearchableMultiSelect({
     };
     document.addEventListener("mousedown", close);
     return () => document.removeEventListener("mousedown", close);
-  }, [open]);
+  }, [open, setOpen]);
 
   return (
     <div className="flex flex-col gap-1 text-xs tracking-wider text-[#858585]">
@@ -149,7 +181,7 @@ export function SearchableMultiSelect({
           className={`${fieldClass} text-left truncate`}
           onClick={() => {
             setQuery("");
-            setOpen((current) => !current);
+            setOpen(!open);
           }}
         >
           {summary}

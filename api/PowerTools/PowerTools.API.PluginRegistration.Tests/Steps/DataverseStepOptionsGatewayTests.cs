@@ -31,6 +31,9 @@ public sealed class DataverseStepOptionsGatewayTests
             .RetrieveStepFilterMetadataAsync(account.Id, CancellationToken.None);
         Assert.Equal("accountid", metadata.PrimaryIdAttribute);
         Assert.Equal(new[] { "accountid", "name" }, metadata.AvailableAttributes);
+        Assert.Equal("Account", metadata.DisplayName);
+        Assert.Equal("account", metadata.LogicalName);
+        Assert.Equal("Account Name", Assert.Single(metadata.Attributes, item => item.LogicalName == "name").DisplayName);
         Assert.Single(options.Messages);
     }
 
@@ -176,11 +179,13 @@ public sealed class DataverseStepOptionsGatewayTests
                 var metadata = new EntityMetadata { LogicalName = "account" };
                 typeof(EntityMetadata).GetProperty(nameof(EntityMetadata.PrimaryIdAttribute))!
                     .SetValue(metadata, "accountid");
+                typeof(EntityMetadata).GetProperty(nameof(EntityMetadata.DisplayName))!
+                    .SetValue(metadata, new Label("Account", 1033));
                 typeof(EntityMetadata).GetProperty(nameof(EntityMetadata.Attributes))!
                     .SetValue(metadata, new AttributeMetadata[]
                     {
-                        new StringAttributeMetadata { LogicalName = "accountid" },
-                        new StringAttributeMetadata { LogicalName = "name" }
+                        new StringAttributeMetadata { LogicalName = "accountid", DisplayName = new Label("Account", 1033) },
+                        new StringAttributeMetadata { LogicalName = "name", DisplayName = new Label("Account Name", 1033) }
                     });
                 var response = new RetrieveEntityResponse();
                 response.Results["EntityMetadata"] = metadata;

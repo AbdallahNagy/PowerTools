@@ -14,5 +14,17 @@ export const httpServer = setupServer(
       filterId: params.filterId,
       primaryIdAttribute: "accountid",
       availableAttributes: ["accountid", "name"],
+      displayName: "Account",
+      logicalName: "account",
+      attributes: [
+        { logicalName: "accountid", displayName: "Account", attributeType: "Uniqueidentifier", isPrimaryId: true },
+        { logicalName: "name", displayName: "Account Name", attributeType: "String", isPrimaryId: false },
+      ],
     })),
+  http.get("http://localhost/api/metadata/entities", () =>
+    HttpResponse.json([
+      { logicalName: "account", displayName: "Account", primaryIdAttribute: "accountid", primaryNameAttribute: "name", isCustom: false },
+      { logicalName: "contact", displayName: "Contact", primaryIdAttribute: "contactid", primaryNameAttribute: "fullname", isCustom: false },
+      { logicalName: "lead", displayName: "Lead", primaryIdAttribute: "leadid", primaryNameAttribute: "subject", isCustom: false },
+    ])),
 );

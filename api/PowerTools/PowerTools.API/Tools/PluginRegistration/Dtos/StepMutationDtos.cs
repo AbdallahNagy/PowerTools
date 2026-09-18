@@ -60,8 +60,16 @@ public sealed record StepMutationExecuteRequestDto(StepDraftDto Draft, string Pl
 public sealed record StepOptionDto(Guid Id, string Name);
 public sealed record StepMessageFilterOptionDto(Guid Id, Guid MessageId, string PrimaryTable,
     string? SecondaryTable, string PrimaryIdAttribute, IReadOnlyList<string> AvailableAttributes);
+public sealed record StepAttributeMetadataDto(
+    string LogicalName, string DisplayName, string AttributeType, bool IsPrimaryId);
+
 public sealed record StepFilterMetadataDto(Guid FilterId, string PrimaryIdAttribute,
-    IReadOnlyList<string> AvailableAttributes);
+    IReadOnlyList<string> AvailableAttributes)
+{
+    public IReadOnlyList<StepAttributeMetadataDto> Attributes { get; init; } = [];
+    public string? DisplayName { get; init; }
+    public string? LogicalName { get; init; }
+}
 public sealed record StepOptionsDto(IReadOnlyList<StepOptionDto> Messages,
     IReadOnlyList<StepMessageFilterOptionDto> Filters, IReadOnlyList<StepOptionDto> EnabledUsers);
 

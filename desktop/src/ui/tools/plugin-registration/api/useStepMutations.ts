@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { apiGet, apiPost } from "../../../shared/api/client";
+import type { EntityInfo } from "../../../shared/contracts/dataverse";
 import type { PluginStep } from "../model/contracts";
 import type { MutationPlan } from "../model/mutationContracts";
 
@@ -15,6 +16,20 @@ export interface StepDraft {
   impersonatingUserAction: "keep" | "set" | "clear";
   unsecureConfigurationAction: "keep" | "set" | "clear";
   secureConfigurationAction: "keep" | "set" | "clear";
+}
+export interface StepFilterAttribute {
+  logicalName: string;
+  displayName: string;
+  attributeType: string;
+  isPrimaryId?: boolean;
+}
+export interface StepFilterMetadata {
+  filterId: string;
+  primaryIdAttribute: string;
+  availableAttributes: string[];
+  attributes?: StepFilterAttribute[];
+  displayName?: string | null;
+  logicalName?: string | null;
 }
 export interface StepOptions {
   messages: { id: string; name: string }[];
@@ -70,9 +85,19 @@ export function useStepFilterMetadata(connectionName: string | null, filterId: s
   const meta = { connectionName: connectionName ?? undefined };
   return useQuery({
     queryKey: ["plugin-registration", "step-filter-metadata", connectionName, filterId],
-    queryFn: () => apiGet<{ filterId: string; primaryIdAttribute: string; availableAttributes: string[] }>(
+    queryFn: () => apiGet<StepFilterMetadata>(
       `/api/plugin-registration/step-filters/${filterId}/metadata`, { meta }),
     enabled: Boolean(connectionName && filterId), staleTime: 0,
+  });
+}
+
+export function useEntityDisplayNames(connectionName: string | null, enabled: boolean) {
+  const meta = { connectionName: connectionName ?? undefined };
+  return useQuery({
+    queryKey: ["plugin-registration", "entity-display-names", connectionName],
+    queryFn: () => apiGet<EntityInfo[]>("/api/metadata/entities", { meta }),
+    enabled: Boolean(connectionName && enabled),
+    staleTime: 5 * 60 * 1000,
   });
 }
 
