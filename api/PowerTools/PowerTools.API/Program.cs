@@ -5,6 +5,9 @@ using PowerTools.API.Tools.Connection;
 using PowerTools.API.Tools.DataMigration;
 using PowerTools.API.Tools.Fetch;
 using PowerTools.API.Tools.Metadata;
+using PowerTools.API.Tools.PluginRegistration;
+using PowerTools.API.Tools.PluginRegistration.Gateway;
+using PowerTools.API.Tools.PluginRegistration.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +35,8 @@ builder.Services.AddScoped<DataverseContextFilter>();
 builder.Services.AddScoped<DataverseTargetContextFilter>();
 builder.Services.AddSingleton<IMigrationJobStore, InMemoryMigrationJobStore>();
 builder.Services.AddHostedService<MigrationJobRunner>();
+builder.Services.AddScoped<IPluginRegistrationGateway, DataversePluginRegistrationGateway>();
+builder.Services.AddScoped<CapabilitiesService>();
 
 var app = builder.Build();
 
@@ -75,6 +80,7 @@ app.MapFetchEndpoints();
 app.MapDataMigrationEndpoints();
 app.MapPreviewEndpoints();
 app.MapMigrationEndpoints();
+app.MapPluginRegistrationEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would
