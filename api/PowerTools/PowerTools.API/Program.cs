@@ -37,6 +37,7 @@ builder.Services.AddSingleton<IMigrationJobStore, InMemoryMigrationJobStore>();
 builder.Services.AddHostedService<MigrationJobRunner>();
 builder.Services.AddScoped<IPluginRegistrationGateway, DataversePluginRegistrationGateway>();
 builder.Services.AddScoped<CapabilitiesService>();
+builder.Services.AddScoped<CatalogService>();
 
 var app = builder.Build();
 

@@ -17,6 +17,9 @@ public static class PluginRegistrationEndpoints
         group.MapGet("/capabilities", (CapabilitiesService capabilities) =>
             Results.Ok(capabilities.Get()));
 
+        group.MapGet("/catalog", async (CatalogService catalog, CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await catalog.GetAsync(ct))));
+
         return app;
     }
 
