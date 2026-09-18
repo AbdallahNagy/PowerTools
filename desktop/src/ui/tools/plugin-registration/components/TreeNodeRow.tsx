@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import type { TreeNode } from "../model/catalogTree";
 
 interface TreeNodeRowProps {
@@ -8,6 +9,7 @@ interface TreeNodeRowProps {
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onActivate?: (node: TreeNode) => void;
+  onContextMenu?: (event: MouseEvent, node: TreeNode) => void;
 }
 
 export function TreeNodeRow({
@@ -18,6 +20,7 @@ export function TreeNodeRow({
   onToggle,
   onSelect,
   onActivate,
+  onContextMenu,
 }: TreeNodeRowProps) {
   const hasChildren = node.children.length > 0;
   const isExpanded = expanded.has(node.id);
@@ -32,6 +35,11 @@ export function TreeNodeRow({
             : "text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)]"
         }`}
         style={{ paddingLeft: `${depth * 16 + 4}px` }}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          onSelect(node.id);
+          onContextMenu?.(event, node);
+        }}
       >
         {hasChildren ? (
           <button
@@ -66,6 +74,7 @@ export function TreeNodeRow({
               onToggle={onToggle}
               onSelect={onSelect}
               onActivate={onActivate}
+              onContextMenu={onContextMenu}
             />
           ))
         : null}

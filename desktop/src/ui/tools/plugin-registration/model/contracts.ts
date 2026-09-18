@@ -92,6 +92,55 @@ export interface MutationResultDto {
   id: string;
 }
 
+export interface StepOptionsDto {
+  messages: MessageOptionDto[];
+  filters: FilterOptionDto[];
+  users: UserOptionDto[];
+}
+
+export interface MessageOptionDto {
+  id: string;
+  name: string;
+}
+
+export interface FilterOptionDto {
+  id: string;
+  messageId: string;
+  primaryEntity: string | null;
+  secondaryEntity: string | null;
+  availability: number;
+}
+
+export interface UserOptionDto {
+  id: string;
+  fullName: string;
+}
+
+export interface StepDraftDto {
+  name: string;
+  pluginTypeId: string;
+  messageId: string;
+  filterId: string | null;
+  stage: number;
+  mode: number;
+  rank: number;
+  supportedDeployment: number;
+  asyncAutoDelete: boolean;
+  filteringAttributes: string[];
+  impersonatingUserId: string | null;
+  description: string | null;
+  configuration: string | null;
+  secureConfigurationAction: "keep" | "replace" | "clear";
+  secureConfiguration: string | null;
+}
+
+export interface EntityAttributeDto {
+  logicalName: string;
+  displayName: string;
+  attributeType: string;
+  isPrimaryId: boolean;
+}
+
 export const STAGE_LABELS: Record<number, string> = {
   10: "Pre-validation",
   20: "Pre-operation",

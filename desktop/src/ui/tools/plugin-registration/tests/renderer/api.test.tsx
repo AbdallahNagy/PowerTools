@@ -1,11 +1,12 @@
 import { QueryClientProvider } from "@tanstack/react-query";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
 
 import { useCatalog } from "../../api/useCatalog";
 import { useCapabilities } from "../../api/useCapabilities";
+import { useStepMutations } from "../../api/useStepMutations";
 import { registrationKeys } from "../../api/queryKeys";
 import { catalogFixture } from "../catalogFixture";
 import { httpServer } from "../../../../../../test/support/httpServer";
@@ -90,5 +91,36 @@ describe("Plugin Registration API", () => {
       isolationModes: [2],
       sourceTypes: [0],
     });
+  });
+
+  it("enables a step without replaying the mutation", async () => {
+    const urls: string[] = [];
+    httpServer.use(
+      http.post("http://localhost/api/plugin-registration/steps/:id/enable", ({ request }) => {
+        urls.push(request.url);
+        return HttpResponse.json({ id: "cccccccc-cccc-cccc-cccc-cccccccccccc" });
+      }),
+    );
+
+    installDesktopBridge(
+      createFakeDesktopBridge({
+        getConnection: async (name) => ({
+          name,
+          envUrl: "https://dev.example.test",
+          crmType: "online",
+          token: "dev-token",
+          expiresOn: "2099-01-01T00:00:00.000Z",
+        }),
+      }),
+    );
+    const queryClient = createTestQueryClient();
+    const { result } = renderHook(() => useStepMutations("Dev Org"), {
+      wrapper: createQueryWrapper(queryClient),
+    });
+
+    await act(() => result.current.enable.mutateAsync("cccccccc-cccc-cccc-cccc-cccccccccccc"));
+    expect(urls).toEqual([
+      "http://localhost/api/plugin-registration/steps/cccccccc-cccc-cccc-cccc-cccccccccccc/enable",
+    ]);
   });
 });

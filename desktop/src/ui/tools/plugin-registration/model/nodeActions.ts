@@ -30,5 +30,35 @@ export function readOnlyReason(node: TreeNode): string | undefined {
 }
 
 export function getNodeActions(node: TreeNode): NodeAction[] {
-  return node.kind === "assembly" ? [] : [];
+  const reason = readOnlyReason(node);
+  switch (node.kind) {
+    case "assembly":
+      return [
+        action("update-assembly", "Update assembly", reason),
+        action("unregister-assembly", "Unregister assembly", reason),
+      ];
+    case "type":
+      return [
+        action("register-step", "Register step", reason),
+        action("unregister-type", "Unregister type", reason),
+      ];
+    case "step":
+      return [
+        action("update-step", "Update step", reason),
+        node.data.isEnabled
+          ? action("disable-step", "Disable step", reason)
+          : action("enable-step", "Enable step", reason),
+        action("register-image", "Register image", reason),
+        action("unregister-step", "Unregister step", reason),
+      ];
+    case "image":
+      return [
+        action("update-image", "Update image", reason),
+        action("unregister-image", "Unregister image", reason),
+      ];
+  }
+}
+
+function action(id: NodeActionId, label: string, disabledReason?: string): NodeAction {
+  return { id, label, disabledReason };
 }

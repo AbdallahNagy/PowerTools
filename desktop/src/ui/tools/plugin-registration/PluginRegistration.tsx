@@ -1,14 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
+import type { MouseEvent } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { Spinner, ToastProvider } from "../../shared/ui";
+import { Spinner, ToastProvider, useToast } from "../../shared/ui";
 import { useConnectionSelection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { useCapabilities } from "./api/useCapabilities";
 import { useCatalog } from "./api/useCatalog";
+import { useStepMutations } from "./api/useStepMutations";
 import { ToolHeader } from "./components/ToolHeader";
 import { RegistrationTree } from "./components/RegistrationTree";
 import { NodeDetails } from "./components/NodeDetails";
-import { buildCatalogTree, findNode } from "./model/catalogTree";
+import { ContextMenu } from "./components/ContextMenu";
+import { ConfirmDialog } from "./components/dialogs/ConfirmDialog";
+import { StepDialog } from "./components/dialogs/StepDialog";
+import { buildCatalogTree, findNode, type TreeNode } from "./model/catalogTree";
+import { toRegistrationError } from "./model/apiError";
+import { getNodeActions, type NodeAction } from "./model/nodeActions";
+import type { StepDto } from "./model/contracts";
 
 export default function PluginRegistration() {
   return (
@@ -18,19 +26,39 @@ export default function PluginRegistration() {
   );
 }
 
+interface StepDialogState {
+  pluginTypeId: string;
+  step?: StepDto;
+}
+
+interface ConfirmState {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  run: () => Promise<unknown>;
+}
+
 function PluginRegistrationPage() {
   const { connectionName, setConnectionName } = useConnectionSelection();
+  const { showToast } = useToast();
   const [search, setSearch] = useState("");
   const [showSystem, setShowSystem] = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; node: TreeNode } | null>(null);
+  const [stepDialog, setStepDialog] = useState<StepDialogState | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
   const catalogQuery = useCatalog(connectionName || null);
   useCapabilities(connectionName || null);
+  const stepMutations = useStepMutations(connectionName || null);
 
   useEffect(() => {
     setExpanded(new Set());
     setSelectedId(null);
+    setMenu(null);
+    setStepDialog(null);
+    setConfirm(null);
   }, [connectionName]);
 
   const tree = useMemo(
@@ -52,10 +80,6 @@ function PluginRegistrationPage() {
   }, [catalogQuery.data, catalogQuery.isLoading, connectionName]);
   useToolStatus(statusContent);
 
-  const changeConnection = (name: string) => {
-    setConnectionName(name);
-  };
-
   const toggleExpanded = (id: string) => {
     setExpanded((current) => {
       const next = new Set(current);
@@ -63,6 +87,56 @@ function PluginRegistrationPage() {
       else next.add(id);
       return next;
     });
+  };
+
+  const runAction = (action: NodeAction, node: TreeNode) => {
+    if (action.disabledReason) {
+      showToast(action.disabledReason, "info");
+      return;
+    }
+
+    switch (action.id) {
+      case "register-step":
+        if (node.kind === "type") setStepDialog({ pluginTypeId: node.data.id });
+        break;
+      case "update-step":
+        if (node.kind === "step") {
+          setStepDialog({ pluginTypeId: node.data.pluginTypeId, step: node.data });
+        }
+        break;
+      case "enable-step":
+        if (node.kind === "step") {
+          setConfirm({
+            title: "Enable step",
+            message: `Enable “${node.data.name}” on ${connectionName}?`,
+            confirmLabel: "Enable",
+            run: () => stepMutations.enable.mutateAsync(node.data.id),
+          });
+        }
+        break;
+      case "disable-step":
+        if (node.kind === "step") {
+          setConfirm({
+            title: "Disable step",
+            message: `Disable “${node.data.name}” on ${connectionName}?`,
+            confirmLabel: "Disable",
+            run: () => stepMutations.disable.mutateAsync(node.data.id),
+          });
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  const activateNode = (node: TreeNode) => {
+    if (node.kind === "step") {
+      runAction({ id: "update-step", label: "Update step" }, node);
+    }
+  };
+
+  const openMenu = (event: MouseEvent, node: TreeNode) => {
+    setMenu({ x: event.clientX, y: event.clientY, node });
   };
 
   let emptyMessage = "Select a connection to load plug-in registrations.";
@@ -80,7 +154,7 @@ function PluginRegistrationPage() {
     <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[var(--color-text-gray)] overflow-hidden">
       <ToolHeader
         connectionName={connectionName}
-        onConnectionChange={changeConnection}
+        onConnectionChange={setConnectionName}
         search={search}
         onSearchChange={setSearch}
         showSystem={showSystem}
@@ -101,6 +175,8 @@ function PluginRegistrationPage() {
             selectedId={selectedId}
             onToggle={toggleExpanded}
             onSelect={setSelectedId}
+            onActivate={activateNode}
+            onContextMenu={openMenu}
             emptyMessage={emptyMessage}
           />
         </Panel>
@@ -109,6 +185,45 @@ function PluginRegistrationPage() {
           <NodeDetails node={selectedNode} />
         </Panel>
       </Group>
+
+      {menu ? (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          actions={getNodeActions(menu.node)}
+          onSelect={(action) => runAction(action, menu.node)}
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
+
+      {stepDialog && connectionName ? (
+        <StepDialog
+          open
+          connectionName={connectionName}
+          pluginTypeId={stepDialog.pluginTypeId}
+          step={stepDialog.step}
+          onClose={() => setStepDialog(null)}
+        />
+      ) : null}
+
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title ?? ""}
+        message={confirm?.message ?? ""}
+        confirmLabel={confirm?.confirmLabel ?? "Confirm"}
+        isPending={stepMutations.enable.isPending || stepMutations.disable.isPending}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => {
+          if (!confirm) return;
+          void confirm
+            .run()
+            .then(() => {
+              showToast("Step updated.", "success");
+              setConfirm(null);
+            })
+            .catch((error) => showToast(toRegistrationError(error).message, "error"));
+        }}
+      />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import type { MouseEvent } from "react";
 import type { TreeNode } from "../model/catalogTree";
 import { TreeNodeRow } from "./TreeNodeRow";
 
@@ -8,6 +9,7 @@ interface RegistrationTreeProps {
   onToggle: (id: string) => void;
   onSelect: (id: string) => void;
   onActivate?: (node: TreeNode) => void;
+  onContextMenu?: (event: MouseEvent, node: TreeNode) => void;
   emptyMessage: string;
 }
 
@@ -18,6 +20,7 @@ export function RegistrationTree({
   onToggle,
   onSelect,
   onActivate,
+  onContextMenu,
   emptyMessage,
 }: RegistrationTreeProps) {
   if (nodes.length === 0) {
@@ -38,8 +41,10 @@ export function RegistrationTree({
           onToggle={onToggle}
           onSelect={onSelect}
           onActivate={onActivate}
+          onContextMenu={onContextMenu}
         />
       ))}
     </div>
   );
 }
+

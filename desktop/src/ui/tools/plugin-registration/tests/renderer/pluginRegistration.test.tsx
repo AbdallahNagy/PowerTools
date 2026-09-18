@@ -101,4 +101,72 @@ describe("Plugin Registration", () => {
     expect(await screen.findByText("Update")).toBeInTheDocument();
     expect(screen.getByText("Post-operation")).toBeInTheDocument();
   });
+
+  it("disables a step from the context menu and refreshes the catalog", async () => {
+    const enableUrls: string[] = [];
+    let catalogLoads = 0;
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/catalog", () => {
+        catalogLoads += 1;
+        return HttpResponse.json(catalogFixture);
+      }),
+      http.get("http://localhost/api/plugin-registration/capabilities", () =>
+        HttpResponse.json({
+          isOnline: true,
+          isolationModes: [2],
+          sourceTypes: [0],
+        }),
+      ),
+      http.post(
+        "http://localhost/api/plugin-registration/steps/:id/disable",
+        ({ request }) => {
+          enableUrls.push(request.url);
+          return HttpResponse.json({ id: catalogFixture.steps[0]?.id });
+        },
+      ),
+    );
+
+    renderWithProviders(
+      <ConnectionsProvider>
+        <StatusBarProvider>
+          <ToolHost
+            tab={{
+              id: "plugin-registration-disable",
+              toolId: "plugin-registration",
+              title: "Plugin Registration",
+            }}
+            definition={pluginRegistrationTool}
+          />
+        </StatusBarProvider>
+      </ConnectionsProvider>,
+      {
+        bridgeOverrides: {
+          getActiveConnectionName: async () => connection.name,
+          getActiveConnection: async () => ({
+            ...connection,
+            token: "dev-token",
+            expiresOn: "2099-01-01T00:00:00.000Z",
+          }),
+          listConnections: async () => [connection],
+          getConnection: async () => ({
+            ...connection,
+            token: "dev-token",
+            expiresOn: "2099-01-01T00:00:00.000Z",
+          }),
+        },
+      },
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand Account Plugin" }));
+    fireEvent.contextMenu(screen.getByText("AccountPlugin: Update of account"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Disable step" }));
+    fireEvent.click(screen.getByRole("button", { name: "Disable" }));
+
+    await waitFor(() => expect(enableUrls).toHaveLength(1));
+    expect(enableUrls[0]).toContain(
+      `/api/plugin-registration/steps/${catalogFixture.steps[0]?.id}/disable`,
+    );
+    await waitFor(() => expect(catalogLoads).toBeGreaterThan(1));
+  });
 });
