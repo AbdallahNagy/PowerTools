@@ -7,6 +7,7 @@ using PowerTools.API.Tools.Fetch;
 using PowerTools.API.Tools.Metadata;
 using PowerTools.API.Tools.PluginRegistration;
 using PowerTools.API.Tools.PluginRegistration.Gateway;
+using PowerTools.API.Tools.PluginRegistration.Inspection;
 using PowerTools.API.Tools.PluginRegistration.Services;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -41,6 +42,8 @@ builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<StepOptionsService>();
 builder.Services.AddScoped<StepService>();
 builder.Services.AddScoped<ImageService>();
+builder.Services.AddSingleton<IPluginAssemblyInspector, PluginAssemblyInspector>();
+builder.Services.AddScoped<AssemblyService>();
 
 var app = builder.Build();
 
