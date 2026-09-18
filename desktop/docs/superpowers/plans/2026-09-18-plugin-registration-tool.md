@@ -1,6 +1,6 @@
 # Plugin Registration Tool — Fresh Implementation Plan
 
-> **For agentic workers:** Implement task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Do not copy XrmToolBox or Microsoft sample source.
+> **For agentic workers:** Implement task-by-task. Steps use checkbox (`- [x]`) syntax for tracking. Do not copy XrmToolBox or Microsoft sample source.
 
 **Goal:** Ship a new activity-bar tool `plugin-registration` that lets a Dataverse developer browse and safely manage plug-in registrations for one connection. Rebuilt from `main`; the old `cursor/stabilize-plugin-registration-47dd` branch is reference only, except the metadata-only DLL inspector and its signed test fixtures, which are ported.
 
@@ -63,72 +63,72 @@ Connection via headers set by `client.ts`. Errors: 400 validation, 409 dependenc
 
 ### Task 1: Branch, plan doc, sidecar skeleton, xUnit project
 
-- [ ] Create this plan doc and commit it.
-- [ ] Add sidecar skeleton: DTOs, problem/exception, option values, gateway interface + Dataverse impl, endpoints with `GET /capabilities`.
-- [ ] Add xUnit test project + `FakePluginRegistrationGateway`.
-- [ ] Wire `Program.cs` and the solution.
-- [ ] `dotnet build PowerTools.sln` and `dotnet test PowerTools.API.PluginRegistration.Tests`.
+- [x] Create this plan doc and commit it.
+- [x] Add sidecar skeleton: DTOs, problem/exception, option values, gateway interface + Dataverse impl, endpoints with `GET /capabilities`.
+- [x] Add xUnit test project + `FakePluginRegistrationGateway`.
+- [x] Wire `Program.cs` and the solution.
+- [x] `dotnet build PowerTools.sln` and `dotnet test PowerTools.API.PluginRegistration.Tests`.
 
 ### Task 2: Catalog queries and service
 
-- [ ] `CatalogQueries` with LIKE exclusions, stage filter, page size 5000, no `content`/`secureconfig` columns.
-- [ ] `CatalogService` maps four parallel `RetrieveAllAsync` calls.
-- [ ] `GET /catalog` endpoint.
-- [ ] Query and service tests.
+- [x] `CatalogQueries` with LIKE exclusions, stage filter, page size 5000, no `content`/`secureconfig` columns.
+- [x] `CatalogService` maps four parallel `RetrieveAllAsync` calls.
+- [x] `GET /catalog` endpoint.
+- [x] Query and service tests.
 
 ### Task 3: Desktop tool skeleton — browse catalog
 
-- [ ] Tool manifest, icon, registry, contracts, `catalogTree`, `useCapabilities`/`useCatalog`, header/tree/details.
-- [ ] Registry test update.
-- [ ] Node + renderer tests.
+- [x] Tool manifest, icon, registry, contracts, `catalogTree`, `useCapabilities`/`useCatalog`, header/tree/details.
+- [x] Registry test update.
+- [x] Node + renderer tests.
 
 ### Task 4: `noAuthRetry` on the shared HTTP client
 
-- [ ] Add `meta.noAuthRetry` and skip 401 replay when set.
-- [ ] Renderer test: without flag two requests; with flag one request then reject.
+- [x] Add `meta.noAuthRetry` and skip 401 replay when set.
+- [x] Renderer test: without flag two requests; with flag one request then reject.
 
 ### Task 5: Sidecar step options, validator, and step service
 
-- [ ] Step-option queries (`isprivate`, `iscustomprocessingstepallowed`, `isvisible`, `isdisabled`).
-- [ ] `StepDraftValidator` and `StepService` create/update/enable/disable with omit-vs-clear and secure-config keep/replace/clear.
-- [ ] Endpoints and tests.
+- [x] Step-option queries (`isprivate`, `iscustomprocessingstepallowed`, `isvisible`, `isdisabled`).
+- [x] `StepDraftValidator` and `StepService` create/update/enable/disable with omit-vs-clear and secure-config keep/replace/clear.
+- [x] Endpoints and tests.
 
 ### Task 6: Desktop step dialog and step actions
 
-- [ ] Hooks, `stepForm`, `apiError`, `nodeActions`, context menu, `StepDialog`, `ConfirmDialog`.
-- [ ] Tests for draft posting, field problems, enable action.
+- [x] Hooks, `stepForm`, `apiError`, `nodeActions`, context menu, `StepDialog`, `ConfirmDialog`.
+- [x] Tests for draft posting, field problems, enable action.
 
 ### Task 7: Sidecar image validator and service
 
-- [ ] Message-property map, validator, service, endpoints, tests.
+- [x] Message-property map, validator, service, endpoints, tests.
 
 ### Task 8: Desktop image dialog
 
-- [ ] `useImageMutations`, `imageForm`, `ImageDialog`, tests.
+- [x] `useImageMutations`, `imageForm`, `ImageDialog`, tests.
 
 ### Task 9: Port the DLL inspector; sidecar assembly service
 
-- [ ] Port inspector + fixtures from `cursor/stabilize-plugin-registration-47dd`.
-- [ ] `AssemblyService` analyze/register/update with type sync.
-- [ ] Multipart endpoints and tests.
+- [x] Port inspector + fixtures from `cursor/stabilize-plugin-registration-47dd`.
+- [x] `AssemblyService` analyze/register/update with type sync.
+- [x] Multipart endpoints and tests.
 
 ### Task 10: Desktop assembly dialog
 
-- [ ] FormData mutations, `AssemblyDialog` with analyze preview and capability-limited radios.
-- [ ] Tests asserting `assembly` field and `isolationMode`.
+- [x] FormData mutations, `AssemblyDialog` with analyze preview and capability-limited radios.
+- [x] Tests asserting `assembly` field and `isolationMode`.
 
 ### Task 11: Unregister (sidecar + desktop)
 
-- [ ] Image delete; step transaction (images then step then secure config); type/assembly with `has_steps` + `RetrieveDependenciesForDelete`.
-- [ ] Desktop confirm dialog with environment, kind, name, child counts.
-- [ ] Tests.
+- [x] Image delete; step transaction (images then step then secure config); type/assembly with `has_steps` + `RetrieveDependenciesForDelete`.
+- [x] Desktop confirm dialog with environment, kind, name, child counts.
+- [x] Tests.
 
 ### Task 12: Finish
 
-- [ ] Tool README (folder map, where validation lives, how to add an action, XrmToolBox credit).
-- [ ] Tick plan checkboxes.
-- [ ] `npm run check` and `dotnet` gates.
-- [ ] Draft PR with limitations: not live-verified (Create image property `Id` vs `Target`, `ExecuteTransaction`, type auto-generation).
+- [x] Tool README (folder map, where validation lives, how to add an action, XrmToolBox credit).
+- [x] Tick plan checkboxes.
+- [x] `npm run check` and `dotnet` gates.
+- [x] Draft PR with limitations: not live-verified (Create image property `Id` vs `Target`, `ExecuteTransaction`, type auto-generation).
 
 ## Known limitations
 

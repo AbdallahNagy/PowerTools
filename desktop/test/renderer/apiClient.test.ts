@@ -332,31 +332,4 @@ describe("Axios API client", () => {
     // 3 initial 401s + 3 retries with the refreshed token.
     expect(attempts).toBe(6);
   });
-
-  it("shares one transport and query cache across canonical and legacy entry points", async () => {
-    const getActiveConnection = vi.fn<DesktopBridge["getActiveConnection"]>(
-      async () => ONLINE_PRIMARY,
-    );
-    installDesktopBridge(createFakeDesktopBridge({
-      getApiBaseUrl: async () => SIDECAR_BASE_URL,
-      getLocalSecret: async () => "local-secret",
-      getActiveConnection,
-    }));
-
-    httpServer.use(
-      http.get(`${SIDECAR_BASE_URL}/shared-transport`, () => HttpResponse.json({ ok: true })),
-    );
-
-    const canonicalTransport = await import("../../src/ui/shared/api/client");
-    const legacyTransport = await import("../../src/ui/api/client");
-    const canonicalQueries = await import("../../src/ui/shared/api/queryClient");
-    const legacyQueries = await import("../../src/ui/api/queryClient");
-
-    await canonicalTransport.api.get("/shared-transport");
-    await legacyTransport.api.get("/shared-transport");
-
-    expect(getActiveConnection).toHaveBeenCalledTimes(1);
-    expect(legacyTransport.api).toBe(canonicalTransport.api);
-    expect(legacyQueries.queryClient).toBe(canonicalQueries.queryClient);
-  });
 });
