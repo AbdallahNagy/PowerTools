@@ -7,6 +7,14 @@ export interface EntityPickerOption {
   unavailable?: boolean;
 }
 
+export interface EntityPickerFilter {
+  id: string;
+  primaryTable: string;
+  secondaryTable: string | null;
+}
+
+type EntityNameLookup = { logicalName: string; displayName: string };
+
 export function isPresentTable(value: string | null | undefined): value is string {
   const trimmed = value?.trim();
   return Boolean(trimmed && trimmed.toLowerCase() !== "none");
@@ -35,4 +43,65 @@ export function entityOptionLabel(option: EntityPickerOption) {
 
 export function entitySearchText(option: EntityPickerOption) {
   return `${entityDisplayName(option)} ${entityLogicalName(option)}`.toLocaleLowerCase();
+}
+
+export function toEntityOption(
+  id: string,
+  primaryTable: string,
+  secondaryTable: string | null,
+  entities: Map<string, EntityNameLookup>,
+  unavailable = false,
+): EntityPickerOption {
+  const presentPrimary = isPresentTable(primaryTable) ? primaryTable : null;
+  const presentSecondary = isPresentTable(secondaryTable) ? secondaryTable : null;
+  const logicalName = presentPrimary ?? presentSecondary ?? "none";
+  const related = presentPrimary && presentSecondary ? presentSecondary : null;
+  const primary = entities.get(logicalName.toLowerCase());
+  const secondary = related ? entities.get(related.toLowerCase()) : undefined;
+  return {
+    id,
+    logicalName,
+    displayName: primary?.displayName || (logicalName === "none" ? "None" : logicalName),
+    secondaryLogicalName: related,
+    secondaryDisplayName: secondary?.displayName || related,
+    unavailable,
+  };
+}
+
+export function buildEntityPickerOptions(
+  filters: EntityPickerFilter[],
+  entities: Map<string, EntityNameLookup>,
+  current?: EntityPickerOption | null,
+): EntityPickerOption[] {
+  const real: EntityPickerOption[] = [];
+  const seen = new Set<string>();
+  let noneOption: EntityPickerOption | null = null;
+
+  const add = (option: EntityPickerOption) => {
+    const key = `${option.logicalName.toLowerCase()}::${(option.secondaryLogicalName ?? "").toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    if (!isPresentTable(option.logicalName)) {
+      noneOption ??= option;
+      return;
+    }
+    real.push(option);
+  };
+
+  if (current) add(current);
+  for (const item of filters) {
+    if (!item.primaryTable && !item.secondaryTable) continue;
+    add(toEntityOption(item.id, item.primaryTable, item.secondaryTable, entities, false));
+  }
+
+  const rows = real.length > 0 && !(noneOption?.unavailable)
+    ? real
+    : noneOption
+      ? [noneOption, ...real]
+      : real;
+  return rows.sort(compareEntityOptions);
+}
+
+function compareEntityOptions(left: EntityPickerOption, right: EntityPickerOption) {
+  return entityDisplayName(left).localeCompare(entityDisplayName(right), undefined, { sensitivity: "base" });
 }

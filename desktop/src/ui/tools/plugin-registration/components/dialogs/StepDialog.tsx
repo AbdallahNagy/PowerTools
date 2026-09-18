@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Button, Modal, Spinner } from "../../../../shared/ui";
-import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import {
   useEntityDisplayNames,
   useStepEditDetails,
@@ -14,7 +13,7 @@ import { SearchableSelect } from "../SearchableSelect";
 import type { PluginHandler, PluginStep } from "../../model/contracts";
 import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 import { closeExclusiveSelects } from "../exclusiveSelect";
-import { entityDisplayName, isPresentTable, type EntityPickerOption } from "../entityPickerModel";
+import { buildEntityPickerOptions, entityDisplayName, isPresentTable, toEntityOption } from "../entityPickerModel";
 import { fieldClass } from "../formStyles";
 import { AttributePickerDialog } from "./AttributePickerDialog";
 import { EntityPickerDialog } from "./EntityPickerDialog";
@@ -192,23 +191,19 @@ export function StepDialog({
     () => new Map((entityCatalog.data ?? []).map((entity) => [entity.logicalName.toLowerCase(), entity])),
     [entityCatalog.data],
   );
-  const entityOptions = useMemo(() => {
-    const rows: EntityPickerOption[] = [];
-    if (currentFilterUnavailable) {
-      rows.push(toEntityOption(
+  const entityOptions = useMemo(() => buildEntityPickerOptions(
+    matchingFilters,
+    entityByLogicalName,
+    currentFilterUnavailable
+      ? toEntityOption(
         currentFilterId,
         editDetails.data?.primaryTable ?? "entity",
         editDetails.data?.secondaryTable ?? null,
         entityByLogicalName,
         true,
-      ));
-    }
-    for (const item of matchingFilters) {
-      if (!item.primaryTable) continue;
-      rows.push(toEntityOption(item.id, item.primaryTable, item.secondaryTable, entityByLogicalName, false));
-    }
-    return rows.sort((left, right) => compareEntityOptions(left, right));
-  }, [currentFilterId, currentFilterUnavailable, editDetails.data?.primaryTable, editDetails.data?.secondaryTable, entityByLogicalName, matchingFilters]);
+      )
+      : null,
+  ), [currentFilterId, currentFilterUnavailable, editDetails.data?.primaryTable, editDetails.data?.secondaryTable, entityByLogicalName, matchingFilters]);
   const selectedEntity = entityOptions.find((option) => option.id === activeFilterId);
   const selectedEntityLabel = selectedEntity
     ? `${entityDisplayName(selectedEntity)}${selectedEntity.unavailable ? " (unavailable)" : ""}`
@@ -415,34 +410,6 @@ export function StepDialog({
       ) : null}
     </>
   );
-}
-
-function toEntityOption(
-  id: string,
-  primaryTable: string,
-  secondaryTable: string | null,
-  entities: Map<string, EntityInfo>,
-  unavailable: boolean,
-): EntityPickerOption {
-  const hasPrimary = isPresentTable(primaryTable);
-  const primary = hasPrimary ? entities.get(primaryTable.toLowerCase()) : undefined;
-  const secondaryName = isPresentTable(secondaryTable) ? secondaryTable : null;
-  const secondary = secondaryName ? entities.get(secondaryName.toLowerCase()) : undefined;
-  return {
-    id,
-    logicalName: hasPrimary ? primaryTable : "none",
-    displayName: primary?.displayName || (hasPrimary ? primaryTable : "None"),
-    secondaryLogicalName: secondaryName,
-    secondaryDisplayName: secondary?.displayName || secondaryName,
-    unavailable,
-  };
-}
-
-function compareEntityOptions(left: EntityPickerOption, right: EntityPickerOption) {
-  const leftNone = !isPresentTable(left.logicalName);
-  const rightNone = !isPresentTable(right.logicalName);
-  if (leftNone !== rightNone) return leftNone ? -1 : 1;
-  return entityDisplayName(left).localeCompare(entityDisplayName(right), undefined, { sensitivity: "base" });
 }
 
 function toAttributeRows(

@@ -350,11 +350,11 @@ describe("Step mutations", () => {
     expect(await within(dialog).findByLabelText("Message")).toHaveTextContent("Update");
     await userEvent.click(within(dialog).getByLabelText("Entity"));
     const entityDialog = await screen.findByRole("dialog", { name: "Select entity" });
-    expect(await within(entityDialog).findByRole("option", { name: /^None none$/i })).toBeInTheDocument();
-    expect(within(entityDialog).getByRole("option", { name: /^Account account$/i })).toBeInTheDocument();
+    expect(await within(entityDialog).findByRole("option", { name: /^Account account$/i })).toBeInTheDocument();
     expect(within(entityDialog).getByRole("option", { name: /^Contact contact$/i })).toBeInTheDocument();
+    expect(within(entityDialog).queryByRole("option", { name: /^None none$/i })).not.toBeInTheDocument();
     expect(within(entityDialog).queryByRole("option", { name: /quotedetail/i })).not.toBeInTheDocument();
-    expect(within(entityDialog).getAllByRole("option")).toHaveLength(3);
+    expect(within(entityDialog).getAllByRole("option")).toHaveLength(2);
   });
 
   it("keeps filled step form data when the modal overlay is clicked", async () => {
