@@ -19,7 +19,12 @@ vi.mock("../../../../shared/api/client", async (original) => ({
 const originalResizeObserver = window.ResizeObserver;
 beforeAll(() => { window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} }; });
 afterAll(() => { if (originalResizeObserver) window.ResizeObserver = originalResizeObserver; else Reflect.deleteProperty(window, "ResizeObserver"); });
-beforeEach(() => apiPost.mockReset());
+beforeEach(() => {
+  apiPost.mockReset();
+  httpServer.use(http.get("http://localhost/api/plugin-registration/capabilities", () => HttpResponse.json({
+    transactionalCascadeUnregister: { supported: true, reason: "Transactional cascade unregister is available." },
+  })));
+});
 
 describe("mutation outcome presentation", () => {
   it("distinguishes verified and reconciled success", () => {
@@ -30,16 +35,24 @@ describe("mutation outcome presentation", () => {
     expect(screen.getByRole("status")).toHaveTextContent("verified after a communication failure");
   });
 
-  it("offers an explicit retry only for a read-only failure", async () => {
-    const retry = vi.fn();
+  it("does not offer a retry action for rejected mutations", () => {
     renderWithProviders(<MutationOutcomeBanner outcome={{ outcome: "rejectedBeforeCompletion", targetId: null, problem: {
       category: "communication", code: "catalog_unavailable", message: "The preview could not be loaded.",
       environment: "Development", component: "Contoso", correlationId: null, suggestedAction: "Try the preview again.",
-    } }} retryRead={retry} />);
+    } }} />);
 
     expect(screen.getByRole("alert")).toHaveTextContent("The preview could not be loaded.");
-    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(retry).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
+  it("hides the generic Dataverse rejection banner", () => {
+    renderWithProviders(<MutationOutcomeBanner outcome={{ outcome: "rejectedBeforeCompletion", targetId: null, problem: {
+      category: "dataverse", code: "dataverse-fault", message: "Dataverse rejected the registration operation.",
+      environment: "Development", component: "assembly", correlationId: null, suggestedAction: "Refresh the registration and review the current state.",
+    } }} />);
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dataverse rejected the registration operation.")).not.toBeInTheDocument();
   });
 
   it("closes an uncertain mutation, refreshes once, blocks repeat, and reselects the affected component", async () => {

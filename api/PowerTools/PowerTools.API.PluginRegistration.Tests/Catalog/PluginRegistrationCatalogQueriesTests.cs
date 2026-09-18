@@ -169,6 +169,26 @@ public sealed class PluginRegistrationCatalogQueriesTests
     }
 
     [Fact]
+    public async Task Catalog_retrieves_assembly_type_step_and_image_pages_concurrently()
+    {
+        var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, PagedOrganizationServiceProxy>();
+        var handler = (PagedOrganizationServiceProxy)(object)proxy;
+        handler.Delay = TimeSpan.FromMilliseconds(200);
+        handler.Responses["pluginassembly"] = new Queue<EntityCollection>([Page()]);
+        handler.Responses["plugintype"] = new Queue<EntityCollection>([Page()]);
+        handler.Responses["sdkmessageprocessingstep"] = new Queue<EntityCollection>([Page()]);
+        handler.Responses["sdkmessageprocessingstepimage"] = new Queue<EntityCollection>([Page()]);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        await new DataversePluginRegistrationGateway(proxy).RetrieveCatalogRowsAsync(CancellationToken.None);
+
+        stopwatch.Stop();
+        Assert.True(stopwatch.Elapsed < TimeSpan.FromMilliseconds(700),
+            $"Concurrent catalog retrieval took {stopwatch.Elapsed}; sequential first pages would exceed 800ms.");
+        Assert.Equal(4, handler.Queries.Count);
+    }
+
+    [Fact]
     public async Task Gateway_catalog_does_not_retrieve_delete_dependencies()
     {
         var assemblyId = Guid.NewGuid();
@@ -450,23 +470,27 @@ public sealed class PluginRegistrationCatalogQueriesTests
         public bool OmitNextDependencyPayload { get; set; }
         public bool UseNextDependencyPayload { get; set; }
         public object? NextDependencyPayload { get; set; }
+        public TimeSpan Delay { get; set; }
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
-            if (targetMethod?.Name == nameof(IOrganizationServiceAsync2.RetrieveMultipleAsync)
-                && args is [QueryExpression query, CancellationToken])
+            lock (this)
             {
-                Queries.Add(new QueryExpression(query.EntityName)
+                if (targetMethod?.Name == nameof(IOrganizationServiceAsync2.RetrieveMultipleAsync)
+                    && args is [QueryExpression query, CancellationToken])
                 {
-                    PageInfo = new PagingInfo
+                    Queries.Add(new QueryExpression(query.EntityName)
                     {
-                        Count = query.PageInfo.Count,
-                        PageNumber = query.PageInfo.PageNumber,
-                        PagingCookie = query.PageInfo.PagingCookie
-                    }
-                });
-                return Task.FromResult(Responses[query.EntityName].Dequeue());
-            }
+                        PageInfo = new PagingInfo
+                        {
+                            Count = query.PageInfo.Count,
+                            PageNumber = query.PageInfo.PageNumber,
+                            PagingCookie = query.PageInfo.PagingCookie
+                        }
+                    });
+                    var page = Responses[query.EntityName].Dequeue();
+                    return Delay <= TimeSpan.Zero ? Task.FromResult(page) : CompleteAfterDelay(page, Delay);
+                }
 
             if (targetMethod?.Name == nameof(IOrganizationServiceAsync2.ExecuteAsync)
                 && args is [OrganizationRequest request, CancellationToken]
@@ -494,6 +518,13 @@ public sealed class PluginRegistrationCatalogQueriesTests
             }
 
             throw new NotSupportedException(targetMethod?.Name);
+            }
+        }
+
+        private static async Task<EntityCollection> CompleteAfterDelay(EntityCollection page, TimeSpan delay)
+        {
+            await Task.Delay(delay);
+            return page;
         }
     }
 }

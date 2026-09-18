@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import { apiGet, apiPost } from "../../../shared/api/client";
+import type { EntityInfo } from "../../../shared/contracts/dataverse";
 import type { PluginStep } from "../model/contracts";
 import type { MutationPlan } from "../model/mutationContracts";
 
@@ -10,21 +11,42 @@ export interface StepDraft {
   primaryTable: string; secondaryTable: string | null; stage: number; mode: number; rank: number;
   filteringAttributes: string[]; impersonatingUserId: string | null;
   unsecureConfiguration: string | null; replacementSecureConfiguration: string | null;
+  description?: string | null;
   expectedVersions: Record<string, number>;
   impersonatingUserAction: "keep" | "set" | "clear";
   unsecureConfigurationAction: "keep" | "set" | "clear";
+  secureConfigurationAction: "keep" | "set" | "clear";
+}
+export interface StepFilterAttribute {
+  logicalName: string;
+  displayName: string;
+  attributeType: string;
+  isPrimaryId?: boolean;
+}
+export interface StepFilterMetadata {
+  filterId: string;
+  primaryIdAttribute: string;
+  availableAttributes: string[];
+  attributes?: StepFilterAttribute[];
+  displayName?: string | null;
+  logicalName?: string | null;
 }
 export interface StepOptions {
   messages: { id: string; name: string }[];
   filters: { id: string; messageId: string; primaryTable: string; secondaryTable: string | null; primaryIdAttribute: string; availableAttributes: string[] }[];
   enabledUsers: { id: string; name: string }[];
 }
-export interface StepEditDetails extends StepDraft { stepId: string; secureConfigExists: boolean; }
+export interface StepEditDetails extends StepDraft {
+  stepId: string;
+  secureConfigExists: boolean;
+  description: string | null;
+  secureConfiguration: string | null;
+}
 export interface StepPublicValues {
   name: string; message: string; primaryTable: string; secondaryTable: string | null;
   stage: number; mode: number; rank: number; filteringAttributes: string[];
   impersonatingUserId: string | null; unsecureConfiguration: string | null;
-  secureConfigExists: boolean; isEnabled: boolean; secureConfigurationAction: "keep" | "set";
+  secureConfigExists: boolean; isEnabled: boolean; secureConfigurationAction: "keep" | "set" | "clear";
 }
 export interface StepPreflight {
   draft: StepDraft;
@@ -57,6 +79,27 @@ export function useStepMutations(connectionName: string | null) {
     retry: false,
   });
   return { options, preflight, execute };
+}
+
+export function useStepFilterMetadata(connectionName: string | null, filterId: string | null) {
+  const meta = { connectionName: connectionName ?? undefined };
+  return useQuery({
+    queryKey: ["plugin-registration", "step-filter-metadata", connectionName, filterId],
+    queryFn: () => apiGet<StepFilterMetadata>(
+      `/api/plugin-registration/step-filters/${filterId}/metadata`, { meta }),
+    enabled: Boolean(connectionName && filterId), staleTime: 0,
+  });
+}
+
+export function useEntityDisplayNames(connectionName: string | null, enabled: boolean) {
+  const meta = { connectionName: connectionName ?? undefined };
+  return useQuery({
+    queryKey: ["plugin-registration", "entity-display-names", connectionName],
+    queryFn: () => apiGet<EntityInfo[]>("/api/metadata/entities", { meta }),
+    enabled: Boolean(connectionName && enabled),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 }
 
 export function useStepEditDetails(connectionName: string | null, stepId: string | null) {

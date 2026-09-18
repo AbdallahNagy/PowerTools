@@ -120,6 +120,29 @@ public sealed class PluginStepMutationTests
     }
 
     [Fact]
+    public async Task Update_can_explicitly_clear_secure_configuration_without_echoing_a_secret()
+    {
+        var gateway = new StatefulStepGateway("update");
+        var service = Service();
+        var draft = gateway.Draft("update") with
+        {
+            ReplacementSecureConfiguration = null,
+            SecureConfigurationAction = "clear"
+        };
+        var preflight = await service.CreatePreflightAsync(gateway, "https://contoso.test", "update", draft, CancellationToken.None);
+
+        Assert.Equal("clear", preflight.After.SecureConfigurationAction);
+        Assert.False(preflight.After.SecureConfigExists);
+        Assert.DoesNotContain("replacement-secret", System.Text.Json.JsonSerializer.Serialize(preflight));
+
+        var result = await service.ExecuteAsync(gateway, "https://contoso.test", "update", preflight.Plan.Token,
+            draft, null, CancellationToken.None);
+
+        Assert.True(result.SucceededAndVerified);
+        Assert.Equal("clear", gateway.LastCommand?.Draft.SecureConfigurationAction);
+    }
+
+    [Fact]
     public async Task Keep_actions_bind_fresh_nullable_values_not_submitted_placeholders()
     {
         var gateway = new StatefulStepGateway("update");
@@ -176,6 +199,7 @@ public sealed class PluginStepMutationTests
         private bool exists = operation != "create";
         private bool enabled = operation != "enable";
         private bool mutated;
+        private bool secureExists = operation != "create";
         private StepDraftDto? appliedDraft;
         public Guid SecureConfigId { get; } = Guid.NewGuid();
         public string StepName => "Update account";
@@ -201,13 +225,13 @@ public sealed class PluginStepMutationTests
                 false, false, true, 4, null);
             var step = exists ? new PluginStepRow(stepId, pluginId, StepName, null, "Update", "account", null,
                 "PostOperation", "Synchronous", 40, 0, 1, enabled, false, true,
-                mutated && !KeepVersionAfterMutation ? 8 : 7, true, null) : null;
+                mutated && !KeepVersionAfterMutation ? 8 : 7, secureExists, null) : null;
             return Task.FromResult(new PluginRegistrationRows([], [plugin], step is null ? [] : [step], []));
         }
 
         public Task<PluginStepPreflightState> RetrieveStepPreflightStateAsync(Guid pluginTypeId, Guid? targetStepId,
-            StepDraftDto draft, CancellationToken cancellationToken) => Task.FromResult(new PluginStepPreflightState(
-                "Update", "account", "accountid", true, true, true, false, false, true, exists,
+            StepDraftDto draft, CancellationToken cancellationToken) =>             Task.FromResult(new PluginStepPreflightState(
+                "Update", "account", "accountid", true, true, true, false, false, true, secureExists,
                 exists ? 7 : null, pluginId, targetStepId, StepName,
                 HasDependency ? [new ComponentDependencyDto(Guid.NewGuid(), "External", "Workflow", null, false, true, 1)] : [],
                 appliedDraft?.SdkMessageId ?? draft.SdkMessageId,
@@ -220,8 +244,8 @@ public sealed class PluginStepMutationTests
                 AvailableAttributes = ["accountid", "name"],
                 IsOrdinaryPlugin = true,
                 IsParentCustomizable = true,
-                SecureConfigId = SecureConfigId,
-                SecureConfigVersion = 11,
+                SecureConfigId = secureExists ? SecureConfigId : null,
+                SecureConfigVersion = secureExists ? 11 : null,
                 ParentVersion = 4
             });
 
@@ -239,6 +263,12 @@ public sealed class PluginStepMutationTests
                 UnsecureConfiguration = command.Draft.UnsecureConfigurationAction == "clear" ? null : command.Draft.UnsecureConfiguration };
             exists = command.Operation != "unregister";
             enabled = command.Operation == "enable" || (command.Operation != "disable" && enabled);
+            secureExists = command.Draft.SecureConfigurationAction switch
+            {
+                "clear" => false,
+                "set" => true,
+                _ => secureExists
+            };
             if (LoseResponseAfterMutation) throw new HttpRequestException("response lost");
             return Task.FromResult(stepId);
         }

@@ -128,7 +128,8 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
             PrimaryTable = state.PrimaryTable, SecondaryTable = state.SecondaryTable, Stage = state.CurrentStage,
             Mode = state.CurrentMode, Rank = state.CurrentRank, FilteringAttributes = state.CurrentFilteringAttributes ?? [],
             ImpersonatingUserId = state.CurrentImpersonatingUserId, UnsecureConfiguration = state.CurrentUnsecureConfiguration,
-            ReplacementSecureConfiguration = null, ImpersonatingUserAction = "keep", UnsecureConfigurationAction = "keep" };
+            ReplacementSecureConfiguration = null, ImpersonatingUserAction = "keep", UnsecureConfigurationAction = "keep",
+            SecureConfigurationAction = "keep" };
     }
 
     private static StepDraftDto NormalizeNullableDraft(StepDraftDto draft, PluginStepPreflightState state) => draft with
@@ -203,6 +204,8 @@ public sealed class PluginStepMutationService(PluginStepValidator validator, Plu
         && (normalized.ImpersonatingUserAction == "keep" || state.CurrentImpersonatingUserId == normalized.ImpersonatingUserId)
         && (normalized.UnsecureConfigurationAction == "keep"
             || string.Equals(state.CurrentUnsecureConfiguration, normalized.UnsecureConfiguration, StringComparison.Ordinal))
-        && (normalized.ReplacementSecureConfiguration is null || state.SecureConfigExists);
+        && (normalized.SecureConfigurationAction == "keep"
+            || normalized.SecureConfigurationAction == "set" && state.SecureConfigExists
+            || normalized.SecureConfigurationAction == "clear" && !state.SecureConfigExists);
     private sealed record ValidatedState(PluginStepPreflightState State, PluginStepValidationResult Validation);
 }

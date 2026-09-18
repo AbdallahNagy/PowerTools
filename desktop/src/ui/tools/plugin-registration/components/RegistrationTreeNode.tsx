@@ -5,6 +5,8 @@ import type { CatalogTreeNode } from "../model/catalogTree";
 interface RegistrationTreeNodeProps {
   node: CatalogTreeNode;
   level: number;
+  setSize?: number;
+  posInSet?: number;
   selectedNodeId: string | null;
   expandedNodeIds: Set<string>;
   forceExpanded: boolean;
@@ -20,6 +22,8 @@ interface RegistrationTreeNodeProps {
 export function RegistrationTreeNode({
   node,
   level,
+  setSize,
+  posInSet,
   selectedNodeId,
   expandedNodeIds,
   forceExpanded,
@@ -47,6 +51,8 @@ export function RegistrationTreeNode({
         type="button"
         role="treeitem"
         aria-level={level}
+        aria-setsize={setSize}
+        aria-posinset={posInSet}
         aria-selected={isSelected}
         {...(hasChildren ? { "aria-expanded": isExpanded } : {})}
         className={`w-full h-7 flex items-center gap-1 pr-3 text-left text-[13px] leading-7 whitespace-nowrap focus:outline-none focus:ring-1 focus:ring-inset focus:ring-[#007fd4] ${
@@ -67,23 +73,6 @@ export function RegistrationTreeNode({
         </span>
         <span>{node.label}</span>
       </button>
-      {isExpanded ? (
-        <div role="group">
-          {node.children.map((child) => (
-            <RegistrationTreeNode
-              key={child.id}
-              node={child}
-              level={level + 1}
-              selectedNodeId={selectedNodeId}
-              expandedNodeIds={expandedNodeIds}
-              forceExpanded={forceExpanded}
-              onSelectAndToggle={onSelectAndToggle}
-              onOpenNode={onOpenNode}
-              onOpenContextMenu={onOpenContextMenu}
-            />
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }

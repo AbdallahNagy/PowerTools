@@ -31,6 +31,9 @@ public sealed class DataverseStepOptionsGatewayTests
             .RetrieveStepFilterMetadataAsync(account.Id, CancellationToken.None);
         Assert.Equal("accountid", metadata.PrimaryIdAttribute);
         Assert.Equal(new[] { "accountid", "name" }, metadata.AvailableAttributes);
+        Assert.Equal("Account", metadata.DisplayName);
+        Assert.Equal("account", metadata.LogicalName);
+        Assert.Equal("Account Name", Assert.Single(metadata.Attributes, item => item.LogicalName == "name").DisplayName);
         Assert.Single(options.Messages);
     }
 
@@ -59,6 +62,7 @@ public sealed class DataverseStepOptionsGatewayTests
             .RetrieveStepOptionsAsync(CancellationToken.None);
 
         Assert.Equal(2, options.Filters.Count);
+        Assert.Contains(proxy.LastFilterQuery!.Orders, order => order.AttributeName == "sdkmessagefilterid");
         Assert.Single(options.Filters, filter => filter.Id == proxy.FilterId);
         Assert.Single(options.Filters, filter => filter.PrimaryTable == "none");
     }
@@ -77,20 +81,38 @@ public sealed class DataverseStepOptionsGatewayTests
         Assert.Equal("account", details.PrimaryTable);
     }
 
+    [Fact]
+    public async Task Edit_details_return_description_and_stored_secure_configuration()
+    {
+        var service = DispatchProxy.Create<IOrganizationServiceAsync2, OptionsServiceProxy>();
+        var proxy = (OptionsServiceProxy)(object)service;
+
+        var details = await new DataversePluginRegistrationGateway(service)
+            .RetrieveStepEditDetailsAsync(proxy.StepId, CancellationToken.None);
+
+        Assert.Equal("Update step", details.Description);
+        Assert.Equal("stored-secret", details.SecureConfiguration);
+    }
+
     public class OptionsServiceProxy : DispatchProxy
     {
         public string NoTable { get; set; } = "none";
         public bool PageFilters { get; set; }
+        public QueryExpression? LastFilterQuery { get; private set; }
         public Guid StepId { get; } = Guid.NewGuid();
         public Guid FilterId { get; } = Guid.NewGuid();
+        public Guid SecureConfigId { get; } = Guid.NewGuid();
         private Guid PluginId { get; } = Guid.NewGuid();
         private Guid MessageId { get; } = Guid.NewGuid();
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
+            lock (this)
+            {
             if (targetMethod?.Name == "RetrieveMultipleAsync")
             {
                 var query = Assert.IsType<QueryExpression>(args![0]);
+                if (query.EntityName == "sdkmessagefilter") LastFilterQuery = query;
                 Entity[] rows = query.EntityName switch
                 {
                     "sdkmessage" => [new("sdkmessage", MessageId) { ["name"] = "Update" }],
@@ -133,13 +155,18 @@ public sealed class DataverseStepOptionsGatewayTests
                     {
                         ["primaryobjecttypecode"] = "account"
                     },
+                    "sdkmessageprocessingstepsecureconfig" => new Entity("sdkmessageprocessingstepsecureconfig")
+                    {
+                        ["secureconfig"] = "stored-secret"
+                    },
                     _ => new Entity("sdkmessageprocessingstep", StepId)
                     {
                         ["plugintypeid"] = new EntityReference("plugintype", PluginId),
                         ["sdkmessageid"] = new EntityReference("sdkmessage", MessageId),
                         ["sdkmessagefilterid"] = new EntityReference("sdkmessagefilter", FilterId),
+                        ["sdkmessageprocessingstepsecureconfigid"] = new EntityReference("sdkmessageprocessingstepsecureconfig", SecureConfigId),
                         ["stage"] = new OptionSetValue(40), ["mode"] = new OptionSetValue(0),
-                        ["rank"] = 1, ["versionnumber"] = 7L
+                        ["rank"] = 1, ["versionnumber"] = 7L, ["description"] = "Update step"
                     }
                 });
             }
@@ -155,17 +182,20 @@ public sealed class DataverseStepOptionsGatewayTests
                 var metadata = new EntityMetadata { LogicalName = "account" };
                 typeof(EntityMetadata).GetProperty(nameof(EntityMetadata.PrimaryIdAttribute))!
                     .SetValue(metadata, "accountid");
+                typeof(EntityMetadata).GetProperty(nameof(EntityMetadata.DisplayName))!
+                    .SetValue(metadata, new Label("Account", 1033));
                 typeof(EntityMetadata).GetProperty(nameof(EntityMetadata.Attributes))!
                     .SetValue(metadata, new AttributeMetadata[]
                     {
-                        new StringAttributeMetadata { LogicalName = "accountid" },
-                        new StringAttributeMetadata { LogicalName = "name" }
+                        new StringAttributeMetadata { LogicalName = "accountid", DisplayName = new Label("Account", 1033) },
+                        new StringAttributeMetadata { LogicalName = "name", DisplayName = new Label("Account Name", 1033) }
                     });
                 var response = new RetrieveEntityResponse();
                 response.Results["EntityMetadata"] = metadata;
                 return Task.FromResult<OrganizationResponse>(response);
             }
             throw new NotSupportedException(targetMethod?.Name);
+            }
         }
     }
 }

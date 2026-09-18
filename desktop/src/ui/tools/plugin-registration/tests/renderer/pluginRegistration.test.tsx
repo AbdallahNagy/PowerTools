@@ -314,8 +314,51 @@ describe("Plugin Registration workspace", () => {
   });
 
   it.each([
+    ["Contoso.Plugins", "Update assembly"],
+    ["(Step) Account Update", "Update step"],
+    ["(Image) Account Target", "Update image"],
+    ["(Workflow Activity) Validate Account", "Update workflow activity"],
+  ])("opens the populated update experience when double-clicking %s", async (nodeName, dialogName) => {
+    useCatalogResponse();
+    renderPluginRegistration();
+    await waitForCatalog();
+
+    fireEvent.click(screen.getByRole("treeitem", { name: "Contoso.Plugins" }), { detail: 1 });
+    if (nodeName.includes("Step") || nodeName.includes("Image")) {
+      fireEvent.click(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }), { detail: 1 });
+    }
+    if (nodeName.includes("Image")) {
+      fireEvent.click(screen.getByRole("treeitem", { name: "(Step) Account Update" }), { detail: 1 });
+    }
+
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: nodeName }), { detail: 2 });
+    expect(await screen.findByRole("dialog", { name: dialogName })).toBeInTheDocument();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+
+  it("replaces an open dialog when a different supported operation starts", async () => {
+    useCatalogResponse();
+    renderPluginRegistration();
+    await waitForCatalog();
+
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "Contoso.Plugins" }), { detail: 2 });
+    expect(await screen.findByRole("dialog", { name: "Update assembly" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("treeitem", { name: "Contoso.Plugins" }), { detail: 1 });
+    fireEvent.click(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }), { detail: 1 });
+    fireEvent.contextMenu(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Register New Step" }));
+
+    expect(await screen.findByRole("dialog", { name: "Register step" })).toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Update assembly" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+
+  it.each([
     ["Contoso.Plugins", ["Update assembly", "Unregister assembly"]],
-    ["(Plugin) Account Plugin", ["Register step", "Unregister plug-in"]],
+    ["(Plugin) Account Plugin", ["Register New Step", "Unregister plug-in"]],
     [
       "(Step) Account Update",
       ["Update step", "Register image", "Disable step", "Unregister step"],

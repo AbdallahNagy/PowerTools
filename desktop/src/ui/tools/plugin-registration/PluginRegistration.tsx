@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useConnections, useConnectionSelection } from "../../shared/connections";
 import { Button, Modal, ToastProvider } from "../../shared/ui";
+import { usePluginRegistrationCapabilities, cascadeCapabilityFromQuery } from "./api/usePluginRegistrationCapabilities";
 import { useRegistrationCatalog } from "./api/useRegistrationCatalog";
 import { useWorkflowActivityDetails } from "./api/useWorkflowActivityDetails";
 import { PluginRegistrationHeader } from "./components/PluginRegistrationHeader";
@@ -25,6 +26,7 @@ import {
   type CatalogTreeNode,
 } from "./model/catalogTree";
 import {
+  dialogOwnerForIntent,
   doubleClickIntentForNode,
   isRegistrationActionSupported,
   type RegistrationActionIntent,
@@ -61,12 +63,13 @@ function PluginRegistrationPage() {
   const { connectionName, setConnectionName } = useConnectionSelection();
   const { connections } = useConnections();
   const catalogQuery = useRegistrationCatalog(connectionName || null);
+  const capabilitiesQuery = usePluginRegistrationCapabilities(connectionName || null);
+  const cascadeUnregister = cascadeCapabilityFromQuery(capabilitiesQuery.data);
   const [selectedNodeId, setSelectedNodeId] = useState<CatalogNodeId | null>(null);
   const [expandedNodeIds, setExpandedNodeIds] = useState<Set<string>>(new Set());
   const [dialogIntent, setDialogIntent] = useState<DialogIntent>(null);
   const [contextMenu, setContextMenu] = useState<RegistrationContextMenuState | null>(null);
   const [mutationOutcome, setMutationOutcome] = useState<MutationOutcome | null>(null);
-  const [retryRead, setRetryRead] = useState<(() => void) | null>(null);
   const [mutationRefreshPending, setMutationRefreshPending] = useState(false);
 
   const nodes = useMemo(
@@ -134,7 +137,6 @@ function PluginRegistrationPage() {
     setContextMenu(null);
     setDialogIntent(null);
     setMutationOutcome(null);
-    setRetryRead(null);
     setConnectionName(name);
   };
 
@@ -154,7 +156,6 @@ function PluginRegistrationPage() {
     const parsed = parseMutationOutcome(value);
     closeDialog();
     setContextMenu(null);
-    setRetryRead(null);
     setMutationOutcome({ ...parsed, targetId: parsed.targetId ?? affectedComponentId ?? null });
     await refreshAfterMutation(parsed.targetId ?? affectedComponentId);
   };
@@ -167,7 +168,6 @@ function PluginRegistrationPage() {
       targetId: context.affectedComponentId ?? null,
       problem,
     });
-    setRetryRead(() => context.phase === "read" ? context.retry ?? null : null);
     if (uncertain || problem.category === "concurrency") {
       closeDialog();
       setContextMenu(null);
@@ -214,7 +214,9 @@ function PluginRegistrationPage() {
   function handleActionIntent(intent: RegistrationActionIntent) {
     if (mutationRefreshPending) return;
     const actionNode = findActionTargetNode(nodes, intent);
-    if (!actionNode || !isRegistrationActionSupported(actionNode, intent)) return;
+    const owner = dialogOwnerForIntent(intent);
+    if (!actionNode || !owner || !isRegistrationActionSupported(actionNode, intent, { cascadeUnregister })) return;
+    setContextMenu(null);
     switch (intent.kind) {
       case "update":
         openDialog({ kind: "update", nodeId: intent.nodeId });
@@ -256,7 +258,7 @@ function PluginRegistrationPage() {
         registerDisabled={!connectionName || mutationRefreshPending}
       />
 
-      <MutationOutcomeBanner outcome={mutationOutcome} retryRead={retryRead} refreshPending={mutationRefreshPending} />
+      <MutationOutcomeBanner outcome={mutationOutcome} refreshPending={mutationRefreshPending} />
 
       <RegistrationWorkspace
         connectionName={connectionName}
@@ -275,6 +277,7 @@ function PluginRegistrationPage() {
 
       <RegistrationContextMenu
         state={contextMenu}
+        actionContext={{ cascadeUnregister }}
         onAction={handleActionIntent}
         onClose={() => setContextMenu(null)}
       />
@@ -282,6 +285,7 @@ function PluginRegistrationPage() {
         <AssemblyDialog
           assembly={dialogNode?.kind === "assembly" ? dialogNode.data : null}
           connectionName={connectionName || null}
+          onPremisesAssemblyOptions={Boolean(capabilitiesQuery.data?.onPremisesAssemblyOptions)}
           onClose={closeDialog}
           onVerified={(assembly) => setSelectedNodeId(catalogNodeId("assembly", assembly.id))}
           onMutationResult={reportMutationResult}

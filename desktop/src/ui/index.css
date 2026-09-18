@@ -60,7 +60,10 @@ button:focus-visible {
   outline: none;
 }
 
-.connection-select {
+.connection-select,
+input,
+textarea,
+select {
   color-scheme: dark;
 }
 

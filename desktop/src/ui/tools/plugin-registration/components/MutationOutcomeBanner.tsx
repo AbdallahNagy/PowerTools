@@ -1,12 +1,12 @@
-import { Button } from "../../../shared/ui";
 import type { MutationOutcome } from "../model/pluginRegistrationError";
 
-export function MutationOutcomeBanner({ outcome, retryRead, refreshPending = false }: {
+export function MutationOutcomeBanner({ outcome, refreshPending = false }: {
   outcome: MutationOutcome | null;
   retryRead?: (() => void) | null;
   refreshPending?: boolean;
 }) {
   if (!outcome) return null;
+  void refreshPending;
 
   if (outcome.outcome === "succeededAndVerified") {
     return <div role="status" className="border border-green-700 bg-green-950/40 px-3 py-2 text-sm text-green-200">
@@ -20,6 +20,8 @@ export function MutationOutcomeBanner({ outcome, retryRead, refreshPending = fal
     </div>;
   }
 
+  if (outcome.problem?.code === "dataverse-fault") return null;
+
   const uncertain = outcome.outcome === "outcomeUncertain";
   const message = uncertain
     ? "The mutation outcome is uncertain. Refresh and inspect before trying again."
@@ -30,6 +32,5 @@ export function MutationOutcomeBanner({ outcome, retryRead, refreshPending = fal
 
   return <div role="alert" className="flex items-center justify-between gap-3 border border-red-800 bg-red-950/40 px-3 py-2 text-sm text-red-200">
     <div><p>{message}</p>{suggestedAction ? <p className="text-xs text-red-300">{suggestedAction}</p> : null}</div>
-    {retryRead && !uncertain ? <Button type="button" variant="secondary" onClick={retryRead} disabled={refreshPending}>Try again</Button> : null}
   </div>;
 }
