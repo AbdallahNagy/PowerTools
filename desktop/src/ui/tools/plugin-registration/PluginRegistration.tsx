@@ -14,10 +14,11 @@ import { ContextMenu } from "./components/ContextMenu";
 import { ConfirmDialog } from "./components/dialogs/ConfirmDialog";
 import { StepDialog } from "./components/dialogs/StepDialog";
 import { ImageDialog } from "./components/dialogs/ImageDialog";
+import { AssemblyDialog } from "./components/dialogs/AssemblyDialog";
 import { buildCatalogTree, findNode, type TreeNode } from "./model/catalogTree";
 import { toRegistrationError } from "./model/apiError";
 import { getNodeActions, type NodeAction } from "./model/nodeActions";
-import type { ImageDto, StepDto } from "./model/contracts";
+import type { AssemblyDto, ImageDto, StepDto } from "./model/contracts";
 
 export default function PluginRegistration() {
   return (
@@ -54,6 +55,9 @@ function PluginRegistrationPage() {
   const [menu, setMenu] = useState<{ x: number; y: number; node: TreeNode } | null>(null);
   const [stepDialog, setStepDialog] = useState<StepDialogState | null>(null);
   const [imageDialog, setImageDialog] = useState<ImageDialogState | null>(null);
+  const [assemblyDialog, setAssemblyDialog] = useState<{ assembly?: AssemblyDto } | null>(
+    null,
+  );
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
   const catalogQuery = useCatalog(connectionName || null);
@@ -66,6 +70,7 @@ function PluginRegistrationPage() {
     setMenu(null);
     setStepDialog(null);
     setImageDialog(null);
+    setAssemblyDialog(null);
     setConfirm(null);
   }, [connectionName]);
 
@@ -141,6 +146,9 @@ function PluginRegistrationPage() {
           if (parent) setImageDialog({ step: parent, image: node.data });
         }
         break;
+      case "update-assembly":
+        if (node.kind === "assembly") setAssemblyDialog({ assembly: node.data });
+        break;
       default:
         break;
     }
@@ -152,6 +160,9 @@ function PluginRegistrationPage() {
     }
     if (node.kind === "image") {
       runAction({ id: "update-image", label: "Update image" }, node);
+    }
+    if (node.kind === "assembly") {
+      runAction({ id: "update-assembly", label: "Update assembly" }, node);
     }
   };
 
@@ -183,8 +194,8 @@ function PluginRegistrationPage() {
           void catalogQuery.refetch();
         }}
         refreshDisabled={!connectionName || catalogQuery.isFetching}
-        onRegisterAssembly={() => undefined}
-        registerAssemblyDisabled
+        onRegisterAssembly={() => setAssemblyDialog({})}
+        registerAssemblyDisabled={!connectionName}
       />
 
       <Group className="flex flex-1 min-h-0">
@@ -233,6 +244,15 @@ function PluginRegistrationPage() {
           step={imageDialog.step}
           image={imageDialog.image}
           onClose={() => setImageDialog(null)}
+        />
+      ) : null}
+
+      {assemblyDialog && connectionName ? (
+        <AssemblyDialog
+          open
+          connectionName={connectionName}
+          assembly={assemblyDialog.assembly}
+          onClose={() => setAssemblyDialog(null)}
         />
       ) : null}
 

@@ -176,3 +176,52 @@ export const SOURCE_LABELS: Record<number, string> = {
   0: "Database",
   1: "Disk",
 };
+
+export interface AssemblyInspectionDto {
+  fileName: string;
+  size: number;
+  sha256: string;
+  identity: AssemblyIdentityInspectionDto;
+  targetFramework: string | null;
+  runtimeVersion: string;
+  diagnostics: AssemblyInspectionDiagnosticDto[];
+  plugins: PluginTypeInspectionDto[];
+  workflowActivities: WorkflowActivityInspectionDto[];
+}
+
+export interface AssemblyIdentityInspectionDto {
+  name: string;
+  version: string;
+  culture: string;
+  publicKeyToken: string;
+}
+
+export interface PluginTypeInspectionDto {
+  typeName: string;
+}
+
+export interface WorkflowActivityInspectionDto {
+  typeName: string;
+  arguments: WorkflowArgumentInspectionDto[];
+}
+
+export interface WorkflowArgumentInspectionDto {
+  propertyName: string;
+  name: string;
+  typeName: string;
+  direction: number | string;
+  isRequired: boolean;
+  referenceTarget: string | null;
+}
+
+export interface AssemblyInspectionDiagnosticDto {
+  code: string;
+  message: string;
+  severity: number | string;
+}
+
+export function isInspectionError(
+  diagnostic: AssemblyInspectionDiagnosticDto,
+): boolean {
+  return diagnostic.severity === 1 || diagnostic.severity === "Error";
+}
