@@ -8,3 +8,4 @@
 - Do not access raw Electron APIs, shell contexts, or another tool's internals.
 - Promote code to `shared/` only when it is a shared domain contract or a proven reusable capability.
 - Preserve visible behavior while migrating an existing tool.
+- When adding or designing a Dataverse tool, use the `xrmtoolbox-plugin-researcher` subagent first. Search [XrmToolBox plugins](https://www.xrmtoolbox.com/plugins/), read the matching plugin backend, and map that logic onto this Electron/React tool module plus sidecar endpoints before inventing Dataverse workflows.
