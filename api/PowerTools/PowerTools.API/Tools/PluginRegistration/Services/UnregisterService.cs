@@ -244,14 +244,14 @@ public sealed class UnregisterService(IPluginRegistrationGateway gateway)
 
     private static (int Type, Guid Id)? MapDependent(Entity entity)
     {
-        var type = entity.GetAttributeValue<OptionSetValue>("dependentcomponenttype")?.Value
-            ?? entity.GetAttributeValue<int>("dependentcomponenttype");
-        var id = entity.GetAttributeValue<Guid>("dependentcomponentobjectid");
-        if (id == Guid.Empty
-            && entity.GetAttributeValue<EntityReference>("dependentcomponentobjectid") is EntityReference reference)
+        var type = CatalogService.GetOption(entity, "dependentcomponenttype");
+        entity.Attributes.TryGetValue("dependentcomponentobjectid", out var rawId);
+        var id = rawId switch
         {
-            id = reference.Id;
-        }
+            Guid guid => guid,
+            EntityReference reference => reference.Id,
+            _ => Guid.Empty,
+        };
 
         if (type == 0 && id == Guid.Empty)
             return null;

@@ -93,8 +93,21 @@ public sealed class CatalogService(IPluginRegistrationGateway gateway)
     internal static bool IsSystem(Entity entity) =>
         entity.GetAttributeValue<int>("customizationlevel") == 0;
 
-    internal static int GetOption(Entity entity, string attribute) =>
-        entity.GetAttributeValue<OptionSetValue>(attribute)?.Value ?? 0;
+    // Dataverse exposes some numeric columns as OptionSetValue (picklist/state) and
+    // others as plain int (e.g. sdkmessagefilter.availability), so accept both.
+    internal static int GetOption(Entity entity, string attribute)
+    {
+        if (!entity.Attributes.TryGetValue(attribute, out var raw))
+            return 0;
+        if (raw is AliasedValue aliased)
+            raw = aliased.Value;
+        return raw switch
+        {
+            OptionSetValue option => option.Value,
+            int value => value,
+            _ => 0,
+        };
+    }
 
     internal static Guid? GetLookupId(Entity entity, string attribute) =>
         entity.GetAttributeValue<EntityReference>(attribute)?.Id;
