@@ -75,14 +75,14 @@ export function buildEntityPickerOptions(
 ): EntityPickerOption[] {
   const real: EntityPickerOption[] = [];
   const seen = new Set<string>();
-  let noneOption: EntityPickerOption | null = null;
+  const unbound: { option: EntityPickerOption | null } = { option: null };
 
   const add = (option: EntityPickerOption) => {
     const key = `${option.logicalName.toLowerCase()}::${(option.secondaryLogicalName ?? "").toLowerCase()}`;
     if (seen.has(key)) return;
     seen.add(key);
     if (!isPresentTable(option.logicalName)) {
-      noneOption ??= option;
+      unbound.option ??= option;
       return;
     }
     real.push(option);
@@ -94,7 +94,8 @@ export function buildEntityPickerOptions(
     add(toEntityOption(item.id, item.primaryTable, item.secondaryTable, entities, false));
   }
 
-  const rows = real.length > 0 && !(noneOption?.unavailable)
+  const noneOption = unbound.option;
+  const rows = real.length > 0 && !noneOption?.unavailable
     ? real
     : noneOption
       ? [noneOption, ...real]
