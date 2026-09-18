@@ -1,5 +1,6 @@
 using Microsoft.Xrm.Sdk;
-using PowerTools.API.Tools.PluginRegistration.Dtos
+using Microsoft.Xrm.Sdk.Query;
+using PowerTools.API.Tools.PluginRegistration.Dtos;
 using PowerTools.API.Tools.PluginRegistration.Gateway;
 using PowerTools.API.Tools.PluginRegistration.Inspection;
 using PowerTools.API.Tools.PluginRegistration.Queries;

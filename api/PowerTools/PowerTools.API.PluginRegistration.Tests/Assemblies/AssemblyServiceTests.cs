@@ -179,22 +179,22 @@ public sealed class AssemblyServiceTests
     {
         var gateway = SeedWritableAssembly("1.2.0.0");
         gateway.Seed(Type("MixedRegistrationAssembly.AlphaPlugin"));
-        gateway.Seed(Type("MixedRegistrationAssembly.BetaPlugin"));
+        gateway.Seed(Type("Contoso.Plugins.MissingType"));
         var service = CreateService(gateway);
-        await using var stream = File.OpenRead(FixturePath("RemovedHandlerAssembly.dll"));
+        await using var stream = File.OpenRead(FixturePath("MixedRegistrationAssembly.dll"));
 
         var error = await Assert.ThrowsAsync<RegistrationException>(() =>
             service.UpdateAsync(
                 _assemblyId,
                 stream,
-                "RemovedHandlerAssembly.dll",
+                "MixedRegistrationAssembly.dll",
                 stream.Length,
                 CancellationToken.None));
 
         Assert.Equal("assembly_missing_types", error.Problem.Code);
         Assert.Contains(
             error.Problem.Problems,
-            problem => problem.Message == "MixedRegistrationAssembly.BetaPlugin");
+            problem => problem.Message == "Contoso.Plugins.MissingType");
     }
 
     [Fact]

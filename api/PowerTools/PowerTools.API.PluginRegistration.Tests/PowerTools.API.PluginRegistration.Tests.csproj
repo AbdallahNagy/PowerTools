@@ -29,9 +29,12 @@
 
   <Target Name="BuildAndCopyInspectionFixtures" BeforeTargets="CoreCompile">
     <MSBuild Projects="@(InspectionFixtureProject)"
+             Targets="Restore"
+             BuildInParallel="true" />
+    <MSBuild Projects="@(InspectionFixtureProject)"
              Targets="Build"
              BuildInParallel="true"
-             Properties="Configuration=$(Configuration)">
+             Properties="Configuration=$(Configuration);EnableWindowsTargeting=true">
       <Output TaskParameter="TargetOutputs" ItemName="InspectionFixtureAssembly" />
     </MSBuild>
     <MakeDir Directories="$(OutDir)Fixtures" />
