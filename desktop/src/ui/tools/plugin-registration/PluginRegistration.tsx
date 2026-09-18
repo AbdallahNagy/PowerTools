@@ -7,6 +7,7 @@ import { useToolStatus } from "../../shared/status";
 import { useCapabilities } from "./api/useCapabilities";
 import { useCatalog } from "./api/useCatalog";
 import { useStepMutations } from "./api/useStepMutations";
+import { useUnregisterMutation } from "./api/useUnregisterMutation";
 import { ToolHeader } from "./components/ToolHeader";
 import { RegistrationTree } from "./components/RegistrationTree";
 import { NodeDetails } from "./components/NodeDetails";
@@ -18,7 +19,7 @@ import { AssemblyDialog } from "./components/dialogs/AssemblyDialog";
 import { buildCatalogTree, findNode, type TreeNode } from "./model/catalogTree";
 import { toRegistrationError } from "./model/apiError";
 import { getNodeActions, type NodeAction } from "./model/nodeActions";
-import type { AssemblyDto, ImageDto, StepDto } from "./model/contracts";
+import type { AssemblyDto, CatalogDto, ImageDto, StepDto } from "./model/contracts";
 
 export default function PluginRegistration() {
   return (
@@ -42,6 +43,7 @@ interface ConfirmState {
   title: string;
   message: string;
   confirmLabel: string;
+  successMessage: string;
   run: () => Promise<unknown>;
 }
 
@@ -63,6 +65,7 @@ function PluginRegistrationPage() {
   const catalogQuery = useCatalog(connectionName || null);
   useCapabilities(connectionName || null);
   const stepMutations = useStepMutations(connectionName || null);
+  const unregister = useUnregisterMutation(connectionName || null);
 
   useEffect(() => {
     setExpanded(new Set());
@@ -102,6 +105,20 @@ function PluginRegistrationPage() {
     });
   };
 
+  const confirmUnregister = (
+    kind: "image" | "step" | "type" | "assembly",
+    name: string,
+    id: string,
+  ) => {
+    setConfirm({
+      title: `Unregister ${kind}`,
+      message: unregisterMessage(kind, name, id, connectionName, catalogQuery.data),
+      confirmLabel: "Unregister",
+      successMessage: `${kind[0]?.toUpperCase()}${kind.slice(1)} unregistered.`,
+      run: () => unregister.mutateAsync({ kind, id }),
+    });
+  };
+
   const runAction = (action: NodeAction, node: TreeNode) => {
     if (action.disabledReason) {
       showToast(action.disabledReason, "info");
@@ -123,6 +140,7 @@ function PluginRegistrationPage() {
             title: "Enable step",
             message: `Enable “${node.data.name}” on ${connectionName}?`,
             confirmLabel: "Enable",
+            successMessage: "Step updated.",
             run: () => stepMutations.enable.mutateAsync(node.data.id),
           });
         }
@@ -133,6 +151,7 @@ function PluginRegistrationPage() {
             title: "Disable step",
             message: `Disable “${node.data.name}” on ${connectionName}?`,
             confirmLabel: "Disable",
+            successMessage: "Step updated.",
             run: () => stepMutations.disable.mutateAsync(node.data.id),
           });
         }
@@ -148,6 +167,24 @@ function PluginRegistrationPage() {
         break;
       case "update-assembly":
         if (node.kind === "assembly") setAssemblyDialog({ assembly: node.data });
+        break;
+      case "unregister-image":
+        if (node.kind === "image") confirmUnregister("image", node.data.name, node.data.id);
+        break;
+      case "unregister-step":
+        if (node.kind === "step") confirmUnregister("step", node.data.name, node.data.id);
+        break;
+      case "unregister-type":
+        if (node.kind === "type") {
+          confirmUnregister(
+            "type",
+            node.data.friendlyName || node.data.name || node.data.typeName,
+            node.data.id,
+          );
+        }
+        break;
+      case "unregister-assembly":
+        if (node.kind === "assembly") confirmUnregister("assembly", node.data.name, node.data.id);
         break;
       default:
         break;
@@ -261,14 +298,18 @@ function PluginRegistrationPage() {
         title={confirm?.title ?? ""}
         message={confirm?.message ?? ""}
         confirmLabel={confirm?.confirmLabel ?? "Confirm"}
-        isPending={stepMutations.enable.isPending || stepMutations.disable.isPending}
+        isPending={
+          stepMutations.enable.isPending ||
+          stepMutations.disable.isPending ||
+          unregister.isPending
+        }
         onClose={() => setConfirm(null)}
         onConfirm={() => {
           if (!confirm) return;
           void confirm
             .run()
             .then(() => {
-              showToast("Step updated.", "success");
+              showToast(confirm.successMessage, "success");
               setConfirm(null);
             })
             .catch((error) => showToast(toRegistrationError(error).message, "error"));
@@ -276,4 +317,33 @@ function PluginRegistrationPage() {
       />
     </div>
   );
+}
+
+function unregisterMessage(
+  kind: "image" | "step" | "type" | "assembly",
+  name: string,
+  id: string,
+  connectionName: string,
+  catalog?: CatalogDto,
+): string {
+  const intro = `Unregister the ${kind} “${name}” from ${connectionName}?`;
+  if (!catalog) return intro;
+  if (kind === "step") {
+    const images = catalog.images.filter((image) => image.stepId === id).length;
+    return images === 0
+      ? intro
+      : `${intro} This also deletes ${images} related image${images === 1 ? "" : "s"}.`;
+  }
+  if (kind === "type") {
+    const steps = catalog.steps.filter((step) => step.pluginTypeId === id).length;
+    return `${intro} This type has ${steps} step${steps === 1 ? "" : "s"}.`;
+  }
+  if (kind === "assembly") {
+    const types = catalog.types.filter((type) => type.assemblyId === id);
+    const steps = catalog.steps.filter((step) =>
+      types.some((type) => type.id === step.pluginTypeId),
+    ).length;
+    return `${intro} This assembly has ${types.length} type${types.length === 1 ? "" : "s"} and ${steps} step${steps === 1 ? "" : "s"}.`;
+  }
+  return intro;
 }

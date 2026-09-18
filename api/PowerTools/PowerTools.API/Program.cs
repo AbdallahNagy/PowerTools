@@ -44,6 +44,7 @@ builder.Services.AddScoped<StepService>();
 builder.Services.AddScoped<ImageService>();
 builder.Services.AddSingleton<IPluginAssemblyInspector, PluginAssemblyInspector>();
 builder.Services.AddScoped<AssemblyService>();
+builder.Services.AddScoped<UnregisterService>();
 
 var app = builder.Build();
 

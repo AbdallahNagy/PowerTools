@@ -169,4 +169,75 @@ describe("Plugin Registration", () => {
     );
     await waitFor(() => expect(catalogLoads).toBeGreaterThan(1));
   });
+
+  it("unregisters a step after confirming environment, name, and child counts", async () => {
+    const urls: string[] = [];
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/catalog", () =>
+        HttpResponse.json(catalogFixture),
+      ),
+      http.get("http://localhost/api/plugin-registration/capabilities", () =>
+        HttpResponse.json({
+          isOnline: true,
+          isolationModes: [2],
+          sourceTypes: [0],
+        }),
+      ),
+      http.post(
+        "http://localhost/api/plugin-registration/steps/:id/unregister",
+        ({ request }) => {
+          urls.push(request.url);
+          return HttpResponse.json({ id: catalogFixture.steps[0]?.id });
+        },
+      ),
+    );
+
+    renderWithProviders(
+      <ConnectionsProvider>
+        <StatusBarProvider>
+          <ToolHost
+            tab={{
+              id: "plugin-registration-unregister",
+              toolId: "plugin-registration",
+              title: "Plugin Registration",
+            }}
+            definition={pluginRegistrationTool}
+          />
+        </StatusBarProvider>
+      </ConnectionsProvider>,
+      {
+        bridgeOverrides: {
+          getActiveConnectionName: async () => connection.name,
+          getActiveConnection: async () => ({
+            ...connection,
+            token: "dev-token",
+            expiresOn: "2099-01-01T00:00:00.000Z",
+          }),
+          listConnections: async () => [connection],
+          getConnection: async () => ({
+            ...connection,
+            token: "dev-token",
+            expiresOn: "2099-01-01T00:00:00.000Z",
+          }),
+        },
+      },
+    );
+
+    fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand Account Plugin" }));
+    fireEvent.contextMenu(screen.getByText("AccountPlugin: Update of account"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Unregister step" }));
+
+    expect(
+      await screen.findByText(
+        "Unregister the step “AccountPlugin: Update of account” from Dev Org? This also deletes 1 related image.",
+      ),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Unregister" }));
+
+    await waitFor(() => expect(urls).toHaveLength(1));
+    expect(urls[0]).toContain(
+      `/api/plugin-registration/steps/${catalogFixture.steps[0]?.id}/unregister`,
+    );
+  });
 });

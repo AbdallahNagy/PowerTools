@@ -111,6 +111,30 @@ public static class PluginRegistrationEndpoints
             }))
             .DisableAntiforgery();
 
+        group.MapPost("/images/{id:guid}/unregister", async (
+            Guid id,
+            UnregisterService unregister,
+            CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await unregister.UnregisterImageAsync(id, ct))));
+
+        group.MapPost("/steps/{id:guid}/unregister", async (
+            Guid id,
+            UnregisterService unregister,
+            CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await unregister.UnregisterStepAsync(id, ct))));
+
+        group.MapPost("/types/{id:guid}/unregister", async (
+            Guid id,
+            UnregisterService unregister,
+            CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await unregister.UnregisterTypeAsync(id, ct))));
+
+        group.MapPost("/assemblies/{id:guid}/unregister", async (
+            Guid id,
+            UnregisterService unregister,
+            CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await unregister.UnregisterAssemblyAsync(id, ct))));
+
         return app;
     }
 
