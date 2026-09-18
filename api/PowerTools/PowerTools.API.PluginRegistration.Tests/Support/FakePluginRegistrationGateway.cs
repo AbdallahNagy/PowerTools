@@ -43,8 +43,12 @@ public sealed class FakePluginRegistrationGateway : IPluginRegistrationGateway
         return Task.FromResult(entity);
     }
 
+    public Func<Entity, Exception?>? CreateError { get; set; }
+
     public Task<Guid> CreateAsync(Entity entity, CancellationToken ct)
     {
+        if (CreateError?.Invoke(entity) is Exception error)
+            throw error;
         if (NextCreateException is not null)
         {
             var exception = NextCreateException;
@@ -54,15 +58,24 @@ public sealed class FakePluginRegistrationGateway : IPluginRegistrationGateway
 
         var id = entity.Id == Guid.Empty ? Guid.NewGuid() : entity.Id;
         entity.Id = id;
-        Created.Add(entity);
+        Created.Add(Clone(entity));
         Store(entity);
         return Task.FromResult(id);
     }
 
     public Task UpdateAsync(Entity entity, CancellationToken ct)
     {
-        Updated.Add(entity);
-        Store(entity);
+        Updated.Add(Clone(entity));
+        if (Records.TryGetValue((entity.LogicalName, entity.Id), out var existing))
+        {
+            foreach (var attribute in entity.Attributes)
+                existing[attribute.Key] = attribute.Value;
+            Store(existing);
+        }
+        else
+        {
+            Store(entity);
+        }
         return Task.CompletedTask;
     }
 
@@ -90,6 +103,14 @@ public sealed class FakePluginRegistrationGateway : IPluginRegistrationGateway
         if (entity.Id == Guid.Empty)
             entity.Id = Guid.NewGuid();
         Store(entity);
+    }
+
+    private static Entity Clone(Entity entity)
+    {
+        var clone = new Entity(entity.LogicalName, entity.Id);
+        foreach (var attribute in entity.Attributes)
+            clone[attribute.Key] = attribute.Value;
+        return clone;
     }
 
     private void Store(Entity entity)

@@ -38,6 +38,8 @@ builder.Services.AddHostedService<MigrationJobRunner>();
 builder.Services.AddScoped<IPluginRegistrationGateway, DataversePluginRegistrationGateway>();
 builder.Services.AddScoped<CapabilitiesService>();
 builder.Services.AddScoped<CatalogService>();
+builder.Services.AddScoped<StepOptionsService>();
+builder.Services.AddScoped<StepService>();
 
 var app = builder.Build();
 

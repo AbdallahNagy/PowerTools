@@ -20,6 +20,31 @@ public static class PluginRegistrationEndpoints
         group.MapGet("/catalog", async (CatalogService catalog, CancellationToken ct) =>
             await ExecuteAsync(async () => Results.Ok(await catalog.GetAsync(ct))));
 
+        group.MapGet("/step-options", async (StepOptionsService options, CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await options.GetAsync(ct))));
+
+        group.MapPost("/steps", async (StepDraftDto draft, StepService steps, CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await steps.CreateAsync(draft, ct))));
+
+        group.MapPost("/steps/{id:guid}/update", async (
+            Guid id,
+            StepDraftDto draft,
+            StepService steps,
+            CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await steps.UpdateAsync(id, draft, ct))));
+
+        group.MapPost("/steps/{id:guid}/enable", async (
+            Guid id,
+            StepService steps,
+            CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await steps.SetEnabledAsync(id, true, ct))));
+
+        group.MapPost("/steps/{id:guid}/disable", async (
+            Guid id,
+            StepService steps,
+            CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await steps.SetEnabledAsync(id, false, ct))));
+
         return app;
     }
 
