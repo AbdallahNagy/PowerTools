@@ -4,6 +4,7 @@ import { apiGet } from "../../../shared/api/client";
 
 export interface PluginRegistrationCapabilities {
   transactionalCascadeUnregister: { supported: boolean; reason: string };
+  onPremisesAssemblyOptions?: boolean;
 }
 
 const unsupported: PluginRegistrationCapabilities = {
@@ -11,6 +12,7 @@ const unsupported: PluginRegistrationCapabilities = {
     supported: false,
     reason: "Transactional cascade unregister is not release-approved yet. Transactional safety has not yet been proven.",
   },
+  onPremisesAssemblyOptions: false,
 };
 
 export function usePluginRegistrationCapabilities(connectionName: string | null) {

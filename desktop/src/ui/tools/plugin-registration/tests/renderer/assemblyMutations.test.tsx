@@ -69,6 +69,10 @@ describe("Assembly mutations", () => {
     expect(await screen.findByText("Upload assembly DLL")).toBeVisible();
     expect(screen.getByText("Choose DLL file")).toBeVisible();
     expect(screen.getByLabelText("Assembly DLL")).toHaveAttribute("type", "file");
+    expect(screen.getByLabelText("Sandbox")).toBeDisabled();
+    expect(screen.getByLabelText("None")).toBeDisabled();
+    expect(screen.getByLabelText("Database")).toBeDisabled();
+    expect(screen.getByLabelText("Disk")).toBeDisabled();
   });
 
   it("blocks confirmation when preflight reinspection reports a different SHA-256", async () => {
@@ -109,9 +113,8 @@ describe("Assembly mutations", () => {
       expect.objectContaining({ meta: { connectionName: "Development" } }),
     ));
     await screen.findByText("Contoso 1.0.0.0");
-    fireEvent.click(screen.getByRole("button", { name: "Preview impact" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("uploaded DLL changed after analysis");
-    expect(screen.queryByRole("dialog", { name: "Assembly impact preview" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("tree", { name: "Added and removed registrations" })).not.toBeInTheDocument();
   });
 
   it("shows a safe compatibility diagnostic and blocks preview for an incompatible DLL", async () => {
@@ -137,7 +140,7 @@ describe("Assembly mutations", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("target framework is not supported");
     expect(screen.queryByText("Metadata value that must not be rendered")).not.toBeInTheDocument();
     expect(screen.getByText("Select a compatible DLL and analyze it again.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Preview impact" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Register" })).toBeDisabled();
     expect(apiPostMock).toHaveBeenCalledTimes(1);
   });
 
@@ -158,28 +161,19 @@ describe("Assembly mutations", () => {
     const file = new File(["dll"], "Contoso.dll", { type: "application/octet-stream" });
 
     await openAndAnalyze(user, file);
-    await user.click(screen.getByRole("button", { name: "Preview impact" }));
 
-    const preview = await screen.findByRole("dialog", { name: "Assembly impact preview" });
-    expect(preview).toHaveTextContent("Contoso, 1.0.0.0, neutral, old-token");
-    expect(preview).toHaveTextContent("Contoso, 2.0.0.0, neutral, new-token");
-    expect(preview).toHaveTextContent("old-sha");
-    expect(preview).toHaveTextContent("analysis-hash");
-    expect(preview).toHaveTextContent("10 bytes");
-    expect(preview).toHaveTextContent("3 bytes");
-    expect(preview).toHaveTextContent("Added: Contoso.AddedPlugin");
-    expect(preview).toHaveTextContent("Unchanged: Contoso.StablePlugin");
-    expect(preview).toHaveTextContent("Changed: Contoso.ChangedPlugin");
-    expect(preview).toHaveTextContent("Removed: Contoso.RemovedPlugin");
-    expect(preview).toHaveTextContent("Contoso.Workflow.Required Account: added-required (breaking)");
-    expect(preview).toHaveTextContent("Contoso.RemovedPlugin: step 'Update account', image 'PreImage'");
-    expect(preview).toHaveTextContent("Custom API: Submit Account");
-    expect(preview).toHaveTextContent("Review the assembly version change.");
-    expect(preview).toHaveTextContent("A referenced workflow activity has a breaking contract.");
-    expect(within(preview).getByRole("button", { name: "Confirm" })).toBeDisabled();
+    const tree = await screen.findByRole("tree", { name: "Added and removed registrations" });
+    expect(tree).toHaveTextContent("(Plugin) Contoso.AddedPlugin");
+    expect(tree).toHaveTextContent("(Plugin) Contoso.RemovedPlugin");
+    expect(tree).toHaveTextContent("(Step) Update account");
+    expect(tree).not.toHaveTextContent("old-sha");
+    expect(tree).not.toHaveTextContent("analysis-hash");
+    expect(tree).not.toHaveTextContent("Custom API");
+    expect(tree).not.toHaveTextContent("Contoso.StablePlugin");
+    expect(screen.getByRole("button", { name: "Register" })).toBeDisabled();
 
-    await user.click(within(preview).getByRole("button", { name: "Cancel" }));
-    expect(screen.queryByRole("dialog", { name: "Assembly impact preview" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog", { name: "Register assembly" })).not.toBeInTheDocument();
     expect(apiPostMock.mock.calls.filter(([url]) => String(url).endsWith("/execute"))).toHaveLength(0);
   });
 
@@ -208,8 +202,8 @@ describe("Assembly mutations", () => {
     const file = new File(["dll"], "Contoso.dll", { type: "application/octet-stream" });
 
     await openAndAnalyze(user, file);
-    await user.click(screen.getByRole("button", { name: "Preview impact" }));
-    await user.click(await screen.findByRole("button", { name: "Confirm" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Register" })).toBeEnabled());
+    await user.click(screen.getByRole("button", { name: "Register" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Register assembly" })).not.toBeInTheDocument());
     const executeCalls = apiPostMock.mock.calls.filter(([url]) => String(url).endsWith("/register/execute"));
@@ -244,6 +238,22 @@ describe("Assembly mutations", () => {
     const dialog = await screen.findByRole("dialog", { name: "Register assembly" });
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("could not be analyzed");
     expect(apiPostMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("enables isolation and location when on-premises assembly options are available", async () => {
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/catalog", () => HttpResponse.json({ assemblies: [] })),
+      http.get("http://localhost/api/plugin-registration/capabilities", () => HttpResponse.json({
+        transactionalCascadeUnregister: { supported: false, reason: "unproven" },
+        onPremisesAssemblyOptions: true,
+      })),
+    );
+    renderPage();
+    await userEvent.click(await enabledRegisterButton());
+    expect(await screen.findByLabelText("Sandbox")).toBeEnabled();
+    expect(screen.getByLabelText("None")).toBeEnabled();
+    expect(screen.getByLabelText("Database")).toBeEnabled();
+    expect(screen.getByLabelText("Disk")).toBeEnabled();
   });
 });
 

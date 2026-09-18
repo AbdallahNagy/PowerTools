@@ -19,31 +19,30 @@ afterAll(() => { if (originalResizeObserver) window.ResizeObserver = originalRes
 beforeEach(() => { apiPostMock.mockReset(); useResponses(); });
 
 describe("Step mutations", () => {
-  it("uses connection options, warns on unfiltered Update, rejects its primary key, and never displays stored secure config", async () => {
+  it("loads the step form once, searches messages and entities, and posts secure configuration", async () => {
     renderPage();
     await openPlugin();
     fireEvent.contextMenu(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }));
     await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register New Step" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Register step" });
-    expect(within(dialog).getByLabelText("Message")).toHaveValue("message-update");
-    expect(within(dialog).getByLabelText("Message filter")).toHaveValue("filter-account");
-    expect(dialog).toHaveTextContent("Stored secure configuration is not displayed");
-    expect(dialog).not.toHaveTextContent("stored-secret");
+    expect(await within(dialog).findByLabelText("Message")).toHaveTextContent("Update");
+    expect(within(dialog).getByLabelText("Entity")).toHaveTextContent("account");
+    expect(within(dialog).getByLabelText("Secure configuration")).toHaveValue("");
     expect(dialog).toHaveTextContent("Update steps should select filtering attributes");
 
-    await userEvent.type(within(dialog).getByLabelText("Filtering attributes"), "accountid");
+    await userEvent.click(within(dialog).getByLabelText("Filtering attributes"));
+    await userEvent.click(screen.getByRole("checkbox", { name: "accountid" }));
     expect(dialog).toHaveTextContent("primary key cannot be used");
-    expect(within(dialog).getByRole("button", { name: "Preview changes" })).toBeDisabled();
-    await userEvent.clear(within(dialog).getByLabelText("Filtering attributes"));
-    await userEvent.type(within(dialog).getByLabelText("Replacement secure configuration"), "new-secret");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Preview changes" }));
+    expect(within(dialog).getByRole("button", { name: "Register" })).toBeDisabled();
+    await userEvent.click(screen.getByRole("checkbox", { name: "accountid" }));
+    await userEvent.type(within(dialog).getByLabelText("Secure configuration"), "new-secret");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Register" }));
     expect(apiPostMock).toHaveBeenCalledWith("/api/plugin-registration/steps/create/preflight",
       expect.objectContaining({ replacementSecureConfiguration: "new-secret" }), expect.anything());
-    expect(await screen.findByRole("dialog", { name: "Step impact preview" })).toHaveTextContent("Update account");
   });
 
-  it("keeps same-table message filters separately selectable by their Dataverse identities", async () => {
+  it("keeps same-table entities separately selectable by their Dataverse identities", async () => {
     httpServer.use(http.get("http://localhost/api/plugin-registration/step-options", () => HttpResponse.json({
       messages: [{ id: "message-update", name: "Update" }],
       filters: [
@@ -58,9 +57,9 @@ describe("Step mutations", () => {
     await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register New Step" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Register step" });
-    const filter = within(dialog).getByLabelText("Message filter");
-    await userEvent.selectOptions(filter, "filter-account-related");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Preview changes" }));
+    await userEvent.click(await within(dialog).findByLabelText("Entity"));
+    await userEvent.click(screen.getByRole("option", { name: "account · contact" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Register" }));
 
     expect(apiPostMock).toHaveBeenCalledWith("/api/plugin-registration/steps/create/preflight",
       expect.objectContaining({ sdkMessageFilterId: "filter-account-related", secondaryTable: "contact" }), expect.anything());
@@ -84,7 +83,7 @@ describe("Step mutations", () => {
     expect(stateDialog).toHaveTextContent("Update · account · PostOperation");
   });
 
-  it("initializes update from safe fresh details and refreshes only after verified execute", async () => {
+  it("initializes update from safe fresh details, shows retrieved secure configuration, and saves without a preview dialog", async () => {
     let catalogReads = 0;
     httpServer.use(
       http.get("http://localhost/api/plugin-registration/catalog", () => { catalogReads++; return HttpResponse.json(catalog); }),
@@ -92,31 +91,30 @@ describe("Step mutations", () => {
         stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
         primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 3,
         filteringAttributes: ["name"], impersonatingUserId: "user-1", unsecureConfiguration: "public-config",
+        secureConfiguration: "stored-secret", description: "Account update",
         secureConfigExists: true, expectedVersions: { "plugin-1": 4, "step-1": 7 },
       })),
     );
-    apiPostMock.mockImplementation((url: string) => url.endsWith("/preflight") ? Promise.resolve({
+    apiPostMock.mockImplementation((url: string) => url.includes("/preflight") ? Promise.resolve({
       draft: {}, before: { message: "Update", primaryTable: "account", stage: 40, mode: 0, rank: 3, filteringAttributes: ["name"], impersonatingUserId: "user-1", unsecureConfiguration: "public-config", secureConfigExists: true, isEnabled: true },
       after: { message: "Update", primaryTable: "account", stage: 40, mode: 0, rank: 3, filteringAttributes: ["name"], impersonatingUserId: "user-1", unsecureConfiguration: "public-config", secureConfigExists: true, isEnabled: true },
-      plan: { token: "signed", blockers: [], warnings: [], changes: [{ field: "rank", before: "3", after: "3" }, { field: "secureConfigurationAction", before: null, after: "keep" }], confirmation: { message: "Confirm" } },
+      plan: { token: "signed", blockers: [], warnings: [], changes: [], confirmation: { message: "Confirm" } },
     }) : Promise.resolve({ outcome: "succeededAndVerified", succeededAndVerified: true, step: catalog.assemblies[0].handlers[0].steps[0] }));
     renderPage();
     await openStep();
     fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
     const dialog = await screen.findByRole("dialog", { name: "Update step" });
-    expect(await within(dialog).findByLabelText("Filtering attributes")).toHaveValue("name");
-    expect(within(dialog).getByLabelText("Impersonating user")).toHaveValue("user-1");
+    expect(await within(dialog).findByLabelText("Filtering attributes")).toHaveTextContent("1 selected");
+    expect(within(dialog).getByLabelText("Run in user's context")).toHaveTextContent("Service User");
     expect(within(dialog).getByLabelText("Unsecure configuration")).toHaveValue("public-config");
-    expect(dialog).not.toHaveTextContent("stored-secret");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Preview changes" }));
-    const preview = await screen.findByRole("dialog", { name: "Step impact preview" });
-    expect(preview).toHaveTextContent("Rank: 3 → 3");
-    expect(preview).toHaveTextContent("Secure configuration: Keep");
-    await userEvent.click(within(preview).getByRole("button", { name: "Confirm" }));
+    expect(within(dialog).getByLabelText("Secure configuration")).toHaveValue("stored-secret");
+    expect(within(dialog).getByLabelText("Description")).toHaveValue("Account update");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Update" }));
+    expect(screen.queryByRole("dialog", { name: "Step impact preview" })).not.toBeInTheDocument();
     await waitFor(() => expect(catalogReads).toBeGreaterThanOrEqual(2));
   });
 
-  it("blocks update preview until safe edit details load and shows a sanitized load failure", async () => {
+  it("shows one loading state until step details finish, then a sanitized load failure", async () => {
     let rejectDetails!: (reason: unknown) => void;
     httpServer.use(http.get("http://localhost/api/plugin-registration/steps/step-1/edit-details", () =>
       new Promise((_resolve, reject) => { rejectDetails = reject; })));
@@ -124,14 +122,14 @@ describe("Step mutations", () => {
     await openStep();
     fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
     const dialog = await screen.findByRole("dialog", { name: "Update step" });
-    expect(within(dialog).getByLabelText("Message")).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "Preview changes" })).toBeDisabled();
+    expect(within(dialog).getByText("Loading step details…")).toBeInTheDocument();
+    expect(within(dialog).queryByLabelText("Message")).not.toBeInTheDocument();
     rejectDetails(new Error("stored-secret backend detail"));
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("Unable to load step details");
     expect(dialog).not.toHaveTextContent("stored-secret backend detail");
   });
 
-  it("explains a step-choice failure and retries it without reopening the update dialog", async () => {
+  it("retries a failed step form load without reopening the dialog", async () => {
     let choiceReads = 0;
     httpServer.use(http.get("http://localhost/api/plugin-registration/step-options", () => {
       choiceReads++;
@@ -148,57 +146,33 @@ describe("Step mutations", () => {
     fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Update step" });
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Unable to load step choices");
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Unable to load step details");
     expect(dialog).not.toHaveTextContent("secret choice failure");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Retry step choices" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Retry" }));
 
-    expect(await within(dialog).findByLabelText("Message")).toHaveValue("message-update");
+    expect(await within(dialog).findByLabelText("Message")).toHaveTextContent("Update");
     expect(choiceReads).toBe(2);
   });
 
-  it("explains a step-details failure and retries it without exposing backend error text", async () => {
-    let detailReads = 0;
-    httpServer.use(http.get("http://localhost/api/plugin-registration/steps/step-1/edit-details", () => {
-      detailReads++;
-      return detailReads === 1
-        ? HttpResponse.json({ detail: "stored-secret backend detail" }, { status: 500 })
-        : HttpResponse.json({
-          stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
-          primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 1, filteringAttributes: ["name"],
-          impersonatingUserId: null, unsecureConfiguration: null, secureConfigExists: true,
-          expectedVersions: { "plugin-1": 4, "step-1": 7 },
-        });
-    }));
-    renderPage();
-    await openStep();
-    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
-
-    const dialog = await screen.findByRole("dialog", { name: "Update step" });
-    expect(await within(dialog).findByRole("alert")).toHaveTextContent("Unable to load step details");
-    expect(dialog).not.toHaveTextContent("stored-secret backend detail");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Retry step details" }));
-
-    expect(await within(dialog).findByLabelText("Filtering attributes")).toHaveValue("name");
-    expect(detailReads).toBe(2);
-  });
-
   it("discards a late step-details response after the update dialog closes", async () => {
-    let resolveDetails!: (response: HttpResponse) => void;
-    httpServer.use(http.get("http://localhost/api/plugin-registration/steps/step-1/edit-details", () =>
-      new Promise<HttpResponse>((resolve) => { resolveDetails = resolve; })));
+    let releaseDetails!: () => void;
+    httpServer.use(http.get("http://localhost/api/plugin-registration/steps/step-1/edit-details", async () => {
+      await new Promise<void>((resolve) => { releaseDetails = resolve; });
+      return HttpResponse.json({
+        stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
+        primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 1, filteringAttributes: ["name"],
+        impersonatingUserId: null, unsecureConfiguration: null, secureConfigExists: true,
+        expectedVersions: { "plugin-1": 4, "step-1": 7 },
+      });
+    }));
     renderPage();
     await openStep();
     fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Update step" });
-    expect(within(dialog).getByText("Loading current step details…")).toBeInTheDocument();
+    expect(within(dialog).getByText("Loading step details…")).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
-    resolveDetails(HttpResponse.json({
-      stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
-      primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 1, filteringAttributes: ["name"],
-      impersonatingUserId: null, unsecureConfiguration: null, secureConfigExists: true,
-      expectedVersions: { "plugin-1": 4, "step-1": 7 },
-    }));
+    releaseDetails();
 
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Update step" })).not.toBeInTheDocument());
   });
@@ -214,13 +188,12 @@ describe("Step mutations", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Update step" });
     expect(await within(dialog).findByText("This step is managed or not customizable, so it can be inspected but not updated.")).toBeInTheDocument();
-    expect(await within(dialog).findByLabelText("Filtering attributes")).toHaveValue("");
-    expect(within(dialog).getByLabelText("Message")).toHaveValue("message-update");
-    expect(within(dialog).getByLabelText("Filtering attributes")).toBeDisabled();
-    expect(within(dialog).getByRole("button", { name: "Preview changes" })).toBeDisabled();
+    expect(within(dialog).getByLabelText("Message")).toHaveTextContent("Update");
+    expect(within(dialog).getByLabelText("Message")).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Update" })).toBeDisabled();
   });
 
-  it("loads selected-filter metadata once and keeps a missing current filter selectable as unavailable", async () => {
+  it("loads selected-entity metadata once and keeps a missing current entity selectable as unavailable", async () => {
     let metadataReads = 0;
     httpServer.use(
       http.get("http://localhost/api/plugin-registration/step-options", () => HttpResponse.json({
@@ -245,25 +218,48 @@ describe("Step mutations", () => {
     await openStep();
     fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
     const dialog = await screen.findByRole("dialog", { name: "Update step" });
-    const filter = await within(dialog).findByLabelText("Message filter");
-    expect(filter).toHaveValue("filter-retired");
-    expect(filter).toHaveTextContent("unavailable");
-    expect(within(dialog).getByLabelText("Impersonating user")).toHaveTextContent("unavailable");
+    const entity = await within(dialog).findByLabelText("Entity");
+    expect(entity).toHaveTextContent("unavailable");
+    expect(within(dialog).getByLabelText("Run in user's context")).toHaveTextContent("unavailable");
     await waitFor(() => expect(metadataReads).toBeGreaterThanOrEqual(1));
     const readsAfterLoad = metadataReads;
-    await userEvent.selectOptions(filter, "filter-account-related");
+    await userEvent.click(entity);
+    await userEvent.click(screen.getByRole("option", { name: "account · contact" }));
     await waitFor(() => expect(metadataReads).toBeGreaterThan(readsAfterLoad));
   });
 
-  it("requires an explicit clear action to remove stored secure configuration", async () => {
+  it("warns before saving when every filtering attribute is selected", async () => {
+    httpServer.use(http.get("http://localhost/api/plugin-registration/step-filters/:filterId/metadata", () =>
+      HttpResponse.json({ filterId: "filter-account", primaryIdAttribute: "accountid", availableAttributes: ["accountid", "name", "telephone1"] })));
     renderPage();
     await openStep();
     fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
     const dialog = await screen.findByRole("dialog", { name: "Update step" });
-    expect(await within(dialog).findByLabelText("Keep stored secure configuration")).toBeChecked();
-    expect(within(dialog).queryByLabelText("Replacement secure configuration")).not.toBeInTheDocument();
-    await userEvent.click(within(dialog).getByLabelText("Clear stored secure configuration"));
-    await userEvent.click(within(dialog).getByRole("button", { name: "Preview changes" }));
+    await userEvent.click(await within(dialog).findByLabelText("Filtering attributes"));
+    await userEvent.click(screen.getByRole("checkbox", { name: "name" }));
+    await userEvent.click(screen.getByRole("checkbox", { name: "telephone1" }));
+    await userEvent.click(within(dialog).getByRole("button", { name: "Update" }));
+    expect(await screen.findByRole("dialog", { name: "All attributes selected" })).toHaveTextContent("highly discouraged");
+    await userEvent.click(screen.getByRole("button", { name: "Change selection" }));
+    expect(screen.queryByRole("dialog", { name: "All attributes selected" })).not.toBeInTheDocument();
+    expect(apiPostMock).not.toHaveBeenCalled();
+  });
+
+  it("clears stored secure configuration when the field is emptied", async () => {
+    httpServer.use(http.get("http://localhost/api/plugin-registration/steps/step-1/edit-details", () => HttpResponse.json({
+      stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
+      primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 1, filteringAttributes: ["name"],
+      impersonatingUserId: null, unsecureConfiguration: null, secureConfiguration: "stored-secret",
+      secureConfigExists: true, expectedVersions: { "plugin-1": 4, "step-1": 7 },
+    })));
+    renderPage();
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Update step" });
+    const secure = await within(dialog).findByLabelText("Secure configuration");
+    expect(secure).toHaveValue("stored-secret");
+    await userEvent.clear(secure);
+    await userEvent.click(within(dialog).getByRole("button", { name: "Update" }));
     expect(apiPostMock).toHaveBeenCalledWith("/api/plugin-registration/steps/step-1/update/preflight",
       expect.objectContaining({ secureConfigurationAction: "clear", replacementSecureConfiguration: null }), expect.anything());
   });
@@ -293,10 +289,12 @@ function useResponses() {
       expectedVersions: { "plugin-1": 4, "step-1": 7 },
     })),
   );
-  apiPostMock.mockResolvedValue({
-    draft: {}, plan: { token: "signed", blockers: [], warnings: [{ code: "filter", message: "Update steps should select filtering attributes" }], confirmation: { level: "explicit", message: "Confirm" } },
-    after: { message: "Update", primaryTable: "account", stage: 40, mode: 0, rank: 1, filteringAttributes: [], secureConfigExists: true },
-  });
+  apiPostMock.mockImplementation((url: string) => String(url).includes("/preflight")
+    ? Promise.resolve({
+      draft: {}, plan: { token: "signed", blockers: [], warnings: [{ code: "filter", message: "Update steps should select filtering attributes" }], confirmation: { level: "explicit", message: "Confirm" } },
+      after: { message: "Update", primaryTable: "account", stage: 40, mode: 0, rank: 1, filteringAttributes: [], secureConfigExists: true },
+    })
+    : Promise.resolve({ outcome: "succeededAndVerified", succeededAndVerified: true, step: catalog.assemblies[0].handlers[0].steps[0] }));
 }
 
 function renderPage() {

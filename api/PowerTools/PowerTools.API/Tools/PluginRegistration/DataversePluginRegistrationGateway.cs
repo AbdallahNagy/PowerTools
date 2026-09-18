@@ -61,7 +61,7 @@ public sealed class DataversePluginRegistrationGateway(
 
     public async Task<StepOptionsDto> RetrieveStepOptionsAsync(CancellationToken cancellationToken)
     {
-        var messages = await RetrieveAllPagesAsync(new QueryExpression("sdkmessage")
+        var messagesTask = RetrieveAllPagesAsync(new QueryExpression("sdkmessage")
         {
             ColumnSet = new ColumnSet("sdkmessageid", "name"),
             Criteria = new FilterExpression(LogicalOperator.And)
@@ -69,11 +69,11 @@ public sealed class DataversePluginRegistrationGateway(
                 Conditions = { new("isprivate", ConditionOperator.Equal, false) }
             }
         }, cancellationToken);
-        var filters = await RetrieveAllPagesAsync(new QueryExpression("sdkmessagefilter")
+        var filtersTask = RetrieveAllPagesAsync(new QueryExpression("sdkmessagefilter")
         {
             ColumnSet = new ColumnSet("sdkmessagefilterid", "sdkmessageid", "primaryobjecttypecode", "secondaryobjecttypecode")
         }, cancellationToken);
-        var users = await RetrieveAllPagesAsync(new QueryExpression("systemuser")
+        var usersTask = RetrieveAllPagesAsync(new QueryExpression("systemuser")
         {
             ColumnSet = new ColumnSet("systemuserid", "fullname"),
             Criteria = new FilterExpression(LogicalOperator.And)
@@ -81,12 +81,13 @@ public sealed class DataversePluginRegistrationGateway(
                 Conditions = { new("isdisabled", ConditionOperator.Equal, false), new("accessmode", ConditionOperator.NotEqual, 3) }
             }
         }, cancellationToken);
+        await Task.WhenAll(messagesTask, filtersTask, usersTask);
         return new(
-            messages.Select(row => new StepOptionDto(row.Id, Text(row, "name"))).OrderBy(row => row.Name).ToArray(),
-            filters.Select(row => new StepMessageFilterOptionDto(row.Id, LookupId(row, "sdkmessageid") ?? Guid.Empty,
+            messagesTask.Result.Select(row => new StepOptionDto(row.Id, Text(row, "name"))).OrderBy(row => row.Name).ToArray(),
+            filtersTask.Result.Select(row => new StepMessageFilterOptionDto(row.Id, LookupId(row, "sdkmessageid") ?? Guid.Empty,
                 Text(row, "primaryobjecttypecode"), NullableText(row, "secondaryobjecttypecode"),
                 $"{Text(row, "primaryobjecttypecode")}id", [])).ToArray(),
-            users.Select(row => new StepOptionDto(row.Id, Text(row, "fullname"))).OrderBy(row => row.Name).ToArray());
+            usersTask.Result.Select(row => new StepOptionDto(row.Id, Text(row, "fullname"))).OrderBy(row => row.Name).ToArray());
     }
 
     public async Task<StepFilterMetadataDto> RetrieveStepFilterMetadataAsync(Guid filterId, CancellationToken cancellationToken)
@@ -193,18 +194,30 @@ public sealed class DataversePluginRegistrationGateway(
     {
         var details = await service.RetrieveAsync("sdkmessageprocessingstep", stepId,
             new ColumnSet("plugintypeid", "sdkmessageid", "sdkmessagefilterid", "filteringattributes", "impersonatinguserid",
-                "configuration", "sdkmessageprocessingstepsecureconfigid", "stage", "mode", "rank", "versionnumber"), cancellationToken);
+                "configuration", "sdkmessageprocessingstepsecureconfigid", "stage", "mode", "rank", "versionnumber", "description"), cancellationToken);
         var pluginId = LookupId(details, "plugintypeid") ?? Guid.Empty;
         var plugin = await service.RetrieveAsync("plugintype", pluginId, new ColumnSet("versionnumber"), cancellationToken);
         var filterId = LookupId(details, "sdkmessagefilterid") ?? Guid.Empty;
         var filter = await service.RetrieveAsync("sdkmessagefilter", filterId,
             new ColumnSet("primaryobjecttypecode", "secondaryobjecttypecode"), cancellationToken);
+        string? secureConfiguration = null;
+        var secureConfigId = LookupId(details, "sdkmessageprocessingstepsecureconfigid");
+        if (secureConfigId is { } secureId)
+        {
+            var secure = await service.RetrieveAsync("sdkmessageprocessingstepsecureconfig", secureId,
+                new ColumnSet("secureconfig"), cancellationToken);
+            secureConfiguration = NullableText(secure, "secureconfig");
+        }
         return new(stepId, pluginId, LookupId(details, "sdkmessageid") ?? Guid.Empty, filterId,
             Text(filter, "primaryobjecttypecode"), NullableText(filter, "secondaryobjecttypecode"), Option(details, "stage"), Option(details, "mode"), details.GetAttributeValue<int?>("rank") ?? 0,
             (NullableText(details, "filteringattributes") ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             LookupId(details, "impersonatinguserid"), NullableText(details, "configuration"),
             LookupId(details, "sdkmessageprocessingstepsecureconfigid").HasValue,
-            new Dictionary<Guid, long> { [pluginId] = Number(plugin, "versionnumber"), [stepId] = Number(details, "versionnumber") });
+            new Dictionary<Guid, long> { [pluginId] = Number(plugin, "versionnumber"), [stepId] = Number(details, "versionnumber") })
+        {
+            Description = NullableText(details, "description"),
+            SecureConfiguration = secureConfiguration
+        };
     }
 
     public async Task<Guid> MutateStepAsync(PluginStepMutationCommand command,
@@ -232,7 +245,8 @@ public sealed class DataversePluginRegistrationGateway(
                 ["sdkmessageid"] = new EntityReference("sdkmessage", draft.SdkMessageId),
                 ["sdkmessagefilterid"] = new EntityReference("sdkmessagefilter", draft.SdkMessageFilterId),
                 ["stage"] = new OptionSetValue(draft.Stage), ["mode"] = new OptionSetValue(draft.Mode),
-                ["rank"] = draft.Rank, ["filteringattributes"] = string.Join(',', draft.FilteringAttributes)
+                ["rank"] = draft.Rank, ["filteringattributes"] = string.Join(',', draft.FilteringAttributes),
+                ["description"] = draft.Description
             };
             if (command.ExpectedStepVersion is { } expectedStepVersion)
                 entity.RowVersion = expectedStepVersion.ToString(System.Globalization.CultureInfo.InvariantCulture);
@@ -482,32 +496,33 @@ public sealed class DataversePluginRegistrationGateway(
     public async Task<PluginRegistrationRows> RetrieveCatalogRowsAsync(
         CancellationToken cancellationToken)
     {
-        var assemblies = await RetrieveAllPagesAsync(
+        var assembliesTask = RetrieveAllPagesAsync(
             PluginRegistrationCatalogQueries.CreateAssemblyQuery(),
             cancellationToken);
-        var types = await RetrieveAllPagesAsync(
+        var typesTask = RetrieveAllPagesAsync(
             PluginRegistrationCatalogQueries.CreateTypeQuery(),
             cancellationToken);
-        var steps = await RetrieveAllPagesAsync(
+        var stepsTask = RetrieveAllPagesAsync(
             PluginRegistrationCatalogQueries.CreateStepQuery(),
             cancellationToken);
-        var images = await RetrieveAllPagesAsync(
+        var imagesTask = RetrieveAllPagesAsync(
             PluginRegistrationCatalogQueries.CreateImageQuery(),
             cancellationToken);
+        await Task.WhenAll(assembliesTask, typesTask, stepsTask, imagesTask);
 
-        var mappedAssemblies = MapDistinct(assemblies, MapAssembly, (row, solution) => row with
+        var mappedAssemblies = MapDistinct(assembliesTask.Result, MapAssembly, (row, solution) => row with
             {
                 SolutionDisplayName = solution
             });
-        var mappedTypes = MapDistinct(types, MapType, (row, solution) => row with
+        var mappedTypes = MapDistinct(typesTask.Result, MapType, (row, solution) => row with
             {
                 SolutionDisplayName = solution
             });
-        var mappedSteps = MapDistinct(steps, MapStep, (row, solution) => row with
+        var mappedSteps = MapDistinct(stepsTask.Result, MapStep, (row, solution) => row with
             {
                 SolutionDisplayName = solution
             });
-        var mappedImages = MapDistinct(images, MapImage, (row, solution) => row with
+        var mappedImages = MapDistinct(imagesTask.Result, MapImage, (row, solution) => row with
             {
                 SolutionDisplayName = solution
             });

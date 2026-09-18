@@ -35,16 +35,24 @@ describe("mutation outcome presentation", () => {
     expect(screen.getByRole("status")).toHaveTextContent("verified after a communication failure");
   });
 
-  it("offers an explicit retry only for a read-only failure", async () => {
-    const retry = vi.fn();
+  it("does not offer a retry action for rejected mutations", () => {
     renderWithProviders(<MutationOutcomeBanner outcome={{ outcome: "rejectedBeforeCompletion", targetId: null, problem: {
       category: "communication", code: "catalog_unavailable", message: "The preview could not be loaded.",
       environment: "Development", component: "Contoso", correlationId: null, suggestedAction: "Try the preview again.",
-    } }} retryRead={retry} />);
+    } }} />);
 
     expect(screen.getByRole("alert")).toHaveTextContent("The preview could not be loaded.");
-    await userEvent.click(screen.getByRole("button", { name: "Try again" }));
-    expect(retry).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: "Try again" })).not.toBeInTheDocument();
+  });
+
+  it("hides the generic Dataverse rejection banner", () => {
+    renderWithProviders(<MutationOutcomeBanner outcome={{ outcome: "rejectedBeforeCompletion", targetId: null, problem: {
+      category: "dataverse", code: "dataverse-fault", message: "Dataverse rejected the registration operation.",
+      environment: "Development", component: "assembly", correlationId: null, suggestedAction: "Refresh the registration and review the current state.",
+    } }} />);
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByText("Dataverse rejected the registration operation.")).not.toBeInTheDocument();
   });
 
   it("closes an uncertain mutation, refreshes once, blocks repeat, and reselects the affected component", async () => {

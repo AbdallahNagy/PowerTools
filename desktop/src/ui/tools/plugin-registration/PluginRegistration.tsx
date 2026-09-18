@@ -70,7 +70,6 @@ function PluginRegistrationPage() {
   const [dialogIntent, setDialogIntent] = useState<DialogIntent>(null);
   const [contextMenu, setContextMenu] = useState<RegistrationContextMenuState | null>(null);
   const [mutationOutcome, setMutationOutcome] = useState<MutationOutcome | null>(null);
-  const [retryRead, setRetryRead] = useState<(() => void) | null>(null);
   const [mutationRefreshPending, setMutationRefreshPending] = useState(false);
 
   const nodes = useMemo(
@@ -138,7 +137,6 @@ function PluginRegistrationPage() {
     setContextMenu(null);
     setDialogIntent(null);
     setMutationOutcome(null);
-    setRetryRead(null);
     setConnectionName(name);
   };
 
@@ -158,7 +156,6 @@ function PluginRegistrationPage() {
     const parsed = parseMutationOutcome(value);
     closeDialog();
     setContextMenu(null);
-    setRetryRead(null);
     setMutationOutcome({ ...parsed, targetId: parsed.targetId ?? affectedComponentId ?? null });
     await refreshAfterMutation(parsed.targetId ?? affectedComponentId);
   };
@@ -171,7 +168,6 @@ function PluginRegistrationPage() {
       targetId: context.affectedComponentId ?? null,
       problem,
     });
-    setRetryRead(() => context.phase === "read" ? context.retry ?? null : null);
     if (uncertain || problem.category === "concurrency") {
       closeDialog();
       setContextMenu(null);
@@ -262,7 +258,7 @@ function PluginRegistrationPage() {
         registerDisabled={!connectionName || mutationRefreshPending}
       />
 
-      <MutationOutcomeBanner outcome={mutationOutcome} retryRead={retryRead} refreshPending={mutationRefreshPending} />
+      <MutationOutcomeBanner outcome={mutationOutcome} refreshPending={mutationRefreshPending} />
 
       <RegistrationWorkspace
         connectionName={connectionName}
@@ -289,6 +285,7 @@ function PluginRegistrationPage() {
         <AssemblyDialog
           assembly={dialogNode?.kind === "assembly" ? dialogNode.data : null}
           connectionName={connectionName || null}
+          onPremisesAssemblyOptions={Boolean(capabilitiesQuery.data?.onPremisesAssemblyOptions)}
           onClose={closeDialog}
           onVerified={(assembly) => setSelectedNodeId(catalogNodeId("assembly", assembly.id))}
           onMutationResult={reportMutationResult}

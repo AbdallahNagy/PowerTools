@@ -36,6 +36,7 @@ public sealed record CascadeUnregisterExecutionDto(
     PluginRegistrationProblemDto? Problem = null);
 
 public sealed record PluginRegistrationCapabilitiesDto(
-    TransactionalCascadeUnregisterCapabilityDto TransactionalCascadeUnregister);
+    TransactionalCascadeUnregisterCapabilityDto TransactionalCascadeUnregister,
+    bool OnPremisesAssemblyOptions = false);
 
 public sealed record TransactionalCascadeUnregisterCapabilityDto(bool Supported, string Reason);

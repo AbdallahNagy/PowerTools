@@ -69,11 +69,13 @@ public static class PluginRegistrationEndpoints
 
         group.MapGet("/capabilities", async (HttpContext context,
             IPluginRegistrationGatewayFactory gatewayFactory, DataverseClientFactory clientFactory,
+            ICurrentConnection connection,
             PluginRegistrationCapabilityService capabilities, CancellationToken cancellationToken) =>
         {
             var gateway = gatewayFactory.Create(context.CreateDataverseClient(clientFactory));
             return Results.Ok(capabilities.GetCapabilities(
-                await gateway.SupportsCascadeTransactionAsync(cancellationToken)));
+                await gateway.SupportsCascadeTransactionAsync(cancellationToken),
+                connection.Context is OnPremisesConnectionContext));
         })
             .WithName("GetPluginRegistrationCapabilities");
 

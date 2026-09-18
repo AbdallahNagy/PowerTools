@@ -77,17 +77,33 @@ public sealed class DataverseStepOptionsGatewayTests
         Assert.Equal("account", details.PrimaryTable);
     }
 
+    [Fact]
+    public async Task Edit_details_return_description_and_stored_secure_configuration()
+    {
+        var service = DispatchProxy.Create<IOrganizationServiceAsync2, OptionsServiceProxy>();
+        var proxy = (OptionsServiceProxy)(object)service;
+
+        var details = await new DataversePluginRegistrationGateway(service)
+            .RetrieveStepEditDetailsAsync(proxy.StepId, CancellationToken.None);
+
+        Assert.Equal("Update step", details.Description);
+        Assert.Equal("stored-secret", details.SecureConfiguration);
+    }
+
     public class OptionsServiceProxy : DispatchProxy
     {
         public string NoTable { get; set; } = "none";
         public bool PageFilters { get; set; }
         public Guid StepId { get; } = Guid.NewGuid();
         public Guid FilterId { get; } = Guid.NewGuid();
+        public Guid SecureConfigId { get; } = Guid.NewGuid();
         private Guid PluginId { get; } = Guid.NewGuid();
         private Guid MessageId { get; } = Guid.NewGuid();
 
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
         {
+            lock (this)
+            {
             if (targetMethod?.Name == "RetrieveMultipleAsync")
             {
                 var query = Assert.IsType<QueryExpression>(args![0]);
@@ -133,13 +149,18 @@ public sealed class DataverseStepOptionsGatewayTests
                     {
                         ["primaryobjecttypecode"] = "account"
                     },
+                    "sdkmessageprocessingstepsecureconfig" => new Entity("sdkmessageprocessingstepsecureconfig")
+                    {
+                        ["secureconfig"] = "stored-secret"
+                    },
                     _ => new Entity("sdkmessageprocessingstep", StepId)
                     {
                         ["plugintypeid"] = new EntityReference("plugintype", PluginId),
                         ["sdkmessageid"] = new EntityReference("sdkmessage", MessageId),
                         ["sdkmessagefilterid"] = new EntityReference("sdkmessagefilter", FilterId),
+                        ["sdkmessageprocessingstepsecureconfigid"] = new EntityReference("sdkmessageprocessingstepsecureconfig", SecureConfigId),
                         ["stage"] = new OptionSetValue(40), ["mode"] = new OptionSetValue(0),
-                        ["rank"] = 1, ["versionnumber"] = 7L
+                        ["rank"] = 1, ["versionnumber"] = 7L, ["description"] = "Update step"
                     }
                 });
             }
@@ -166,6 +187,7 @@ public sealed class DataverseStepOptionsGatewayTests
                 return Task.FromResult<OrganizationResponse>(response);
             }
             throw new NotSupportedException(targetMethod?.Name);
+            }
         }
     }
 }

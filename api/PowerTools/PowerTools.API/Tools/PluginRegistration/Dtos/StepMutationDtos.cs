@@ -9,6 +9,7 @@ public sealed record StepDraftDto(Guid PluginTypeId, Guid SdkMessageId, Guid Sdk
     public string ImpersonatingUserAction { get; init; } = "keep";
     public string UnsecureConfigurationAction { get; init; } = "keep";
     public string SecureConfigurationAction { get; init; } = "keep";
+    public string? Description { get; init; }
 }
 
 public sealed record StepPublicValuesDto(string Name, string Message, string PrimaryTable, string? SecondaryTable,
@@ -67,7 +68,11 @@ public sealed record StepOptionsDto(IReadOnlyList<StepOptionDto> Messages,
 public sealed record StepEditDetailsDto(Guid StepId, Guid PluginTypeId, Guid SdkMessageId,
     Guid SdkMessageFilterId, string PrimaryTable, string? SecondaryTable, int Stage, int Mode, int Rank,
     IReadOnlyList<string> FilteringAttributes, Guid? ImpersonatingUserId, string? UnsecureConfiguration,
-    bool SecureConfigExists, IReadOnlyDictionary<Guid, long> ExpectedVersions);
+    bool SecureConfigExists, IReadOnlyDictionary<Guid, long> ExpectedVersions)
+{
+    public string? Description { get; init; }
+    public string? SecureConfiguration { get; init; }
+}
 
 public sealed record PluginStepMutationCommand(string Operation, Guid? TargetStepId, StepDraftDto Draft,
     StepPublicValuesDto Before, long ExpectedPluginVersion, long? ExpectedStepVersion,
