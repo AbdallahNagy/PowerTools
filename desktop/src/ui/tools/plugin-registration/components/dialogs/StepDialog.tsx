@@ -10,12 +10,14 @@ import {
   type StepDraft,
   type StepFilterAttribute,
 } from "../../api/useStepMutations";
+import { SearchableSelect } from "../SearchableSelect";
 import type { PluginHandler, PluginStep } from "../../model/contracts";
 import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
-import { closeExclusiveSelects, SearchableSelect } from "../SearchableSelect";
+import { closeExclusiveSelects } from "../exclusiveSelect";
+import { entityDisplayName, type EntityPickerOption } from "../entityPickerModel";
 import { fieldClass } from "../formStyles";
 import { AttributePickerDialog } from "./AttributePickerDialog";
-import { EntityPickerDialog, entityDisplayName, type EntityPickerOption } from "./EntityPickerDialog";
+import { EntityPickerDialog } from "./EntityPickerDialog";
 
 interface Props {
   connectionName: string | null;
@@ -54,7 +56,10 @@ export function StepDialog({
   const detailsReady = operation === "create" || editDetails.isSuccess;
   const optionsReady = mutations.options.isSuccess;
   const selectedMessageId = messageId || options?.messages[0]?.id || "";
-  const matchingFilters = options?.filters.filter((item) => item.messageId === selectedMessageId) ?? [];
+  const matchingFilters = useMemo(
+    () => options?.filters.filter((item) => item.messageId === selectedMessageId) ?? [],
+    [options?.filters, selectedMessageId],
+  );
   const currentFilterId = editDetails.data?.sdkMessageFilterId ?? "";
   const currentUserId = editDetails.data?.impersonatingUserId ?? "";
   const currentFilterUnavailable = Boolean(
@@ -212,7 +217,7 @@ export function StepDialog({
   const attributesLoading = Boolean(activeFilterId) && (filterMetadata.isPending || filterMetadata.isFetching);
   const attributeSummary = attributes.length === 0
     ? "None selected"
-    : attributes.length === nonPrimaryAttributes.length && nonPrimaryAttributes.length > 0
+    : attributes.length === availableAttributes.length && availableAttributes.length > 0
       ? "All attributes"
       : `${attributes.length} selected`;
 

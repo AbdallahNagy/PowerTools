@@ -105,10 +105,10 @@ public sealed class DataversePluginRegistrationGateway(
         }, cancellationToken);
         var attributes = response.EntityMetadata.Attributes
             .Where(attribute => attribute.AttributeOf is null && !string.IsNullOrWhiteSpace(attribute.LogicalName))
-            .OrderBy(attribute => attribute.DisplayName?.UserLocalizedLabel?.Label ?? attribute.LogicalName)
+            .OrderBy(attribute => Localized(attribute.DisplayName, attribute.LogicalName!))
             .Select(attribute => new StepAttributeMetadataDto(
                 attribute.LogicalName!,
-                attribute.DisplayName?.UserLocalizedLabel?.Label ?? attribute.LogicalName!,
+                Localized(attribute.DisplayName, attribute.LogicalName!),
                 attribute.AttributeType?.ToString() ?? "Unknown",
                 attribute.IsPrimaryId == true))
             .ToArray();
@@ -117,7 +117,7 @@ public sealed class DataversePluginRegistrationGateway(
         {
             Attributes = attributes,
             LogicalName = logicalName,
-            DisplayName = response.EntityMetadata.DisplayName?.UserLocalizedLabel?.Label ?? logicalName
+            DisplayName = Localized(response.EntityMetadata.DisplayName, logicalName)
         };
     }
 
@@ -784,6 +784,14 @@ public sealed class DataversePluginRegistrationGateway(
             .ThenBy(name => name, StringComparer.Ordinal)
             .ToArray();
         return names.Length == 0 ? null : string.Join(", ", names);
+    }
+
+    private static string Localized(Label? label, string fallback)
+    {
+        var user = label?.UserLocalizedLabel?.Label;
+        if (!string.IsNullOrWhiteSpace(user)) return user;
+        var any = label?.LocalizedLabels?.FirstOrDefault(item => !string.IsNullOrWhiteSpace(item.Label))?.Label;
+        return string.IsNullOrWhiteSpace(any) ? fallback : any!;
     }
 
     private static string Text(Entity entity, string attribute) =>
