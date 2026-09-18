@@ -4,12 +4,16 @@ import { Button, Modal, Spinner } from "../../../../shared/ui";
 import type { StepFilterAttribute } from "../../api/useStepMutations";
 import { fieldClass } from "../formStyles";
 
+const PRIMARY_KEY_UPDATE_FILTER_REASON =
+  "The primary key cannot filter Update steps because the record ID never changes.";
+
 export function AttributePickerDialog({
   open,
   attributes,
   selected,
   loading = false,
   disabled = false,
+  blockPrimaryId = false,
   onChange,
   onClose,
 }: {
@@ -18,6 +22,7 @@ export function AttributePickerDialog({
   selected: string[];
   loading?: boolean;
   disabled?: boolean;
+  blockPrimaryId?: boolean;
   onChange: (ids: string[]) => void;
   onClose: () => void;
 }) {
@@ -41,6 +46,12 @@ export function AttributePickerDialog({
   const clearVisible = () => {
     const visible = new Set(filtered.map((attribute) => attribute.logicalName.toLowerCase()));
     onChange(selected.filter((value) => !visible.has(value.toLowerCase())));
+  };
+  const toggleAttribute = (attribute: StepFilterAttribute) => {
+    const id = attribute.logicalName.toLowerCase();
+    const checked = selectedSet.has(id);
+    if (disabled || (attribute.isPrimaryId && blockPrimaryId && !checked)) return;
+    onChange(checked ? selected.filter((value) => value.toLowerCase() !== id) : [...selected, id]);
   };
 
   return (
@@ -86,22 +97,38 @@ export function AttributePickerDialog({
                 ) : filtered.map((attribute) => {
                   const id = attribute.logicalName.toLowerCase();
                   const checked = selectedSet.has(id);
+                  const blocked = Boolean(attribute.isPrimaryId && blockPrimaryId && !checked);
                   return (
-                    <tr key={id} className="border-t border-[#3c3c3c] hover:bg-[var(--color-hover-bg)]">
-                      <td className="px-3 py-2">
-                        <input
-                          type="checkbox"
-                          aria-label={attribute.logicalName}
-                          checked={checked}
-                          disabled={disabled}
-                          onChange={() => {
-                            onChange(checked ? selected.filter((value) => value.toLowerCase() !== id) : [...selected, id]);
-                          }}
-                        />
+                    <tr key={id} className="border-t border-[#3c3c3c]">
+                      <td colSpan={4} className="p-0">
+                        <label
+                          className={`grid w-full grid-cols-[2.5rem_minmax(0,1.2fr)_minmax(0,1fr)_minmax(0,8rem)] items-start px-3 py-2 ${
+                            blocked || disabled
+                              ? "cursor-not-allowed opacity-70"
+                              : "cursor-pointer hover:bg-[var(--color-hover-bg)]"
+                          }`}
+                          title={blocked ? PRIMARY_KEY_UPDATE_FILTER_REASON : undefined}
+                        >
+                          <input
+                            type="checkbox"
+                            aria-label={attribute.logicalName}
+                            className="mt-0.5"
+                            checked={checked}
+                            disabled={disabled || blocked}
+                            onChange={() => toggleAttribute(attribute)}
+                          />
+                          <span className="min-w-0 text-[var(--color-text-white)]">
+                            <span className="block truncate">{attribute.displayName || attribute.logicalName}</span>
+                            {blocked ? (
+                              <span className="mt-0.5 block text-[11px] leading-4 text-[#858585]">
+                                {PRIMARY_KEY_UPDATE_FILTER_REASON}
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="truncate font-mono text-xs text-[#858585]">{attribute.logicalName}</span>
+                          <span className="truncate text-[#858585]">{attribute.attributeType || "Unknown"}</span>
+                        </label>
                       </td>
-                      <td className="px-3 py-2 text-[var(--color-text-white)]">{attribute.displayName || attribute.logicalName}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-[#858585]">{attribute.logicalName}</td>
-                      <td className="px-3 py-2 text-[#858585]">{attribute.attributeType || "Unknown"}</td>
                     </tr>
                   );
                 })}

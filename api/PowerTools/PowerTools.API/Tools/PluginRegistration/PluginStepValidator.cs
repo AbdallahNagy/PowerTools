@@ -56,7 +56,7 @@ public sealed class PluginStepValidator
         if (string.Equals(state.Message, "Update", StringComparison.OrdinalIgnoreCase))
         {
             if (attributes.Contains(state.PrimaryIdAttribute, StringComparer.OrdinalIgnoreCase))
-                blockers.Add(new("primaryKeyFilteringAttribute", "The primary key cannot be an Update filtering attribute."));
+                blockers.Add(new("primaryKeyFilteringAttribute", "The primary key cannot filter Update steps because the record ID never changes."));
             if (attributes.Length == 0)
                 warnings.Add(new("updateWithoutFilteringAttributes", "Update steps should select filtering attributes to avoid unnecessary execution."));
         }

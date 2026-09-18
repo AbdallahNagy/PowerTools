@@ -14,7 +14,7 @@ import { SearchableSelect } from "../SearchableSelect";
 import type { PluginHandler, PluginStep } from "../../model/contracts";
 import type { ReportMutationFailure, ReportMutationResult } from "../../model/pluginRegistrationError";
 import { closeExclusiveSelects } from "../exclusiveSelect";
-import { entityDisplayName, type EntityPickerOption } from "../entityPickerModel";
+import { entityDisplayName, isPresentTable, type EntityPickerOption } from "../entityPickerModel";
 import { fieldClass } from "../formStyles";
 import { AttributePickerDialog } from "./AttributePickerDialog";
 import { EntityPickerDialog } from "./EntityPickerDialog";
@@ -153,7 +153,7 @@ export function StepDialog({
         : !draft
           ? "Select a message and entity."
           : primaryKeySelected
-            ? "Remove the primary key from filtering attributes."
+            ? "Remove the primary key from filtering attributes. The record ID never changes on Update."
             : mutations.preflight.isPending || mutations.execute.isPending
               ? "Saving…"
               : null;
@@ -298,7 +298,7 @@ export function StepDialog({
                     </button>
                   </div>
                   {updateWithoutFilters ? <p role="status" className="text-amber-300">Update steps should select filtering attributes.</p> : null}
-                  {primaryKeySelected ? <p role="alert" className="text-red-300">The primary key cannot be used as an Update filtering attribute.</p> : null}
+                  {primaryKeySelected ? <p role="alert" className="text-red-300">The primary key cannot filter Update steps because the record ID never changes.</p> : null}
                   <SearchableSelect
                     label="Run in user's context"
                     value={userId}
@@ -393,6 +393,7 @@ export function StepDialog({
         selected={attributes}
         loading={attributesLoading}
         disabled={!canEdit}
+        blockPrimaryId={selectedMessageName === "Update"}
         onChange={(ids) => setAttributes(ids.map((value) => value.toLowerCase()))}
         onClose={() => setAttributePickerOpen(false)}
       />
@@ -419,13 +420,14 @@ function toEntityOption(
   unavailable: boolean,
 ): EntityPickerOption {
   const primary = entities.get(primaryTable.toLowerCase());
-  const secondary = secondaryTable ? entities.get(secondaryTable.toLowerCase()) : undefined;
+  const secondaryName = isPresentTable(secondaryTable) ? secondaryTable : null;
+  const secondary = secondaryName ? entities.get(secondaryName.toLowerCase()) : undefined;
   return {
     id,
     logicalName: primaryTable,
     displayName: primary?.displayName || primaryTable,
-    secondaryLogicalName: secondaryTable,
-    secondaryDisplayName: secondary?.displayName || secondaryTable,
+    secondaryLogicalName: secondaryName,
+    secondaryDisplayName: secondary?.displayName || secondaryName,
     unavailable,
   };
 }

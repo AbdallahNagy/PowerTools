@@ -27,16 +27,19 @@ describe("Step mutations", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Register step" });
     expect(await within(dialog).findByLabelText("Message")).toHaveTextContent("Update");
-    await waitFor(() => expect(within(dialog).getByLabelText("Entity")).toHaveTextContent("Account"));
+    await waitFor(() => expect(within(dialog).getByLabelText("Entity")).toHaveTextContent(/^Account$/));
+    expect(within(dialog).getByLabelText("Entity")).not.toHaveTextContent(/none/i);
     expect(within(dialog).getByLabelText("Secure configuration")).toHaveValue("");
     expect(dialog).toHaveTextContent("Update steps should select filtering attributes");
 
     await userEvent.click(within(dialog).getByLabelText("Filtering attributes"));
     const attributesDialog = await screen.findByRole("dialog", { name: "Select filtering attributes" });
-    await userEvent.click(await within(attributesDialog).findByRole("checkbox", { name: "accountid" }));
-    expect(dialog).toHaveTextContent("primary key cannot be used");
-    expect(within(dialog).getByRole("button", { name: "Register" })).toBeDisabled();
-    await userEvent.click(within(attributesDialog).getByRole("checkbox", { name: "accountid" }));
+    await userEvent.click(await within(attributesDialog).findByText("Account Name"));
+    expect(within(attributesDialog).getByRole("checkbox", { name: "name" })).toBeChecked();
+    await userEvent.click(within(attributesDialog).getByText("Account"));
+    expect(within(attributesDialog).getByRole("checkbox", { name: "accountid" })).not.toBeChecked();
+    expect(attributesDialog).toHaveTextContent("record ID never changes");
+    expect(dialog).not.toHaveTextContent("record ID never changes");
     await userEvent.click(within(attributesDialog).getByRole("button", { name: "Done" }));
     await userEvent.type(within(dialog).getByLabelText("Secure configuration"), "new-secret");
     await userEvent.click(within(dialog).getByRole("button", { name: "Register" }));
@@ -48,7 +51,7 @@ describe("Step mutations", () => {
     httpServer.use(http.get("http://localhost/api/plugin-registration/step-options", () => HttpResponse.json({
       messages: [{ id: "message-update", name: "Update" }],
       filters: [
-        { id: "filter-account-primary", messageId: "message-update", primaryTable: "account", secondaryTable: null, primaryIdAttribute: "accountid" },
+        { id: "filter-account-primary", messageId: "message-update", primaryTable: "account", secondaryTable: "none", primaryIdAttribute: "accountid" },
         { id: "filter-account-related", messageId: "message-update", primaryTable: "account", secondaryTable: "contact", primaryIdAttribute: "accountid" },
       ],
       enabledUsers: [],
@@ -59,10 +62,15 @@ describe("Step mutations", () => {
     await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register New Step" }));
 
     const dialog = await screen.findByRole("dialog", { name: "Register step" });
-    await userEvent.click(await within(dialog).findByLabelText("Entity"));
+    await waitFor(() => expect(within(dialog).getByLabelText("Entity")).toHaveTextContent(/^Account$/));
+    expect(within(dialog).getByLabelText("Entity")).not.toHaveTextContent(/none/i);
+    await userEvent.click(within(dialog).getByLabelText("Entity"));
     const entityDialog = await screen.findByRole("dialog", { name: "Select entity" });
     expect(within(entityDialog).getByText("Name")).toBeInTheDocument();
     expect(within(entityDialog).getByText("Logical name")).toBeInTheDocument();
+    expect(await within(entityDialog).findByRole("option", { name: /^Account account$/i })).toBeInTheDocument();
+    expect(await within(entityDialog).findByRole("option", { name: /account · contact/i })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /none/i })).not.toBeInTheDocument();
     await userEvent.click(within(entityDialog).getByRole("option", { name: /account · contact/i }));
     expect(screen.queryByRole("dialog", { name: "Select entity" })).not.toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: "Register" }));
@@ -374,14 +382,41 @@ describe("Step mutations", () => {
     expect(within(attributesDialog).getByText("Account Name")).toBeInTheDocument();
     expect(within(attributesDialog).getByText("Main Phone")).toBeInTheDocument();
     expect(within(attributesDialog).getAllByText("String").length).toBeGreaterThan(0);
+    await userEvent.click(within(attributesDialog).getByText("Main Phone"));
+    expect(within(attributesDialog).getByRole("checkbox", { name: "telephone1" })).toBeChecked();
+    await userEvent.click(within(attributesDialog).getByText("telephone1"));
+    expect(within(attributesDialog).getByRole("checkbox", { name: "telephone1" })).not.toBeChecked();
     await userEvent.click(within(attributesDialog).getByRole("button", { name: "Select all" }));
     expect(within(attributesDialog).getByRole("checkbox", { name: "name" })).toBeChecked();
     expect(within(attributesDialog).getByRole("checkbox", { name: "telephone1" })).toBeChecked();
     expect(within(attributesDialog).getByRole("checkbox", { name: "accountid" })).not.toBeChecked();
+    expect(attributesDialog).toHaveTextContent("record ID never changes");
     await userEvent.click(within(attributesDialog).getByRole("button", { name: "Select none" }));
     expect(within(attributesDialog).getByRole("checkbox", { name: "name" })).not.toBeChecked();
     await userEvent.click(within(attributesDialog).getByRole("button", { name: "Done" }));
     expect(screen.queryByRole("dialog", { name: "Select filtering attributes" })).not.toBeInTheDocument();
+  });
+
+  it("explains an existing Update primary-key filter and lets the user clear it from the row", async () => {
+    httpServer.use(http.get("http://localhost/api/plugin-registration/steps/:stepId/edit-details", () => HttpResponse.json({
+      stepId: "step-1", pluginTypeId: "plugin-1", sdkMessageId: "message-update", sdkMessageFilterId: "filter-account",
+      primaryTable: "account", secondaryTable: null, stage: 40, mode: 0, rank: 1, filteringAttributes: ["accountid"],
+      impersonatingUserId: null, unsecureConfiguration: null, secureConfigExists: false,
+      expectedVersions: { "plugin-1": 4, "step-1": 7 },
+    })));
+    renderPage();
+    await openStep();
+    fireEvent.doubleClick(screen.getByRole("treeitem", { name: "(Step) Update account" }));
+    const dialog = await screen.findByRole("dialog", { name: "Update step" });
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent("record ID never changes");
+    expect(within(dialog).getByRole("button", { name: "Update" })).toBeDisabled();
+    await userEvent.click(within(dialog).getByLabelText("Filtering attributes"));
+    const attributesDialog = await screen.findByRole("dialog", { name: "Select filtering attributes" });
+    expect(within(attributesDialog).getByRole("checkbox", { name: "accountid" })).toBeChecked();
+    await userEvent.click(within(attributesDialog).getByText("Account"));
+    expect(within(attributesDialog).getByRole("checkbox", { name: "accountid" })).not.toBeChecked();
+    await userEvent.click(within(attributesDialog).getByRole("button", { name: "Done" }));
+    expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("discards a pending step dialog after the connection changes", async () => {
