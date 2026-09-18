@@ -58,12 +58,11 @@ export function Modal({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
-      onMouseDown={onClose}
+      data-testid="modal-backdrop"
     >
       <div
         className={`bg-[var(--color-bg-darker)] border border-[#3c3c3c] rounded-sm shadow-xl w-full ${widthClass} max-h-[85vh] flex flex-col`}
         style={{ transform: `translate(${offset.x}px, ${offset.y}px)` }}
-        onMouseDown={(e) => e.stopPropagation()}
       >
         <div
           className="flex items-center justify-between px-4 py-2.5 border-b border-[#3c3c3c] cursor-move select-none"

@@ -69,7 +69,7 @@ export function StepDialog({
     ?? (currentFilterUnavailable ? undefined : matchingFilters[0]);
   const activeFilterId = filterId || (currentFilterUnavailable ? currentFilterId : selectedFilter?.id || "");
   const filterMetadata = useStepFilterMetadata(connectionName, activeFilterId || null);
-  const entityCatalog = useEntityDisplayNames(connectionName, entityPickerOpen);
+  const entityCatalog = useEntityDisplayNames(connectionName, true);
   const metadataReady = !activeFilterId || filterMetadata.isSuccess || filterMetadata.isError;
   const formError = mutations.options.isError || (operation === "update" && editDetails.isError);
   useEffect(() => {
@@ -383,6 +383,7 @@ export function StepDialog({
         open={entityPickerOpen}
         options={entityOptions}
         value={activeFilterId}
+        loading={entityCatalog.isLoading || (entityCatalog.isFetching && !entityCatalog.data)}
         onSelect={changeEntity}
         onClose={() => setEntityPickerOpen(false)}
       />

@@ -98,6 +98,7 @@ export function useEntityDisplayNames(connectionName: string | null, enabled: bo
     queryFn: () => apiGet<EntityInfo[]>("/api/metadata/entities", { meta }),
     enabled: Boolean(connectionName && enabled),
     staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 }
 

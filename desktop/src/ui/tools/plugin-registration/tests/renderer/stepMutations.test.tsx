@@ -27,7 +27,7 @@ describe("Step mutations", () => {
 
     const dialog = await screen.findByRole("dialog", { name: "Register step" });
     expect(await within(dialog).findByLabelText("Message")).toHaveTextContent("Update");
-    expect(within(dialog).getByLabelText("Entity")).toHaveTextContent("account");
+    await waitFor(() => expect(within(dialog).getByLabelText("Entity")).toHaveTextContent("Account"));
     expect(within(dialog).getByLabelText("Secure configuration")).toHaveValue("");
     expect(dialog).toHaveTextContent("Update steps should select filtering attributes");
 
@@ -296,6 +296,48 @@ describe("Step mutations", () => {
     await userEvent.click(screen.getByRole("option", { name: "Service User" }));
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
     expect(within(dialog).getByLabelText("Run in user's context")).toHaveTextContent("Service User");
+  });
+
+  it("shows a loader while entity display names are fetching", async () => {
+    let releaseEntities!: () => void;
+    httpServer.use(http.get("http://localhost/api/metadata/entities", async () => {
+      await new Promise<void>((resolve) => { releaseEntities = resolve; });
+      return HttpResponse.json([
+        { logicalName: "account", displayName: "Account", primaryIdAttribute: "accountid", primaryNameAttribute: "name", isCustom: false },
+      ]);
+    }));
+    renderPage();
+    await openPlugin();
+    fireEvent.contextMenu(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }));
+    await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register New Step" }));
+    const dialog = await screen.findByRole("dialog", { name: "Register step" });
+    await within(dialog).findByLabelText("Message");
+    await userEvent.click(within(dialog).getByLabelText("Entity"));
+    const entityDialog = await screen.findByRole("dialog", { name: "Select entity" });
+    expect(within(entityDialog).getByText("Loading entities…")).toBeInTheDocument();
+    expect(within(entityDialog).queryByRole("option")).not.toBeInTheDocument();
+    releaseEntities();
+    expect(await within(entityDialog).findByRole("option", { name: /Account account/i })).toBeInTheDocument();
+  });
+
+  it("keeps filled step form data when the modal overlay is clicked", async () => {
+    renderPage();
+    await openPlugin();
+    fireEvent.contextMenu(screen.getByRole("treeitem", { name: "(Plugin) Account Plugin" }));
+    await userEvent.click(within(screen.getByRole("menu")).getByRole("menuitem", { name: "Register New Step" }));
+    const dialog = await screen.findByRole("dialog", { name: "Register step" });
+    const description = await within(dialog).findByLabelText("Description");
+    await userEvent.type(description, "keep this");
+    fireEvent.mouseDown(screen.getByTestId("modal-backdrop"));
+    expect(screen.getByRole("dialog", { name: "Register step" })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Description")).toHaveValue("keep this");
+    await userEvent.click(within(dialog).getByLabelText("Entity"));
+    expect(await screen.findByRole("dialog", { name: "Select entity" })).toBeInTheDocument();
+    const backdrops = screen.getAllByTestId("modal-backdrop");
+    fireEvent.mouseDown(backdrops[backdrops.length - 1]!);
+    expect(screen.getByRole("dialog", { name: "Select entity" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Register step" })).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("Description")).toHaveValue("keep this");
   });
 
   it("opens entity and attribute picker modals with names, types, and select-all", async () => {

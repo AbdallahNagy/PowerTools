@@ -49,8 +49,8 @@ export function SearchableSelect({
   }, [open, setOpen]);
 
   return (
-    <label className="flex flex-col gap-1 text-xs tracking-wider text-[#858585]">
-      {label}
+    <div className="flex flex-col gap-1 text-xs tracking-wider text-[#858585]">
+      <span>{label}</span>
       <div ref={root} className="relative">
         <button
           type="button"
@@ -88,7 +88,13 @@ export function SearchableSelect({
                     className={`w-full px-2 py-1.5 text-left text-sm hover:bg-[var(--color-hover-bg)] ${
                       option.id === value ? "text-[var(--color-text-white)] bg-[var(--color-hover-bg)]" : "text-[var(--color-text-gray)]"
                     }`}
-                    onClick={() => {
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
                       onChange(option.id);
                       setOpen(false);
                     }}
@@ -101,7 +107,7 @@ export function SearchableSelect({
           </div>
         ) : null}
       </div>
-    </label>
+    </div>
   );
 }
 
