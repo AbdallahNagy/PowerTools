@@ -40,6 +40,7 @@ builder.Services.AddScoped<CapabilitiesService>();
 builder.Services.AddScoped<CatalogService>();
 builder.Services.AddScoped<StepOptionsService>();
 builder.Services.AddScoped<StepService>();
+builder.Services.AddScoped<ImageService>();
 
 var app = builder.Build();
 

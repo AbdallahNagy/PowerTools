@@ -45,6 +45,16 @@ public static class PluginRegistrationEndpoints
             CancellationToken ct) =>
             await ExecuteAsync(async () => Results.Ok(await steps.SetEnabledAsync(id, false, ct))));
 
+        group.MapPost("/images", async (ImageDraftDto draft, ImageService images, CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await images.CreateAsync(draft, ct))));
+
+        group.MapPost("/images/{id:guid}/update", async (
+            Guid id,
+            ImageDraftDto draft,
+            ImageService images,
+            CancellationToken ct) =>
+            await ExecuteAsync(async () => Results.Ok(await images.UpdateAsync(id, draft, ct))));
+
         return app;
     }
 
