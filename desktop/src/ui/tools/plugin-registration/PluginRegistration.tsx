@@ -13,10 +13,11 @@ import { NodeDetails } from "./components/NodeDetails";
 import { ContextMenu } from "./components/ContextMenu";
 import { ConfirmDialog } from "./components/dialogs/ConfirmDialog";
 import { StepDialog } from "./components/dialogs/StepDialog";
+import { ImageDialog } from "./components/dialogs/ImageDialog";
 import { buildCatalogTree, findNode, type TreeNode } from "./model/catalogTree";
 import { toRegistrationError } from "./model/apiError";
 import { getNodeActions, type NodeAction } from "./model/nodeActions";
-import type { StepDto } from "./model/contracts";
+import type { ImageDto, StepDto } from "./model/contracts";
 
 export default function PluginRegistration() {
   return (
@@ -29,6 +30,11 @@ export default function PluginRegistration() {
 interface StepDialogState {
   pluginTypeId: string;
   step?: StepDto;
+}
+
+interface ImageDialogState {
+  step: StepDto;
+  image?: ImageDto;
 }
 
 interface ConfirmState {
@@ -47,6 +53,7 @@ function PluginRegistrationPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; node: TreeNode } | null>(null);
   const [stepDialog, setStepDialog] = useState<StepDialogState | null>(null);
+  const [imageDialog, setImageDialog] = useState<ImageDialogState | null>(null);
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
   const catalogQuery = useCatalog(connectionName || null);
@@ -58,6 +65,7 @@ function PluginRegistrationPage() {
     setSelectedId(null);
     setMenu(null);
     setStepDialog(null);
+    setImageDialog(null);
     setConfirm(null);
   }, [connectionName]);
 
@@ -124,6 +132,15 @@ function PluginRegistrationPage() {
           });
         }
         break;
+      case "register-image":
+        if (node.kind === "step") setImageDialog({ step: node.data });
+        break;
+      case "update-image":
+        if (node.kind === "image") {
+          const parent = catalogQuery.data?.steps.find((item) => item.id === node.data.stepId);
+          if (parent) setImageDialog({ step: parent, image: node.data });
+        }
+        break;
       default:
         break;
     }
@@ -132,6 +149,9 @@ function PluginRegistrationPage() {
   const activateNode = (node: TreeNode) => {
     if (node.kind === "step") {
       runAction({ id: "update-step", label: "Update step" }, node);
+    }
+    if (node.kind === "image") {
+      runAction({ id: "update-image", label: "Update image" }, node);
     }
   };
 
@@ -203,6 +223,16 @@ function PluginRegistrationPage() {
           pluginTypeId={stepDialog.pluginTypeId}
           step={stepDialog.step}
           onClose={() => setStepDialog(null)}
+        />
+      ) : null}
+
+      {imageDialog && connectionName ? (
+        <ImageDialog
+          open
+          connectionName={connectionName}
+          step={imageDialog.step}
+          image={imageDialog.image}
+          onClose={() => setImageDialog(null)}
         />
       ) : null}
 

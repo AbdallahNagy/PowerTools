@@ -141,6 +141,14 @@ export interface EntityAttributeDto {
   isPrimaryId: boolean;
 }
 
+export interface ImageDraftDto {
+  stepId: string;
+  name: string;
+  entityAlias: string;
+  imageType: number;
+  attributes: string[];
+}
+
 export const STAGE_LABELS: Record<number, string> = {
   10: "Pre-validation",
   20: "Pre-operation",
