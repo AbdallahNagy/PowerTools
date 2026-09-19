@@ -45,6 +45,29 @@ export function AttributePickerModal({
     }
   };
 
+  const selectAllVisible = () => {
+    const next = [...selected];
+    const have = new Set(next);
+    for (const attribute of filtered) {
+      if (have.has(attribute.logicalName)) continue;
+      next.push(attribute.logicalName);
+      have.add(attribute.logicalName);
+    }
+    onChange(next);
+  };
+
+  const selectNoneVisible = () => {
+    const visible = new Set(filtered.map((attribute) => attribute.logicalName));
+    onChange(selected.filter((name) => !visible.has(name)));
+  };
+
+  const allVisibleSelected =
+    filtered.length > 0 && filtered.every((attribute) => checked.has(attribute.logicalName));
+  const noneVisibleSelected = filtered.every(
+    (attribute) => !checked.has(attribute.logicalName),
+  );
+  const selectionDisabled = Boolean(isLoading) || filtered.length === 0;
+
   return (
     <Modal
       open={open}
@@ -59,6 +82,29 @@ export function AttributePickerModal({
         onChange={setSearch}
         placeholder="Search attributes…"
       />
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={selectAllVisible}
+            disabled={selectionDisabled || allVisibleSelected}
+            className="text-xs whitespace-nowrap text-[var(--color-primary)] hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
+          >
+            Select all
+          </button>
+          <button
+            type="button"
+            onClick={selectNoneVisible}
+            disabled={selectionDisabled || noneVisibleSelected}
+            className="text-xs whitespace-nowrap text-[var(--color-text-dark-gray)] hover:text-[var(--color-text-white)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Select none
+          </button>
+        </div>
+        <span className="text-xs whitespace-nowrap text-[var(--color-text-dark-gray)]">
+          {selected.length} selected
+        </span>
+      </div>
       <div className="max-h-72 min-h-40 overflow-auto border border-[var(--color-border-dark)] bg-[var(--color-bg-light)]">
         {isLoading ? (
           <div className="flex justify-center p-6">
