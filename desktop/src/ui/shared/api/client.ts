@@ -118,6 +118,8 @@ declare module "axios" {
       connectionName?: string;
       /** Optional second connection sent via X-Target-* headers. */
       targetConnectionName?: string;
+      /** Skip the automatic 401 refresh-and-replay. Required for non-idempotent mutations. */
+      noAuthRetry?: boolean;
     };
   }
 }
@@ -159,7 +161,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const original = error.config as RetriableConfig | undefined;
-    if (error.response?.status === 401 && original && !original._retry) {
+    if (
+      error.response?.status === 401 &&
+      original &&
+      !original._retry &&
+      !original.meta?.noAuthRetry
+    ) {
       original._retry = true;
       try {
         if (original.meta?.connectionName) {
