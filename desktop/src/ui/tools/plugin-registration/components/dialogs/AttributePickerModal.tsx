@@ -4,6 +4,7 @@ import type { EntityAttributeDto } from "../../model/contracts";
 
 interface AttributePickerModalProps {
   open: boolean;
+  title?: string;
   attributes: EntityAttributeDto[];
   selected: string[];
   isLoading?: boolean;
@@ -13,6 +14,7 @@ interface AttributePickerModalProps {
 
 export function AttributePickerModal({
   open,
+  title = "Filtering attributes",
   attributes,
   selected,
   isLoading,
@@ -46,7 +48,7 @@ export function AttributePickerModal({
   return (
     <Modal
       open={open}
-      title="Filtering attributes"
+      title={title}
       onClose={onClose}
       widthClass="max-w-lg"
       zClass="z-[60]"
