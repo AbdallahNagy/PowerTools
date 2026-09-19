@@ -95,7 +95,7 @@ describe("Plugin Registration", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Expand Account Plugin" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
     fireEvent.click(screen.getByText("AccountPlugin: Update of account"));
 
     expect(await screen.findByText("Update")).toBeInTheDocument();
@@ -158,7 +158,7 @@ describe("Plugin Registration", () => {
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Expand Account Plugin" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
     fireEvent.contextMenu(screen.getByText("AccountPlugin: Update of account"));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Disable step" }));
     fireEvent.click(screen.getByRole("button", { name: "Disable" }));
@@ -224,7 +224,7 @@ describe("Plugin Registration", () => {
     );
 
     fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Expand Account Plugin" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
     fireEvent.contextMenu(screen.getByText("AccountPlugin: Update of account"));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Unregister step" }));
 

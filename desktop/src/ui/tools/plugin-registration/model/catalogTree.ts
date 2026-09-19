@@ -92,8 +92,10 @@ export function findNode(nodes: TreeNode[], id: string | null): TreeNode | null 
   return null;
 }
 
-function typeLabel(type: PluginTypeDto): string {
-  return type.friendlyName || type.name || type.typeName;
+// The Microsoft Plugin Registration Tool stores a random GUID in plugintype.friendlyname,
+// so the fully qualified type name is the only reliable human-readable label.
+export function typeLabel(type: PluginTypeDto): string {
+  return type.typeName || type.name || type.friendlyName || type.id;
 }
 
 function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {

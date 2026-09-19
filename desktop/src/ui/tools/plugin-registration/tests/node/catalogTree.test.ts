@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCatalogTree, findNode } from "../../model/catalogTree";
+import { buildCatalogTree, findNode, typeLabel } from "../../model/catalogTree";
 import { catalogFixture } from "../catalogFixture";
 
 describe("buildCatalogTree", () => {
@@ -13,6 +13,24 @@ describe("buildCatalogTree", () => {
     expect(tree[0]?.children[0]?.kind).toBe("type");
     expect(tree[0]?.children[0]?.children[0]?.kind).toBe("step");
     expect(tree[0]?.children[0]?.children[0]?.children[0]?.kind).toBe("image");
+  });
+
+  it("labels plug-in types by type name, not the PRT-generated friendly name", () => {
+    const tree = buildCatalogTree(catalogFixture, { showSystem: false, search: "" });
+    expect(tree[0]?.children[0]?.label).toBe("Contoso.Plugins.AccountPlugin");
+
+    const prtType = {
+      ...catalogFixture.types[0]!,
+      name: "Contoso.Plugins.AccountPlugin",
+      friendlyName: "4f1b0d5a-2f6a-4c58-9c33-1e0a7f7b9d21",
+    };
+    expect(typeLabel(prtType)).toBe("Contoso.Plugins.AccountPlugin");
+
+    const guidOnly = buildCatalogTree(
+      { ...catalogFixture, types: [prtType] },
+      { showSystem: false, search: "" },
+    );
+    expect(guidOnly[0]?.children[0]?.label).toBe("Contoso.Plugins.AccountPlugin");
   });
 
   it("hides system assemblies unless requested", () => {

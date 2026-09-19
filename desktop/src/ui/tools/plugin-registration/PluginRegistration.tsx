@@ -16,7 +16,7 @@ import { ConfirmDialog } from "./components/dialogs/ConfirmDialog";
 import { StepDialog } from "./components/dialogs/StepDialog";
 import { ImageDialog } from "./components/dialogs/ImageDialog";
 import { AssemblyDialog } from "./components/dialogs/AssemblyDialog";
-import { buildCatalogTree, findNode, type TreeNode } from "./model/catalogTree";
+import { buildCatalogTree, findNode, typeLabel, type TreeNode } from "./model/catalogTree";
 import { toRegistrationError } from "./model/apiError";
 import { getNodeActions, type NodeAction } from "./model/nodeActions";
 import type { AssemblyDto, CatalogDto, ImageDto, StepDto } from "./model/contracts";
@@ -176,11 +176,7 @@ function PluginRegistrationPage() {
         break;
       case "unregister-type":
         if (node.kind === "type") {
-          confirmUnregister(
-            "type",
-            node.data.friendlyName || node.data.name || node.data.typeName,
-            node.data.id,
-          );
+          confirmUnregister("type", typeLabel(node.data), node.data.id);
         }
         break;
       case "unregister-assembly":

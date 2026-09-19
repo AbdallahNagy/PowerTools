@@ -6,6 +6,8 @@ interface ModalProps {
   onClose: () => void;
   children: ReactNode;
   widthClass?: string;
+  zClass?: string;
+  nested?: boolean;
 }
 
 export function Modal({
@@ -14,21 +16,25 @@ export function Modal({
   onClose,
   children,
   widthClass = "max-w-2xl",
+  zClass = "z-50",
+  nested = false,
 }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      if (nested) e.stopImmediatePropagation();
+      onClose();
     };
-    document.addEventListener("keydown", handler);
-    return () => document.removeEventListener("keydown", handler);
-  }, [open, onClose]);
+    document.addEventListener("keydown", handler, nested);
+    return () => document.removeEventListener("keydown", handler, nested);
+  }, [open, onClose, nested]);
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-6"
+      className={`fixed inset-0 ${zClass} flex items-center justify-center bg-black/50 p-6`}
       onMouseDown={onClose}
     >
       <div

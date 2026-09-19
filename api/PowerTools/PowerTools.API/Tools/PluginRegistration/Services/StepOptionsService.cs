@@ -23,7 +23,7 @@ public sealed class StepOptionsService(IPluginRegistrationGateway gateway)
                 entity.GetAttributeValue<EntityReference>("sdkmessageid")?.Id ?? Guid.Empty,
                 entity.GetAttributeValue<string>("primaryobjecttypecode"),
                 entity.GetAttributeValue<string>("secondaryobjecttypecode"),
-                entity.GetAttributeValue<OptionSetValue>("availability")?.Value ?? 0)).ToList(),
+                CatalogService.GetOption(entity, "availability"))).ToList(),
             usersTask.Result.Select(entity => new UserOptionDto(
                 entity.Id,
                 entity.GetAttributeValue<string>("fullname") ?? string.Empty)).ToList());

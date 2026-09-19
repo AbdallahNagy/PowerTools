@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
 
@@ -39,25 +39,34 @@ function renderDialog() {
   );
 }
 
+function stepOptions() {
+  return HttpResponse.json({
+    messages: [{ id: messageId, name: "Update" }],
+    filters: [
+      {
+        id: "filter-none",
+        messageId,
+        primaryEntity: "none",
+        secondaryEntity: "none",
+        availability: 2,
+      },
+      {
+        id: "filter-account",
+        messageId,
+        primaryEntity: "account",
+        secondaryEntity: "none",
+        availability: 0,
+      },
+    ],
+    users: [],
+  });
+}
+
 describe("StepDialog", () => {
   it("posts a step draft for the selected message", async () => {
     let posted: unknown;
     httpServer.use(
-      http.get("http://localhost/api/plugin-registration/step-options", () =>
-        HttpResponse.json({
-          messages: [{ id: messageId, name: "Update" }],
-          filters: [
-            {
-              id: "filter-account",
-              messageId,
-              primaryEntity: "account",
-              secondaryEntity: "none",
-              availability: 0,
-            },
-          ],
-          users: [],
-        }),
-      ),
+      http.get("http://localhost/api/plugin-registration/step-options", () => stepOptions()),
       http.get("http://localhost/api/metadata/entities/account/attributes", () =>
         HttpResponse.json([
           {
@@ -70,6 +79,12 @@ describe("StepDialog", () => {
             logicalName: "name",
             displayName: "Account Name",
             attributeType: "String",
+            isPrimaryId: false,
+          },
+          {
+            logicalName: "revenue",
+            displayName: "Revenue",
+            attributeType: "Money",
             isPrimaryId: false,
           },
         ]),
@@ -85,10 +100,17 @@ describe("StepDialog", () => {
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "AccountPlugin: Update of account" },
     });
-    fireEvent.change(screen.getByLabelText("Primary entity"), {
-      target: { value: "filter-account" },
+    const primary = screen.getByLabelText("Primary entity");
+    expect(within(primary).queryByRole("option", { name: "none" })).not.toBeInTheDocument();
+    expect(within(primary).getByRole("option", { name: "account" })).toBeInTheDocument();
+    fireEvent.change(primary, { target: { value: "account" } });
+    fireEvent.click(await screen.findByRole("button", { name: "None selected" }));
+    fireEvent.change(screen.getByPlaceholderText("Search attributes…"), {
+      target: { value: "Account" },
     });
+    expect(screen.queryByText("Revenue")).not.toBeInTheDocument();
     fireEvent.click(await screen.findByText("Account Name"));
+    fireEvent.click(screen.getByRole("button", { name: "Done" }));
     fireEvent.click(screen.getByRole("button", { name: "Register" }));
 
     await waitFor(() => expect(posted).toBeDefined());
@@ -102,6 +124,19 @@ describe("StepDialog", () => {
       filteringAttributes: ["name"],
       secureConfigurationAction: "keep",
     });
+  });
+
+  it("disables async auto-delete while the step is synchronous", async () => {
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/step-options", () => stepOptions()),
+    );
+
+    renderDialog();
+    await screen.findByLabelText("Name");
+    expect(screen.getByRole("checkbox", { name: "Delete completed async jobs" })).toBeDisabled();
+    expect(screen.getByLabelText("Secondary entity")).toBeDisabled();
+    fireEvent.click(screen.getByRole("radio", { name: "Pre-operation" }));
+    expect(screen.getByRole("radio", { name: "Asynchronous" })).toBeDisabled();
   });
 
   it("shows a field problem from a 400 response", async () => {
