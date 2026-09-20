@@ -1,4 +1,4 @@
-import type { CatalogDto } from "../model/contracts";
+import type { CatalogDto, StepOptionsDto } from "../model/contracts";
 
 export const catalogFixture: CatalogDto = {
   assemblies: [
@@ -95,4 +95,18 @@ export const catalogFixture: CatalogDto = {
       isSystem: false,
     },
   ],
+};
+
+export const stepOptionsFixture: StepOptionsDto = {
+  messages: [{ id: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee", name: "Update" }],
+  filters: [
+    {
+      id: "ffffffff-ffff-ffff-ffff-ffffffffffff",
+      messageId: "eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee",
+      primaryEntity: "account",
+      secondaryEntity: "none",
+      availability: 0,
+    },
+  ],
+  users: [],
 };

@@ -9,7 +9,7 @@ import {
 } from "../../../../shared/status";
 import ToolHost from "../../../../shell/tool-runtime/ToolHost";
 import { pluginRegistrationTool } from "../../tool";
-import { catalogFixture } from "../catalogFixture";
+import { catalogFixture, stepOptionsFixture } from "../catalogFixture";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
@@ -39,52 +39,72 @@ function StatusItemsProbe() {
 beforeAll(() => vi.stubGlobal("ResizeObserver", TestResizeObserver));
 afterAll(() => vi.unstubAllGlobals());
 
+function capabilitiesResponse() {
+  return HttpResponse.json({
+    isOnline: true,
+    isolationModes: [2],
+    sourceTypes: [0],
+  });
+}
+
+function registrationReadHandlers(options?: {
+  onCatalog?: () => void;
+  onStepOptions?: () => void;
+}) {
+  return [
+    http.get("http://localhost/api/plugin-registration/catalog", () => {
+      options?.onCatalog?.();
+      return HttpResponse.json(catalogFixture);
+    }),
+    http.get("http://localhost/api/plugin-registration/capabilities", () =>
+      capabilitiesResponse(),
+    ),
+    http.get("http://localhost/api/plugin-registration/step-options", () => {
+      options?.onStepOptions?.();
+      return HttpResponse.json(stepOptionsFixture);
+    }),
+  ];
+}
+
+const toolBridge = {
+  getActiveConnectionName: async () => connection.name,
+  getActiveConnection: async () => ({
+    ...connection,
+    token: "dev-token",
+    expiresOn: "2099-01-01T00:00:00.000Z",
+  }),
+  listConnections: async () => [connection],
+  getConnection: async () => ({
+    ...connection,
+    token: "dev-token",
+    expiresOn: "2099-01-01T00:00:00.000Z",
+  }),
+};
+
+function renderTool(tabId: string) {
+  return renderWithProviders(
+    <ConnectionsProvider>
+      <StatusBarProvider>
+        <ToolHost
+          tab={{
+            id: tabId,
+            toolId: "plugin-registration",
+            title: "Plugin Registration",
+          }}
+          definition={pluginRegistrationTool}
+        />
+        <StatusItemsProbe />
+      </StatusBarProvider>
+    </ConnectionsProvider>,
+    { bridgeOverrides: toolBridge },
+  );
+}
+
 describe("Plugin Registration", () => {
   it("loads the catalog, expands a step, and shows stage details", async () => {
-    httpServer.use(
-      http.get("http://localhost/api/plugin-registration/catalog", () =>
-        HttpResponse.json(catalogFixture),
-      ),
-      http.get("http://localhost/api/plugin-registration/capabilities", () =>
-        HttpResponse.json({
-          isOnline: true,
-          isolationModes: [2],
-          sourceTypes: [0],
-        }),
-      ),
-    );
+    httpServer.use(...registrationReadHandlers());
 
-    renderWithProviders(
-      <ConnectionsProvider>
-        <StatusBarProvider>
-          <ToolHost
-            tab={{
-              id: "plugin-registration-browse",
-              toolId: "plugin-registration",
-              title: "Plugin Registration",
-            }}
-            definition={pluginRegistrationTool}
-          />
-          <StatusItemsProbe />
-        </StatusBarProvider>
-      </ConnectionsProvider>,
-      {
-        bridgeOverrides: {
-          getActiveConnectionName: async () => connection.name,
-          getActiveConnection: async () => ({
-            ...connection,
-            token: "dev-token",
-            expiresOn: "2099-01-01T00:00:00.000Z",
-          }),
-          listConnections: async () => [connection],
-          getConnection: async () => ({
-            ...connection,
-            token: "dev-token",
-            expiresOn: "2099-01-01T00:00:00.000Z",
-          }),
-        },
-      },
-    );
+    renderTool("plugin-registration-browse");
 
     expect(await screen.findByText("Contoso.Plugins (1.0.0.0)")).toBeInTheDocument();
     expect(screen.queryByText("Microsoft.Crm.ObjectModel (9.0.0.0)")).not.toBeInTheDocument();
@@ -106,17 +126,7 @@ describe("Plugin Registration", () => {
     const enableUrls: string[] = [];
     let catalogLoads = 0;
     httpServer.use(
-      http.get("http://localhost/api/plugin-registration/catalog", () => {
-        catalogLoads += 1;
-        return HttpResponse.json(catalogFixture);
-      }),
-      http.get("http://localhost/api/plugin-registration/capabilities", () =>
-        HttpResponse.json({
-          isOnline: true,
-          isolationModes: [2],
-          sourceTypes: [0],
-        }),
-      ),
+      ...registrationReadHandlers({ onCatalog: () => { catalogLoads += 1; } }),
       http.post(
         "http://localhost/api/plugin-registration/steps/:id/disable",
         ({ request }) => {
@@ -126,36 +136,7 @@ describe("Plugin Registration", () => {
       ),
     );
 
-    renderWithProviders(
-      <ConnectionsProvider>
-        <StatusBarProvider>
-          <ToolHost
-            tab={{
-              id: "plugin-registration-disable",
-              toolId: "plugin-registration",
-              title: "Plugin Registration",
-            }}
-            definition={pluginRegistrationTool}
-          />
-        </StatusBarProvider>
-      </ConnectionsProvider>,
-      {
-        bridgeOverrides: {
-          getActiveConnectionName: async () => connection.name,
-          getActiveConnection: async () => ({
-            ...connection,
-            token: "dev-token",
-            expiresOn: "2099-01-01T00:00:00.000Z",
-          }),
-          listConnections: async () => [connection],
-          getConnection: async () => ({
-            ...connection,
-            token: "dev-token",
-            expiresOn: "2099-01-01T00:00:00.000Z",
-          }),
-        },
-      },
-    );
+    renderTool("plugin-registration-disable");
 
     fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
     fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
@@ -173,16 +154,7 @@ describe("Plugin Registration", () => {
   it("unregisters a step after confirming environment, name, and child counts", async () => {
     const urls: string[] = [];
     httpServer.use(
-      http.get("http://localhost/api/plugin-registration/catalog", () =>
-        HttpResponse.json(catalogFixture),
-      ),
-      http.get("http://localhost/api/plugin-registration/capabilities", () =>
-        HttpResponse.json({
-          isOnline: true,
-          isolationModes: [2],
-          sourceTypes: [0],
-        }),
-      ),
+      ...registrationReadHandlers(),
       http.post(
         "http://localhost/api/plugin-registration/steps/:id/unregister",
         ({ request }) => {
@@ -192,36 +164,7 @@ describe("Plugin Registration", () => {
       ),
     );
 
-    renderWithProviders(
-      <ConnectionsProvider>
-        <StatusBarProvider>
-          <ToolHost
-            tab={{
-              id: "plugin-registration-unregister",
-              toolId: "plugin-registration",
-              title: "Plugin Registration",
-            }}
-            definition={pluginRegistrationTool}
-          />
-        </StatusBarProvider>
-      </ConnectionsProvider>,
-      {
-        bridgeOverrides: {
-          getActiveConnectionName: async () => connection.name,
-          getActiveConnection: async () => ({
-            ...connection,
-            token: "dev-token",
-            expiresOn: "2099-01-01T00:00:00.000Z",
-          }),
-          listConnections: async () => [connection],
-          getConnection: async () => ({
-            ...connection,
-            token: "dev-token",
-            expiresOn: "2099-01-01T00:00:00.000Z",
-          }),
-        },
-      },
-    );
+    renderTool("plugin-registration-unregister");
 
     fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
     fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
@@ -239,5 +182,56 @@ describe("Plugin Registration", () => {
     expect(urls[0]).toContain(
       `/api/plugin-registration/steps/${catalogFixture.steps[0]?.id}/unregister`,
     );
+  });
+
+  it("prefetches step options and reuses them when opening a step dialog", async () => {
+    let stepOptionLoads = 0;
+    httpServer.use(
+      ...registrationReadHandlers({
+        onStepOptions: () => {
+          stepOptionLoads += 1;
+        },
+      }),
+    );
+
+    renderTool("plugin-registration-prefetch-steps");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
+    await waitFor(() => expect(stepOptionLoads).toBe(1));
+
+    fireEvent.contextMenu(screen.getByText("Contoso.Plugins.AccountPlugin"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Register step" }));
+    expect(await screen.findByLabelText("Message")).toBeInTheDocument();
+    expect(stepOptionLoads).toBe(1);
+  });
+
+  it("refetches catalog and step options together on refresh", async () => {
+    let catalogLoads = 0;
+    let stepOptionLoads = 0;
+    httpServer.use(
+      ...registrationReadHandlers({
+        onCatalog: () => {
+          catalogLoads += 1;
+        },
+        onStepOptions: () => {
+          stepOptionLoads += 1;
+        },
+      }),
+    );
+
+    renderTool("plugin-registration-refresh");
+
+    const refresh = await screen.findByRole("button", { name: "Refresh" });
+    await waitFor(() => expect(refresh).toBeEnabled());
+    await waitFor(() => {
+      expect(catalogLoads).toBe(1);
+      expect(stepOptionLoads).toBe(1);
+    });
+
+    fireEvent.click(refresh);
+    await waitFor(() => {
+      expect(catalogLoads).toBe(2);
+      expect(stepOptionLoads).toBe(2);
+    });
   });
 });

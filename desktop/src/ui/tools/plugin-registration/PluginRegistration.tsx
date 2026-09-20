@@ -6,6 +6,7 @@ import { useConnectionSelection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { useCapabilities } from "./api/useCapabilities";
 import { useCatalog } from "./api/useCatalog";
+import { useStepOptions } from "./api/useStepOptions";
 import { useStepMutations } from "./api/useStepMutations";
 import { useUnregisterMutation } from "./api/useUnregisterMutation";
 import { ToolHeader } from "./components/ToolHeader";
@@ -63,6 +64,7 @@ function PluginRegistrationPage() {
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
   const catalogQuery = useCatalog(connectionName || null);
+  const stepOptionsQuery = useStepOptions(connectionName || null);
   useCapabilities(connectionName || null);
   const stepMutations = useStepMutations(connectionName || null);
   const unregister = useUnregisterMutation(connectionName || null);
@@ -225,8 +227,11 @@ function PluginRegistrationPage() {
         onShowSystemChange={setShowSystem}
         onRefresh={() => {
           void catalogQuery.refetch();
+          void stepOptionsQuery.refetch();
         }}
-        refreshDisabled={!connectionName || catalogQuery.isFetching}
+        refreshDisabled={
+          !connectionName || catalogQuery.isFetching || stepOptionsQuery.isFetching
+        }
         onRegisterAssembly={() => setAssemblyDialog({})}
         registerAssemblyDisabled={!connectionName}
       />

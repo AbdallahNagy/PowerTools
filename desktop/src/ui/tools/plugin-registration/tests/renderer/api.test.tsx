@@ -7,8 +7,9 @@ import { http, HttpResponse } from "msw";
 import { useCatalog } from "../../api/useCatalog";
 import { useCapabilities } from "../../api/useCapabilities";
 import { useStepMutations } from "../../api/useStepMutations";
+import { STEP_OPTIONS_STALE_TIME, useStepOptions } from "../../api/useStepOptions";
 import { registrationKeys } from "../../api/queryKeys";
-import { catalogFixture } from "../catalogFixture";
+import { catalogFixture, stepOptionsFixture } from "../catalogFixture";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import {
   createFakeDesktopBridge,
@@ -122,5 +123,50 @@ describe("Plugin Registration API", () => {
     expect(urls).toEqual([
       "http://localhost/api/plugin-registration/steps/cccccccc-cccc-cccc-cccc-cccccccccccc/enable",
     ]);
+  });
+
+  it("caches step options for the session and refetches on demand", async () => {
+    let loads = 0;
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/step-options", () => {
+        loads += 1;
+        return HttpResponse.json(stepOptionsFixture);
+      }),
+    );
+
+    installDesktopBridge(
+      createFakeDesktopBridge({
+        getConnection: async (name) => ({
+          name,
+          envUrl: "https://dev.example.test",
+          crmType: "online",
+          token: "dev-token",
+          expiresOn: "2099-01-01T00:00:00.000Z",
+        }),
+      }),
+    );
+    const queryClient = createTestQueryClient();
+    const { result, unmount } = renderHook(() => useStepOptions("Dev Org"), {
+      wrapper: createQueryWrapper(queryClient),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(loads).toBe(1);
+    const stepOptionsQuery = queryClient.getQueryCache().find({
+      queryKey: registrationKeys.stepOptions("Dev Org"),
+    });
+    expect((stepOptionsQuery?.options as { staleTime?: number }).staleTime).toBe(
+      STEP_OPTIONS_STALE_TIME,
+    );
+
+    unmount();
+    const remounted = renderHook(() => useStepOptions("Dev Org"), {
+      wrapper: createQueryWrapper(queryClient),
+    });
+    await waitFor(() => expect(remounted.result.current.isSuccess).toBe(true));
+    expect(loads).toBe(1);
+
+    await act(() => remounted.result.current.refetch());
+    await waitFor(() => expect(loads).toBe(2));
   });
 });
