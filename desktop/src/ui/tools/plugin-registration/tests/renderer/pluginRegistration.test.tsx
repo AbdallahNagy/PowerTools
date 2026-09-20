@@ -13,6 +13,14 @@ import { catalogFixture, stepOptionsFixture } from "../catalogFixture";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 class TestResizeObserver {
   observe() {}
   unobserve() {}
@@ -182,6 +190,36 @@ describe("Plugin Registration", () => {
     expect(urls[0]).toContain(
       `/api/plugin-registration/steps/${catalogFixture.steps[0]?.id}/unregister`,
     );
+  });
+
+  it("shows a loader while unregistering a step", async () => {
+    const gate = deferred();
+    httpServer.use(
+      ...registrationReadHandlers(),
+      http.post(
+        "http://localhost/api/plugin-registration/steps/:id/unregister",
+        async () => {
+          await gate.promise;
+          return HttpResponse.json({ id: catalogFixture.steps[0]?.id });
+        },
+      ),
+    );
+
+    renderTool("plugin-registration-unregister-loader");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
+    fireEvent.contextMenu(screen.getByText("AccountPlugin: Update of account"));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Unregister step" }));
+    fireEvent.click(screen.getByRole("button", { name: "Unregister" }));
+
+    expect(await screen.findByRole("status", { name: "Unregistering…" })).toBeInTheDocument();
+    gate.resolve();
+
+    const toast = await screen.findByText("Step unregistered.");
+    expect(toast.closest("[data-toast-type]")).toHaveAttribute("data-toast-type", "success");
+    expect(toast.closest("[data-toast-type]")).toHaveClass("bg-[var(--color-primary)]");
+    expect(screen.queryByRole("status", { name: "Unregistering…" })).not.toBeInTheDocument();
   });
 
   it("prefetches step options and reuses them when opening a step dialog", async () => {

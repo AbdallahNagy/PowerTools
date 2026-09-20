@@ -75,13 +75,20 @@ export function ImageDialog({
     }
   };
 
+  const closeDialog = () => {
+    if (pickerOpen || isPending) return;
+    onClose();
+  };
+
   return (
     <>
       <Modal
         open={open}
         title={image ? "Update image" : "Register image"}
-        onClose={onClose}
+        onClose={closeDialog}
         widthClass="max-w-xl"
+        busy={isPending}
+        busyLabel={image ? "Updating image…" : "Registering image…"}
       >
         <FormField label="Name" htmlFor="image-name" problem={problemFor(problems, "name")}>
           <input
@@ -147,7 +154,7 @@ export function ImageDialog({
           </button>
         </FormField>
         <div className="flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
+          <Button type="button" variant="secondary" onClick={closeDialog} disabled={isPending}>
             Cancel
           </Button>
           <Button type="button" onClick={() => void save()} disabled={isPending}>

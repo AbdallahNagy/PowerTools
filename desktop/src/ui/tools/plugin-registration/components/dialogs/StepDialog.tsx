@@ -127,7 +127,7 @@ export function StepDialog({
   };
 
   const closeDialog = () => {
-    if (pickerOpen) return;
+    if (pickerOpen || isPending) return;
     onClose();
   };
 
@@ -138,6 +138,8 @@ export function StepDialog({
         title={step ? "Update step" : "Register step"}
         onClose={closeDialog}
         widthClass="max-w-5xl"
+        busy={isPending}
+        busyLabel={step ? "Updating step…" : "Registering step…"}
       >
         {optionsQuery.isLoading ? (
           <div className="flex justify-center p-6">
@@ -476,7 +478,7 @@ export function StepDialog({
             </div>
 
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
+              <Button type="button" variant="secondary" onClick={closeDialog} disabled={isPending}>
                 Cancel
               </Button>
               <Button type="button" onClick={() => void save()} disabled={isPending}>
