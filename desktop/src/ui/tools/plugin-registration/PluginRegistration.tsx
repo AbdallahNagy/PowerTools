@@ -237,7 +237,7 @@ function PluginRegistrationPage() {
       />
 
       <Group className="flex flex-1 min-h-0">
-        <Panel defaultSize="35%" minSize="15%" className="flex flex-col min-h-0 bg-[var(--color-bg-darker)]">
+        <Panel defaultSize="65%" minSize="15%" className="flex flex-col min-h-0 bg-[var(--color-bg-darker)]">
           <RegistrationTree
             nodes={tree}
             expanded={expanded}
