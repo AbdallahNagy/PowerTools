@@ -8,6 +8,14 @@ import { catalogFixture } from "../catalogFixture";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 const connection = {
   name: "Dev Org",
   envUrl: "https://dev.example.test",
@@ -164,6 +172,32 @@ describe("StepDialog", () => {
     await screen.findByLabelText("Name");
     fireEvent.click(screen.getByRole("button", { name: "Register" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Step name is required.");
+    const errorToast = screen.getByText("The registration request is invalid.").closest("[data-toast-type]");
+    expect(errorToast).toHaveAttribute("data-toast-type", "error");
+  });
+
+  it("shows a loader while registering a step and a primary success toast when finished", async () => {
+    const gate = deferred();
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/step-options", () => stepOptions()),
+      http.post("http://localhost/api/plugin-registration/steps", async () => {
+        await gate.promise;
+        return HttpResponse.json({ id: "step-1" });
+      }),
+    );
+
+    renderDialog();
+    await screen.findByLabelText("Name");
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
+
+    expect(await screen.findByRole("status", { name: "Registering step…" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Register" })).toBeDisabled();
+    gate.resolve();
+
+    const toast = await screen.findByText("Step registered.");
+    expect(toast.closest("[data-toast-type]")).toHaveAttribute("data-toast-type", "success");
+    expect(toast.closest("[data-toast-type]")).toHaveClass("bg-[var(--color-primary)]");
+    expect(screen.queryByRole("status", { name: "Registering step…" })).not.toBeInTheDocument();
   });
 });
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal, Spinner, useToast } from "../../../../shared/ui";
+import { Button, Modal, useToast } from "../../../../shared/ui";
 import { useAssemblyMutations } from "../../api/useAssemblyMutations";
 import { useCapabilities } from "../../api/useCapabilities";
 import {
@@ -95,12 +95,25 @@ export function AssemblyDialog({
     }
   };
 
+  const busyLabel = mutations.analyze.isPending
+    ? "Analyzing assembly…"
+    : assembly
+      ? "Updating assembly…"
+      : "Registering assembly…";
+
+  const closeDialog = () => {
+    if (isPending) return;
+    onClose();
+  };
+
   return (
     <Modal
       open={open}
       title={assembly ? "Update assembly" : "Register assembly"}
-      onClose={onClose}
+      onClose={closeDialog}
       widthClass="max-w-2xl"
+      busy={isPending}
+      busyLabel={busyLabel}
     >
       <FormField
         label="Assembly"
@@ -112,15 +125,10 @@ export function AssemblyDialog({
           type="file"
           accept=".dll"
           className={fieldControlClass}
+          disabled={isPending}
           onChange={(event) => void onFile(event.target.files)}
         />
       </FormField>
-
-      {mutations.analyze.isPending ? (
-        <div className="flex justify-center p-4">
-          <Spinner />
-        </div>
-      ) : null}
 
       {inspection ? (
         <InspectionPreview
@@ -169,7 +177,7 @@ export function AssemblyDialog({
       </FormField>
 
       <div className="flex justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={onClose} disabled={isPending}>
+        <Button type="button" variant="secondary" onClick={closeDialog} disabled={isPending}>
           Cancel
         </Button>
         <Button type="button" onClick={() => void save()} disabled={!canSubmit}>

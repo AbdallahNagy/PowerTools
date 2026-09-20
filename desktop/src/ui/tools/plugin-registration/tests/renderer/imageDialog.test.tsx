@@ -9,6 +9,14 @@ import { catalogFixture } from "../catalogFixture";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 const connection = {
   name: "Dev Org",
   envUrl: "https://dev.example.test",
@@ -140,5 +148,29 @@ describe("ImageDialog", () => {
     expect(await screen.findByRole("checkbox", { name: "Pre-image" })).toBeEnabled();
     expect(screen.getByRole("checkbox", { name: "Post-image" })).toBeDisabled();
     expect(screen.getByRole("checkbox", { name: "Post-image" })).not.toBeChecked();
+  });
+
+  it("shows a loader while registering an image", async () => {
+    const gate = deferred();
+    mockAttributes();
+    httpServer.use(
+      http.post("http://localhost/api/plugin-registration/images", async () => {
+        await gate.promise;
+        return HttpResponse.json({ id: "image-1" });
+      }),
+    );
+
+    renderDialog();
+    fireEvent.change(await screen.findByLabelText("Name"), {
+      target: { value: "PreImage" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
+
+    expect(await screen.findByRole("status", { name: "Registering image…" })).toBeInTheDocument();
+    gate.resolve();
+
+    const toast = await screen.findByText("Image registered.");
+    expect(toast.closest("[data-toast-type]")).toHaveAttribute("data-toast-type", "success");
+    expect(screen.queryByRole("status", { name: "Registering image…" })).not.toBeInTheDocument();
   });
 });

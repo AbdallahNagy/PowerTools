@@ -9,6 +9,14 @@ import { catalogFixture } from "../catalogFixture";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
+function deferred() {
+  let resolve!: () => void;
+  const promise = new Promise<void>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+}
+
 const connection = {
   name: "Dev Org",
   envUrl: "https://dev.example.test",
@@ -86,5 +94,62 @@ describe("AssemblyDialog", () => {
 
     await waitFor(() => expect(posted.hasAssembly).toBe(true));
     expect(posted.isolationMode).toBe("2");
+  });
+
+  it("shows a loader while analyzing and registering an assembly", async () => {
+    const analyze = deferred();
+    const register = deferred();
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/capabilities", () =>
+        HttpResponse.json({
+          isOnline: true,
+          isolationModes: [2],
+          sourceTypes: [0],
+        }),
+      ),
+      http.post("http://localhost/api/plugin-registration/assemblies/analyze", async () => {
+        await analyze.promise;
+        return HttpResponse.json(inspection);
+      }),
+      http.post("http://localhost/api/plugin-registration/assemblies", async () => {
+        await register.promise;
+        return HttpResponse.json({ id: catalogFixture.assemblies[0]?.id });
+      }),
+    );
+
+    renderWithProviders(
+      <ToastProvider>
+        <AssemblyDialog open connectionName={connection.name} onClose={() => undefined} />
+      </ToastProvider>,
+      {
+        bridgeOverrides: {
+          getConnection: async () => ({
+            ...connection,
+            token: "dev-token",
+            expiresOn: "2099-01-01T00:00:00.000Z",
+          }),
+        },
+      },
+    );
+
+    const file = new NodeFile(["dll-bytes"], "Contoso.Plugins.dll", {
+      type: "application/octet-stream",
+    });
+    fireEvent.change(await screen.findByLabelText("Assembly"), {
+      target: { files: [file] },
+    });
+
+    expect(await screen.findByRole("status", { name: "Analyzing assembly…" })).toBeInTheDocument();
+    analyze.resolve();
+    expect(await screen.findByText("Contoso.Plugins.AccountPlugin")).toBeInTheDocument();
+    expect(screen.queryByRole("status", { name: "Analyzing assembly…" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
+    expect(await screen.findByRole("status", { name: "Registering assembly…" })).toBeInTheDocument();
+    register.resolve();
+
+    const toast = await screen.findByText("Assembly registered.");
+    expect(toast.closest("[data-toast-type]")).toHaveAttribute("data-toast-type", "success");
+    expect(screen.queryByRole("status", { name: "Registering assembly…" })).not.toBeInTheDocument();
   });
 });

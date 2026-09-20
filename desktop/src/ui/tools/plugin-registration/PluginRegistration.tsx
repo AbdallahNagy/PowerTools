@@ -304,6 +304,7 @@ function PluginRegistrationPage() {
           stepMutations.disable.isPending ||
           unregister.isPending
         }
+        busyLabel={confirmBusyLabel(confirm?.confirmLabel)}
         onClose={() => setConfirm(null)}
         onConfirm={() => {
           if (!confirm) return;
@@ -347,4 +348,11 @@ function unregisterMessage(
     return `${intro} This assembly has ${types.length} type${types.length === 1 ? "" : "s"} and ${steps} step${steps === 1 ? "" : "s"}.`;
   }
   return intro;
+}
+
+function confirmBusyLabel(confirmLabel?: string): string {
+  if (confirmLabel === "Unregister") return "Unregistering…";
+  if (confirmLabel === "Enable") return "Enabling step…";
+  if (confirmLabel === "Disable") return "Disabling step…";
+  return "Working…";
 }
