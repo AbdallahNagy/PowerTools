@@ -105,10 +105,15 @@ describe("StepDialog", () => {
 
     renderDialog();
     await screen.findByLabelText("Name");
+    const primary = await waitFor(() => {
+      const field = screen.getByLabelText("Primary entity");
+      expect(field).toBeEnabled();
+      return field;
+    });
+    expect(screen.getByLabelText("Secondary entity")).toBeDisabled();
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "AccountPlugin: Update of account" },
     });
-    const primary = screen.getByLabelText("Primary entity");
     expect(within(primary).queryByRole("option", { name: "none" })).not.toBeInTheDocument();
     expect(within(primary).getByRole("option", { name: "account" })).toBeInTheDocument();
     fireEvent.change(primary, { target: { value: "account" } });
@@ -141,7 +146,9 @@ describe("StepDialog", () => {
 
     renderDialog();
     await screen.findByLabelText("Name");
+    await waitFor(() => expect(screen.getByLabelText("Primary entity")).toBeEnabled());
     expect(screen.getByRole("checkbox", { name: "Delete completed async jobs" })).toBeDisabled();
+    expect(screen.getByLabelText("Primary entity")).toBeEnabled();
     expect(screen.getByLabelText("Secondary entity")).toBeDisabled();
     fireEvent.click(screen.getByRole("radio", { name: "Pre-operation" }));
     expect(screen.getByRole("radio", { name: "Asynchronous" })).toBeDisabled();
@@ -198,6 +205,92 @@ describe("StepDialog", () => {
     expect(toast.closest("[data-toast-type]")).toHaveAttribute("data-toast-type", "success");
     expect(toast.closest("[data-toast-type]")).toHaveClass("bg-[var(--color-primary)]");
     expect(screen.queryByRole("status", { name: "Registering step…" })).not.toBeInTheDocument();
+  });
+
+  it("disables both entities when the message only has a none filter", async () => {
+    const associateId = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa";
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/step-options", () =>
+        HttpResponse.json({
+          messages: [
+            { id: messageId, name: "Update" },
+            { id: associateId, name: "Associate" },
+          ],
+          filters: [
+            {
+              id: "filter-none",
+              messageId,
+              primaryEntity: "none",
+              secondaryEntity: "none",
+              availability: 2,
+            },
+            {
+              id: "filter-account",
+              messageId,
+              primaryEntity: "account",
+              secondaryEntity: "none",
+              availability: 0,
+            },
+            {
+              id: "filter-associate-none",
+              messageId: associateId,
+              primaryEntity: "none",
+              secondaryEntity: "none",
+              availability: 2,
+            },
+          ],
+          users: [],
+        }),
+      ),
+    );
+
+    renderDialog();
+    await screen.findByLabelText("Name");
+    await waitFor(() => expect(screen.getByLabelText("Primary entity")).toBeEnabled());
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: associateId } });
+    expect(screen.getByLabelText("Primary entity")).toBeDisabled();
+    expect(screen.getByLabelText("Secondary entity")).toBeDisabled();
+  });
+
+  it("enables secondary entity only after a paired primary is selected", async () => {
+    const setRelatedId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbb01";
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/step-options", () =>
+        HttpResponse.json({
+          messages: [{ id: setRelatedId, name: "SetRelated" }],
+          filters: [
+            {
+              id: "filter-invoice-contact",
+              messageId: setRelatedId,
+              primaryEntity: "invoice",
+              secondaryEntity: "contact",
+              availability: 0,
+            },
+            {
+              id: "filter-lead-account",
+              messageId: setRelatedId,
+              primaryEntity: "lead",
+              secondaryEntity: "account",
+              availability: 0,
+            },
+          ],
+          users: [],
+        }),
+      ),
+    );
+
+    renderDialog();
+    await screen.findByLabelText("Name");
+    expect(screen.getByLabelText("Primary entity")).toBeDisabled();
+    expect(screen.getByLabelText("Secondary entity")).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: setRelatedId } });
+    const primary = screen.getByLabelText("Primary entity");
+    expect(primary).toBeEnabled();
+    expect(screen.getByLabelText("Secondary entity")).toBeDisabled();
+    fireEvent.change(primary, { target: { value: "invoice" } });
+    const secondary = screen.getByLabelText("Secondary entity");
+    expect(secondary).toBeEnabled();
+    expect(within(secondary).getByRole("option", { name: "contact" })).toBeInTheDocument();
   });
 });
 

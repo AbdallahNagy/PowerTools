@@ -11,8 +11,10 @@ import {
   isNoneEntity,
   messageSupportsFilteringAttributes,
   primaryEntitiesForMessage,
+  primaryEntityEnabled,
   resolveFilterId,
   secondaryEntitiesForPrimary,
+  secondaryEntityEnabled,
   selectMessage,
   selectMode,
   selectPrimaryEntity,
@@ -126,6 +128,76 @@ describe("stepForm", () => {
       "contact",
     ]);
     expect(secondaryEntitiesForPrimary(options, "msg-update", "account")).toEqual([]);
+  });
+
+  it("enables primary and secondary from message filter rows", () => {
+    const enablementOptions: StepOptionsDto = {
+      messages: [
+        { id: "msg-update", name: "Update" },
+        { id: "msg-associate", name: "Associate" },
+        { id: "msg-setrelated", name: "SetRelated" },
+      ],
+      filters: [
+        {
+          id: "u-none",
+          messageId: "msg-update",
+          primaryEntity: "none",
+          secondaryEntity: "none",
+          availability: 2,
+        },
+        {
+          id: "u-account",
+          messageId: "msg-update",
+          primaryEntity: "account",
+          secondaryEntity: "none",
+          availability: 0,
+        },
+        {
+          id: "a-none",
+          messageId: "msg-associate",
+          primaryEntity: "none",
+          secondaryEntity: "none",
+          availability: 2,
+        },
+        {
+          id: "s-invoice",
+          messageId: "msg-setrelated",
+          primaryEntity: "invoice",
+          secondaryEntity: "contact",
+          availability: 0,
+        },
+        {
+          id: "s-lead",
+          messageId: "msg-setrelated",
+          primaryEntity: "lead",
+          secondaryEntity: "account",
+          availability: 0,
+        },
+        {
+          id: "s-none-contact",
+          messageId: "msg-setrelated",
+          primaryEntity: "none",
+          secondaryEntity: "contact",
+          availability: 0,
+        },
+      ],
+      users: [],
+    };
+
+    expect(primaryEntityEnabled(enablementOptions, "")).toBe(false);
+    expect(secondaryEntityEnabled(enablementOptions, "", "")).toBe(false);
+
+    expect(primaryEntityEnabled(enablementOptions, "msg-update")).toBe(true);
+    expect(secondaryEntityEnabled(enablementOptions, "msg-update", "")).toBe(false);
+    expect(secondaryEntityEnabled(enablementOptions, "msg-update", "account")).toBe(false);
+
+    expect(primaryEntityEnabled(enablementOptions, "msg-associate")).toBe(false);
+    expect(secondaryEntityEnabled(enablementOptions, "msg-associate", "")).toBe(false);
+    expect(secondaryEntityEnabled(enablementOptions, "msg-associate", "account")).toBe(false);
+
+    expect(primaryEntityEnabled(enablementOptions, "msg-setrelated")).toBe(true);
+    expect(secondaryEntityEnabled(enablementOptions, "msg-setrelated", "")).toBe(false);
+    expect(secondaryEntityEnabled(enablementOptions, "msg-setrelated", "invoice")).toBe(true);
   });
 
   it("clears entity selections when the message changes", () => {

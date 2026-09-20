@@ -15,7 +15,9 @@ import {
   filteringAttributesSummary,
   preStageAllowed,
   primaryEntitiesForMessage,
+  primaryEntityEnabled,
   secondaryEntitiesForPrimary,
+  secondaryEntityEnabled,
   selectMessage,
   selectMode,
   selectPrimaryEntity,
@@ -88,7 +90,17 @@ export function StepDialog({
     form.primaryEntity,
     currentFilter,
   );
-  const secondaryEnabled = secondaryEntities.length > 0;
+  const primaryEnabled = primaryEntityEnabled(
+    optionsQuery.data,
+    form.messageId,
+    currentFilter,
+  );
+  const secondaryEnabled = secondaryEntityEnabled(
+    optionsQuery.data,
+    form.messageId,
+    form.primaryEntity,
+    currentFilter,
+  );
   const attributesEnabled = filteringAttributesEnabled(messageName, form.primaryEntity);
   const attributesQuery = useEntityAttributes(
     open ? connectionName : null,
@@ -183,11 +195,13 @@ export function StepDialog({
                   label="Primary entity"
                   htmlFor="step-primary-entity"
                   problem={problemFor(problems, "filterId")}
+                  disabled={!primaryEnabled}
                 >
                   <select
                     id="step-primary-entity"
                     className={fieldControlClass}
                     value={form.primaryEntity}
+                    disabled={!primaryEnabled}
                     onChange={(event) =>
                       setForm((current) =>
                         selectPrimaryEntity(
