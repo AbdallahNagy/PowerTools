@@ -197,6 +197,27 @@ export function secondaryEntitiesForPrimary(
   return [...names].sort((a, b) => a.localeCompare(b));
 }
 
+export function primaryEntityEnabled(
+  options: StepOptionsDto | undefined,
+  messageId: string,
+  current?: { id: string; primaryEntity: string | null; secondaryEntity: string | null },
+): boolean {
+  return Boolean(messageId) && primaryEntitiesForMessage(options, messageId, current).length > 0;
+}
+
+export function secondaryEntityEnabled(
+  options: StepOptionsDto | undefined,
+  messageId: string,
+  primaryEntity: string,
+  current?: { id: string; primaryEntity: string | null; secondaryEntity: string | null },
+): boolean {
+  return (
+    primaryEntityEnabled(options, messageId, current) &&
+    !isNoneEntity(primaryEntity) &&
+    secondaryEntitiesForPrimary(options, messageId, primaryEntity, current).length > 0
+  );
+}
+
 export function withResolvedFilter(
   form: StepFormState,
   options: StepOptionsDto | undefined,
