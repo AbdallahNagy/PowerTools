@@ -132,6 +132,8 @@ describe("createPreloadApi", () => {
     expect(received).toEqual([true]);
     expect(removals).toEqual([{ channel: "window-maximized-changed", listener }]);
   });
+
+  it("exposes exactly the declared renderer methods", () => {
     const { ipcRenderer } = createIpcRendererFake();
 
     expect(Object.keys(createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">))).toEqual([

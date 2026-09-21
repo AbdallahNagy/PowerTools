@@ -1,6 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import ActivityBar from "../../src/ui/components/layout/ActivityBar";
 import Layout from "../../src/ui/components/layout/Layout";
@@ -11,6 +11,12 @@ import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { ConnectionsProvider } from "../../src/ui/shared/connections";
 import { StatusBarProvider, useStatusBar } from "../../src/ui/shared/status";
 import { renderWithProviders } from "../support/render";
+
+class TestResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
 
 function TabState() {
   const { activeTabId, closeTab, openTool, tabs } = useTabs();
@@ -41,9 +47,11 @@ function StatusPublisher({ id, children }: { id: string; children: ReactNode }) 
   return null;
 }
 
+beforeAll(() => vi.stubGlobal("ResizeObserver", TestResizeObserver));
 afterEach(() => {
   vi.restoreAllMocks();
 });
+afterAll(() => vi.unstubAllGlobals());
 
 describe("renderer shell", () => {
   it("projects activity tools in order and opens named FetchXML Builder instances", async () => {
@@ -195,7 +203,11 @@ describe("renderer shell", () => {
   });
 
   it("toggles the resizable sidebar from the title bar", async () => {
-    renderWithProviders(<Layout />);
+    renderWithProviders(
+      <TabProvider>
+        <Layout />
+      </TabProvider>,
+    );
 
     expect(await screen.findByRole("navigation", { name: "Tools" })).toBeInTheDocument();
     expect(screen.getByRole("separator", { name: "Resize sidebar" })).toBeInTheDocument();
