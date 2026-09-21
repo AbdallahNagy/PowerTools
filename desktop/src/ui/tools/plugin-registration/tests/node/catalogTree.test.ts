@@ -34,8 +34,12 @@ describe("buildCatalogTree", () => {
       { ...catalogFixture, types: [prtType] },
       { showSystem: false, search: "" },
     );
-    expect(guidOnly[0]?.children[0]?.label).toBe("(plugin) Contoso.Plugins.AccountPlugin");
-    expect(guidOnly[0]?.children[0]?.data.typeName).toBe("Contoso.Plugins.AccountPlugin");
+    const typeNode = guidOnly[0]?.children[0];
+    expect(typeNode?.kind).toBe("type");
+    expect(typeNode?.label).toBe("(plugin) Contoso.Plugins.AccountPlugin");
+    expect(typeNode && typeNode.kind === "type" ? typeLabel(typeNode.data) : null).toBe(
+      "Contoso.Plugins.AccountPlugin",
+    );
   });
 
   it("hides system assemblies unless requested", () => {
