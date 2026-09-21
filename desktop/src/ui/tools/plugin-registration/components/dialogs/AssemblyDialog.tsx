@@ -56,6 +56,7 @@ export function AssemblyDialog({
 
   const isolationModes = capabilities.data?.isolationModes ?? [];
   const sourceTypes = capabilities.data?.sourceTypes ?? [];
+  const frozen = !!assembly;
   const hasErrors = inspection?.diagnostics.some(isInspectionError) ?? false;
   const isPending =
     mutations.analyze.isPending ||
@@ -141,39 +142,27 @@ export function AssemblyDialog({
         label="Isolation"
         problem={problemFor(problems, "isolationMode")}
       >
-        <div className="flex gap-4">
-          {isolationModes.map((mode) => (
-            <label key={mode} className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="isolationMode"
-                value={mode}
-                checked={isolationMode === mode}
-                disabled={!!assembly}
-                onChange={() => setIsolationMode(mode)}
-              />
-              {ISOLATION_LABELS[mode] ?? mode}
-            </label>
-          ))}
-        </div>
+        <CapabilityRadios
+          name="isolationMode"
+          value={isolationMode}
+          options={ISOLATION_OPTIONS}
+          allowed={isolationModes}
+          labels={ISOLATION_LABELS}
+          frozen={frozen}
+          onChange={setIsolationMode}
+        />
       </FormField>
 
       <FormField label="Source" problem={problemFor(problems, "sourceType")}>
-        <div className="flex gap-4">
-          {sourceTypes.map((source) => (
-            <label key={source} className="flex items-center gap-2 text-sm">
-              <input
-                type="radio"
-                name="sourceType"
-                value={source}
-                checked={sourceType === source}
-                disabled={!!assembly}
-                onChange={() => setSourceType(source)}
-              />
-              {SOURCE_LABELS[source] ?? source}
-            </label>
-          ))}
-        </div>
+        <CapabilityRadios
+          name="sourceType"
+          value={sourceType}
+          options={SOURCE_OPTIONS}
+          allowed={sourceTypes}
+          labels={SOURCE_LABELS}
+          frozen={frozen}
+          onChange={setSourceType}
+        />
       </FormField>
 
       <div className="flex justify-end gap-2">
@@ -242,6 +231,55 @@ function InspectionPreview({
           ))}
         </ul>
       ) : null}
+    </div>
+  );
+}
+
+const ISOLATION_OPTIONS = [2, 1] as const;
+const SOURCE_OPTIONS = [0, 1] as const;
+
+function CapabilityRadios({
+  name,
+  value,
+  options,
+  allowed,
+  labels,
+  frozen,
+  onChange,
+}: {
+  name: string;
+  value: number;
+  options: readonly number[];
+  allowed: number[];
+  labels: Record<number, string>;
+  frozen: boolean;
+  onChange: (value: number) => void;
+}) {
+  return (
+    <div className="flex gap-4">
+      {options.map((option) => {
+        const disabled = frozen || !allowed.includes(option);
+        return (
+          <label
+            key={option}
+            className={`flex items-center gap-2 text-sm ${
+              disabled
+                ? "text-[var(--color-text-dark-gray)] cursor-not-allowed"
+                : "text-[var(--color-text-gray)]"
+            }`}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option}
+              checked={value === option}
+              disabled={disabled}
+              onChange={() => onChange(option)}
+            />
+            {labels[option] ?? option}
+          </label>
+        );
+      })}
     </div>
   );
 }

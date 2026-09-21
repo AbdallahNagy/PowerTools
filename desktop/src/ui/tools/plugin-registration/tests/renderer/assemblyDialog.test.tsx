@@ -152,4 +152,109 @@ describe("AssemblyDialog", () => {
     expect(toast.closest("[data-toast-type]")).toHaveAttribute("data-toast-type", "success");
     expect(screen.queryByRole("status", { name: "Registering assembly…" })).not.toBeInTheDocument();
   });
+
+  it("shows Isolation None and Source Disk disabled for online orgs", async () => {
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/capabilities", () =>
+        HttpResponse.json({
+          isOnline: true,
+          isolationModes: [2],
+          sourceTypes: [0],
+        }),
+      ),
+    );
+
+    renderWithProviders(
+      <ToastProvider>
+        <AssemblyDialog open connectionName={connection.name} onClose={() => undefined} />
+      </ToastProvider>,
+      {
+        bridgeOverrides: {
+          getConnection: async () => ({
+            ...connection,
+            token: "dev-token",
+            expiresOn: "2099-01-01T00:00:00.000Z",
+          }),
+        },
+      },
+    );
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Sandbox" })).toBeEnabled());
+    expect(screen.getByRole("radio", { name: "None" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Database" })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: "Disk" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Sandbox" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Database" })).toBeChecked();
+  });
+
+  it("enables Isolation None and Source Disk for on-prem orgs", async () => {
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/capabilities", () =>
+        HttpResponse.json({
+          isOnline: false,
+          isolationModes: [1, 2],
+          sourceTypes: [0, 1],
+        }),
+      ),
+    );
+
+    renderWithProviders(
+      <ToastProvider>
+        <AssemblyDialog open connectionName={connection.name} onClose={() => undefined} />
+      </ToastProvider>,
+      {
+        bridgeOverrides: {
+          getConnection: async () => ({
+            ...connection,
+            token: "dev-token",
+            expiresOn: "2099-01-01T00:00:00.000Z",
+          }),
+        },
+      },
+    );
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "None" })).toBeEnabled());
+    expect(screen.getByRole("radio", { name: "Sandbox" })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: "Database" })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: "Disk" })).toBeEnabled();
+  });
+
+  it("freezes isolation and source when updating an assembly", async () => {
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/capabilities", () =>
+        HttpResponse.json({
+          isOnline: false,
+          isolationModes: [1, 2],
+          sourceTypes: [0, 1],
+        }),
+      ),
+    );
+
+    renderWithProviders(
+      <ToastProvider>
+        <AssemblyDialog
+          open
+          connectionName={connection.name}
+          assembly={catalogFixture.assemblies[0]}
+          onClose={() => undefined}
+        />
+      </ToastProvider>,
+      {
+        bridgeOverrides: {
+          getConnection: async () => ({
+            ...connection,
+            token: "dev-token",
+            expiresOn: "2099-01-01T00:00:00.000Z",
+          }),
+        },
+      },
+    );
+
+    await waitFor(() => expect(screen.getByRole("radio", { name: "Sandbox" })).toBeChecked());
+    expect(screen.getByRole("radio", { name: "Sandbox" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "None" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Database" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Database" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Disk" })).toBeDisabled();
+  });
 });
