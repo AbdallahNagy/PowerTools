@@ -43,6 +43,18 @@ export const catalogFixture: CatalogDto = {
       isSystem: false,
     },
     {
+      id: "77777777-7777-7777-7777-777777777777",
+      assemblyId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+      typeName: "Contoso.Plugins.WorkflowActivity",
+      name: "WorkflowActivity",
+      friendlyName: "Workflow Activity",
+      isWorkflowActivity: true,
+      workflowActivityGroupName: "Contoso",
+      description: null,
+      isManaged: false,
+      isSystem: false,
+    },
+    {
       id: "88888888-8888-8888-8888-888888888888",
       assemblyId: "99999999-9999-9999-9999-999999999999",
       typeName: "Microsoft.Crm.ObjectModel.SystemPlugin",

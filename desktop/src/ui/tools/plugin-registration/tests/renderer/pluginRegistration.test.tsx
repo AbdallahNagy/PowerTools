@@ -114,17 +114,17 @@ describe("Plugin Registration", () => {
 
     renderTool("plugin-registration-browse");
 
-    expect(await screen.findByText("Contoso.Plugins (1.0.0.0)")).toBeInTheDocument();
-    expect(screen.queryByText("Microsoft.Crm.ObjectModel (9.0.0.0)")).not.toBeInTheDocument();
+    expect(await screen.findByText("(assembly) Contoso.Plugins (1.0.0.0)")).toBeInTheDocument();
+    expect(screen.queryByText("(assembly) Microsoft.Crm.ObjectModel (9.0.0.0)")).not.toBeInTheDocument();
     await waitFor(() =>
       expect(screen.getByRole("status", { name: "tool statuses" })).toHaveTextContent(
         "2 assemblies · 1 steps",
       ),
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
-    fireEvent.click(screen.getByText("AccountPlugin: Update of account"));
+    fireEvent.click(screen.getByRole("button", { name: "Expand (assembly) Contoso.Plugins (1.0.0.0)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand (plugin) Contoso.Plugins.AccountPlugin" }));
+    fireEvent.click(screen.getByText("(step) AccountPlugin: Update of account"));
 
     expect(await screen.findByText("Update")).toBeInTheDocument();
     expect(screen.getByText("Post-operation")).toBeInTheDocument();
@@ -146,9 +146,9 @@ describe("Plugin Registration", () => {
 
     renderTool("plugin-registration-disable");
 
-    fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
-    fireEvent.contextMenu(screen.getByText("AccountPlugin: Update of account"));
+    fireEvent.click(await screen.findByRole("button", { name: "Expand (assembly) Contoso.Plugins (1.0.0.0)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand (plugin) Contoso.Plugins.AccountPlugin" }));
+    fireEvent.contextMenu(screen.getByText("(step) AccountPlugin: Update of account"));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Disable step" }));
     fireEvent.click(screen.getByRole("button", { name: "Disable" }));
 
@@ -174,9 +174,9 @@ describe("Plugin Registration", () => {
 
     renderTool("plugin-registration-unregister");
 
-    fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
-    fireEvent.contextMenu(screen.getByText("AccountPlugin: Update of account"));
+    fireEvent.click(await screen.findByRole("button", { name: "Expand (assembly) Contoso.Plugins (1.0.0.0)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand (plugin) Contoso.Plugins.AccountPlugin" }));
+    fireEvent.contextMenu(screen.getByText("(step) AccountPlugin: Update of account"));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Unregister step" }));
 
     expect(
@@ -207,9 +207,9 @@ describe("Plugin Registration", () => {
 
     renderTool("plugin-registration-unregister-loader");
 
-    fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
-    fireEvent.click(screen.getByRole("button", { name: "Expand Contoso.Plugins.AccountPlugin" }));
-    fireEvent.contextMenu(screen.getByText("AccountPlugin: Update of account"));
+    fireEvent.click(await screen.findByRole("button", { name: "Expand (assembly) Contoso.Plugins (1.0.0.0)" }));
+    fireEvent.click(screen.getByRole("button", { name: "Expand (plugin) Contoso.Plugins.AccountPlugin" }));
+    fireEvent.contextMenu(screen.getByText("(step) AccountPlugin: Update of account"));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Unregister step" }));
     fireEvent.click(screen.getByRole("button", { name: "Unregister" }));
 
@@ -234,10 +234,10 @@ describe("Plugin Registration", () => {
 
     renderTool("plugin-registration-prefetch-steps");
 
-    fireEvent.click(await screen.findByRole("button", { name: "Expand Contoso.Plugins (1.0.0.0)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Expand (assembly) Contoso.Plugins (1.0.0.0)" }));
     await waitFor(() => expect(stepOptionLoads).toBe(1));
 
-    fireEvent.contextMenu(screen.getByText("Contoso.Plugins.AccountPlugin"));
+    fireEvent.contextMenu(screen.getByText("(plugin) Contoso.Plugins.AccountPlugin"));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Register step" }));
     expect(await screen.findByLabelText("Message")).toBeInTheDocument();
     expect(stepOptionLoads).toBe(1);

@@ -49,7 +49,7 @@ export function buildCatalogTree(
                   (image): TreeNode => ({
                     kind: "image",
                     id: nodeId("image", image.id),
-                    label: image.name || image.entityAlias,
+                    label: prefixedLabel("image", imageDisplayName(image)),
                     data: image,
                     children: [],
                   }),
@@ -57,7 +57,7 @@ export function buildCatalogTree(
               return {
                 kind: "step" as const,
                 id: nodeId("step", step.id),
-                label: step.name,
+                label: prefixedLabel("step", step.name),
                 data: step,
                 children: images,
               };
@@ -65,7 +65,10 @@ export function buildCatalogTree(
           return {
             kind: "type" as const,
             id: nodeId("type", type.id),
-            label: typeLabel(type),
+            label: prefixedLabel(
+              type.isWorkflowActivity ? "workflow activity" : "plugin",
+              typeLabel(type),
+            ),
             data: type,
             children: steps,
           };
@@ -73,7 +76,7 @@ export function buildCatalogTree(
       return {
         kind: "assembly" as const,
         id: nodeId("assembly", assembly.id),
-        label: assembly.version ? `${assembly.name} (${assembly.version})` : assembly.name,
+        label: prefixedLabel("assembly", assemblyDisplayName(assembly)),
         data: assembly,
         children: types,
       };
@@ -98,6 +101,21 @@ export function typeLabel(type: PluginTypeDto): string {
   return type.typeName || type.name || type.friendlyName || type.id;
 }
 
+export function prefixedLabel(
+  kind: "assembly" | "plugin" | "workflow activity" | "step" | "image",
+  text: string,
+): string {
+  return `(${kind}) ${text}`;
+}
+
+function assemblyDisplayName(assembly: AssemblyDto): string {
+  return assembly.version ? `${assembly.name} (${assembly.version})` : assembly.name;
+}
+
+function imageDisplayName(image: ImageDto): string {
+  return image.name || image.entityAlias;
+}
+
 function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
   const map = new Map<string, T[]>();
   for (const item of items) {
@@ -120,13 +138,18 @@ function filterBySearch(nodes: TreeNode[], search: string): TreeNode[] {
 }
 
 function nodeMatches(node: TreeNode, search: string): boolean {
-  const fields = [node.label];
+  const fields: string[] = [];
   switch (node.kind) {
     case "assembly":
-      fields.push(node.data.name, node.data.version ?? "");
+      fields.push(assemblyDisplayName(node.data), node.data.name, node.data.version ?? "");
       break;
     case "type":
-      fields.push(node.data.typeName, node.data.name ?? "", node.data.friendlyName ?? "");
+      fields.push(
+        typeLabel(node.data),
+        node.data.typeName,
+        node.data.name ?? "",
+        node.data.friendlyName ?? "",
+      );
       break;
     case "step":
       fields.push(
@@ -137,7 +160,7 @@ function nodeMatches(node: TreeNode, search: string): boolean {
       );
       break;
     case "image":
-      fields.push(node.data.name, node.data.entityAlias);
+      fields.push(imageDisplayName(node.data), node.data.name, node.data.entityAlias);
       break;
   }
   return fields.some((field) => field.toLowerCase().includes(search));

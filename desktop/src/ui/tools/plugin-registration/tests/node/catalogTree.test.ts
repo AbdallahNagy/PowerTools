@@ -8,16 +8,20 @@ describe("buildCatalogTree", () => {
 
     expect(tree).toHaveLength(1);
     expect(tree[0]?.kind).toBe("assembly");
-    expect(tree[0]?.label).toBe("Contoso.Plugins (1.0.0.0)");
-    expect(tree[0]?.children).toHaveLength(1);
+    expect(tree[0]?.label).toBe("(assembly) Contoso.Plugins (1.0.0.0)");
+    expect(tree[0]?.children).toHaveLength(2);
     expect(tree[0]?.children[0]?.kind).toBe("type");
+    expect(tree[0]?.children[0]?.label).toBe("(plugin) Contoso.Plugins.AccountPlugin");
+    expect(tree[0]?.children[1]?.label).toBe("(workflow activity) Contoso.Plugins.WorkflowActivity");
     expect(tree[0]?.children[0]?.children[0]?.kind).toBe("step");
+    expect(tree[0]?.children[0]?.children[0]?.label).toBe("(step) AccountPlugin: Update of account");
     expect(tree[0]?.children[0]?.children[0]?.children[0]?.kind).toBe("image");
+    expect(tree[0]?.children[0]?.children[0]?.children[0]?.label).toBe("(image) PreImage");
   });
 
   it("labels plug-in types by type name, not the PRT-generated friendly name", () => {
     const tree = buildCatalogTree(catalogFixture, { showSystem: false, search: "" });
-    expect(tree[0]?.children[0]?.label).toBe("Contoso.Plugins.AccountPlugin");
+    expect(tree[0]?.children[0]?.label).toBe("(plugin) Contoso.Plugins.AccountPlugin");
 
     const prtType = {
       ...catalogFixture.types[0]!,
@@ -30,7 +34,8 @@ describe("buildCatalogTree", () => {
       { ...catalogFixture, types: [prtType] },
       { showSystem: false, search: "" },
     );
-    expect(guidOnly[0]?.children[0]?.label).toBe("Contoso.Plugins.AccountPlugin");
+    expect(guidOnly[0]?.children[0]?.label).toBe("(plugin) Contoso.Plugins.AccountPlugin");
+    expect(guidOnly[0]?.children[0]?.data.typeName).toBe("Contoso.Plugins.AccountPlugin");
   });
 
   it("hides system assemblies unless requested", () => {
@@ -52,6 +57,7 @@ describe("buildCatalogTree", () => {
     const step = tree[0]?.children[0]?.children[0];
     expect(step?.kind).toBe("step");
     expect(step?.data.name).toContain("Update of account");
+    expect(step?.label).toBe("(step) AccountPlugin: Update of account");
   });
 
   it("finds a node by composite id", () => {
