@@ -64,6 +64,12 @@ export interface DesktopBridge {
   installUpdate(): Promise<void>;
   onUpdateStatusChanged(callback: (status: UpdateStatus) => void): () => void;
   openExternalUrl(url: string): Promise<void>;
+  popupAppMenu(menuId: "file" | "edit" | "view" | "help", x: number, y: number): Promise<void>;
+  minimizeWindow(): Promise<void>;
+  toggleMaximizeWindow(): Promise<void>;
+  closeWindow(): Promise<void>;
+  isWindowMaximized(): Promise<boolean>;
+  onWindowMaximizedChanged(callback: (maximized: boolean) => void): () => void;
 }
 
 declare global {
@@ -102,4 +108,10 @@ export const desktopBridge: DesktopBridge = {
   installUpdate: () => bridge().installUpdate(),
   onUpdateStatusChanged: (callback) => bridge().onUpdateStatusChanged(callback),
   openExternalUrl: (url) => bridge().openExternalUrl(url),
+  popupAppMenu: (menuId, x, y) => bridge().popupAppMenu(menuId, x, y),
+  minimizeWindow: () => bridge().minimizeWindow(),
+  toggleMaximizeWindow: () => bridge().toggleMaximizeWindow(),
+  closeWindow: () => bridge().closeWindow(),
+  isWindowMaximized: () => bridge().isWindowMaximized(),
+  onWindowMaximizedChanged: (callback) => bridge().onWindowMaximizedChanged(callback),
 };

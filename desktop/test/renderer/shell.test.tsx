@@ -1,8 +1,9 @@
 import { useEffect, type ReactNode } from "react";
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import ActivityBar from "../../src/ui/components/layout/ActivityBar";
+import Layout from "../../src/ui/components/layout/Layout";
 import StatusBar from "../../src/ui/components/layout/StatusBar";
 import { TabProvider } from "../../src/ui/context/TabContext";
 import { useTabs } from "../../src/ui/context/useTabs";
@@ -10,6 +11,12 @@ import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { ConnectionsProvider } from "../../src/ui/shared/connections";
 import { StatusBarProvider, useStatusBar } from "../../src/ui/shared/status";
 import { renderWithProviders } from "../support/render";
+
+class TestResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
 
 function TabState() {
   const { activeTabId, closeTab, openTool, tabs } = useTabs();
@@ -40,9 +47,11 @@ function StatusPublisher({ id, children }: { id: string; children: ReactNode }) 
   return null;
 }
 
+beforeAll(() => vi.stubGlobal("ResizeObserver", TestResizeObserver));
 afterEach(() => {
   vi.restoreAllMocks();
 });
+afterAll(() => vi.unstubAllGlobals());
 
 describe("renderer shell", () => {
   it("projects activity tools in order and opens named FetchXML Builder instances", async () => {
@@ -158,6 +167,62 @@ describe("renderer shell", () => {
       "Welcome | Data Migration",
     );
     expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe("welcome");
+  });
+
+  it("lists tools with icon and name and filters them from the sidebar search", async () => {
+    renderWithProviders(
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+        </TabProvider>
+      </ConnectionsProvider>,
+    );
+
+    expect(await screen.findByRole("button", { name: "data migration" })).toHaveTextContent(
+      "Data Migration",
+    );
+    expect(
+      screen.getByRole("button", { name: "Build, run, and refine FetchXML queries" }),
+    ).toHaveTextContent("FetchXML Builder");
+    expect(screen.getByRole("button", { name: "connect" })).toHaveTextContent("Connect");
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search tools" }), {
+      target: { value: "fetch" },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Build, run, and refine FetchXML queries" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "data migration" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "connect" })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search tools" }), {
+      target: { value: "no-such-tool" },
+    });
+    expect(screen.getByText("No matching tools")).toBeInTheDocument();
+  });
+
+  it("toggles the resizable sidebar from the title bar", async () => {
+    renderWithProviders(
+      <TabProvider>
+        <Layout />
+      </TabProvider>,
+    );
+
+    expect(await screen.findByRole("navigation", { name: "Tools" })).toBeInTheDocument();
+    expect(screen.getByRole("separator", { name: "Resize sidebar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "File" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide sidebar" }));
+
+    expect(screen.queryByRole("navigation", { name: "Tools" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("separator", { name: "Resize sidebar" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show sidebar" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show sidebar" }));
+    expect(screen.getByRole("navigation", { name: "Tools" })).toBeInTheDocument();
+    expect(screen.getByRole("separator", { name: "Resize sidebar" })).toBeInTheDocument();
   });
 
   it("replaces status content by ID and removes only the unmounted publisher", async () => {

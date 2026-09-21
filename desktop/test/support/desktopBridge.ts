@@ -3,6 +3,7 @@ import type { DesktopBridge } from "../../src/ui/platform/desktopBridge";
 type ConnectionStatusListener = Parameters<DesktopBridge["onConnectionStatusUpdate"]>[0];
 type ConnectionsUpdatedListener = Parameters<DesktopBridge["onConnectionsUpdated"]>[0];
 type UpdateStatusChangedListener = Parameters<DesktopBridge["onUpdateStatusChanged"]>[0];
+type WindowMaximizedChangedListener = Parameters<DesktopBridge["onWindowMaximizedChanged"]>[0];
 type ConnectionList = Awaited<ReturnType<DesktopBridge["listConnections"]>>;
 type UpdateStatus = Awaited<ReturnType<DesktopBridge["getUpdateStatus"]>>;
 
@@ -14,12 +15,14 @@ export interface FakeDesktopBridge extends DesktopBridge {
   emitConnectionStatusUpdate(name: string | null): void;
   emitConnectionsUpdated(connections: ConnectionList): void;
   emitUpdateStatusChanged(status: UpdateStatus): void;
+  emitWindowMaximizedChanged(maximized: boolean): void;
 }
 
 export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}): FakeDesktopBridge {
   const connectionStatusListeners = new Set<ConnectionStatusListener>();
   const connectionsUpdatedListeners = new Set<ConnectionsUpdatedListener>();
   const updateStatusChangedListeners = new Set<UpdateStatusChangedListener>();
+  const windowMaximizedChangedListeners = new Set<WindowMaximizedChangedListener>();
 
   const bridge: DesktopBridge = {
     createConnectionWindow: async () => undefined,
@@ -51,6 +54,15 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
       return () => updateStatusChangedListeners.delete(callback);
     },
     openExternalUrl: async () => undefined,
+    popupAppMenu: async () => undefined,
+    minimizeWindow: async () => undefined,
+    toggleMaximizeWindow: async () => undefined,
+    closeWindow: async () => undefined,
+    isWindowMaximized: async () => false,
+    onWindowMaximizedChanged: (callback) => {
+      windowMaximizedChangedListeners.add(callback);
+      return () => windowMaximizedChangedListeners.delete(callback);
+    },
     ...overrides,
   };
 
@@ -64,6 +76,9 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     },
     emitUpdateStatusChanged: (status) => {
       updateStatusChangedListeners.forEach((listener) => listener(status));
+    },
+    emitWindowMaximizedChanged: (maximized) => {
+      windowMaximizedChangedListeners.forEach((listener) => listener(maximized));
     },
   };
 }

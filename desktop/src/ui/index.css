@@ -73,6 +73,16 @@ button:focus-visible {
   color: var(--color-text-dark-gray);
 }
 
+.app-drag {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
 /* Dark scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
