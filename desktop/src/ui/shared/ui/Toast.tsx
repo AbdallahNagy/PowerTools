@@ -18,8 +18,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const colors: Record<ToastType, string> = {
     error: "bg-[#3c1e1e] border-red-700 text-red-200",
-    success: "bg-[#1e3c1e] border-green-700 text-green-200",
-    info: "bg-[#1e2d3c] border-[#007fd4] text-[#cccccc]",
+    success:
+      "bg-[var(--color-primary)] border-[var(--color-primary)] text-[var(--color-text-white)]",
+    info: "bg-[var(--color-primary)] border-[var(--color-primary)] text-[var(--color-text-white)]",
   };
 
   return (
@@ -29,6 +30,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((t) => (
           <div
             key={t.id}
+            data-toast-type={t.type}
             className={`flex items-start gap-2 p-3 rounded-sm border text-sm shadow-lg ${colors[t.type]}`}
           >
             <span className="flex-1 break-words">{t.message}</span>

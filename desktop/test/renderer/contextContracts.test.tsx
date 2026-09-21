@@ -88,4 +88,19 @@ describe("renderer context contracts", () => {
     expect(screen.queryByText("First toast")).not.toBeInTheDocument();
     expect(screen.getByText("Second toast")).toBeInTheDocument();
   });
+
+  it("uses the app primary color for finished toasts and red for errors", () => {
+    render(<ToastProvider><ToastControls /></ToastProvider>);
+
+    fireEvent.click(screen.getByRole("button", { name: "Show first" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show second" }));
+
+    const success = screen.getByText("First toast").closest("[data-toast-type]");
+    const error = screen.getByText("Second toast").closest("[data-toast-type]");
+    expect(success).toHaveAttribute("data-toast-type", "success");
+    expect(success).toHaveClass("bg-[var(--color-primary)]");
+    expect(error).toHaveAttribute("data-toast-type", "error");
+    expect(error).toHaveClass("bg-[#3c1e1e]");
+    expect(error).toHaveClass("border-red-700");
+  });
 });
