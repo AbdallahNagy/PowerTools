@@ -11,6 +11,10 @@ public sealed class StepService(IPluginRegistrationGateway gateway)
     public async Task<MutationResultDto> CreateAsync(StepDraftDto draft, CancellationToken ct)
     {
         var messageName = await RequireMessageNameAsync(draft.MessageId, ct);
+        string? primaryEntity = null;
+        if (string.IsNullOrWhiteSpace(draft.Name) && draft.FilterId is Guid filterId)
+            primaryEntity = await TryGetPrimaryEntityAsync(filterId, ct);
+        draft = StepDraftValidator.ApplyCreateName(draft, messageName, primaryEntity);
         var problems = StepDraftValidator.Validate(draft, messageName, isUpdate: false);
         if (problems.Count > 0)
             throw RegistrationException.Validation(problems);
@@ -143,6 +147,16 @@ public sealed class StepService(IPluginRegistrationGateway gateway)
         if (message is null)
             throw RegistrationException.NotFound("message_not_found", "The selected message was not found.");
         return message.GetAttributeValue<string>("name") ?? string.Empty;
+    }
+
+    private async Task<string?> TryGetPrimaryEntityAsync(Guid filterId, CancellationToken ct)
+    {
+        var filter = await gateway.RetrieveAsync(
+            "sdkmessagefilter",
+            filterId,
+            new ColumnSet("primaryobjecttypecode"),
+            ct);
+        return filter?.GetAttributeValue<string>("primaryobjecttypecode");
     }
 
     private async Task<Entity> RequireStepAsync(Guid id, CancellationToken ct)

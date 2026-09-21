@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyDefaultMessage,
   createStepForm,
+  defaultStepName,
   deploymentFlags,
   deploymentFromFlags,
   filterLabel,
@@ -234,5 +235,12 @@ describe("stepForm", () => {
     expect(asyncForm.stage).toBe(40);
     expect(selectStage(asyncForm, 10).stage).toBe(40);
     expect(selectMode(asyncForm, 0)).toMatchObject({ mode: 0, asyncAutoDelete: false });
+  });
+
+  it("defaults a blank step name to message of entity", () => {
+    expect(defaultStepName("Update", "account")).toBe("Update of account");
+    expect(defaultStepName("Create", "")).toBe("Create");
+    expect(defaultStepName("Create", "none")).toBe("Create");
+    expect(defaultStepName("  Update  ", "  account  ")).toBe("Update of account");
   });
 });

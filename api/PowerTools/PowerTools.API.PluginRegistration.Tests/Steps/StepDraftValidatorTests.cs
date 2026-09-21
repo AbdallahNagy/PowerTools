@@ -49,6 +49,45 @@ public sealed class StepDraftValidatorTests
         Assert.Contains(problems, p => p.Field == "filterId" && p.Code == "invalid");
     }
 
+    [Fact]
+    public void Create_defaults_blank_name_to_message_of_entity()
+    {
+        var draft = StepDraftValidator.ApplyCreateName(
+            ValidDraft() with { Name = " " },
+            "Update",
+            "account");
+        Assert.Equal("Update of account", draft.Name);
+        Assert.Empty(StepDraftValidator.Validate(draft, "Update", isUpdate: false));
+    }
+
+    [Fact]
+    public void Create_defaults_blank_name_to_message_when_entity_is_missing()
+    {
+        var draft = StepDraftValidator.ApplyCreateName(
+            ValidDraft() with { Name = "" },
+            "Create",
+            null);
+        Assert.Equal("Create", draft.Name);
+        Assert.Equal("Create", StepDraftValidator.DefaultName("Create", "none"));
+    }
+
+    [Fact]
+    public void Create_leaves_a_typed_name_unchanged()
+    {
+        var draft = StepDraftValidator.ApplyCreateName(ValidDraft(), "Update", "account");
+        Assert.Equal("AccountPlugin: Update of account", draft.Name);
+    }
+
+    [Fact]
+    public void Update_still_requires_a_name()
+    {
+        var problems = StepDraftValidator.Validate(
+            ValidDraft() with { Name = "" },
+            "Update",
+            isUpdate: true);
+        Assert.Contains(problems, p => p.Field == "name" && p.Code == "required");
+    }
+
     private static StepDraftDto ValidDraft() => new(
         "AccountPlugin: Update of account",
         Guid.Parse("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb"),

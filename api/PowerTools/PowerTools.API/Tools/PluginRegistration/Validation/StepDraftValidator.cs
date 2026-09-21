@@ -14,6 +14,29 @@ public static class StepDraftValidator
         "UpdateMultiple",
     };
 
+    public static string DefaultName(string messageName, string? primaryEntity)
+    {
+        var message = messageName?.Trim() ?? "";
+        var entity = string.IsNullOrWhiteSpace(primaryEntity) ? "" : primaryEntity.Trim();
+        if (string.Equals(entity, "none", StringComparison.OrdinalIgnoreCase))
+            entity = "";
+        if (entity.Length == 0)
+            return message;
+        if (message.Length == 0)
+            return entity;
+        return $"{message} of {entity}";
+    }
+
+    public static StepDraftDto ApplyCreateName(
+        StepDraftDto draft,
+        string messageName,
+        string? primaryEntity)
+    {
+        if (!string.IsNullOrWhiteSpace(draft.Name))
+            return draft;
+        return draft with { Name = DefaultName(messageName, primaryEntity) };
+    }
+
     public static IReadOnlyList<RegistrationProblem> Validate(
         StepDraftDto draft,
         string messageName,

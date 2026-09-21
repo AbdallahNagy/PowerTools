@@ -154,6 +154,36 @@ describe("StepDialog", () => {
     expect(screen.getByRole("radio", { name: "Asynchronous" })).toBeDisabled();
   });
 
+  it("defaults a blank name to message of entity on create", async () => {
+    let posted: unknown;
+    httpServer.use(
+      http.get("http://localhost/api/plugin-registration/step-options", () => stepOptions()),
+      http.post("http://localhost/api/plugin-registration/steps", async ({ request }) => {
+        posted = await request.json();
+        return HttpResponse.json({ id: "step-1" });
+      }),
+    );
+
+    renderDialog();
+    await screen.findByLabelText("Name");
+    const primary = await waitFor(() => {
+      const field = screen.getByLabelText("Primary entity");
+      expect(field).toBeEnabled();
+      return field;
+    });
+    fireEvent.change(primary, { target: { value: "account" } });
+    expect(screen.getByLabelText("Name")).toHaveValue("");
+    fireEvent.click(screen.getByRole("button", { name: "Register" }));
+
+    await waitFor(() => expect(posted).toBeDefined());
+    expect(posted).toMatchObject({
+      name: "Update of account",
+      pluginTypeId: typeId,
+      messageId,
+      filterId: "filter-account",
+    });
+  });
+
   it("shows a field problem from a 400 response", async () => {
     httpServer.use(
       http.get("http://localhost/api/plugin-registration/step-options", () =>
@@ -168,7 +198,9 @@ describe("StepDialog", () => {
           {
             code: "validation_failed",
             message: "The registration request is invalid.",
-            problems: [{ field: "name", code: "required", message: "Step name is required." }],
+            problems: [
+              { field: "rank", code: "invalid", message: "Execution order cannot be negative." },
+            ],
           },
           { status: 400 },
         ),
@@ -178,7 +210,9 @@ describe("StepDialog", () => {
     renderDialog();
     await screen.findByLabelText("Name");
     fireEvent.click(screen.getByRole("button", { name: "Register" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Step name is required.");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Execution order cannot be negative.",
+    );
     const errorToast = screen.getByText("The registration request is invalid.").closest("[data-toast-type]");
     expect(errorToast).toHaveAttribute("data-toast-type", "error");
   });

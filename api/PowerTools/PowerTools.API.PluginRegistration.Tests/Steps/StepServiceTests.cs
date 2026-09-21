@@ -59,6 +59,36 @@ public sealed class StepServiceTests
     }
 
     [Fact]
+    public async Task Create_defaults_blank_name_to_message_of_entity()
+    {
+        var gateway = CreateGateway();
+        gateway.Seed(new Entity("sdkmessagefilter", _filterId)
+        {
+            ["primaryobjecttypecode"] = "account",
+        });
+        var service = new StepService(gateway);
+
+        await service.CreateAsync(
+            Draft() with { Name = "", FilterId = _filterId },
+            CancellationToken.None);
+
+        var created = Assert.Single(gateway.Created, e => e.LogicalName == "sdkmessageprocessingstep");
+        Assert.Equal("Update of account", created.GetAttributeValue<string>("name"));
+    }
+
+    [Fact]
+    public async Task Create_defaults_blank_name_to_message_when_filter_is_missing()
+    {
+        var gateway = CreateGateway();
+        var service = new StepService(gateway);
+
+        await service.CreateAsync(Draft() with { Name = "  " }, CancellationToken.None);
+
+        var created = Assert.Single(gateway.Created, e => e.LogicalName == "sdkmessageprocessingstep");
+        Assert.Equal("Update", created.GetAttributeValue<string>("name"));
+    }
+
+    [Fact]
     public async Task Create_cleans_up_orphan_secure_config_when_step_create_fails()
     {
         var gateway = CreateGateway();

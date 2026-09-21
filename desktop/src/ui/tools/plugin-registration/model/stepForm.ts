@@ -42,6 +42,14 @@ export interface StepFormState {
   secureConfiguration: string;
 }
 
+export function defaultStepName(messageName: string, primaryEntity: string): string {
+  const message = messageName.trim();
+  const entity = isNoneEntity(primaryEntity) ? "" : primaryEntity.trim();
+  if (!entity) return message;
+  if (!message) return entity;
+  return `${message} of ${entity}`;
+}
+
 export function createStepForm(step?: StepDto, pluginTypeId?: string): StepFormState {
   return {
     name: step?.name ?? "",

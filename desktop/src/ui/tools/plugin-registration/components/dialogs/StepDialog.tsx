@@ -10,6 +10,7 @@ import {
   asyncAutoDeleteEnabled,
   asyncModeAllowed,
   createStepForm,
+  defaultStepName,
   deploymentFlags,
   filteringAttributesEnabled,
   filteringAttributesSummary,
@@ -125,7 +126,10 @@ export function StepDialog({
 
   const save = async () => {
     setProblems([]);
-    const draft = toStepDraft(form);
+    let draft = toStepDraft(form);
+    if (!step && !draft.name) {
+      draft = { ...draft, name: defaultStepName(messageName, form.primaryEntity) };
+    }
     try {
       if (step) await mutations.update.mutateAsync({ id: step.id, draft });
       else await mutations.create.mutateAsync(draft);
