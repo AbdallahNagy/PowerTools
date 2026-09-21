@@ -3,6 +3,7 @@ import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import ActivityBar from "../../src/ui/components/layout/ActivityBar";
+import Layout from "../../src/ui/components/layout/Layout";
 import StatusBar from "../../src/ui/components/layout/StatusBar";
 import { TabProvider } from "../../src/ui/context/TabContext";
 import { useTabs } from "../../src/ui/context/useTabs";
@@ -158,6 +159,58 @@ describe("renderer shell", () => {
       "Welcome | Data Migration",
     );
     expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe("welcome");
+  });
+
+  it("lists tools with icon and name and filters them from the sidebar search", async () => {
+    renderWithProviders(
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+        </TabProvider>
+      </ConnectionsProvider>,
+    );
+
+    expect(await screen.findByRole("button", { name: "data migration" })).toHaveTextContent(
+      "Data Migration",
+    );
+    expect(
+      screen.getByRole("button", { name: "Build, run, and refine FetchXML queries" }),
+    ).toHaveTextContent("FetchXML Builder");
+    expect(screen.getByRole("button", { name: "connect" })).toHaveTextContent("Connect");
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search tools" }), {
+      target: { value: "fetch" },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Build, run, and refine FetchXML queries" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "data migration" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "connect" })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search tools" }), {
+      target: { value: "no-such-tool" },
+    });
+    expect(screen.getByText("No matching tools")).toBeInTheDocument();
+  });
+
+  it("toggles the resizable sidebar from the title bar", async () => {
+    renderWithProviders(<Layout />);
+
+    expect(await screen.findByRole("navigation", { name: "Tools" })).toBeInTheDocument();
+    expect(screen.getByRole("separator", { name: "Resize sidebar" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "File" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Close" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide sidebar" }));
+
+    expect(screen.queryByRole("navigation", { name: "Tools" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("separator", { name: "Resize sidebar" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Show sidebar" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show sidebar" }));
+    expect(screen.getByRole("navigation", { name: "Tools" })).toBeInTheDocument();
+    expect(screen.getByRole("separator", { name: "Resize sidebar" })).toBeInTheDocument();
   });
 
   it("replaces status content by ID and removes only the unmounted publisher", async () => {

@@ -59,6 +59,11 @@ describe("createPreloadApi", () => {
     ["downloadUpdate", [], "download-update", []],
     ["installUpdate", [], "install-update", []],
     ["openExternalUrl", ["https://example.test/docs"], "open-external-url", ["https://example.test/docs"]],
+    ["popupAppMenu", ["file", 10, 32], "popup-app-menu", ["file", 10, 32]],
+    ["minimizeWindow", [], "window-minimize", []],
+    ["toggleMaximizeWindow", [], "window-toggle-maximize", []],
+    ["closeWindow", [], "window-close", []],
+    ["isWindowMaximized", [], "window-is-maximized", []],
   ] as const)(
     "%s invokes %s with the existing arguments",
     async (methodName, methodArgs, expectedChannel, expectedArgs) => {
@@ -114,7 +119,19 @@ describe("createPreloadApi", () => {
     expect(removals).toEqual([{ channel: "update-status-changed", listener }]);
   });
 
-  it("exposes exactly the declared renderer methods", () => {
+  it("forwards window maximize changes and unsubscribes the same listener", () => {
+    const { ipcRenderer, listeners, removals } = createIpcRendererFake();
+    const api = createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">);
+    const received: boolean[] = [];
+
+    const unsubscribe = api.onWindowMaximizedChanged((maximized) => received.push(maximized));
+    const listener = listeners.get("window-maximized-changed");
+    listener?.({ ignored: true }, true);
+    unsubscribe();
+
+    expect(received).toEqual([true]);
+    expect(removals).toEqual([{ channel: "window-maximized-changed", listener }]);
+  });
     const { ipcRenderer } = createIpcRendererFake();
 
     expect(Object.keys(createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">))).toEqual([
@@ -139,6 +156,12 @@ describe("createPreloadApi", () => {
       "installUpdate",
       "onUpdateStatusChanged",
       "openExternalUrl",
+      "popupAppMenu",
+      "minimizeWindow",
+      "toggleMaximizeWindow",
+      "closeWindow",
+      "isWindowMaximized",
+      "onWindowMaximizedChanged",
     ]);
   });
 });

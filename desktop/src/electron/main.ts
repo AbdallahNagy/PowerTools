@@ -29,6 +29,11 @@ import type {
   StoredOnPremisesConnection,
 } from "./connectionTypes.js";
 import { decryptCredential, encryptCredential } from "./secureCredentials.js";
+import {
+  configureMainWindowChrome,
+  getMainWindowOptions,
+  registerWindowChromeIpc,
+} from "./windowChrome.js";
 
 const { autoUpdater } = electronUpdater;
 
@@ -76,6 +81,7 @@ app.whenReady().then(async () => {
     }
     await shell.openExternal(parsed.toString());
   });
+  registerWindowChromeIpc(ipcMain);
 
   let connectionWindow: BrowserWindow | null = null;
 
@@ -458,7 +464,7 @@ app.whenReady().then(async () => {
     return getConnectionForRenderer(activeConnectionName);
   });
 
-  const mainWindow = new BrowserWindow({
+  const mainWindow = new BrowserWindow(getMainWindowOptions({
     webPreferences: {
       preload: getPreloadPath(),
     },
@@ -466,7 +472,8 @@ app.whenReady().then(async () => {
     height: 600,
     icon: getAppIconPath(),
     show: false,
-  });
+  }));
+  configureMainWindowChrome(mainWindow);
   mainWindow.maximize();
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();

@@ -55,6 +55,17 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
     },
     openExternalUrl: (url: string) =>
       ipcRenderer.invoke("open-external-url", url),
+    popupAppMenu: (menuId: string, x: number, y: number) =>
+      ipcRenderer.invoke("popup-app-menu", menuId, x, y),
+    minimizeWindow: () => ipcRenderer.invoke("window-minimize"),
+    toggleMaximizeWindow: () => ipcRenderer.invoke("window-toggle-maximize"),
+    closeWindow: () => ipcRenderer.invoke("window-close"),
+    isWindowMaximized: () => ipcRenderer.invoke("window-is-maximized"),
+    onWindowMaximizedChanged: (callback: (maximized: boolean) => void) => {
+      const listener = (_: unknown, maximized: boolean) => callback(maximized);
+      ipcRenderer.on("window-maximized-changed", listener);
+      return () => ipcRenderer.removeListener("window-maximized-changed", listener);
+    },
   };
 }
 

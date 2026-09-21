@@ -64,6 +64,12 @@ describe("desktopBridge", () => {
       openExternalUrl: async (url) => {
         observed.push(["openExternalUrl", url]);
       },
+      popupAppMenu: async (menuId, x, y) => {
+        observed.push(["popupAppMenu", menuId, x, y]);
+      },
+      minimizeWindow: async () => {
+        observed.push(["minimizeWindow"]);
+      },
     }));
 
     const connectionInput = {
@@ -93,6 +99,8 @@ describe("desktopBridge", () => {
     });
     await expect(desktopBridge.getActiveConnectionName()).resolves.toBe("Primary");
     await expect(desktopBridge.openExternalUrl("https://example.test/docs")).resolves.toBeUndefined();
+    await expect(desktopBridge.popupAppMenu("file", 8, 24)).resolves.toBeUndefined();
+    await expect(desktopBridge.minimizeWindow()).resolves.toBeUndefined();
 
     expect(observed).toEqual([
       ["saveConnectionData", connectionInput],
@@ -102,6 +110,8 @@ describe("desktopBridge", () => {
       ["deleteConnection", "Primary"],
       ["getActiveConnectionName"],
       ["openExternalUrl", "https://example.test/docs"],
+      ["popupAppMenu", "file", 8, 24],
+      ["minimizeWindow"],
     ]);
   });
 
@@ -188,8 +198,14 @@ describe("createFakeDesktopBridge", () => {
     await expect(bridge.downloadUpdate()).resolves.toBeUndefined();
     await expect(bridge.installUpdate()).resolves.toBeUndefined();
     await expect(bridge.openExternalUrl("https://example.test")).resolves.toBeUndefined();
+    await expect(bridge.popupAppMenu("help", 0, 0)).resolves.toBeUndefined();
+    await expect(bridge.minimizeWindow()).resolves.toBeUndefined();
+    await expect(bridge.toggleMaximizeWindow()).resolves.toBeUndefined();
+    await expect(bridge.closeWindow()).resolves.toBeUndefined();
+    await expect(bridge.isWindowMaximized()).resolves.toBe(false);
 
     expect(() => bridge.onConnectionStatusUpdate(() => undefined)).not.toThrow();
     expect(() => bridge.onUpdateStatusChanged(() => undefined)()).not.toThrow();
+    expect(() => bridge.onWindowMaximizedChanged(() => undefined)()).not.toThrow();
   });
 });

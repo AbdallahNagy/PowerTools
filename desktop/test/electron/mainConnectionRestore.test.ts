@@ -19,6 +19,11 @@ vi.mock("electron", () => {
     loadFile() { return Promise.resolve(); }
     loadURL() { return Promise.resolve(); }
     maximize() {}
+    unmaximize() {}
+    minimize() {}
+    isMaximized() { return false; }
+    setMenuBarVisibility() {}
+    setAutoHideMenuBar() {}
     once(_event: string, listener: () => void) { listener(); }
     on() {}
     show() {}
@@ -38,6 +43,11 @@ vi.mock("electron", () => {
       handle: (channel: string, handler: (...args: unknown[]) => unknown) => {
         handlers.set(channel, handler);
       },
+    },
+    Menu: {
+      setApplicationMenu: vi.fn(),
+      getApplicationMenu: vi.fn(() => ({ items: [] })),
+      buildFromTemplate: vi.fn((template: unknown) => template),
     },
     shell: { openExternal: vi.fn() },
   };

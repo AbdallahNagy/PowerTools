@@ -41,6 +41,9 @@ test("launches the desktop app with an isolated profile and opens FetchXML Build
     if (!mainWindow) return;
 
     await expect(mainWindow.getByRole("heading", { level: 1, name: "PowerTools" })).toBeVisible();
+    await expect(mainWindow.getByRole("button", { name: "File" })).toBeVisible();
+    await expect(mainWindow.getByRole("button", { name: "Close" })).toBeVisible();
+    await expect(mainWindow.getByRole("searchbox", { name: "Search tools" })).toBeVisible();
 
     await mainWindow
       .getByRole("button", { name: "Build, run, and refine FetchXML queries" })
