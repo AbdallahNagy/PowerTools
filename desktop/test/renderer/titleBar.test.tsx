@@ -25,6 +25,7 @@ describe("title bar", () => {
     );
 
     const titleBar = await screen.findByTestId("title-bar");
+    const mark = screen.getByRole("img", { name: "Power Tools" });
     const file = screen.getByRole("button", { name: "File" });
     const edit = screen.getByRole("button", { name: "Edit" });
     const view = screen.getByRole("button", { name: "View" });
@@ -33,7 +34,11 @@ describe("title bar", () => {
     const maximize = screen.getByRole("button", { name: "Maximize" });
     const close = screen.getByRole("button", { name: "Close" });
 
+    expect(titleBar).toContainElement(mark);
     expect(titleBar).toContainElement(file);
+    expect(
+      mark.compareDocumentPosition(file) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     expect(titleBar).toContainElement(edit);
     expect(titleBar).toContainElement(view);
     expect(titleBar).toContainElement(help);

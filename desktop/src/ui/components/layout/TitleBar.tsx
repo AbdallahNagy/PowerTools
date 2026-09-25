@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import PowerToolsIcon from "../../assets/icons/power-tools-preview-256.png";
 import { desktopBridge } from "../../platform/desktopBridge";
 import { TITLE_BAR_MENU_LABELS, TITLE_BAR_MENUS, type TitleBarMenuId } from "./titleBarMenus";
 
@@ -36,14 +37,29 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
       className="app-drag flex h-8 shrink-0 items-stretch bg-[var(--color-bg-darker)] text-[var(--color-text-gray)] text-xs select-none border-b border-[var(--color-border-dark)]"
     >
       <div className="app-no-drag flex items-stretch">
+        <span className="flex items-center pl-2 pr-1">
+          <img src={PowerToolsIcon} alt="Power Tools" className="h-5 w-5" />
+        </span>
+        {TITLE_BAR_MENUS.map((menuId) => (
+          <button
+            key={menuId}
+            type="button"
+            aria-haspopup="menu"
+            aria-label={TITLE_BAR_MENU_LABELS[menuId]}
+            className="px-2.5 hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+            onClick={(event) => popupMenu(menuId, event.currentTarget)}
+          >
+            {TITLE_BAR_MENU_LABELS[menuId]}
+          </button>
+        ))}
+
         <button
           type="button"
           aria-label={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
           aria-pressed={sidebarVisible}
           title={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
-          className={`flex w-8 items-center justify-center hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)] ${
-            sidebarVisible ? "text-[var(--color-primary)]" : ""
-          }`}
+          className={`flex w-8 items-center justify-center hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)] ml-12 ${sidebarVisible ? "text-[var(--color-primary)]" : ""
+            }`}
           onClick={onToggleSidebar}
         >
           <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -59,18 +75,6 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
             <path d="M9 4v16" stroke="currentColor" strokeWidth="2" />
           </svg>
         </button>
-        {TITLE_BAR_MENUS.map((menuId) => (
-          <button
-            key={menuId}
-            type="button"
-            aria-haspopup="menu"
-            aria-label={TITLE_BAR_MENU_LABELS[menuId]}
-            className="px-2.5 hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
-            onClick={(event) => popupMenu(menuId, event.currentTarget)}
-          >
-            {TITLE_BAR_MENU_LABELS[menuId]}
-          </button>
-        ))}
       </div>
 
       <div
