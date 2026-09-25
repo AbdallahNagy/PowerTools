@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import ActivityBar from "../../src/ui/components/layout/ActivityBar";
@@ -178,13 +178,15 @@ describe("renderer shell", () => {
       </ConnectionsProvider>,
     );
 
-    expect(await screen.findByRole("button", { name: "data migration" })).toHaveTextContent(
-      "Data Migration",
-    );
+    const dataMigration = await screen.findByRole("button", { name: "data migration" });
+    expect(dataMigration).toHaveTextContent("Data Migration");
     expect(
       screen.getByRole("button", { name: "Build, run, and refine FetchXML queries" }),
     ).toHaveTextContent("FetchXML Builder");
-    expect(screen.getByRole("button", { name: "connect" })).toHaveTextContent("Connect");
+    const connection = screen.getByRole("button", { name: "Not connected" });
+    expect(
+      dataMigration.compareDocumentPosition(connection) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search tools" }), {
       target: { value: "fetch" },
@@ -194,12 +196,13 @@ describe("renderer shell", () => {
       screen.getByRole("button", { name: "Build, run, and refine FetchXML queries" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "data migration" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "connect" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Not connected" })).toBeInTheDocument();
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Search tools" }), {
       target: { value: "no-such-tool" },
     });
     expect(screen.getByText("No matching tools")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Not connected" })).toBeInTheDocument();
   });
 
   it("toggles the resizable sidebar from the title bar", async () => {
@@ -272,32 +275,60 @@ describe("renderer shell", () => {
     expect(screen.queryByRole("status", { name: "second publisher status" })).not.toBeInTheDocument();
   });
 
-  it("uses one shared connection load while preserving StatusBar updates", async () => {
+  it("pins the connection switcher to the sidebar footer", async () => {
     const listConnections = vi.fn(async () => [
       {
         name: "Primary",
         envUrl: "https://primary.example.test",
         crmType: "online" as const,
       },
+      {
+        name: "Secondary",
+        envUrl: "https://secondary.example.test",
+        crmType: "online" as const,
+      },
     ]);
     const getActiveConnectionName = vi.fn(async () => "Primary");
+    const createConnectionWindow = vi.fn(async () => undefined);
+    const setActiveConnection = vi.fn(async () => ({ success: true as const }));
     const { bridge } = renderWithProviders(
       <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+        </TabProvider>
         <StatusBarProvider>
           <StatusBar />
         </StatusBarProvider>
       </ConnectionsProvider>,
-      { bridgeOverrides: { getActiveConnectionName, listConnections } },
+      {
+        bridgeOverrides: {
+          getActiveConnectionName,
+          listConnections,
+          createConnectionWindow,
+          setActiveConnection,
+        },
+      },
     );
 
-    await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Connected: (Primary)" })).toBeInTheDocument();
-    });
+    const connection = await screen.findByRole("button", { name: "Connection: Primary" });
+    expect(connection).toHaveTextContent("Primary");
+    expect(screen.getByText("connected to: Primary")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "connected to: Primary" })).not.toBeInTheDocument();
     expect(listConnections).toHaveBeenCalledTimes(1);
     expect(getActiveConnectionName).toHaveBeenCalledTimes(1);
 
     act(() => bridge.emitConnectionStatusUpdate("Secondary"));
+    expect(screen.getByRole("button", { name: "Connection: Secondary" })).toHaveTextContent(
+      "Secondary",
+    );
+    expect(screen.getByText("connected to: Secondary")).toBeInTheDocument();
 
-    expect(screen.getByRole("button", { name: "Connected: (Secondary)" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Connection: Secondary" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Primary" }));
+    expect(setActiveConnection).toHaveBeenCalledWith("Primary");
+
+    fireEvent.click(await screen.findByRole("button", { name: "Connection: Primary" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Add connection" }));
+    expect(createConnectionWindow).toHaveBeenCalledTimes(1);
   });
 });
