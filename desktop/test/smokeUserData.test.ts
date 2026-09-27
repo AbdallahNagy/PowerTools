@@ -4,6 +4,7 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 
 import { expect, test } from "vitest";
 
+import { disposeElectronApp } from "./smoke/disposeElectron";
 import { createIsolatedUserDataDir } from "./smoke/isolatedUserData";
 
 test("creates and removes an isolated Electron profile under the OS temp directory", async () => {
@@ -23,4 +24,10 @@ test("creates and removes an isolated Electron profile under the OS temp directo
   }
 
   expect(existsSync(isolatedUserData.path)).toBe(false);
+});
+
+test("disposeElectronApp is a no-op without a launched app", async () => {
+  await expect(
+    disposeElectronApp(undefined, resolve(tmpdir(), "power-tools-smoke-missing")),
+  ).resolves.toBeUndefined();
 });

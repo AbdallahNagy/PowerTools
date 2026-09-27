@@ -3,28 +3,39 @@ import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
+import { disposeElectronApp } from "./disposeElectron";
 import { createIsolatedUserDataDir } from "./isolatedUserData";
 
 const desktopDir = fileURLToPath(new URL("../..", import.meta.url));
 const mainWindowUrl = "http://localhost:5123/";
+const ELECTRON_LAUNCH_TIMEOUT_MS = 50_000;
 
 test("launches the desktop app with an isolated profile and opens FetchXML Builder", async () => {
   const isolatedUserData = await createIsolatedUserDataDir();
   let electronApp: Awaited<ReturnType<typeof electron.launch>> | undefined;
 
   try {
-    electronApp = await electron.launch({
-      args: [
-        `--user-data-dir=${isolatedUserData.path}`,
-        "--host-resolver-rules=MAP localhost 127.0.0.1",
-        ".",
-      ],
-      cwd: desktopDir,
-      env: {
-        ...process.env,
-        NODE_ENV: "development",
-      },
-    });
+    electronApp = await Promise.race([
+      electron.launch({
+        args: [
+          `--user-data-dir=${isolatedUserData.path}`,
+          "--host-resolver-rules=MAP localhost 127.0.0.1",
+          "--disable-gpu",
+          ".",
+        ],
+        cwd: desktopDir,
+        env: {
+          ...process.env,
+          NODE_ENV: "development",
+        },
+      }),
+      new Promise<never>((_, reject) => {
+        setTimeout(
+          () => reject(new Error("Electron launch timed out")),
+          ELECTRON_LAUNCH_TIMEOUT_MS,
+        );
+      }),
+    ]);
 
     const electronUserDataPath = await electronApp.evaluate(({ app }) => app.getPath("userData"));
     expect(resolve(electronUserDataPath)).toBe(resolve(isolatedUserData.path));
@@ -53,11 +64,8 @@ test("launches the desktop app with an isolated profile and opens FetchXML Build
       mainWindow.locator("span.mr-2").filter({ hasText: /^FetchXML Builder$/ }),
     ).toBeVisible();
   } finally {
-    try {
-      await electronApp?.close();
-    } finally {
-      await isolatedUserData.remove();
-    }
+    await disposeElectronApp(electronApp, isolatedUserData.path);
+    await isolatedUserData.remove();
   }
 
   expect(existsSync(isolatedUserData.path)).toBe(false);
