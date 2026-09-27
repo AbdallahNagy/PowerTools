@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { Button, Spinner, ToastProvider, useToast } from "../../shared/ui";
+import { Button, SearchableSelect, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
 import { useConnections, useConnectionSelection } from "../../shared/connections";
 import type { FetchResult } from "./model/types";
@@ -167,25 +167,27 @@ function FetchXmlBuilderPage() {
           <div className="flex flex-col gap-1 shrink-0 min-w-0">
             <label className="text-xs text-[#858585] tracking-wider">Table</label>
             <div className="flex items-center gap-2 min-w-0">
-              <select
+              <SearchableSelect
+                aria-label="Table"
                 value={selectedEntity?.logicalName ?? ""}
-                onChange={(e) => handleEntityChange(e.target.value)}
-                disabled={!connectionName || tablesLoading}
-                className="w-72 shrink-0 truncate bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-[#007fd4] disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <option value="">
-                  {!connectionName
+                onChange={handleEntityChange}
+                options={sortedTables.map((table) => ({
+                  value: table.logicalName,
+                  label: table.displayName,
+                  description: table.logicalName,
+                }))}
+                placeholder={
+                  !connectionName
                     ? "— select a connection first —"
                     : tablesLoading
                       ? "Loading tables…"
-                      : "— select a table —"}
-                </option>
-                {sortedTables.map((e) => (
-                  <option key={e.logicalName} value={e.logicalName}>
-                    {e.displayName} ({e.logicalName})
-                  </option>
-                ))}
-              </select>
+                      : "— select a table —"
+                }
+                searchPlaceholder="Search tables…"
+                disabled={!connectionName || tablesLoading}
+                loading={tablesLoading}
+                className="w-72 shrink-0"
+              />
               {tablesLoading && <Spinner size={14} />}
               <Button variant="ghost" onClick={handleClearAll} className="text-xs py-1 px-2 shrink-0 ml-auto">
                 Clear all

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { SearchableSelect, type SearchableSelectOption } from "../../../../shared/ui";
 import { createRelationshipPathSegment, selectLookupRelationships } from "../../model/fetchxml";
 import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import type {
@@ -47,11 +48,36 @@ export function FieldPicker({
         ? "legacy-related"
         : "";
 
+  const options = useMemo(() => {
+    const next: SearchableSelectOption[] = [];
+    if (value?.kind === "related") {
+      next.push({ value: "legacy-related", label: legacyFieldLabel(value) });
+    }
+    for (const field of sortedFields) {
+      next.push({
+        value: `field:${field.logicalName}`,
+        label: field.displayName,
+        description: field.logicalName,
+        group: "Fields",
+      });
+    }
+    if (allowRelationships) {
+      sortedRelationships.forEach((relationship, index) => {
+        next.push({
+          value: `relationship:${index}`,
+          label: relationshipLabel(relationship, tables, fields),
+          group: "Related tables",
+        });
+      });
+    }
+    return next;
+  }, [allowRelationships, fields, sortedFields, sortedRelationships, tables, value]);
+
   return (
-    <select
+    <SearchableSelect
+      aria-label="Field"
       value={selectedValue}
-      onChange={(event) => {
-        const next = event.target.value;
+      onChange={(next) => {
         if (next.startsWith("field:")) {
           onChange({ kind: "root", field: next.slice("field:".length) });
           return;
@@ -63,34 +89,11 @@ export function FieldPicker({
           onSelectRelationship(createRelationshipPathSegment(relationship, path, label));
         }
       }}
-      className="w-56 shrink-0 rounded-sm border border-[#3c3c3c] bg-[#1e1e1e] px-2 py-1 text-sm text-[#cccccc] focus:border-[#007fd4] focus:outline-none"
-    >
-      <option value="" disabled>
-        Select field...
-      </option>
-      {value?.kind === "related" && (
-        <option value="legacy-related">{legacyFieldLabel(value)}</option>
-      )}
-      <optgroup label="Fields">
-        {sortedFields.map((field) => (
-          <option key={field.logicalName} value={`field:${field.logicalName}`}>
-            {field.displayName} ({field.logicalName})
-          </option>
-        ))}
-      </optgroup>
-      {allowRelationships && sortedRelationships.length > 0 && (
-        <optgroup label="Related tables">
-          {sortedRelationships.map((relationship, index) => (
-            <option
-              key={`${relationship.schemaName}:${relationship.targetEntity}:${relationship.sourceAttribute}`}
-              value={`relationship:${index}`}
-            >
-              {relationshipLabel(relationship, tables, fields)}
-            </option>
-          ))}
-        </optgroup>
-      )}
-    </select>
+      options={options}
+      placeholder="Select field..."
+      searchPlaceholder="Search fields…"
+      className="w-56 shrink-0"
+    />
   );
 }
 
