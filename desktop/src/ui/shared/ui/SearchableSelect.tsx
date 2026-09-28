@@ -1,11 +1,16 @@
 import {
-  Combobox,
-  ComboboxButton,
-  ComboboxInput,
-  ComboboxOption,
-  ComboboxOptions,
-} from "@headlessui/react";
-import { useEffect, useId, useMemo, useState, type KeyboardEvent } from "react";
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type KeyboardEvent,
+  type RefObject,
+} from "react";
+import { createPortal } from "react-dom";
 
 export type SearchableSelectOption = {
   value: string;
@@ -42,6 +47,9 @@ const inputClassName =
 
 const optionClassName =
   "flex cursor-pointer items-baseline gap-2 px-2 py-1.5 text-left data-focus:bg-[var(--color-hover-bg)] data-selected:bg-[var(--color-bg-light)] data-disabled:cursor-not-allowed data-disabled:opacity-50";
+
+const panelClassName =
+  "max-h-60 overflow-auto rounded-sm border border-[var(--color-hover-bg)] bg-[var(--color-bg-darker)] py-1 shadow-lg";
 
 export function SearchableSelect({
   value,
@@ -112,51 +120,175 @@ function PopoverSearchableSelect({
   "aria-label": ariaLabel,
   "aria-labelledby": ariaLabelledBy,
 }: Omit<SearchableSelectProps, "variant">) {
+  const listId = useId();
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const selected = options.find((option) => option.value === value);
   const filtered = useMemo(() => filterOptions(options, query), [options, query]);
   const groups = useMemo(() => groupOptions(filtered), [filtered]);
+  const enabledOptions = filtered.filter((option) => !option.disabled);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const panelStyle = useFixedPanelStyle(open, triggerRef);
+
+  const close = useCallback(() => {
+    setOpen(false);
+    setQuery("");
+  }, []);
+
+  useEffect(() => {
+    setActiveIndex((current) => {
+      if (enabledOptions.length === 0) return 0;
+      return Math.min(current, enabledOptions.length - 1);
+    });
+  }, [enabledOptions.length]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (triggerRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      close();
+    };
+
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open, close]);
+
+  const selectValue = (next: string) => {
+    onChange(next);
+    close();
+  };
+
+  const activeOption = enabledOptions[activeIndex];
+  const activeId = activeOption ? `${listId}-${activeOption.value}` : undefined;
+
+  const moveActive = (offset: number) => {
+    if (enabledOptions.length === 0) return;
+    setActiveIndex((current) => {
+      const next = current + offset;
+      if (next < 0) return 0;
+      if (next >= enabledOptions.length) return enabledOptions.length - 1;
+      return next;
+    });
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      moveActive(1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      moveActive(-1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      setActiveIndex(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      if (enabledOptions.length > 0) setActiveIndex(enabledOptions.length - 1);
+    } else if (event.key === "Enter") {
+      event.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      if (activeOption) selectValue(activeOption.value);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      close();
+    }
+  };
+
+  const panel =
+    open && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            ref={panelRef}
+            id={listId}
+            role="listbox"
+            style={panelStyle}
+            className={panelClassName}
+          >
+            <OptionListBody
+              loading={loading}
+              loadingMessage={loadingMessage}
+              groups={groups}
+              emptyMessage={emptyMessage}
+              selectedValue={value}
+              activeValue={activeOption?.value}
+              listId={listId}
+              onSelect={selectValue}
+            />
+          </div>,
+          document.body,
+        )
+      : null;
 
   return (
-    <div className={`relative ${className}`}>
-      <Combobox
-        value={value || null}
-        onChange={(next) => {
-          if (next == null) return;
-          onChange(next);
-        }}
-        onClose={() => setQuery("")}
-        disabled={disabled}
-        immediate
-      >
-        <div className="relative">
-          <ComboboxInput
-            id={id}
-            aria-label={ariaLabel}
-            aria-labelledby={ariaLabelledBy}
-            displayValue={() => selected?.label ?? ""}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={query ? searchPlaceholder : placeholder}
-            className={`${inputClassName} pr-7`}
-          />
-          <ComboboxButton className="absolute inset-y-0 right-0 flex items-center px-1.5 text-[var(--color-text-dark-gray)]">
-            <ChevronIcon />
-          </ComboboxButton>
-        </div>
-        <ComboboxOptions
-          anchor="bottom start"
-          modal={false}
-          className="z-50 max-h-60 w-[var(--input-width)] overflow-auto rounded-sm border border-[var(--color-hover-bg)] bg-[var(--color-bg-darker)] py-1 shadow-lg [--anchor-gap:4px]"
+    <div ref={triggerRef} className={`relative ${className}`}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          id={id}
+          type="text"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-activedescendant={open ? activeId : undefined}
+          aria-autocomplete="list"
+          aria-haspopup="listbox"
+          aria-label={ariaLabel}
+          aria-labelledby={ariaLabelledBy}
+          disabled={disabled}
+          value={open ? query : (selected?.label ?? "")}
+          placeholder={open ? searchPlaceholder : placeholder}
+          onChange={(event) => {
+            setQuery(event.target.value);
+            setOpen(true);
+          }}
+          onFocus={() => {
+            if (!disabled) setOpen(true);
+          }}
+          onKeyDown={handleKeyDown}
+          className={`${inputClassName} pr-7`}
+        />
+        <button
+          type="button"
+          tabIndex={-1}
+          disabled={disabled}
+          aria-label="Open options"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          className="absolute inset-y-0 right-0 flex items-center px-1.5 text-[var(--color-text-dark-gray)] disabled:cursor-not-allowed"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            if (disabled) return;
+            setOpen((current) => {
+              if (current) {
+                setQuery("");
+                return false;
+              }
+              inputRef.current?.focus();
+              return true;
+            });
+          }}
         >
-          <OptionListBody
-            loading={loading}
-            loadingMessage={loadingMessage}
-            groups={groups}
-            emptyMessage={emptyMessage}
-            asCombobox
-          />
-        </ComboboxOptions>
-      </Combobox>
+          <ChevronIcon />
+        </button>
+      </div>
+      {panel}
     </div>
   );
 }
@@ -242,11 +374,7 @@ function InlineSearchableSelect({
         onKeyDown={handleKeyDown}
         className={inputClassName}
       />
-      <div
-        id={listId}
-        role="listbox"
-        className="min-h-0 flex-1 overflow-auto rounded-sm border border-[var(--color-hover-bg)] bg-[var(--color-bg-darker)] py-1"
-      >
+      <div id={listId} role="listbox" className={`min-h-0 flex-1 ${panelClassName}`}>
         <OptionListBody
           loading={loading}
           loadingMessage={loadingMessage}
@@ -262,12 +390,47 @@ function InlineSearchableSelect({
   );
 }
 
+function useFixedPanelStyle(
+  open: boolean,
+  triggerRef: RefObject<HTMLElement | null>,
+): CSSProperties {
+  const [style, setStyle] = useState<CSSProperties>({});
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    const update = () => {
+      const rect = triggerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const gap = 4;
+      const maxHeight = Math.min(240, Math.max(80, window.innerHeight - rect.bottom - 8));
+      setStyle({
+        position: "fixed",
+        top: rect.bottom + gap,
+        left: rect.left,
+        width: Math.max(rect.width, 160),
+        zIndex: 80,
+        maxHeight,
+      });
+    };
+
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open, triggerRef]);
+
+  return style;
+}
+
 function OptionListBody({
   loading,
   loadingMessage,
   groups,
   emptyMessage,
-  asCombobox = false,
   selectedValue,
   activeValue,
   listId,
@@ -277,7 +440,6 @@ function OptionListBody({
   loadingMessage: string;
   groups: OptionGroup[];
   emptyMessage: string;
-  asCombobox?: boolean;
   selectedValue?: string;
   activeValue?: string;
   listId?: string;
@@ -305,33 +467,26 @@ function OptionListBody({
               {group.name}
             </div>
           )}
-          {group.options.map((option) =>
-            asCombobox ? (
-              <ComboboxOption
-                key={option.value}
-                value={option.value}
-                disabled={option.disabled}
-                className={optionClassName}
-              >
-                <OptionContent option={option} />
-              </ComboboxOption>
-            ) : (
-              <button
-                key={option.value}
-                id={listId ? `${listId}-${option.value}` : undefined}
-                type="button"
-                role="option"
-                disabled={option.disabled}
-                aria-selected={option.value === selectedValue}
-                onClick={() => onSelect?.(option.value)}
-                className={`w-full ${optionClassName} ${
-                  option.value === activeValue ? "bg-[var(--color-hover-bg)]" : ""
-                } ${option.value === selectedValue ? "bg-[var(--color-bg-light)]" : ""}`}
-              >
-                <OptionContent option={option} />
-              </button>
-            ),
-          )}
+          {group.options.map((option) => (
+            <button
+              key={option.value}
+              id={listId ? `${listId}-${option.value}` : undefined}
+              type="button"
+              role="option"
+              disabled={option.disabled}
+              aria-selected={option.value === selectedValue}
+              data-focus={option.value === activeValue ? true : undefined}
+              data-selected={option.value === selectedValue ? true : undefined}
+              data-disabled={option.disabled ? true : undefined}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => onSelect?.(option.value)}
+              className={`w-full ${optionClassName} ${
+                option.value === activeValue ? "bg-[var(--color-hover-bg)]" : ""
+              } ${option.value === selectedValue ? "bg-[var(--color-bg-light)]" : ""}`}
+            >
+              <OptionContent option={option} />
+            </button>
+          ))}
         </div>
       ))}
     </>

@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -6,6 +7,7 @@ import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import { FieldPicker } from "../../components/filter-builder/FieldPicker";
 import type { FieldMetadata, RelationshipMetadata } from "../../model/types";
 import { renderWithProviders } from "../../../../../../test/support/render";
+import { ToolErrorBoundary } from "../../../../shell/tool-runtime/ToolErrorBoundary";
 
 class TestResizeObserver {
   observe() {}
@@ -94,21 +96,26 @@ describe("FieldPicker", () => {
     const user = userEvent.setup();
 
     renderWithProviders(
-      <FieldPicker
-        value={null}
-        fields={[nameField, primaryContact]}
-        tables={[account, contact]}
-        relationships={[relationship]}
-        path={[]}
-        allowRelationships
-        onChange={onChange}
-        onSelectRelationship={onSelectRelationship}
-      />,
+      <StrictMode>
+        <ToolErrorBoundary toolTitle="FetchXML Builder">
+          <FieldPicker
+            value={null}
+            fields={[nameField, primaryContact]}
+            tables={[account, contact]}
+            relationships={[relationship]}
+            path={[]}
+            allowRelationships
+            onChange={onChange}
+            onSelectRelationship={onSelectRelationship}
+          />
+        </ToolErrorBoundary>
+      </StrictMode>,
     );
 
     await user.click(screen.getByRole("combobox", { name: "Field" }));
     await user.click(await screen.findByRole("option", { name: /Account Name/ }));
 
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(onChange).toHaveBeenCalledWith({ kind: "root", field: "name" });
     expect(onSelectRelationship).not.toHaveBeenCalled();
   });
@@ -119,19 +126,24 @@ describe("FieldPicker", () => {
     const user = userEvent.setup();
 
     renderWithProviders(
-      <FieldPicker
-        value={null}
-        fields={[nameField, primaryContact]}
-        tables={[account, contact]}
-        relationships={[relationship]}
-        path={[]}
-        allowRelationships
-        onChange={onChange}
-        onSelectRelationship={onSelectRelationship}
-      />,
+      <StrictMode>
+        <ToolErrorBoundary toolTitle="FetchXML Builder">
+          <FieldPicker
+            value={null}
+            fields={[nameField, primaryContact]}
+            tables={[account, contact]}
+            relationships={[relationship]}
+            path={[]}
+            allowRelationships
+            onChange={onChange}
+            onSelectRelationship={onSelectRelationship}
+          />
+        </ToolErrorBoundary>
+      </StrictMode>,
     );
 
     await user.click(screen.getByRole("combobox", { name: "Field" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(await screen.findByRole("group", { name: "Related tables" })).toBeInTheDocument();
     await user.click(screen.getByRole("option", { name: /Primary Contact > Contact/ }));
 

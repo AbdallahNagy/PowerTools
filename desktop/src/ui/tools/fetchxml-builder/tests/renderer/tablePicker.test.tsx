@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -6,6 +7,7 @@ import { ConnectionsProvider } from "../../../../shared/connections";
 import FetchXmlBuilder from "../..";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
+import { ToolErrorBoundary } from "../../../../shell/tool-runtime/ToolErrorBoundary";
 
 class TestResizeObserver {
   observe() {}
@@ -83,9 +85,13 @@ describe("FetchXML Builder table picker", () => {
     );
 
     renderWithProviders(
-      <ConnectionsProvider>
-        <FetchXmlBuilder />
-      </ConnectionsProvider>,
+      <StrictMode>
+        <ToolErrorBoundary toolTitle="FetchXML Builder">
+          <ConnectionsProvider>
+            <FetchXmlBuilder />
+          </ConnectionsProvider>
+        </ToolErrorBoundary>
+      </StrictMode>,
       {
         bridgeOverrides: {
           getActiveConnectionName: async () => connection.name,
@@ -118,6 +124,7 @@ describe("FetchXML Builder table picker", () => {
     await waitFor(() => {
       expect(screen.queryByText("Select a table to build filters.")).not.toBeInTheDocument();
     });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Table" })).toHaveValue("Account");
   });
 });
