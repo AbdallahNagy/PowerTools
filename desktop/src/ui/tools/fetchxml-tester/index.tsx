@@ -126,7 +126,7 @@ function FetchXmlTesterPage() {
 
       <Group className="flex min-h-0 flex-1">
         <Panel
-          defaultSize={showQueryLibrary ? 62 : 100}
+          defaultSize={showQueryLibrary ? 70 : 100}
           minSize={35}
           className="flex min-h-0 min-w-0 flex-col"
         >
@@ -170,7 +170,7 @@ function FetchXmlTesterPage() {
         {showQueryLibrary ? (
           <>
             <Separator className="mx-1 w-1 cursor-col-resize bg-[var(--color-bg-light)] transition-colors hover:bg-[var(--color-primary)]" />
-            <Panel defaultSize="38%" minSize="18%" className="flex min-h-0 min-w-0 flex-col">
+            <Panel defaultSize="30%" minSize="18%" className="flex min-h-0 min-w-0 flex-col">
               <QueryLibrary
                 queries={visibleQueries}
                 search={search}
