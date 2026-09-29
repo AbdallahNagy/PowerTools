@@ -325,20 +325,50 @@ public sealed class PolymorphicLookupServiceTests
     }
 
     [Fact]
-    public void Invalid_cascade_is_rejected_without_an_elastic_override()
+    public void Unknown_cascade_behavior_is_rejected()
     {
         var problem = PolymorphicLookupRules.ValidateCascade(new CascadeBody
         {
-            Assign = "NoCascade",
-            Merge = "NoCascade",
-            Reparent = "NoCascade",
-            Share = "NoCascade",
-            Unshare = "NoCascade",
-            RollupView = "NoCascade",
-            Delete = "NoCascade",
+            Assign = "Bogus",
+            Delete = "RemoveLink",
         });
 
-        Assert.Equal("CascadeBehaviorNotSupportedInPolymorphicLookup", problem!.Code);
+        Assert.Equal("UnknownCascadeBehavior", problem!.Code);
+    }
+
+    [Fact]
+    public async Task Create_applies_parental_cascade_from_the_request()
+    {
+        var fake = HappyPath();
+        var parental = new CascadeBody
+        {
+            Assign = "Cascade",
+            Delete = "Cascade",
+            Merge = "Cascade",
+            Reparent = "Cascade",
+            Share = "Cascade",
+            Unshare = "Cascade",
+            RollupView = "NoCascade",
+        };
+        var account = Relationship("account");
+        var contact = Relationship("contact");
+        account.Cascade = parental;
+        contact.Cascade = parental;
+
+        var result = await new PolymorphicLookupService(fake).CreateAsync(
+            CreateBody([account, contact]),
+            CancellationToken.None);
+
+        Assert.Null(result.Problem);
+        var request = Assert.Single(fake.Executed, item => item.RequestName == "CreatePolymorphicLookupAttribute");
+        var relationships = Assert.IsAssignableFrom<OneToManyRelationshipMetadata[]>(request["OneToManyRelationships"]);
+        Assert.All(relationships, relationship =>
+        {
+            Assert.Equal(CascadeType.Cascade, relationship.CascadeConfiguration.Assign);
+            Assert.Equal(CascadeType.Cascade, relationship.CascadeConfiguration.Delete);
+            Assert.Equal(CascadeType.Cascade, relationship.CascadeConfiguration.Merge);
+            Assert.Equal(CascadeType.NoCascade, relationship.CascadeConfiguration.RollupView);
+        });
     }
 
     private static FakePolymorphicLookupClient HappyPath(

@@ -217,7 +217,7 @@ public sealed class PolymorphicLookupService(IPolymorphicLookupClient client)
             }
 
             var languageCode = await RequireLanguageCodeAsync(cancellationToken);
-            relationship.CascadeConfiguration = PolymorphicLookupRules.PolymorphicCascade();
+            relationship.CascadeConfiguration = PolymorphicLookupRules.ToCascadeConfiguration(body.Cascade);
             relationship.IsValidForAdvancedFind = body.IsValidForAdvancedFind ?? relationship.IsValidForAdvancedFind;
             relationship.AssociatedMenuConfiguration ??= new AssociatedMenuConfiguration();
             relationship.AssociatedMenuConfiguration.Behavior =

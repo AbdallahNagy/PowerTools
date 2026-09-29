@@ -24,22 +24,32 @@ public static class PolymorphicLookupRules
         Delete = CascadeType.RemoveLink,
     };
 
+    public static CascadeConfiguration ToCascadeConfiguration(CascadeBody? cascade)
+    {
+        var configuration = PolymorphicCascade();
+        if (cascade is null) return configuration;
+
+        configuration.Assign = ParseCascade(cascade.Assign) ?? configuration.Assign;
+        configuration.Delete = ParseCascade(cascade.Delete) ?? configuration.Delete;
+        configuration.Merge = ParseCascade(cascade.Merge) ?? configuration.Merge;
+        configuration.Reparent = ParseCascade(cascade.Reparent) ?? configuration.Reparent;
+        configuration.Share = ParseCascade(cascade.Share) ?? configuration.Share;
+        configuration.Unshare = ParseCascade(cascade.Unshare) ?? configuration.Unshare;
+        configuration.RollupView = ParseCascade(cascade.RollupView) ?? configuration.RollupView;
+        return configuration;
+    }
+
     public static PolymorphicLookupProblem? ValidateCascade(CascadeBody? cascade)
     {
         if (cascade is null) return null;
 
-        if (!Is(cascade.Assign, "NoCascade")
-            || !Is(cascade.Merge, "NoCascade")
-            || !Is(cascade.Reparent, "NoCascade")
-            || !Is(cascade.Share, "NoCascade")
-            || !Is(cascade.Unshare, "NoCascade")
-            || !Is(cascade.RollupView, "NoCascade")
-            || !Is(cascade.Delete, "RemoveLink"))
-        {
-            return PolymorphicLookupFaults.Describe(PolymorphicLookupFaults.CascadeBehaviorNotSupportedInPolymorphicLookup);
-        }
-
-        return null;
+        return UnknownCascade(cascade.Assign, LinkCascadeActions, "Assign")
+            ?? UnknownCascade(cascade.Delete, DeleteCascadeActions, "Delete")
+            ?? UnknownCascade(cascade.Merge, LinkCascadeActions, "Merge")
+            ?? UnknownCascade(cascade.Reparent, LinkCascadeActions, "Reparent")
+            ?? UnknownCascade(cascade.Share, LinkCascadeActions, "Share")
+            ?? UnknownCascade(cascade.Unshare, LinkCascadeActions, "Unshare")
+            ?? UnknownCascade(cascade.RollupView, RollupCascadeActions, "Rollup view");
     }
 
     public static PolymorphicLookupProblem? ValidateSchemaName(string? schemaName, string field)
@@ -135,13 +145,38 @@ public static class PolymorphicLookupRules
             ReferencingAttribute = referencingAttribute,
             ReferencedAttribute = referencedAttribute,
             IsValidForAdvancedFind = body.IsValidForAdvancedFind ?? true,
-            CascadeConfiguration = PolymorphicCascade(),
+            CascadeConfiguration = ToCascadeConfiguration(body.Cascade),
             AssociatedMenuConfiguration = menu,
         };
     }
 
-    private static bool Is(string? actual, string expected) =>
-        actual is null || string.Equals(actual, expected, StringComparison.OrdinalIgnoreCase);
+    private static readonly string[] LinkCascadeActions = ["Cascade", "Active", "UserOwned", "NoCascade"];
+    private static readonly string[] DeleteCascadeActions = ["Cascade", "RemoveLink", "Restrict", "NoCascade"];
+    private static readonly string[] RollupCascadeActions = ["Cascade", "NoCascade"];
+
+    private static PolymorphicLookupProblem? UnknownCascade(string? value, string[] allowed, string field)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        if (allowed.Any(item => string.Equals(item, value, StringComparison.OrdinalIgnoreCase))) return null;
+        return PolymorphicLookupFaults.Local(
+            "UnknownCascadeBehavior",
+            $"{field} cascade '{value}' is not a cascade behavior.");
+    }
+
+    private static CascadeType? ParseCascade(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return null;
+        return value.Trim().ToLowerInvariant() switch
+        {
+            "cascade" => CascadeType.Cascade,
+            "active" => CascadeType.Active,
+            "userowned" => CascadeType.UserOwned,
+            "nocascade" => CascadeType.NoCascade,
+            "removelink" => CascadeType.RemoveLink,
+            "restrict" => CascadeType.Restrict,
+            _ => null,
+        };
+    }
 }
 
 public sealed class PolymorphicLookupValidationException(PolymorphicLookupProblem problem) : Exception(problem.Message)

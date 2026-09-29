@@ -1,11 +1,15 @@
+export type CascadeBehavior = "Parental" | "Referential" | "ReferentialRestrictDelete" | "Custom";
+
+export type CascadeAction = "Cascade" | "Active" | "UserOwned" | "NoCascade" | "RemoveLink" | "Restrict";
+
 export interface CascadeSettings {
-  assign: "NoCascade";
-  delete: "RemoveLink";
-  merge: "NoCascade";
-  reparent: "NoCascade";
-  share: "NoCascade";
-  unshare: "NoCascade";
-  rollupView: "NoCascade";
+  assign: CascadeAction;
+  delete: CascadeAction;
+  merge: CascadeAction;
+  reparent: CascadeAction;
+  share: CascadeAction;
+  unshare: CascadeAction;
+  rollupView: CascadeAction;
 }
 
 export type MenuBehavior = "UseCollectionName" | "UseLabel" | "DoNotDisplay";
@@ -80,6 +84,8 @@ export interface RelationshipDraft {
   menuGroup: MenuGroup;
   menuOrder: number;
   menuLabel: string;
+  cascadeBehavior: CascadeBehavior;
+  cascade: CascadeSettings;
 }
 
 export interface RelationshipPayload {

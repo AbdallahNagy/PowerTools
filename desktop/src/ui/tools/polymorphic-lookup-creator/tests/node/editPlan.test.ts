@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cascadeFields } from "../../model/cascade";
+import {
+  cascadeActionOptions,
+  cascadeBehaviors,
+  classifyCascade,
+  presetCascade,
+  referentialCascade,
+} from "../../model/cascade";
 import { buildEditPlan, canCreateLookup, editOperationOrder } from "../../model/editPlan";
 import { suggestSchemaFragment } from "../../model/schemaName";
 import type { RelationshipDraft } from "../../model/types";
@@ -16,6 +22,8 @@ function draft(referencedLogicalName: string, patch: Partial<RelationshipDraft> 
     menuGroup: "Details",
     menuOrder: 10000,
     menuLabel: "",
+    cascadeBehavior: "Referential",
+    cascade: referentialCascade(),
     ...patch,
   };
 }
@@ -60,18 +68,33 @@ describe("polymorphic lookup edit plan", () => {
     expect(result.plan ? editOperationOrder(result.plan) : []).toEqual(["add", "delete", "update"]);
   });
 
-  it("offers only the polymorphic cascade values", () => {
-    expect(cascadeFields.map((field) => field.value)).toEqual([
-      "NoCascade",
-      "NoCascade",
-      "NoCascade",
-      "NoCascade",
-      "NoCascade",
-      "NoCascade",
-      "RemoveLink",
+  it("offers the plugin cascade behaviors and custom actions", () => {
+    expect(cascadeBehaviors.map((behavior) => behavior.label)).toEqual([
+      "Parental",
+      "Referential",
+      "Referential, restrict delete",
+      "Custom",
     ]);
-    expect(cascadeFields.every((field) => field.option === "No cascade" || field.option === "Remove link")).toBe(
-      true,
-    );
+    expect(presetCascade("Parental")).toMatchObject({
+      assign: "Cascade",
+      delete: "Cascade",
+      rollupView: "NoCascade",
+    });
+    expect(presetCascade("Referential").delete).toBe("RemoveLink");
+    expect(presetCascade("ReferentialRestrictDelete").delete).toBe("Restrict");
+    expect(classifyCascade(presetCascade("Parental"))).toBe("Parental");
+    expect(classifyCascade(presetCascade("Referential"))).toBe("Referential");
+    expect(cascadeActionOptions.assign.map((option) => option.label)).toEqual([
+      "Cascade",
+      "Active",
+      "Owner",
+      "None",
+    ]);
+    expect(cascadeActionOptions.delete.map((option) => option.label)).toEqual([
+      "All",
+      "Remove link",
+      "Restrict",
+      "None",
+    ]);
   });
 });

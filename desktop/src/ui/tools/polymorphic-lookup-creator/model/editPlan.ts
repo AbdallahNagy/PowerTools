@@ -1,4 +1,4 @@
-import { polymorphicCascade } from "./cascade";
+import { cascadeFromDto, classifyCascade, referentialCascade, sameCascade } from "./cascade";
 import { joinSchema, suggestSchemaFragment } from "./schemaName";
 import type {
   EditPlan,
@@ -24,6 +24,8 @@ export function newRelationshipDraft(
     menuGroup: "Details",
     menuOrder: 10000,
     menuLabel: "",
+    cascadeBehavior: "Referential",
+    cascade: referentialCascade(),
   };
 }
 
@@ -61,6 +63,7 @@ export function buildDrafts(
     const separator = relationship.schemaName.indexOf("_");
     const fragment =
       separator > 0 ? relationship.schemaName.slice(separator + 1) : relationship.schemaName;
+    const cascade = cascadeFromDto(relationship.cascade);
     return {
       referencedLogicalName: target,
       schemaName: relationship.schemaName,
@@ -81,6 +84,8 @@ export function buildDrafts(
           : "Details",
       menuOrder: relationship.associatedMenuOrder ?? 10000,
       menuLabel: relationship.associatedMenuLabel ?? "",
+      cascade,
+      cascadeBehavior: classifyCascade(cascade),
     };
   });
 }
@@ -90,7 +95,7 @@ export function relationshipPayload(draft: RelationshipDraft): RelationshipPaylo
     referencedEntityLogicalName: draft.referencedLogicalName,
     schemaName: draft.schemaName,
     isValidForAdvancedFind: draft.isValidForAdvancedFind,
-    cascade: polymorphicCascade(),
+    cascade: draft.cascade,
     associatedMenuBehavior: draft.menuBehavior,
     associatedMenuGroup: draft.menuGroup,
     associatedMenuOrder: draft.menuOrder,
@@ -104,7 +109,8 @@ function relationshipChanged(original: RelationshipDraft, current: RelationshipD
     original.menuBehavior !== current.menuBehavior ||
     original.menuGroup !== current.menuGroup ||
     original.menuOrder !== current.menuOrder ||
-    original.menuLabel !== current.menuLabel
+    original.menuLabel !== current.menuLabel ||
+    !sameCascade(original.cascade, current.cascade)
   );
 }
 

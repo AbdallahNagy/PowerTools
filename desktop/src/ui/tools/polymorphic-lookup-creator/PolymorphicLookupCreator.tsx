@@ -3,7 +3,6 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button, Checkbox, DataTable, Modal, SearchInput, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import { useConnections } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
-import { desktopBridge } from "../../platform/desktopBridge";
 import {
   addRelationship,
   createLookup,
@@ -15,22 +14,26 @@ import {
 } from "./api/lookupApi";
 import { polymorphicKeys } from "./api/queryKeys";
 import { SchemaField, ToolSelect, ToolTextInput } from "./components/ToolField";
-import { cascadeFields, isElasticTable, menuBehaviors, menuGroups } from "./model/cascade";
+import {
+  cascadeBehaviors,
+  cascadeFields,
+  isElasticTable,
+  menuBehaviors,
+  menuGroups,
+  presetCascade,
+} from "./model/cascade";
 import {
   buildDrafts,
   buildEditPlan,
   canCreateLookup,
   isExistingDirty,
   lookupSignature,
-  managedLabel,
   newRelationshipDraft,
   relationshipPayload,
 } from "./model/editPlan";
 import { toLookupError } from "./model/apiError";
 import { joinSchema, matchesQuery, prefixText, splitSchema, suggestSchemaFragment } from "./model/schemaName";
-import type { EditPlan, RelationshipDraft } from "./model/types";
-
-const ABOUT_URL = "https://github.com/MscrmTools/MscrmTools.PolymorphicLookupCreator";
+import type { CascadeBehavior, EditPlan, RelationshipDraft } from "./model/types";
 
 export default function PolymorphicLookupCreator() {
   return (
@@ -95,6 +98,7 @@ function PolymorphicLookupPage() {
   const [drafts, setDrafts] = useState<RelationshipDraft[]>([]);
   const [originalDrafts, setOriginalDrafts] = useState<RelationshipDraft[]>([]);
   const [selectedReferenced, setSelectedReferenced] = useState<string | null>(null);
+  const [expandedPicker, setExpandedPicker] = useState<"solution" | "table" | "lookups" | "attributes" | null>("solution");
   const [solutionSearch, setSolutionSearch] = useState("");
   const [tableSearch, setTableSearch] = useState("");
   const [lookupSearch, setLookupSearch] = useState("");
@@ -152,7 +156,13 @@ function PolymorphicLookupPage() {
       referencingLogicalName: table?.logicalName ?? "",
       solutionAware: table?.isSolutionAware === true,
     });
-  const saveEnabled = !!solution && !!table && !writePhase && editPlan?.plan != null;
+  const ownTableError =
+    table && drafts.some((draft) => draft.referencedLogicalName === table.logicalName)
+      ? `${table.displayName} is the referencing table. Remove it from the attributes. A lookup cannot reference its own table.`
+      : null;
+  const referencesOwnTable = ownTableError != null;
+  const saveEnabled =
+    !!solution && !!table && !writePhase && !referencesOwnTable && editPlan?.plan != null;
   const elastic = isElasticTable(table?.tableType);
 
   const signature = useMemo(() => {
@@ -184,6 +194,7 @@ function PolymorphicLookupPage() {
     setSelectedReferenced(null);
     setNotice(null);
     setModal(null);
+    setExpandedPicker("solution");
     synced.current = null;
   }, [connection.connectionName, connection.ready]);
 
@@ -365,6 +376,7 @@ function PolymorphicLookupPage() {
       );
       showToast("Lookup deleted", "success");
       resetEditor();
+      setExpandedPicker("lookups");
       setModal(null);
       await refreshMetadata();
     } catch (error) {
@@ -415,9 +427,20 @@ function PolymorphicLookupPage() {
         </div>
       ) : (
         <div className="flex min-h-0 flex-1">
-          <section className="flex w-1/2 min-w-0 flex-col gap-4 overflow-auto border-r border-[var(--color-border-dark)] bg-[var(--color-bg-darker)] p-3">
+          <section className="flex w-1/2 min-w-0 flex-col gap-2 overflow-hidden border-r border-[var(--color-border-dark)] bg-[var(--color-bg-darker)] p-3">
+            <PickerStep
+              title="Unmanaged solution"
+              summary={solution ? `${solution.friendlyName} (${prefixText(solution.customizationPrefix)})` : null}
+              expanded={expandedPicker === "solution"}
+              onToggle={() =>
+                setExpandedPicker((current) =>
+                  current === "solution" ? (table ? null : "solution") : "solution",
+                )
+              }
+            >
             <ListSection
               title="Unmanaged solution"
+              showHeading={false}
               search={solutionSearch}
               onSearch={setSolutionSearch}
               placeholder="Search solutions"
@@ -438,6 +461,7 @@ function PolymorphicLookupPage() {
                   guard(() => {
                     setSolutionUniqueName(row.uniqueName);
                     setTableLogicalName(null);
+                    setExpandedPicker("table");
                     resetEditor();
                   })
                 }
@@ -448,10 +472,20 @@ function PolymorphicLookupPage() {
                 </p>
               ) : null}
             </ListSection>
+            </PickerStep>
 
             {solution ? (
+              <PickerStep
+                title="Referencing table"
+                summary={table?.displayName ?? null}
+                expanded={expandedPicker === "table"}
+                onToggle={() =>
+                  setExpandedPicker((current) => (current === "table" ? null : "table"))
+                }
+              >
               <ListSection
                 title="Referencing table"
+                showHeading={false}
                 search={tableSearch}
                 onSearch={setTableSearch}
                 placeholder="Search referencing tables"
@@ -475,13 +509,14 @@ function PolymorphicLookupPage() {
                   onRowClick={(row) =>
                     guard(() => {
                       setTableLogicalName(row.logicalName);
+                      setExpandedPicker("lookups");
                       resetEditor();
                     })
                   }
                 />
                 {elastic ? (
                   <p className="text-xs text-[var(--color-text-dark-gray)]">
-                    New relationships on this table use no cascade.
+                    This referencing table is elastic.
                   </p>
                 ) : null}
                 {table?.isSolutionAware ? (
@@ -490,11 +525,29 @@ function PolymorphicLookupPage() {
                   </p>
                 ) : null}
               </ListSection>
+              </PickerStep>
             ) : null}
 
             {table ? (
+              <PickerStep
+                title="Lookups"
+                summary={
+                  mode === "new"
+                    ? "New lookup"
+                    : selectedLookup
+                      ? `${selectedLookup.displayName} · ${selectedLookup.schemaName}`
+                      : null
+                }
+                expanded={expandedPicker === "lookups"}
+                onToggle={() =>
+                  setExpandedPicker((current) =>
+                    current === "lookups" ? (mode ? "attributes" : null) : "lookups",
+                  )
+                }
+              >
               <ListSection
                 title="Lookups"
+                showHeading={false}
                 search={lookupSearch}
                 onSearch={setLookupSearch}
                 placeholder="Search lookups"
@@ -517,6 +570,7 @@ function PolymorphicLookupPage() {
                       setOriginalDrafts([]);
                       setSelectedReferenced(null);
                       setNotice(null);
+                      setExpandedPicker("attributes");
                       synced.current = "new";
                     })}
                   >
@@ -535,21 +589,9 @@ function PolymorphicLookupPage() {
                     { key: "displayName", header: "Display name" },
                     { key: "schemaName", header: "Schema name" },
                     {
-                      key: "managed",
-                      header: "Managed or unmanaged",
-                      render: (row) => managedLabel(row.isManaged),
-                    },
-                    {
-                      key: "targets",
-                      header: "Referenced tables",
-                      render: (row) =>
-                        row.targets
-                          .map(
-                            (target) =>
-                              entities.find((entity) => entity.logicalName === target)?.displayName ??
-                              target,
-                          )
-                          .join(", "),
+                      key: "attributes",
+                      header: "Attributes",
+                      render: (row) => targetLabels(entities, row.targets),
                     },
                   ]}
                   rows={filteredLookups}
@@ -565,57 +607,75 @@ function PolymorphicLookupPage() {
                       setLookupLogicalName(row.logicalName);
                       setSelectedReferenced(null);
                       setNotice(null);
+                      setExpandedPicker("attributes");
                     })
                   }
                 />
               </ListSection>
+              </PickerStep>
             ) : null}
-          </section>
 
-          <section className="flex w-1/2 min-w-0 flex-col gap-3 overflow-auto bg-[var(--color-bg-darker)] p-3">
-            {mode == null ? (
-              <p className="text-sm text-[var(--color-text-gray)]">Select a lookup or create one.</p>
-            ) : (
-              <>
-                <ToolTextInput
-                  id="lookup-display-name"
-                  label="Display name"
-                  value={displayName}
-                  readOnly={mode === "existing"}
-                  onChange={
-                    mode === "new"
-                      ? (value) => {
-                          setDisplayName(value);
-                          if (!fragmentEdited) setFragment(suggestSchemaFragment(value));
-                        }
-                      : undefined
-                  }
-                />
-                <SchemaField
-                  id="lookup-schema-name"
-                  label="Schema name"
-                  prefix={schemaPrefix}
-                  fragment={mode === "existing" && selectedLookup ? splitSchema(selectedLookup.schemaName).fragment : fragment}
-                  readOnly={mode === "existing"}
-                  onChange={
-                    mode === "new"
-                      ? (value) => {
-                          setFragmentEdited(true);
-                          setFragment(value);
-                        }
-                      : undefined
-                  }
-                />
-                <div className="flex flex-col gap-2">
-                  <h3 className="text-sm text-[var(--color-text-white)]">Referenced tables</h3>
+            {mode ? (
+              <PickerStep
+                title="Attributes"
+                summary={
+                  selectedDraft
+                    ? referencedTables.find((item) => item.logicalName === selectedDraft.referencedLogicalName)
+                        ?.displayName ?? selectedDraft.referencedLogicalName
+                    : null
+                }
+                expanded={expandedPicker === "attributes"}
+                onToggle={() =>
+                  setExpandedPicker((current) => (current === "attributes" ? null : "attributes"))
+                }
+              >
+                <div className="flex min-h-0 flex-1 flex-col gap-2">
+                  <ToolTextInput
+                    id="lookup-display-name"
+                    label="Display name"
+                    value={displayName}
+                    readOnly={mode === "existing"}
+                    onChange={
+                      mode === "new"
+                        ? (value) => {
+                            setDisplayName(value);
+                            if (!fragmentEdited) setFragment(suggestSchemaFragment(value));
+                          }
+                        : undefined
+                    }
+                  />
+                  <SchemaField
+                    id="lookup-schema-name"
+                    label="Schema name"
+                    prefix={schemaPrefix}
+                    fragment={
+                      mode === "existing" && selectedLookup
+                        ? splitSchema(selectedLookup.schemaName).fragment
+                        : fragment
+                    }
+                    readOnly={mode === "existing"}
+                    onChange={
+                      mode === "new"
+                        ? (value) => {
+                            setFragmentEdited(true);
+                            setFragment(value);
+                          }
+                        : undefined
+                    }
+                  />
                   <SearchInput
                     value={referencedSearch}
                     onChange={setReferencedSearch}
-                    placeholder="Search referenced tables"
+                    placeholder="Search attributes"
                   />
                   {drafts.length < 2 ? (
                     <p className="text-xs text-[var(--color-text-dark-gray)]">
-                      Select at least two referenced tables.
+                      Select at least two attributes.
+                    </p>
+                  ) : null}
+                  {ownTableError ? (
+                    <p role="alert" className="text-xs text-[var(--color-text-white)]">
+                      {ownTableError}
                     </p>
                   ) : null}
                   <DataTable
@@ -632,11 +692,14 @@ function PolymorphicLookupPage() {
                               disabled={!!writePhase}
                               onChange={(checked) => {
                                 if (!checked) {
-                                  setDrafts((current) =>
-                                    current.filter((draft) => draft.referencedLogicalName !== row.logicalName),
+                                  const remaining = drafts.filter(
+                                    (draft) => draft.referencedLogicalName !== row.logicalName,
                                   );
+                                  setDrafts(remaining);
                                   setSelectedReferenced((current) =>
-                                    current === row.logicalName ? null : current,
+                                    current === row.logicalName
+                                      ? remaining[0]?.referencedLogicalName ?? null
+                                      : current,
                                   );
                                   return;
                                 }
@@ -672,65 +735,89 @@ function PolymorphicLookupPage() {
                     }}
                   />
                 </div>
-                {selectedDraft ? (
-                  <RelationshipFields
-                    draft={selectedDraft}
-                    elastic={elastic}
-                    disabled={!!writePhase}
-                    onChange={(patch) => updateDraft(selectedDraft.referencedLogicalName, patch)}
-                  />
-                ) : null}
+              </PickerStep>
+            ) : null}
+          </section>
+
+          <section className="flex w-1/2 min-w-0 flex-col gap-3 overflow-auto bg-[var(--color-bg-darker)] p-3">
+            {mode == null ? (
+              <p className="text-sm text-[var(--color-text-gray)]">Select a lookup or create one.</p>
+            ) : (
+              <>
+            {ownTableError ? (
+              <p role="alert" className="text-xs text-[var(--color-text-white)]">
+                {ownTableError}
+              </p>
+            ) : null}
+            {selectedDraft ? (
+              <>
+                <RelationshipFields
+                  draft={selectedDraft}
+                  disabled={!!writePhase}
+                  onChange={(patch) => updateDraft(selectedDraft.referencedLogicalName, patch)}
+                />
                 {elastic ? (
                   <p className="text-xs text-[var(--color-text-dark-gray)]">
-                    New relationships on this table use no cascade.
+                    This referencing table is elastic.
                   </p>
                 ) : null}
-                <div className="flex gap-2">
-                  {mode === "new" ? (
-                    <Button disabled={!createEnabled} onClick={() => void runCreate()}>
-                      Create lookup
-                    </Button>
-                  ) : (
-                    <Button
-                      disabled={!saveEnabled}
-                      onClick={() => {
-                        if (!editPlan?.plan) return;
-                        if (editPlan.plan.deletes.length > 0) {
-                          pendingPlan.current = editPlan.plan;
-                          setModal("remove");
-                          return;
-                        }
-                        void runSave(editPlan.plan);
-                      }}
-                    >
-                      Save
-                    </Button>
-                  )}
-                  <Button
-                    variant="secondary"
-                    disabled={!!writePhase}
-                    onClick={() => guard(resetEditor)}
-                  >
-                    Cancel
-                  </Button>
-                  {writePhase && modal == null ? <Spinner /> : null}
-                </div>
+                <LookupActions
+                  mode={mode}
+                  createEnabled={createEnabled}
+                  saveEnabled={saveEnabled}
+                  writePhase={writePhase}
+                  showSpinner={!!writePhase && modal == null}
+                  onCreate={() => void runCreate()}
+                  onSave={() => {
+                    if (!editPlan?.plan) return;
+                    if (editPlan.plan.deletes.length > 0) {
+                      pendingPlan.current = editPlan.plan;
+                      setModal("remove");
+                      return;
+                    }
+                    void runSave(editPlan.plan);
+                  }}
+                  onCancel={() =>
+                    guard(() => {
+                      resetEditor();
+                      setExpandedPicker("lookups");
+                    })
+                  }
+                />
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-[var(--color-text-gray)]">Select an attribute.</p>
+                <LookupActions
+                  mode={mode}
+                  createEnabled={createEnabled}
+                  saveEnabled={saveEnabled}
+                  writePhase={writePhase}
+                  showSpinner={!!writePhase && modal == null}
+                  onCreate={() => void runCreate()}
+                  onSave={() => {
+                    if (!editPlan?.plan) return;
+                    if (editPlan.plan.deletes.length > 0) {
+                      pendingPlan.current = editPlan.plan;
+                      setModal("remove");
+                      return;
+                    }
+                    void runSave(editPlan.plan);
+                  }}
+                  onCancel={() =>
+                    guard(() => {
+                      resetEditor();
+                      setExpandedPicker("lookups");
+                    })
+                  }
+                />
+              </>
+            )}
               </>
             )}
           </section>
         </div>
       )}
-
-      <footer className="shrink-0 border-t border-[var(--color-border-dark)] px-3 py-2 text-xs text-[var(--color-text-dark-gray)]">
-        Polymorphic Lookup Creator by MscrmTools.{" "}
-        <button
-          type="button"
-          className="underline"
-          onClick={() => void desktopBridge.openExternalUrl(ABOUT_URL)}
-        >
-          {ABOUT_URL}
-        </button>
-      </footer>
 
       <Modal
         open={discardOpen}
@@ -826,8 +913,98 @@ function PolymorphicLookupPage() {
   );
 }
 
+function targetLabels(
+  entities: Array<{ logicalName: string; displayName: string }>,
+  targets: string[],
+): string {
+  return targets
+    .map((target) => entities.find((entity) => entity.logicalName === target)?.displayName ?? target)
+    .join(", ");
+}
+
+function LookupActions({
+  mode,
+  createEnabled,
+  saveEnabled,
+  writePhase,
+  showSpinner,
+  onCreate,
+  onSave,
+  onCancel,
+}: {
+  mode: "new" | "existing";
+  createEnabled: boolean;
+  saveEnabled: boolean;
+  writePhase: string | null;
+  showSpinner: boolean;
+  onCreate: () => void;
+  onSave: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <div className="flex gap-2">
+      {mode === "new" ? (
+        <Button disabled={!createEnabled} onClick={onCreate}>
+          Create lookup
+        </Button>
+      ) : (
+        <Button disabled={!saveEnabled} onClick={onSave}>
+          Save
+        </Button>
+      )}
+      <Button variant="secondary" disabled={!!writePhase} onClick={onCancel}>
+        Cancel
+      </Button>
+      {showSpinner ? <Spinner /> : null}
+    </div>
+  );
+}
+
+function PickerStep({
+  title,
+  summary,
+  expanded,
+  onToggle,
+  children,
+}: {
+  title: string;
+  summary: string | null;
+  expanded: boolean;
+  onToggle: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className={expanded ? "flex min-h-0 flex-1 flex-col gap-2" : "shrink-0"}>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-label={summary ? `${title}, ${summary}` : title}
+        onClick={onToggle}
+        className="flex w-full items-center gap-2 rounded-sm border border-[var(--color-border-dark)] bg-[var(--color-bg-light)] px-3 py-2 text-left hover:bg-[var(--color-hover-bg)]"
+      >
+        <svg
+          className={`h-3 w-3 shrink-0 text-[var(--color-text-dark-gray)] ${expanded ? "rotate-90" : ""}`}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden="true"
+        >
+          <path d="m9 6 6 6-6 6" />
+        </svg>
+        <span className="text-sm text-[var(--color-text-white)]">{title}</span>
+        {summary ? (
+          <span className="truncate text-xs text-[var(--color-text-dark-gray)]">{summary}</span>
+        ) : null}
+      </button>
+      {expanded ? <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">{children}</div> : null}
+    </div>
+  );
+}
+
 function ListSection({
   title,
+  showHeading = true,
   search,
   onSearch,
   placeholder,
@@ -837,6 +1014,7 @@ function ListSection({
   children,
 }: {
   title: string;
+  showHeading?: boolean;
   search: string;
   onSearch: (value: string) => void;
   placeholder: string;
@@ -846,8 +1024,8 @@ function ListSection({
   children: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <h2 className="text-sm text-[var(--color-text-white)]">{title}</h2>
+    <div className={showHeading ? "flex min-h-0 flex-1 flex-col gap-2" : "flex min-h-0 flex-1 flex-col gap-2"}>
+      {showHeading ? <h2 className="text-sm text-[var(--color-text-white)]">{title}</h2> : null}
       <SearchInput value={search} onChange={onSearch} placeholder={placeholder} />
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
@@ -870,12 +1048,10 @@ function ListSection({
 
 function RelationshipFields({
   draft,
-  elastic,
   disabled,
   onChange,
 }: {
   draft: RelationshipDraft;
-  elastic: boolean;
   disabled: boolean;
   onChange: (patch: Partial<RelationshipDraft>) => void;
 }) {
@@ -937,18 +1113,44 @@ function RelationshipFields({
         readOnly={disabled}
         onChange={(value) => onChange({ menuLabel: value })}
       />
-      <fieldset disabled={elastic || disabled} className="grid grid-cols-2 gap-2">
-        {cascadeFields.map((field) => (
-          <ToolSelect
-            key={field.key}
-            id={`cascade-${field.key}`}
-            label={`Cascade ${field.label}`}
-            value={field.value}
-            disabled={elastic || disabled}
-            options={[{ value: field.value, label: field.option }]}
-          />
-        ))}
-      </fieldset>
+      <ToolSelect
+        id="cascade-behavior"
+        label="Cascade behavior"
+        value={draft.cascadeBehavior}
+        options={cascadeBehaviors}
+        disabled={disabled}
+        onChange={(value) => {
+          const behavior = value as CascadeBehavior;
+          onChange(
+            behavior === "Custom"
+              ? { cascadeBehavior: behavior }
+              : { cascadeBehavior: behavior, cascade: presetCascade(behavior) },
+          );
+        }}
+      />
+      {draft.cascadeBehavior === "Custom" ? (
+        <div className="grid grid-cols-2 gap-2">
+          {cascadeFields.map((field) => (
+            <ToolSelect
+              key={field.key}
+              id={`cascade-${field.key}`}
+              label={field.label}
+              value={draft.cascade[field.key]}
+              disabled={disabled}
+              options={field.options}
+              onChange={(value) =>
+                onChange({
+                  cascadeBehavior: "Custom",
+                  cascade: {
+                    ...draft.cascade,
+                    [field.key]: value as RelationshipDraft["cascade"]["assign"],
+                  },
+                })
+              }
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

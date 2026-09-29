@@ -96,6 +96,48 @@ describe("Polymorphic Lookup Creator", () => {
     httpServer.use(...readHandlers());
   });
 
+  it("shrinks the chosen list and expands it again from its summary", async () => {
+    renderTool();
+    fireEvent.click(await screen.findByText("Contoso Solution"));
+    expect(screen.queryByPlaceholderText("Search solutions")).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Search referencing tables")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Unmanaged solution, Contoso Solution (new_)" }));
+    expect(screen.getByPlaceholderText("Search solutions")).toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Search referencing tables")).not.toBeInTheDocument();
+  });
+
+  it("explains when the referencing table is also an attribute and keeps another attribute open", async () => {
+    httpServer.use(
+      http.get("http://localhost/api/polymorphic-lookups/metadata", () =>
+        HttpResponse.json({
+          ...metadataFixture,
+          entities: metadataFixture.entities.map((entity) =>
+            entity.logicalName === "incident"
+              ? { ...entity, canBePrimaryEntityInRelationship: true }
+              : entity,
+          ),
+        }),
+      ),
+    );
+    renderTool();
+    await chooseCase();
+    fireEvent.click(screen.getByRole("button", { name: "New lookup" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Account" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Contact" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Lead" }));
+    expect(screen.getByLabelText("Relationship schema name")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Lead" }));
+    expect(screen.getByLabelText("Relationship schema name")).toBeInTheDocument();
+    expect(screen.queryByText("Select an attribute.")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Case" }));
+    fireEvent.change(screen.getByLabelText("Display name"), { target: { value: "Customer" } });
+    expect(screen.getByRole("button", { name: "Create lookup" })).toBeDisabled();
+    expect(screen.getAllByRole("alert").some((item) => item.textContent?.includes("Case"))).toBe(true);
+  });
+
   it("keeps create disabled until two referenced tables and a display name are set", async () => {
     const bodies: unknown[] = [];
     httpServer.use(
@@ -108,7 +150,8 @@ describe("Polymorphic Lookup Creator", () => {
     await chooseCase();
 
     expect(screen.getByText("Managed Lookup")).toBeInTheDocument();
-    expect(screen.getByText("Managed")).toBeInTheDocument();
+    expect(screen.getByText("new_ManagedId")).toBeInTheDocument();
+    expect(screen.getAllByRole("columnheader", { name: "Attributes" }).length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole("button", { name: "New lookup" }));
     expect(screen.queryByRole("checkbox", { name: "Case" })).not.toBeInTheDocument();
 
