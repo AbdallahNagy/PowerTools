@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
 
@@ -100,6 +100,11 @@ describe("FetchXML Tester", () => {
     expect(screen.getByRole("status", { name: "tool statuses" })).toHaveTextContent(
       "Number of rows returned: 1 (More records: true)",
     );
+    expect(
+      within(screen.getByRole("region", { name: "Results" })).getByText(
+        "Number of rows returned: 1 (More records: true)",
+      ),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("checkbox", { name: "Show formatted values" }));
     expect(screen.getByText("Contoso")).toBeInTheDocument();
@@ -143,6 +148,11 @@ describe("FetchXML Tester", () => {
     expect(screen.getByRole("status", { name: "tool statuses" })).toHaveTextContent(
       "Number of rows returned: 1 (More records: false)",
     );
+    expect(
+      within(screen.getByRole("region", { name: "Results" })).getByText(
+        "Number of rows returned: 1 (More records: false)",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("formats comments, then saves and reloads the query", async () => {

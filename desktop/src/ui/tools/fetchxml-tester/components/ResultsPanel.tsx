@@ -7,17 +7,22 @@ interface ResultsPanelProps {
 }
 
 export function ResultsPanel({ result }: ResultsPanelProps) {
+  const summary = result ? resultSummary(result.records.length, result.moreRecords) : null;
+
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-2">
-      <div className="text-xs text-[var(--color-text-gray)]">Results</div>
+    <section aria-label="Results" className="flex min-h-0 flex-1 flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="text-xs text-[var(--color-text-gray)]">Results</div>
+        {summary ? <p className="text-xs text-[var(--color-text-white)]">{summary}</p> : null}
+      </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {!result ? (
           <p className="px-3 py-6 text-center text-xs text-[var(--color-text-dark-gray)]">
             Run a query to see records.
           </p>
         ) : result.columns.length === 0 ? (
-          <p className="px-3 py-6 text-center text-xs text-[var(--color-text-gray)]">
-            {resultSummary(result.records.length, result.moreRecords)}
+          <p className="px-3 py-6 text-center text-xs text-[var(--color-text-dark-gray)]">
+            No rows returned
           </p>
         ) : (
           <DataTable
