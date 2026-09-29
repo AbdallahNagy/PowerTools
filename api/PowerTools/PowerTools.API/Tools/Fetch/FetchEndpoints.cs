@@ -2,6 +2,7 @@ using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.Fetch.Dtos;
+using PowerTools.API.Utils;
 
 namespace PowerTools.API.Tools.Fetch;
 

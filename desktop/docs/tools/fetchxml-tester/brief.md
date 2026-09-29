@@ -318,3 +318,20 @@ Elastic tables (500-row pages), `datasource="retained"`, and virtual-table query
 - The formatted multi-select separator. The platform value is the single `FormattedValues` string.
 - Which aggregates, link types, and hints each virtual-table provider or on-premises build rejects. Those fail as server faults for that environment.
 - Whether `EntityReference.Name` and `FormattedValues` still match when the primary-name column is column-secured.
+
+### Implementation notes and test evidence
+
+- Extended `POST /api/fetch/execute` with `preserveFetchXml` and `valueMode`. Defaults keep FetchXML Builder paging and the synthetic `id` column. Verbatim mode sends the original string to `FetchExpression` after the existing XXE, `<fetch>`, and `<entity>` checks.
+- Tester cell mapping is `formatted` or `raw`, with no `id` column. Aliased values unwrap. Multi-select raw values join with commas. The response shape is unchanged, including `pagingCookie` and `totalEstimate`. The screen does not show the cookie, because it is not ready to paste, and it does not treat `totalEstimate` as the full match set.
+- New activity-bar tool `fetchxml-tester` in `desktop/src/ui/tools/fetchxml-tester/`, registered once in `desktop/src/ui/tools/registry.tsx`. The editor starts on the account sample. Execute posts `{ fetchXml, preserveFetchXml: true, valueMode }` through `apiPost` and `meta.connectionName`. The connection is the shell connection. The library is `localStorage`.
+- The tab follows the UX section: Format, Execute, Show formatted values, Save modal, results grid, and a library with search, All environments, Reload, and Delete. Empty text disables Execute and Save. A failed execute leaves the last grid and its status text in place.
+- GPL and Ms-PL plugin source was not copied.
+
+Commands and results:
+
+- `dotnet run --project api/PowerTools/PowerTools.API.Tests/PowerTools.API.Tests.csproj` passed. It covers builder paging, verbatim XML, XXE, a missing `<entity>`, formatted and raw cells, aliased values, and multi-select values.
+- From `desktop/`, `npm run check` passed: typecheck, lint with zero warnings, 247 tests, renderer build, and the Electron smoke test.
+
+### Open questions
+
+None.

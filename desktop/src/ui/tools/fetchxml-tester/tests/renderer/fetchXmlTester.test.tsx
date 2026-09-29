@@ -171,7 +171,8 @@ describe("FetchXML Tester", () => {
       target: { value: "Named accounts" },
     });
     await waitFor(() => {
-      fireEvent.click(screen.getAllByRole("button", { name: "Save" }).at(-1)!);
+      const saveButtons = screen.getAllByRole("button", { name: "Save" });
+      fireEvent.click(saveButtons[saveButtons.length - 1]!);
       expect(screen.getByText("Query saved.")).toBeInTheDocument();
     });
 
@@ -184,9 +185,9 @@ describe("FetchXML Tester", () => {
       target: { value: "<fetch><entity name=\"contact\" /></fetch>" },
     });
     fireEvent.click(screen.getByText("account"));
-    expect(screen.getByRole("textbox", { name: "FetchXML" })).toHaveValue(
-      expect.stringContaining("<!-- owner -->"),
-    );
+    expect(
+      (screen.getByRole("textbox", { name: "FetchXML" }) as HTMLTextAreaElement).value,
+    ).toContain("<!-- owner -->");
 
     fireEvent.click(screen.getByRole("button", { name: "Delete account saved query" }));
     expect(screen.getByText("No matching queries")).toBeInTheDocument();

@@ -111,11 +111,11 @@ function printNode(node: XmlNode, indent: number): string {
 }
 
 function escapeText(value: string): string {
-  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function escapeAttribute(value: string): string {
-  return escapeText(value).replaceAll("\"", "&quot;");
+  return escapeText(value).replace(/"/g, "&quot;");
 }
 
 function decodeEntities(value: string): string {

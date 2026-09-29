@@ -85,12 +85,12 @@ AssertSequence(
 var rawRecord = rawProjection.Records[0];
 AssertFalse(rawRecord.ContainsKey("id"));
 AssertEquals("Contoso", (string)rawRecord["name"]!);
-AssertEquals(false, (bool)rawRecord["donotemail"]!);
+AssertEqualBool(false, (bool)rawRecord["donotemail"]!);
 AssertEquals(ownerId.ToString(), (string)rawRecord["ownerid"]!);
 AssertEquals("1,4", (string)rawRecord["new_choices"]!);
 AssertEquals("Parent Co", (string)rawRecord["parent.name"]!);
-AssertEquals(10.5m, (decimal)rawRecord["revenue"]!);
-AssertEquals(0, (int)rawRecord["statecode"]!);
+AssertEqualDecimal(10.5m, (decimal)rawRecord["revenue"]!);
+AssertEqualInt(0, (int)rawRecord["statecode"]!);
 AssertEquals("lookup", rawProjection.ColumnTypes["ownerid"]);
 
 var formattedProjection = FetchResultProjector.Project([account], FetchValueModes.Formatted);
@@ -113,8 +113,8 @@ AssertEquals("Ada", ReadAnonymous(builderRecord["ownerid"]!, "name"));
 AssertEquals("systemuser", ReadAnonymous(builderRecord["ownerid"]!, "logicalName"));
 
 var emptyProjection = FetchResultProjector.Project(Array.Empty<Entity>(), FetchValueModes.Formatted);
-AssertEquals(0, emptyProjection.Records.Count);
-AssertEquals(0, emptyProjection.Columns.Count);
+AssertEqualInt(0, emptyProjection.Records.Count);
+AssertEqualInt(0, emptyProjection.Columns.Count);
 
 var defaultViewColumns = DefaultViewColumns.ParseLayoutXml(
     "<grid><row name=\"account\" id=\"accountid\">" +
@@ -385,19 +385,19 @@ static void AssertEquals(string expected, string actual)
         throw new InvalidOperationException($"Expected '{expected}', got '{actual}'.");
 }
 
-static void AssertEquals(int expected, int actual)
+static void AssertEqualInt(int expected, int actual)
 {
     if (expected != actual)
         throw new InvalidOperationException($"Expected {expected}, got {actual}.");
 }
 
-static void AssertEquals(bool expected, bool actual)
+static void AssertEqualBool(bool expected, bool actual)
 {
     if (expected != actual)
         throw new InvalidOperationException($"Expected {expected}, got {actual}.");
 }
 
-static void AssertEquals(decimal expected, decimal actual)
+static void AssertEqualDecimal(decimal expected, decimal actual)
 {
     if (expected != actual)
         throw new InvalidOperationException($"Expected {expected}, got {actual}.");
