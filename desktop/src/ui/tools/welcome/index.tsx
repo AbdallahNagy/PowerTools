@@ -78,6 +78,10 @@ const tools: {
     title: "FetchXML Builder",
     description: "Build, test, and refine FetchXML queries in a cleaner workspace built for fast iteration.",
   },
+  {
+    title: "FetchXML Tester",
+    description: "Paste a FetchXML query, run it as written, and keep a local library of the queries you use.",
+  },
 ];
 
 export default function WelcomeTab() {

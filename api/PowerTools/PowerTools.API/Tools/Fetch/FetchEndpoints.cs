@@ -1,18 +1,12 @@
-using System.Xml;
-using System.Xml.Linq;
-using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.Fetch.Dtos;
-using PowerTools.API.Utils;
 
 namespace PowerTools.API.Tools.Fetch;
 
 public static class FetchEndpoints
 {
-    private const int MaxPageSize = 250;
-
     public static IEndpointRouteBuilder MapFetchEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/fetch")
@@ -23,85 +17,22 @@ public static class FetchEndpoints
             HttpContext ctx,
             DataverseClientFactory factory) =>
         {
-            // ── Validate page size ────────────────────────────────────────────
-            var pageSize = Math.Clamp(req.PageSize, 1, MaxPageSize);
+            var prepared = FetchXmlPreparation.Prepare(req);
+            if (!prepared.IsValid)
+                return Results.BadRequest(new { error = prepared.Error });
 
-            // ── Parse & validate FetchXML (XXE-safe) ─────────────────────────
-            XDocument doc;
-            try
-            {
-                var settings = new XmlReaderSettings
-                {
-                    DtdProcessing = DtdProcessing.Prohibit,
-                    XmlResolver = null
-                };
-                using var reader = XmlReader.Create(new StringReader(req.FetchXml), settings);
-                doc = XDocument.Load(reader);
-            }
-            catch (XmlException ex)
-            {
-                return Results.BadRequest(new { error = $"Invalid FetchXML: {ex.Message}" });
-            }
-
-            var fetchEl = doc.Root;
-            if (fetchEl?.Name.LocalName != "fetch")
-                return Results.BadRequest(new { error = "Root element must be <fetch>" });
-
-            var entityEl = fetchEl.Element("entity");
-            if (entityEl is null)
-                return Results.BadRequest(new { error = "<fetch> must contain an <entity> element" });
-
-            // ── Inject paging attributes ──────────────────────────────────────
-            var finalXml = FetchXmlPaging.Apply(doc, req.Page, pageSize, req.PagingCookie, req.ReturnTotalRecordCount);
-
-            // ── Execute ───────────────────────────────────────────────────────
             var svc = ctx.CreateDataverseClient(factory);
 
             try
             {
-                var result = await svc.RetrieveMultipleAsync(new FetchExpression(finalXml));
-
-                // Collect the attribute names actually returned across all entities
-                var columns = result.Entities
-                    .SelectMany(e => e.Attributes.Keys)
-                    .Distinct()
-                    .OrderBy(k => k)
-                    .ToList();
-
-                // Derive the type tag for each column from the first non-null value seen
-                var columnTypes = columns.ToDictionary(
-                    col => col,
-                    col =>
-                    {
-                        var firstNonNull = result.Entities
-                            .Select(e => e.Attributes.TryGetValue(col, out var v) ? v : null)
-                            .FirstOrDefault(v => v != null);
-                        return DataverseValueFormatter.GetTypeTag(firstNonNull);
-                    });
-
-                var records = result.Entities
-                    .Select(e =>
-                    {
-                        var dict = new Dictionary<string, object?> { ["id"] = e.Id.ToString() };
-                        foreach (var key in e.Attributes.Keys)
-                        {
-                            // For option sets and booleans, Dataverse already provides a
-                            // human-readable label in FormattedValues (e.g. "Active", "Yes").
-                            if (e[key] is OptionSetValue or bool
-                                && e.FormattedValues.TryGetValue(key, out var label))
-                                dict[key] = label;
-                            else
-                                dict[key] = DataverseValueFormatter.Format(e[key]);
-                        }
-                        return dict;
-                    })
-                    .ToList();
+                var result = await svc.RetrieveMultipleAsync(new FetchExpression(prepared.FetchXml));
+                var projected = FetchResultProjector.Project(result.Entities, prepared.ValueMode);
 
                 return Results.Ok(new
                 {
-                    records,
-                    columns,
-                    columnTypes,
+                    records = projected.Records,
+                    columns = projected.Columns,
+                    columnTypes = projected.ColumnTypes,
                     moreRecords = result.MoreRecords,
                     pagingCookie = result.PagingCookie,
                     totalEstimate = result.TotalRecordCount >= 0 ? result.TotalRecordCount : (int?)null
