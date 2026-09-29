@@ -10,6 +10,7 @@ import {
   TOOL_REGISTRY,
 } from "../src/ui/tools/registry";
 import { fetchXmlBuilderTool } from "../src/ui/tools/fetchxml-builder/tool";
+import { fetchXmlTesterTool } from "../src/ui/tools/fetchxml-tester/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
@@ -74,12 +75,14 @@ describe("tool registry", () => {
       "welcome",
       "data-migration",
       "fetchxml-builder",
+      "fetchxml-tester",
       "plugin-registration",
       "polymorphic-lookup-creator",
     ]);
     expect(ACTIVITY_BAR_TOOLS.map((tool) => tool.id)).toEqual([
       "data-migration",
       "fetchxml-builder",
+      "fetchxml-tester",
       "plugin-registration",
       "polymorphic-lookup-creator",
     ]);
@@ -87,6 +90,7 @@ describe("tool registry", () => {
     expect(TOOL_REGISTRY["polymorphic-lookup-creator"].allowMultipleInstances).toBe(false);
     expect(TOOL_REGISTRY["data-migration"]).toBe(dataMigrationTool);
     expect(TOOL_REGISTRY["fetchxml-builder"]).toBe(fetchXmlBuilderTool);
+    expect(TOOL_REGISTRY["fetchxml-tester"]).toBe(fetchXmlTesterTool);
     expect(TOOL_REGISTRY["plugin-registration"]).toBe(pluginRegistrationTool);
     expect(TOOL_REGISTRY["polymorphic-lookup-creator"]).toBe(polymorphicLookupTool);
   });

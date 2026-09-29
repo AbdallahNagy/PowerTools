@@ -6,9 +6,11 @@ using System.ServiceModel.Federation;
 using System.Text;
 using Data8.PowerPlatform.Dataverse.Client;
 using Data8.PowerPlatform.Dataverse.Client.Wsdl;
+using Microsoft.Xrm.Sdk;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.DataMigration;
 using PowerTools.API.Tools.Fetch;
+using PowerTools.API.Tools.Fetch.Dtos;
 using PowerTools.API.Tools.Metadata;
 
 var dataverseCookie = "<cookie page=\"1\"><accountid last=\"{ABC}\" first=\"{DEF}\" /></cookie>";
@@ -24,6 +26,95 @@ AssertDoesNotContain("&amp;quot;1&amp;quot;", pagedFetch);
 
 var countedFetch = FetchXmlPaging.Apply(fetchXml, page: 1, count: 50, pagingCookie: null, returnTotalRecordCount: true);
 AssertContains("returntotalrecordcount=\"true\"", countedFetch);
+
+var builderPrepared = FetchXmlPreparation.Prepare(
+    new ExecuteFetchRequest(fetchXml, Page: 2, PageSize: 50, PagingCookie: dataverseCookie, ReturnTotalRecordCount: true));
+AssertNull(builderPrepared.Error);
+AssertContains("page=\"2\"", builderPrepared.FetchXml);
+AssertContains("count=\"50\"", builderPrepared.FetchXml);
+AssertContains("returntotalrecordcount=\"true\"", builderPrepared.FetchXml);
+AssertEquals(FetchValueModes.Builder, builderPrepared.ValueMode);
+
+var verbatimFetch = "<fetch count=\"3\" page=\"9\"><entity name=\"account\"><!-- keep --><attribute name=\"name\" /></entity></fetch>";
+var verbatimPrepared = FetchXmlPreparation.Prepare(
+    new ExecuteFetchRequest(verbatimFetch, Page: 2, PageSize: 50, PagingCookie: dataverseCookie, PreserveFetchXml: true, ValueMode: "RAW"));
+AssertNull(verbatimPrepared.Error);
+AssertEquals(verbatimFetch, verbatimPrepared.FetchXml);
+AssertEquals(FetchValueModes.Raw, verbatimPrepared.ValueMode);
+
+var xxeFetch = "<!DOCTYPE fetch [<!ENTITY xxe SYSTEM \"file:///etc/passwd\">]><fetch><entity name=\"account\">&xxe;</entity></fetch>";
+var xxePrepared = FetchXmlPreparation.Prepare(new ExecuteFetchRequest(xxeFetch, PreserveFetchXml: true));
+AssertContains("Invalid FetchXML", xxePrepared.Error ?? "");
+
+var missingEntity = FetchXmlPreparation.Prepare(new ExecuteFetchRequest("<fetch></fetch>", PreserveFetchXml: true));
+AssertEquals("<fetch> must contain an <entity> element", missingEntity.Error ?? "");
+
+var wrongRoot = FetchXmlPreparation.Prepare(new ExecuteFetchRequest("<account></account>", PreserveFetchXml: true));
+AssertEquals("Root element must be <fetch>", wrongRoot.Error ?? "");
+
+var badMode = FetchXmlPreparation.Prepare(
+    new ExecuteFetchRequest(fetchXml, PreserveFetchXml: true, ValueMode: "labels"));
+AssertEquals("valueMode must be builder, formatted, or raw.", badMode.Error ?? "");
+
+var accountId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+var ownerId = Guid.Parse("22222222-2222-2222-2222-222222222222");
+var account = new Entity("account", accountId);
+account["name"] = "Contoso";
+account["statecode"] = new OptionSetValue(0);
+account.FormattedValues["statecode"] = "Active";
+account["revenue"] = new Money(10.5m);
+account.FormattedValues["revenue"] = "$10.50";
+account["ownerid"] = new EntityReference("systemuser", ownerId) { Name = "Ada" };
+account.FormattedValues["ownerid"] = "Ada Lovelace";
+account["new_choices"] = new OptionSetValueCollection { new OptionSetValue(1), new OptionSetValue(4) };
+account.FormattedValues["new_choices"] = "One, Four";
+account["parent.name"] = new AliasedValue("account", "name", "Parent Co");
+account["donotemail"] = false;
+account.FormattedValues["donotemail"] = "No";
+
+var rawProjection = FetchResultProjector.Project([account], FetchValueModes.Raw);
+AssertSequence(
+    rawProjection.Columns,
+    "donotemail",
+    "name",
+    "new_choices",
+    "ownerid",
+    "parent.name",
+    "revenue",
+    "statecode");
+var rawRecord = rawProjection.Records[0];
+AssertFalse(rawRecord.ContainsKey("id"));
+AssertEquals("Contoso", (string)rawRecord["name"]!);
+AssertEqualBool(false, (bool)rawRecord["donotemail"]!);
+AssertEquals(ownerId.ToString(), (string)rawRecord["ownerid"]!);
+AssertEquals("1,4", (string)rawRecord["new_choices"]!);
+AssertEquals("Parent Co", (string)rawRecord["parent.name"]!);
+AssertEqualDecimal(10.5m, (decimal)rawRecord["revenue"]!);
+AssertEqualInt(0, (int)rawRecord["statecode"]!);
+AssertEquals("lookup", rawProjection.ColumnTypes["ownerid"]);
+
+var formattedProjection = FetchResultProjector.Project([account], FetchValueModes.Formatted);
+var formattedRecord = formattedProjection.Records[0];
+AssertFalse(formattedRecord.ContainsKey("id"));
+AssertEquals("No", (string)formattedRecord["donotemail"]!);
+AssertEquals("Ada Lovelace", (string)formattedRecord["ownerid"]!);
+AssertEquals("One, Four", (string)formattedRecord["new_choices"]!);
+AssertEquals("$10.50", (string)formattedRecord["revenue"]!);
+AssertEquals("Active", (string)formattedRecord["statecode"]!);
+AssertEquals("Parent Co", (string)formattedRecord["parent.name"]!);
+
+var builderProjection = FetchResultProjector.Project([account], FetchValueModes.Builder);
+var builderRecord = builderProjection.Records[0];
+AssertEquals(accountId.ToString(), (string)builderRecord["id"]!);
+AssertEquals("Active", (string)builderRecord["statecode"]!);
+AssertEquals("No", (string)builderRecord["donotemail"]!);
+AssertEquals("22222222-2222-2222-2222-222222222222", ReadAnonymous(builderRecord["ownerid"]!, "id"));
+AssertEquals("Ada", ReadAnonymous(builderRecord["ownerid"]!, "name"));
+AssertEquals("systemuser", ReadAnonymous(builderRecord["ownerid"]!, "logicalName"));
+
+var emptyProjection = FetchResultProjector.Project(Array.Empty<Entity>(), FetchValueModes.Formatted);
+AssertEqualInt(0, emptyProjection.Records.Count);
+AssertEqualInt(0, emptyProjection.Columns.Count);
 
 var defaultViewColumns = DefaultViewColumns.ParseLayoutXml(
     "<grid><row name=\"account\" id=\"accountid\">" +
@@ -292,6 +383,51 @@ static void AssertEquals(string expected, string actual)
 {
     if (!string.Equals(expected, actual, StringComparison.Ordinal))
         throw new InvalidOperationException($"Expected '{expected}', got '{actual}'.");
+}
+
+static void AssertEqualInt(int expected, int actual)
+{
+    if (expected != actual)
+        throw new InvalidOperationException($"Expected {expected}, got {actual}.");
+}
+
+static void AssertEqualBool(bool expected, bool actual)
+{
+    if (expected != actual)
+        throw new InvalidOperationException($"Expected {expected}, got {actual}.");
+}
+
+static void AssertEqualDecimal(decimal expected, decimal actual)
+{
+    if (expected != actual)
+        throw new InvalidOperationException($"Expected {expected}, got {actual}.");
+}
+
+static void AssertNull(string? actual)
+{
+    if (actual is not null)
+        throw new InvalidOperationException($"Expected null, got '{actual}'.");
+}
+
+static void AssertFalse(bool actual)
+{
+    if (actual)
+        throw new InvalidOperationException("Expected false.");
+}
+
+static void AssertSequence(IReadOnlyList<string> actual, params string[] expected)
+{
+    if (!actual.SequenceEqual(expected))
+        throw new InvalidOperationException(
+            $"Expected [{string.Join(", ", expected)}], got [{string.Join(", ", actual)}].");
+}
+
+static string ReadAnonymous(object value, string propertyName)
+{
+    var property = value.GetType().GetProperty(propertyName)
+        ?? throw new InvalidOperationException($"Missing property '{propertyName}'.");
+    return property.GetValue(value)?.ToString()
+        ?? throw new InvalidOperationException($"Property '{propertyName}' was null.");
 }
 
 static void AssertThrows(string expectedMessagePart, Action action)

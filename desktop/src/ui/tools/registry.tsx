@@ -1,5 +1,6 @@
 import { dataMigrationTool } from "./data-migration/tool";
 import { fetchXmlBuilderTool } from "./fetchxml-builder/tool";
+import { fetchXmlTesterTool } from "./fetchxml-tester/tool";
 import { pluginRegistrationTool } from "./plugin-registration/tool";
 import { polymorphicLookupTool } from "./polymorphic-lookup-creator/tool";
 import { createToolRegistry } from "./defineTool";
@@ -9,6 +10,7 @@ export const BUILT_IN_TOOLS = [
   welcomeTool,
   dataMigrationTool,
   fetchXmlBuilderTool,
+  fetchXmlTesterTool,
   pluginRegistrationTool,
   polymorphicLookupTool,
 ] as const;
