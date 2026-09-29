@@ -233,7 +233,24 @@ Changing the selected environment clears the filter, the manual expansion, and t
 - A tree, property grid, dependency heading, XrmToolBox host chrome, plugin icon, or plugin wording.
 - A connection picker inside the tab.
 
+### Implementation notes and test evidence
+
+- Files added:
+  - `desktop/src/ui/tools/workflow-activities-viewer/` (`tool.ts`, `WorkflowActivitiesViewer.tsx`, `workflow-activities-icon.svg`, `api/`, `model/`, `tests/`)
+  - One registration in `desktop/src/ui/tools/registry.tsx`
+  - Sidecar `api/PowerTools/PowerTools.API/Tools/WorkflowActivities/`, mapped from `Program.cs` with `DataverseContextFilter` and `DataverseClientFactory`
+  - `api/PowerTools/PowerTools.API.WorkflowActivities.Tests/` and its solution entry
+- Endpoints: `GET /api/workflow-activities` and `GET /api/workflow-activities/{pluginTypeId}/processes`. The renderer calls `apiGet` with `meta.connectionName` only. The tab follows the activity-bar environment and reloads when that connection changes.
+- Behavior taken from the Dataverse review and UX, where those sections override the earlier mapping: `RetrieveMultiple` only; database assemblies (`sourcetype` 0) and published custom workflow activities (`isworkflowactivity` true, `componentstate` 0); activity pages of 250 ordered by `assemblyname` then `plugintypeid`; groups by `pluginassemblyid`, sorted by assembly name; argument names parsed in the sidecar, with inputs and outputs returned independently and malformed XML kept as empty lists; missing names, dates, and lookup names stay empty and the screen shows Unknown. Processes are activated definitions (`type` 1, `statecode` 1, `componentstate` 0, `rendererobjecttypecode` null) in categories 0, 1, and 3, including global actions. `xaml` is read in the sidecar at page size 50, matched case-insensitively to the CLR type identity from `typename`, and dropped before the response. `categoryLabel` comes from formatted values. An intentional cap of 200 process pages sets `truncated`, and the screen says the process list stopped early. Unknown activity ids return 404. Dataverse faults, including service-protection faults with `Retry-After`, are returned as errors rather than empty lists. The screen is one tab (`allowMultipleInstances: false`) with the UX states, columns, start-condition order, and shared controls named in ### UX. No plugin source, WinForms UI, icons, or unique copy was copied.
+- Commands and results:
+  - `dotnet test api/PowerTools/PowerTools.API.WorkflowActivities.Tests/PowerTools.API.WorkflowActivities.Tests.csproj` — passed, 16 tests. `UseAppHost=false` was not required.
+  - From `desktop/`: `npm test` — passed, 56 files, 274 tests.
+  - From `desktop/`: `npm run lint` — passed.
+  - From `desktop/`: `npm run build` — passed.
+  - From `desktop/`: `npm run check` — passed (typecheck, lint with `--max-warnings 0`, tests, renderer build, and the smoke launch).
+
 ### Open questions
 
 - License is GPL-3.0-or-later, recorded in ### Match. Accept that copyleft impact before implementation. This screen is specified from the capability list and does not copy the plugin source, WinForms layout, icons, or wording.
 - Accept the GPL-3.0-or-later license impact before any implementation copies or vendors plugin code. A clean-room reimplementation from this brief, with no copied source, is the path the researcher described. This work is still inspired by a GPL plugin, so that inspiration has to be accepted before implementation.
+- Resolved: the add-tool request accepts a clean-room implementation and no plugin source was copied.
