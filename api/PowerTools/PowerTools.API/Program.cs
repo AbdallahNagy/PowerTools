@@ -8,6 +8,7 @@ using PowerTools.API.Tools.Metadata;
 using PowerTools.API.Tools.PluginRegistration;
 using PowerTools.API.Tools.PluginRegistration.Gateway;
 using PowerTools.API.Tools.PolymorphicLookup;
+using PowerTools.API.Tools.WorkflowActivities;
 using PowerTools.API.Tools.PluginRegistration.Inspection;
 using PowerTools.API.Tools.PluginRegistration.Services;
 
@@ -91,6 +92,7 @@ app.MapPreviewEndpoints();
 app.MapMigrationEndpoints();
 app.MapPluginRegistrationEndpoints();
 app.MapPolymorphicLookupEndpoints();
+app.MapWorkflowActivitiesEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would
