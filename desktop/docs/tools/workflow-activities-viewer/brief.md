@@ -86,3 +86,72 @@ New endpoints:
 License and copy limits: GPL-3.0-or-later. Inspiration only. Do not copy source, WinForms layout, icons, or the plugin's labels. Do not vendor the NuGet package. Implementation of steps 1-4 waits on an explicit acceptance of that license impact.
 
 Risks: substring matching false-positives and false-negatives; global actions omitted by `primaryentity` not null; non-database assemblies omitted; activated definitions only; `xaml` `like` may be expensive or unsupported on older on-premises servers, which is why the sidecar fallback exists; category `6` labeling must come from metadata rather than the plugin's "Reserved" string.
+
+### UX
+
+#### Sidebar
+
+- Tool id `workflow-activities-viewer`. Show it in the activity bar (`showInActivityBar: true`).
+- Title: **Workflow Activities Viewer**. Tooltip: **See which activated processes reference a custom workflow activity**. That tooltip is the activity-bar button `title` and accessible name. The entry is one row under the existing Search tools field.
+- One tab (`allowMultipleInstances: false`). Choosing the tool again activates that tab. The tab follows the one selected environment and reloads when that environment changes.
+- Icon: a new monochrome SVG. The activity bar already inverts sidebar icons. Do not reuse an XrmToolBox plugin icon.
+
+#### Title bar
+
+No title-bar menu item. Leave File, Edit, View, and Help unchanged. Refresh stays on the tool tab.
+
+#### Tool tab
+
+One surface, two columns, on `bg-[var(--color-bg-dark)]`. The left column is the assembly list. The right column is the selected activity. Each column is `bg-[var(--color-bg-darker)]`, split by `border-[var(--color-border-dark)]`. The environment control is the connection footer already on the activity bar.
+
+1. **No environment.** Both columns show one message: select an environment from the connection control at the bottom of the tool sidebar. `SearchInput` and **Refresh** are disabled. Do not load activities or processes.
+2. **Assemblies.** After an environment is selected, list custom workflow activities from database-stored plug-in assemblies, grouped by assembly name. Headers are in ascending name order. Each header is a tool-local button: the assembly name in `text-[var(--color-text-white)]`, the number of activities listed under it in `text-[var(--color-text-dark-gray)]`, and `hover:bg-[var(--color-hover-bg)]`. Activities under an expanded header are tool-local rows. These rows are not a new shared control.
+   - `SearchInput` placeholder `Filter by activity name`. Match a case-insensitive substring of the activity name. Assembly names are not part of the match.
+   - An empty filter starts with every assembly collapsed, and clearing the filter collapses every assembly again. With an empty filter, activating a header expands or collapses that assembly, and that choice stays until the filter changes or the environment changes.
+   - Any other filter hides assemblies with no matching activity, lists only the matching activities, and expands those assemblies. Headers stay expanded for as long as the filter text is non-empty.
+   - `Button` variant `secondary`, label Refresh. Disabled while a load is in flight. Refresh reloads activities and, when the same activity is still present, its processes. It keeps the filter text and any manual expansion. It keeps the selection when that activity is still in the list. Otherwise it clears the right column.
+3. **Activity.** Until a row is selected, the right column reads **Select an activity.** in `text-[var(--color-text-dark-gray)]`. The selected row uses `bg-[var(--color-hover-bg)]` and `text-[var(--color-text-white)]`. The detail shows the activity name, created on, created by, modified on, and modified by. The name is `text-[var(--color-text-white)]`. Labels are `text-[var(--color-text-dark-gray)]`. Values are `text-[var(--color-text-gray)]`. A missing value reads **Unknown** in `text-[var(--color-text-dark-gray)]`.
+4. **Arguments.** Under the dates, list input argument names and output argument names in two sections. Show both sections for every selected activity. A section with no names reads **No input arguments** or **No output arguments**.
+5. **Processes.** For the selected activity, show the activated process definitions whose XAML contains that activity name. Use `DataTable` with columns Process, Category, Primary table, Created on, Modified on, and Start conditions. Leave Category blank when the process has no category text. Do not set `onRowClick`. Start conditions, in this order and only when they apply, are On demand, Record created, Columns changed plus the column names, and Record deleted, separated by a comma. When none of those apply, the cell reads **No start conditions**.
+
+Changing the selected environment clears the filter, the manual expansion, and the selection, then loads activities for the new environment. The tab shows one environment.
+
+#### States
+
+- **Loading.** `Spinner` in the region that is loading. An activity load disables **Refresh** and publishes `Loading workflow activities…` with `useToolStatus`. A process load keeps the activity name, dates, and argument lists, replaces the process region with `Spinner`, and publishes `Loading processes…`.
+- **Empty.** No environment: the message in step 1, and status `No environment selected`. No activities: **No custom workflow activities in database-stored assemblies.** A filter with no matches: **No activities match this filter.** No processes: `DataTable` `emptyMessage` is `No activated process references this activity.`
+- **Success.** After activities load and no activity is selected, publish `N activities in M assemblies` with `useToolStatus`. `N` and `M` are the loaded totals. After processes load, publish `<activity name>: P activated processes`, or `<activity name>: no matching processes` when there are none. A successful load does not raise a toast.
+- **Error.** `useToast` type `error` with the failure text. An activity-load failure clears the list and the detail, shows the text in the left column, and offers `Button` variant `secondary`, label Retry. A process-load failure leaves the assembly list and the activity detail in place, shows the text in the process region with **Retry**, and publishes `<activity name>: could not load processes`. An activity-load error publishes `Could not load workflow activities`. Toast already styles `error`. The palette has no separate error color.
+
+#### Shared controls
+
+- `Button` — Refresh and Retry.
+- `DataTable` — processes for the selected activity.
+- `SearchInput` — the activity-name filter.
+- `Spinner` — activity and process loads.
+- `Toast` and `useToast` — load errors.
+- `useToolStatus` — the status strings above. The tool does not choose status ids.
+- `Checkbox`, `Modal`, and `ProgressBar` are unused. Nothing is edited, confirmed, or measured as partial progress.
+
+#### Colors
+
+`bg-[var(--color-bg-dark)]` for the tab, `bg-[var(--color-bg-darker)]` for both columns, `text-[var(--color-text-white)]` for the activity name, assembly headers, and the selected row, `text-[var(--color-text-gray)]` for values, `text-[var(--color-text-dark-gray)]` for counts, empty copy, and Unknown, `border-[var(--color-border-dark)]` for the divider, and `hover:bg-[var(--color-hover-bg)]` plus the selected-row fill. No hex values.
+
+#### What not to build
+
+- A File, Edit, View, or Help command for this tool.
+- Another tab of this tool, a second environment, or a compare between environments.
+- Creating, updating, or deleting processes, assemblies, or activities.
+- A process row that lists the activities that process runs, opens the process, or shows its XAML.
+- A filter on assembly name, category, table, or process name.
+- Argument type, required, description, or the raw argument XML.
+- Version, type name, or any process column beyond Process, Category, Primary table, Created on, Modified on, and Start conditions.
+- Activities from assemblies that are not database-stored, or processes that are not activated definitions.
+- `Checkbox`, `Modal`, `ProgressBar`, a shared text field, or any new control in `desktop/src/ui/shared/ui`.
+- A success toast for a completed load.
+- A tree, property grid, dependency heading, XrmToolBox host chrome, plugin icon, or plugin wording.
+- A connection picker inside the tab.
+
+### Open questions
+
+- License is GPL-3.0-or-later, recorded in ### Match. Accept that copyleft impact before implementation. This screen is specified from the capability list and does not copy the plugin source, WinForms layout, icons, or wording.
