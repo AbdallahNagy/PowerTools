@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
@@ -58,7 +58,15 @@ function renderTool() {
   );
 }
 
+class TestResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+beforeAll(() => vi.stubGlobal("ResizeObserver", TestResizeObserver));
 beforeEach(() => localStorage.removeItem(QUERY_LIBRARY_STORAGE_KEY));
+afterAll(() => vi.unstubAllGlobals());
 
 describe("FetchXML Tester", () => {
   it("keeps an empty query from calling Dataverse", async () => {
@@ -102,7 +110,7 @@ describe("FetchXML Tester", () => {
     );
     expect(
       within(screen.getByRole("region", { name: "Results" })).getByText(
-        "Number of rows returned: 1 (More records: true)",
+        "Results - Number of rows returned: 1 (More records: true)",
       ),
     ).toBeInTheDocument();
 
@@ -150,9 +158,20 @@ describe("FetchXML Tester", () => {
     );
     expect(
       within(screen.getByRole("region", { name: "Results" })).getByText(
-        "Number of rows returned: 1 (More records: false)",
+        "Results - Number of rows returned: 1 (More records: false)",
       ),
     ).toBeInTheDocument();
+  });
+
+  it("hides and shows the query library panel", async () => {
+    renderTool();
+    expect(await screen.findByRole("region", { name: "Query library" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide query library" }));
+    expect(screen.queryByRole("region", { name: "Query library" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Show query library" }));
+    expect(screen.getByRole("region", { name: "Query library" })).toBeInTheDocument();
   });
 
   it("formats comments, then saves and reloads the query", async () => {

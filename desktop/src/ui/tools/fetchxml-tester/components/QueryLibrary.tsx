@@ -25,7 +25,7 @@ export function QueryLibrary({
   const emptyMessage = search.trim() ? "No matching queries" : "No saved queries";
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col gap-2">
+    <section aria-label="Query library" className="flex h-full min-h-0 flex-1 flex-col gap-2">
       <div className="text-xs text-[var(--color-text-gray)]">Query library</div>
       <div className="flex items-center gap-3 flex-wrap">
         <div className="w-64">

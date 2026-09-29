@@ -10,10 +10,9 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
   const summary = result ? resultSummary(result.records.length, result.moreRecords) : null;
 
   return (
-    <section aria-label="Results" className="flex min-h-0 flex-1 flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <div className="text-xs text-[var(--color-text-gray)]">Results</div>
-        {summary ? <p className="text-xs text-[var(--color-text-white)]">{summary}</p> : null}
+    <section aria-label="Results" className="flex h-full min-h-0 flex-1 flex-col gap-2">
+      <div className="text-xs text-[var(--color-text-gray)]">
+        {summary ? `Results - ${summary}` : "Results"}
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {!result ? (
