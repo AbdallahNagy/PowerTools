@@ -114,7 +114,32 @@ function FetchXmlTesterPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[var(--color-bg-dark)] p-4 text-[var(--color-text-gray)]">
-      <div className="flex shrink-0 items-center justify-end">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="button" variant="secondary" onClick={handleFormat} disabled={isPending}>
+            Format
+          </Button>
+          <Button type="button" onClick={handleExecute} disabled={!hasQuery || isPending}>
+            Execute
+          </Button>
+          {isPending ? <Spinner /> : null}
+          <label className="flex items-center gap-2 text-xs text-[var(--color-text-gray)]">
+            <Checkbox
+              checked={showFormatted}
+              onChange={setShowFormatted}
+              id="fetchxml-tester-formatted"
+            />
+            Show formatted values
+          </label>
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setSaveOpen(true)}
+            disabled={!hasQuery || isPending}
+          >
+            Save
+          </Button>
+        </div>
         <Button
           type="button"
           variant="secondary"
@@ -137,31 +162,6 @@ function FetchXmlTesterPage() {
             <Panel defaultSize="42%" minSize="22%" className="flex min-h-0 flex-col gap-2">
               <div className="text-xs text-[var(--color-text-gray)]">FetchXML</div>
               <QueryEditor value={fetchXml} onChange={setFetchXml} onExecute={handleExecute} />
-              <div className="flex shrink-0 flex-wrap items-center gap-3">
-                <Button type="button" variant="secondary" onClick={handleFormat} disabled={isPending}>
-                  Format
-                </Button>
-                <Button type="button" onClick={handleExecute} disabled={!hasQuery || isPending}>
-                  Execute
-                </Button>
-                {isPending ? <Spinner /> : null}
-                <label className="flex items-center gap-2 text-xs text-[var(--color-text-gray)]">
-                  <Checkbox
-                    checked={showFormatted}
-                    onChange={setShowFormatted}
-                    id="fetchxml-tester-formatted"
-                  />
-                  Show formatted values
-                </label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => setSaveOpen(true)}
-                  disabled={!hasQuery || isPending}
-                >
-                  Save
-                </Button>
-              </div>
             </Panel>
             <Separator className="my-1 h-1 cursor-row-resize bg-[var(--color-bg-light)] transition-colors hover:bg-[var(--color-primary)]" />
             <Panel minSize="25%" className="flex min-h-0 flex-col">
