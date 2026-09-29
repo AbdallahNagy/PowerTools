@@ -12,6 +12,7 @@ interface DataTableProps<T> {
   rows: T[];
   onRowClick?: (row: T) => void;
   getRowKey: (row: T) => string;
+  selectedKey?: string | null;
   emptyMessage?: string;
 }
 
@@ -20,6 +21,7 @@ export function DataTable<T>({
   rows,
   onRowClick,
   getRowKey,
+  selectedKey,
   emptyMessage = "No results.",
 }: DataTableProps<T>) {
   return (
@@ -49,23 +51,28 @@ export function DataTable<T>({
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
-              <tr
-                key={getRowKey(row)}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={`border-b border-[#3c3c3c] last:border-0 transition-colors ${
-                  onRowClick ? "cursor-pointer hover:bg-[#2a2d2e]" : ""
-                }`}
-              >
-                {columns.map((col) => (
-                  <td key={col.key} className="px-3 py-2">
-                    {col.render
-                      ? col.render(row)
-                      : String((row as Record<string, unknown>)[col.key] ?? "")}
-                  </td>
-                ))}
-              </tr>
-            ))
+            rows.map((row) => {
+              const key = getRowKey(row);
+              const selected = selectedKey != null && selectedKey === key;
+              return (
+                <tr
+                  key={key}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  aria-selected={selectedKey != null ? selected : undefined}
+                  className={`border-b border-[#3c3c3c] last:border-0 transition-colors ${
+                    selected ? "bg-[var(--color-hover-bg)]" : ""
+                  } ${onRowClick ? "cursor-pointer hover:bg-[var(--color-hover-bg)]" : ""}`}
+                >
+                  {columns.map((col) => (
+                    <td key={col.key} className="px-3 py-2">
+                      {col.render
+                        ? col.render(row)
+                        : String((row as Record<string, unknown>)[col.key] ?? "")}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>

@@ -1,0 +1,117 @@
+import type { CascadeDto, PolymorphicMetadata, UnmanagedSolution } from "../model/types";
+
+const cascade: CascadeDto = {
+  assign: "NoCascade",
+  delete: "RemoveLink",
+  merge: "NoCascade",
+  reparent: "NoCascade",
+  share: "NoCascade",
+  unshare: "NoCascade",
+  rollupView: "NoCascade",
+};
+
+export const solutionsFixture: UnmanagedSolution[] = [
+  {
+    uniqueName: "Contoso",
+    friendlyName: "Contoso Solution",
+    version: "1.0.0.0",
+    publisherName: "Contoso Publisher",
+    customizationPrefix: "new",
+  },
+];
+
+export const metadataFixture: PolymorphicMetadata = {
+  languageCode: 1033,
+  entities: [
+    {
+      logicalName: "incident",
+      schemaName: "Incident",
+      displayName: "Case",
+      primaryIdAttribute: "incidentid",
+      canBePrimaryEntityInRelationship: false,
+      canBeRelatedEntityInRelationship: true,
+      tableType: "Standard",
+      isSolutionAware: false,
+      lookups: [
+        {
+          logicalName: "new_customerid",
+          schemaName: "new_CustomerId",
+          displayName: "Customer",
+          targets: ["account", "contact"],
+          isManaged: false,
+          isCustomizable: true,
+        },
+        {
+          logicalName: "new_managedid",
+          schemaName: "new_ManagedId",
+          displayName: "Managed Lookup",
+          targets: ["account"],
+          isManaged: true,
+          isCustomizable: true,
+        },
+      ],
+      manyToOne: [
+        {
+          schemaName: "new_incident_account_customer",
+          referencingAttribute: "new_customerid",
+          referencedEntity: "account",
+          referencedAttribute: "accountid",
+          isValidForAdvancedFind: true,
+          cascade,
+          associatedMenuBehavior: "UseCollectionName",
+          associatedMenuGroup: "Details",
+          associatedMenuOrder: 10000,
+          associatedMenuLabel: null,
+        },
+        {
+          schemaName: "new_incident_contact_customer",
+          referencingAttribute: "new_customerid",
+          referencedEntity: "contact",
+          referencedAttribute: "contactid",
+          isValidForAdvancedFind: true,
+          cascade,
+          associatedMenuBehavior: "UseCollectionName",
+          associatedMenuGroup: "Details",
+          associatedMenuOrder: 10000,
+          associatedMenuLabel: null,
+        },
+      ],
+    },
+    {
+      logicalName: "account",
+      schemaName: "Account",
+      displayName: "Account",
+      primaryIdAttribute: "accountid",
+      canBePrimaryEntityInRelationship: true,
+      canBeRelatedEntityInRelationship: false,
+      tableType: "Standard",
+      isSolutionAware: false,
+      lookups: [],
+      manyToOne: [],
+    },
+    {
+      logicalName: "contact",
+      schemaName: "Contact",
+      displayName: "Contact",
+      primaryIdAttribute: "contactid",
+      canBePrimaryEntityInRelationship: true,
+      canBeRelatedEntityInRelationship: false,
+      tableType: "Standard",
+      isSolutionAware: false,
+      lookups: [],
+      manyToOne: [],
+    },
+    {
+      logicalName: "lead",
+      schemaName: "Lead",
+      displayName: "Lead",
+      primaryIdAttribute: "leadid",
+      canBePrimaryEntityInRelationship: true,
+      canBeRelatedEntityInRelationship: false,
+      tableType: "Standard",
+      isSolutionAware: false,
+      lookups: [],
+      manyToOne: [],
+    },
+  ],
+};

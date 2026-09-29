@@ -1,6 +1,7 @@
 import { dataMigrationTool } from "./data-migration/tool";
 import { fetchXmlBuilderTool } from "./fetchxml-builder/tool";
 import { pluginRegistrationTool } from "./plugin-registration/tool";
+import { polymorphicLookupTool } from "./polymorphic-lookup-creator/tool";
 import { createToolRegistry } from "./defineTool";
 import { welcomeTool } from "./welcome/tool";
 
@@ -9,6 +10,7 @@ export const BUILT_IN_TOOLS = [
   dataMigrationTool,
   fetchXmlBuilderTool,
   pluginRegistrationTool,
+  polymorphicLookupTool,
 ] as const;
 
 const registry = createToolRegistry(BUILT_IN_TOOLS);

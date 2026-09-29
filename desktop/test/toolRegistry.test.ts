@@ -12,6 +12,7 @@ import {
 import { fetchXmlBuilderTool } from "../src/ui/tools/fetchxml-builder/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
+import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
 
 function TestTool() {
   return null;
@@ -74,15 +75,19 @@ describe("tool registry", () => {
       "data-migration",
       "fetchxml-builder",
       "plugin-registration",
+      "polymorphic-lookup-creator",
     ]);
     expect(ACTIVITY_BAR_TOOLS.map((tool) => tool.id)).toEqual([
       "data-migration",
       "fetchxml-builder",
       "plugin-registration",
+      "polymorphic-lookup-creator",
     ]);
     expect(TOOL_REGISTRY.welcome.allowMultipleInstances).toBe(false);
+    expect(TOOL_REGISTRY["polymorphic-lookup-creator"].allowMultipleInstances).toBe(false);
     expect(TOOL_REGISTRY["data-migration"]).toBe(dataMigrationTool);
     expect(TOOL_REGISTRY["fetchxml-builder"]).toBe(fetchXmlBuilderTool);
     expect(TOOL_REGISTRY["plugin-registration"]).toBe(pluginRegistrationTool);
+    expect(TOOL_REGISTRY["polymorphic-lookup-creator"]).toBe(polymorphicLookupTool);
   });
 });
