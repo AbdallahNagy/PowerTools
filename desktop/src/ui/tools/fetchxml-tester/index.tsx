@@ -17,6 +17,9 @@ import { resultSummary } from "./model/resultSummary";
 import { SAMPLE_FETCH_XML } from "./model/sampleQuery";
 import type { FetchResult } from "./model/types";
 
+const WORKSPACE_PANEL_ID = "fetchxml-tester-workspace";
+const LIBRARY_PANEL_ID = "fetchxml-tester-library";
+
 export default function FetchXmlTester() {
   return (
     <ToastProvider>
@@ -124,10 +127,20 @@ function FetchXmlTesterPage() {
         </Button>
       </div>
 
-      <Group className="flex min-h-0 flex-1">
+      <Group
+        key={showQueryLibrary ? "with-library" : "full-width"}
+        id="fetchxml-tester-horizontal"
+        className="flex min-h-0 flex-1"
+        defaultLayout={
+          showQueryLibrary
+            ? { [WORKSPACE_PANEL_ID]: 70, [LIBRARY_PANEL_ID]: 30 }
+            : { [WORKSPACE_PANEL_ID]: 100 }
+        }
+      >
         <Panel
-          defaultSize={showQueryLibrary ? 70 : 100}
-          minSize={35}
+          id={WORKSPACE_PANEL_ID}
+          defaultSize={showQueryLibrary ? "70%" : "100%"}
+          minSize="35%"
           className="flex min-h-0 min-w-0 flex-col"
         >
           <Group orientation="vertical" className="flex min-h-0 flex-1">
@@ -170,7 +183,12 @@ function FetchXmlTesterPage() {
         {showQueryLibrary ? (
           <>
             <Separator className="mx-1 w-1 cursor-col-resize bg-[var(--color-bg-light)] transition-colors hover:bg-[var(--color-primary)]" />
-            <Panel defaultSize="30%" minSize="18%" className="flex min-h-0 min-w-0 flex-col">
+            <Panel
+              id={LIBRARY_PANEL_ID}
+              defaultSize="30%"
+              minSize="18%"
+              className="flex min-h-0 min-w-0 flex-col"
+            >
               <QueryLibrary
                 queries={visibleQueries}
                 search={search}
