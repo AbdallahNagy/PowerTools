@@ -87,6 +87,87 @@ License and copy limits: GPL-3.0-or-later. Inspiration only. Do not copy source,
 
 Risks: substring matching false-positives and false-negatives; global actions omitted by `primaryentity` not null; non-database assemblies omitted; activated definitions only; `xaml` `like` may be expensive or unsupported on older on-premises servers, which is why the sidecar fallback exists; category `6` labeling must come from metadata rather than the plugin's "Reserved" string.
 
+### Dataverse review
+
+Evidence is the current Microsoft Learn table references and query guidance, not the plugin binary. Process table: [workflow](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/workflow). Activity table: [plugintype](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/plugintype). Assembly table: [pluginassembly](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/pluginassembly). Where custom activities can be used: [workflow extensions](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/workflow/workflow-extensions). Global actions: [configure actions](https://learn.microsoft.com/en-us/power-apps/maker/data-platform/configure-actions). Paging: [page FetchXML results](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/fetchxml/page-results) and [query data](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/org-service/entity-operations-query-data). Large-column and leading-wildcard filters: [query anti-patterns](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/query-antipatterns). Online throttling: [service protection API limits](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/api-limits). No live organization was queried.
+
+#### Messages, metadata, paging, and batching
+
+Both reads are `RetrieveMultiple` (`IOrganizationService.RetrieveMultiple`, or `RetrieveMultipleRequest`). The Web API equivalents are `GET /api/data/v9.2/plugintypes` and `GET /workflows`. `FetchExpression` and `QueryExpression` are the same message. There is no custom activity message to call. `WhoAmI`, impersonation, `ExecuteMultiple`, `ExecuteTransaction`, `SetState`, and publish are not part of this read. `RetrieveUnpublishedMultiple` is a different message. `workflow` supports it; the plugin does not call it.
+
+`plugintype.isworkflowactivity` is a Boolean. FetchXML `eq` `1` and QueryExpression `true` are the same condition. The activity columns in the brief exist. `name` is optional (max 256). `typename` is required and is the fully qualified CLR type (max 256). `assemblyname` is "Full path name of the plug-in assembly" (max 100), not `pluginassembly.pluginassemblyid`. `customworkflowactivityinfo` is a memo (max 1,048,576) described only as serialized `SandboxCustomActivityInfo`, including required arguments. Microsoft does not publish that XML schema.
+
+`pluginassembly.sourcetype` (`pluginassembly_sourcetype`) is Database `0`, Disk `1`, Normal `2`, AzureWebApp `3`, and File Store `4`. An inner link on `pluginassemblyid` with `sourcetype` eq `0` is a valid filter. It keeps database assemblies only.
+
+`workflow` columns used by the plugin match the table. `type` (`workflow_type`) is Definition `1`, Activation `2`, Template `3`. `statecode` is Draft `0`, Activated `1`, Suspended `2`. Activated uses status reason `2`. The documented status reason for Suspended is `3`, labeled CompanyDLPViolation, in the current table reference. `category` (`workflow_category`) is Workflow `0`, Dialog `1`, Business Rule `2`, Action `3`, Business Process Flow `4`, Modern Flow `5`, Desktop Flow `6`, AI Flow `7`. Take `categoryLabel` from `FormattedValues` (Web API `OData.Community.Display.V1.FormattedValue`) for `workflow_category` in the caller’s language. Keep the integer when the formatted label is missing. `primaryentity` is an `EntityName`. `rendererobjecttypecode` is an `EntityName` described as "The renderer type of Workflow". `ondemand`, `triggeroncreate`, and `triggerondelete` are Booleans and default false. `triggeronupdateattributelist` is a memo of attribute logical names. `subprocess` means the definition can be included as a child process. The parent process is `parentworkflowid`, which the plugin does not read. `xaml` is a memo (max 1,073,741,823) and is marked ApplicationRequired. Modern flow logic is `clientdata`. Desktop flow script is `definition`. A null `xaml` is a real retrieve result for categories that do not store Windows Workflow XAML.
+
+Custom workflow activities are used in the workflow, dialog, and action designers (categories `0`, `1`, and `3`). Dialogs are deprecated online; existing category `1` rows can remain. Global actions are category `3` with no table ("None (global)") and still store their definition in `xaml`. Business rules, business process flows, modern flows, desktop flows, and AI flows do not reference a custom workflow activity through `xaml`.
+
+The stable activity id is `plugintypeid`. The stable process id is `workflowid`. `plugintypeidunique` and `workflowidunique` identify a solution layer. Group assemblies by `pluginassemblyid`. `assemblyname` can collapse two assemblies onto one string. `plugintype.name` is the designer menu name. The Plug-in Registration tutorial edits that menu name independently of the CLR type. Match the class identity from `typename` (the type name before any assembly-qualified comma). The plugin’s case-insensitive substring of `name` against `xaml` is a different test. A short menu name false-matches, and a renamed menu name misses XAML that still contains the CLR type. The exact token written into `xaml` was not read from a live process.
+
+Page with `PagingCookie` until `MoreRecords` is false. Pass the cookie back unchanged. These tables are standard tables, so the default and maximum page size is 5,000, not the elastic 500. FetchXML with no `count` still stops at that page and sets `MoreRecords` when more rows exist. Order by `plugintypeid` or `workflowid` as the tie-break. Ordering only by `assemblyname` or `name` can repeat or skip rows across pages. Do not ask for 5,000 rows when the column set includes `xaml` or `customworkflowactivityinfo`. The platform does not publish a smaller maximum; a page of `xaml` values times out or returns a very large response.
+
+Do not filter on `xaml`. It is a large text column, and a contains test is a leading `%` wildcard. That is `PerformanceLargeColumnSearch` plus `PerformanceLeadingWildCard`. Documented faults include `LeadingWildcardCauseTimeout` (`0x80048573`, `-2147187341`), `DataEngineLeadingWildcardQueryThrottling` (`0x80048644`, `-2147187132`), and `PerformanceValidationIssuesCauseTimeout` (`0x80048575`, `-2147187339`). The process query should page category `0`, `1`, and `3` only, read `xaml` in the sidecar, test the substring there, and drop `xaml` before the response. The recommended FetchXML `like` on `xaml` is the query to avoid, including on older on-premises servers. FetchXML documents `%`, `_`, and `[` as wildcards. An escape clause for those characters was not found, so "escape `%` and `_`" is not a confirmed FetchXML contract.
+
+`ownerid` is SystemRequired on this user-owned table. `ownerid` not null does not remove rows. `componentstate` eq `0` (Published) should be on both queries. Values are Published `0`, Unpublished `1`, Deleted `2`, Deleted Unpublished `3`. The plugin never filters it.
+
+`triggeronupdateattributelist` splits on commas. Logical names do not contain commas. Empty means no column-change trigger. There is no separate `triggeronupdate` Boolean. An action often has all four start flags empty because it runs when it is invoked. Empty start conditions do not mean the process never runs.
+
+#### Privileges and connection requirements
+
+Use the existing caller’s `IOrganizationService`. Do not call `WhoAmI` and do not set `CallerId`. Impersonation would change which processes are visible.
+
+`plugintype` and `pluginassembly` are organization-owned. The caller needs Read on both (`prvReadPluginType`, `prvReadPluginAssembly`). Depth is organization. The inner link fails the whole activity query when either privilege is missing. `workflow` is user-owned. The caller needs Read (`prvReadWorkflow`) at the granted depth: user, business unit, parent-child, or organization. `RetrieveMultiple` returns only rows the caller can read. User-level Read is not an inventory of every activated process. `xaml` has no separate privilege in the table reference. Shared processes are included when share gives the caller access.
+
+`createdby` and `modifiedby` are lookups to `systemuser` and are optional. `EntityReference.Name` is empty when the name was not returned. The id can still be present. A missing name is an empty display value, not a failed page.
+
+#### Online versus on-premises
+
+The message is `RetrieveMultiple` on both. Online Plug-in Registration stores assemblies in the database and sandbox. Disk (`1`) and Normal (`2`) are the on-premises disk and GAC locations, and on-premises custom workflow activities can run from those locations in partial or full trust. Isolation mode None `1` is the on-premises full-trust value. Sandbox is `2`. External is `3`. The database-only link hides on-premises activities that the process designer can still run. AzureWebApp `3` and File Store `4` are in the current option set. Whether those source types can have `isworkflowactivity` true was not verified.
+
+Current Dataverse metadata includes categories `5`, `6`, and `7` and source types `3` and `4`. Older on-premises option sets can omit those values. An unknown integer should be returned as that integer with an empty label. Dialogs are deprecated online and can still be category `1` rows. Online service protection, per web server, is 6,000 requests, 1,200 seconds of execution, or 52 concurrent requests in a five-minute window: `-2147015902` (`0x80072322`), `-2147015903` (`0x80072321`), and `-2147015898` (`0x80072326`). The SDK returns `Retry-After` on `OrganizationServiceFault.ErrorDetails`. Those limits are the online contract. The plugin’s TLS 1.2 switch is a client setting. The existing connection already authenticates. Online requires TLS 1.2. On-premises auth stays with that connection (Active Directory, IFD, or OAuth).
+
+#### Solution and managed limits
+
+This tool only reads. Managed and unmanaged rows both come back from `RetrieveMultiple`. `ismanaged` is read-only on `plugintype` and `workflow`. Managed `xaml` and `customworkflowactivityinfo` are readable. No column in a managed layer has to be edited. Do not send `Update`, `SetState`, or a publish message, and do not pass a solution unique name. Filter `componentstate` eq `0` so a published row and another layer are not listed as two activities or two processes. Unpublished process edits are draft rows and are the `RetrieveUnpublishedMultiple` path, which this tool does not need for activated definitions.
+
+#### Failure modes
+
+One `RetrieveMultiple` either returns a page or faults. It does not commit a partial page. A privilege failure fails the whole query. A fault on a later page must be returned as the Dataverse error. A short page is complete only when `MoreRecords` is false. `truncated` means an intentional safety cap stopped paging early, and that cap has to be visible.
+
+A null or missing `xaml` does not match. Do not throw. A missing `plugintype.name`, `createdby`, `modifiedby`, date, Boolean, or `category` is an empty field. Do not drop the rest of the page. Boolean attributes that are absent are false. Malformed or empty `customworkflowactivityinfo` yields empty argument lists and still returns the activity. Return input names and output names independently.
+
+`like` on `xaml` fails with the leading-wildcard and large-column faults above, or with query throttling, before it returns a dependency list. Scanning every category’s `xaml` at page size 5,000 can time out even after the category list is corrected. Online service-protection faults include `Retry-After`. Surface those faults. Do not turn them into an empty process list.
+
+Copied plugin filters miss global actions when `primaryentity` is null, miss on-premises disk and GAC assemblies, miss draft and suspended processes, and miss a process whose XAML contains `typename` but not the menu `name`. They also download `xaml` for categories that cannot contain the activity. Duplicate `workflowid` or `plugintypeid` rows can appear when `componentstate` is unfiltered. That duplicate-layer result was not executed against a live organization.
+
+#### Plugin claims that are wrong
+
+- Category `6` is not "Reserved". Current `workflow_category` labels it Desktop Flow. Category `7` is AI Flow. The plugin map has no arm for `7`, so that label is empty. [workflow category](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/workflow), [desktop flows](https://learn.microsoft.com/en-us/power-automate/developer/desktop-flow-public-apis), [manage flows with code](https://learn.microsoft.com/en-us/power-automate/manage-flows-with-code).
+- `pluginassembly_sourcetype` is not only Database, Disk, and Normal. Current values include AzureWebApp `3` and File Store `4`. [pluginassembly](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/pluginassembly).
+- `plugintype.name` is not the process identity inside XAML. `typename` is the required CLR type. `name` is the optional menu name and can be edited after registration. [plugintype](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/reference/entities/plugintype), [tutorial](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/workflow/tutorial-create-workflow-extension).
+- `category` not null is not the set of processes that can run a custom activity. The documented hosts are workflow, dialog, and action. [workflow extensions](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/workflow/workflow-extensions).
+- `primaryentity` not null drops global actions. Global actions are valid action processes with no table, and their definition is `xaml`. [configure actions](https://learn.microsoft.com/en-us/power-apps/maker/data-platform/configure-actions).
+- `ownerid` not null does not filter this user-owned table. `ownerid` is SystemRequired.
+- `subprocess` is "can be a child process", not a link to a parent. The parent column is `parentworkflowid`.
+- A FetchXML `like` on `xaml` is a leading-wildcard filter on a large text column, not a safe way to avoid downloading definitions. [query anti-patterns](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/query-antipatterns).
+- Ignoring `MoreRecords` is a plugin defect. The platform reports further rows with `MoreRecords` and a paging cookie. The 5,000-row page is the standard-table maximum, not a silent end of data. [page results](https://learn.microsoft.com/en-us/power-apps/developer/data-platform/fetchxml/page-results).
+- A null `createdby` name, a null `plugintype.name`, or a null `xaml` does not fail `RetrieveMultiple`. The plugin throw is local code. `RetrieveMultiple` itself has no per-row partial success.
+
+#### Plugin claims that remain unverified
+
+- The `Inputs` / `Outputs` / `Name` element shape. The column is serialized `SandboxCustomActivityInfo`. No public schema was found, and no live value was retrieved. An `InOutArgument` may be stored once, under both lists, or under an element this parser does not read.
+- The exact substring a process designer writes into `xaml` for a custom activity.
+- Whether a global action stores `primaryentity` as null or as an empty string. The table reference marks the column SystemRequired. The maker documentation allows None (global). Those statements were not compared on a live row.
+- Which processes set `rendererobjecttypecode`. The null filter is the plugin’s choice.
+- Whether `RetrieveMultiple` returns every `componentstate` layer or only the active row. Both tables have the column, and `workflow` has a separate unpublished message. A live organization was not queried.
+- Whether source types `3` and `4` can have `isworkflowactivity` true.
+- Whether `pluginassembly.name` is unique in an organization. Grouping by `plugintype.assemblyname` can still merge distinct `pluginassemblyid` values.
+- A FetchXML escape syntax for `%`, `_`, and `[`.
+- The `triggeronupdateattributelist` value used when the designer selects every column.
+- On-premises option-set members for category `5`–`7` and source type `3`–`4` on servers older than the current Dataverse metadata.
+- That `xaml` is not column-secured in a given organization. The table reference shows it as readable with the row. Column security, if an administrator adds it, omits the value instead of failing the page.
+
 ### UX
 
 #### Sidebar
@@ -155,3 +236,4 @@ Changing the selected environment clears the filter, the manual expansion, and t
 ### Open questions
 
 - License is GPL-3.0-or-later, recorded in ### Match. Accept that copyleft impact before implementation. This screen is specified from the capability list and does not copy the plugin source, WinForms layout, icons, or wording.
+- Accept the GPL-3.0-or-later license impact before any implementation copies or vendors plugin code. A clean-room reimplementation from this brief, with no copied source, is the path the researcher described. This work is still inspired by a GPL plugin, so that inspiration has to be accepted before implementation.
