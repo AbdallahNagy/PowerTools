@@ -9,5 +9,5 @@ export const workflowActivitiesTool = defineTool({
   icon: WorkflowActivitiesIcon,
   showInActivityBar: true,
   component: WorkflowActivitiesViewer,
-  allowMultipleInstances: false,
+  allowMultipleInstances: true,
 });

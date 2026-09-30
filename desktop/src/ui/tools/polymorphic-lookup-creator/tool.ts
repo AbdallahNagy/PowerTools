@@ -9,5 +9,5 @@ export const polymorphicLookupTool = defineTool({
   icon: PolymorphicLookupIcon,
   showInActivityBar: true,
   component: PolymorphicLookupCreator,
-  allowMultipleInstances: false,
+  allowMultipleInstances: true,
 });

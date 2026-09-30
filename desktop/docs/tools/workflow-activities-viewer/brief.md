@@ -174,7 +174,7 @@ Copied plugin filters miss global actions when `primaryentity` is null, miss on-
 
 - Tool id `workflow-activities-viewer`. Show it in the activity bar (`showInActivityBar: true`).
 - Title: **Workflow Activities Viewer**. Tooltip: **See which activated processes reference a custom workflow activity**. That tooltip is the activity-bar button `title` and accessible name. The entry is one row under the existing Search tools field.
-- One tab (`allowMultipleInstances: false`). Choosing the tool again activates that tab. The tab follows the one selected environment and reloads when that environment changes.
+- More than one tab (`allowMultipleInstances: true`). Choosing the tool again opens another tab. Each tab keeps its own filter, expansion, and selection. Each tab follows the selected environment and reloads when that environment changes.
 - Icon: a new monochrome SVG. The activity bar already inverts sidebar icons. Do not reuse an XrmToolBox plugin icon.
 
 #### Title bar
@@ -221,7 +221,7 @@ Changing the selected environment clears the filter, the manual expansion, and t
 #### What not to build
 
 - A File, Edit, View, or Help command for this tool.
-- Another tab of this tool, a second environment, or a compare between environments.
+- A second environment, or a compare between environments.
 - Creating, updating, or deleting processes, assemblies, or activities.
 - A process row that lists the activities that process runs, opens the process, or shows its XAML.
 - A filter on assembly name, category, table, or process name.
@@ -241,7 +241,7 @@ Changing the selected environment clears the filter, the manual expansion, and t
   - Sidecar `api/PowerTools/PowerTools.API/Tools/WorkflowActivities/`, mapped from `Program.cs` with `DataverseContextFilter` and `DataverseClientFactory`
   - `api/PowerTools/PowerTools.API.WorkflowActivities.Tests/` and its solution entry
 - Endpoints: `GET /api/workflow-activities` and `GET /api/workflow-activities/{pluginTypeId}/processes`. The renderer calls `apiGet` with `meta.connectionName` only. The tab follows the activity-bar environment and reloads when that connection changes.
-- Behavior taken from the Dataverse review and UX, where those sections override the earlier mapping: `RetrieveMultiple` only; database assemblies (`sourcetype` 0) and published custom workflow activities (`isworkflowactivity` true, `componentstate` 0); activity pages of 250 ordered by `assemblyname` then `plugintypeid`; groups by `pluginassemblyid`, sorted by assembly name; argument names parsed in the sidecar, with inputs and outputs returned independently and malformed XML kept as empty lists; missing names, dates, and lookup names stay empty and the screen shows Unknown. Processes are activated definitions (`type` 1, `statecode` 1, `componentstate` 0, `rendererobjecttypecode` null) in categories 0, 1, and 3, including global actions. `xaml` is read in the sidecar at page size 50, matched case-insensitively to the CLR type identity from `typename`, and dropped before the response. `categoryLabel` comes from formatted values. An intentional cap of 200 process pages sets `truncated`, and the screen says the process list stopped early. Unknown activity ids return 404. Dataverse faults, including service-protection faults with `Retry-After`, are returned as errors rather than empty lists. The screen is one tab (`allowMultipleInstances: false`) with the UX states, columns, start-condition order, and shared controls named in ### UX. No plugin source, WinForms UI, icons, or unique copy was copied.
+- Behavior taken from the Dataverse review and UX, where those sections override the earlier mapping: `RetrieveMultiple` only; database assemblies (`sourcetype` 0) and published custom workflow activities (`isworkflowactivity` true, `componentstate` 0); activity pages of 250 ordered by `assemblyname` then `plugintypeid`; groups by `pluginassemblyid`, sorted by assembly name; argument names parsed in the sidecar, with inputs and outputs returned independently and malformed XML kept as empty lists; missing names, dates, and lookup names stay empty and the screen shows Unknown. Processes are activated definitions (`type` 1, `statecode` 1, `componentstate` 0, `rendererobjecttypecode` null) in categories 0, 1, and 3, including global actions. `xaml` is read in the sidecar at page size 50, matched case-insensitively to the CLR type identity from `typename`, and dropped before the response. `categoryLabel` comes from formatted values. An intentional cap of 200 process pages sets `truncated`, and the screen says the process list stopped early. Unknown activity ids return 404. Dataverse faults, including service-protection faults with `Retry-After`, are returned as errors rather than empty lists. The screen allows more than one tab (`allowMultipleInstances: true`) with the UX states, columns, start-condition order, and shared controls named in ### UX. No plugin source, WinForms UI, icons, or unique copy was copied.
 - Commands and results:
   - `dotnet test api/PowerTools/PowerTools.API.WorkflowActivities.Tests/PowerTools.API.WorkflowActivities.Tests.csproj` — passed, 16 tests. `UseAppHost=false` was not required.
   - From `desktop/`: `npm test` — passed, 56 files, 274 tests.

@@ -90,8 +90,8 @@ describe("tool registry", () => {
       "workflow-activities-viewer",
     ]);
     expect(TOOL_REGISTRY.welcome.allowMultipleInstances).toBe(false);
-    expect(TOOL_REGISTRY["polymorphic-lookup-creator"].allowMultipleInstances).toBe(false);
-    expect(TOOL_REGISTRY["workflow-activities-viewer"].allowMultipleInstances).toBe(false);
+    expect(TOOL_REGISTRY["polymorphic-lookup-creator"].allowMultipleInstances).toBe(true);
+    expect(TOOL_REGISTRY["workflow-activities-viewer"].allowMultipleInstances).toBe(true);
     expect(TOOL_REGISTRY["workflow-activities-viewer"].title).toBe("Workflow Activities Viewer");
     expect(TOOL_REGISTRY["workflow-activities-viewer"].tooltip).toBe(
       "See which activated processes reference a custom workflow activity",
