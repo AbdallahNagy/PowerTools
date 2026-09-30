@@ -38,6 +38,14 @@ Colors use the CSS variables in that skill, written as Tailwind variable classes
 
 Status text is published with `useToolStatus`. The tool does not manage status ids.
 
+When the tool surface is split into two views, left and right or top and bottom, the divider is draggable. Specify `Group`, `Panel`, and `Separator` from `react-resizable-panels`, the same split the shell uses in `desktop/src/ui/components/layout/Layout.tsx`. This is not a new shared control.
+
+- A horizontal split uses a `w-1 cursor-col-resize` separator. A vertical split sets `orientation="vertical"` and uses an `h-1 cursor-row-resize` separator.
+- Name the separator, for example `Resize panes`.
+- Color it `bg-[var(--color-bg-light)]`, with `hover:bg-[var(--color-primary)]` and `active:bg-[var(--color-primary)]`.
+- Give each pane a `minSize` so neither view can be dragged away.
+- Do not use a fixed half width or a static border as the only divider.
+
 ## Output
 
 Append `### UX` to the brief. Do not rewrite earlier sections, including `### Dataverse review` if it is already present. If `### UX` already exists, stop.
@@ -46,7 +54,7 @@ Specify:
 
 - How the tool is opened from the sidebar, including title and tooltip
 - Whether a title-bar menu item is required, and which menu
-- The flow inside the tool tab
+- The flow inside the tool tab, including a draggable divider when the tab is split into two views
 - Loading, empty, success, and error states
 - Shared controls to reuse, named from the list above
 - What not to build, including capabilities outside `### What it does` and any WinForms layout you refuse to copy
@@ -58,4 +66,4 @@ Append a bullet under `### Open questions` only for an ambiguous tool name, a GP
 - Do not copy WinForms layouts, XrmToolBox host chrome, icons, or plugin copy.
 - Do not invent sidecar endpoints, request bodies, or Dataverse messages.
 - Do not write production code.
-- Do not add shared form controls. Specify only controls that already exist in `desktop/src/ui/shared/ui`.
+- Do not add shared form controls. Specify only controls that already exist in `desktop/src/ui/shared/ui`, plus the draggable `react-resizable-panels` split described above.
