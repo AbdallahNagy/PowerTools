@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import type { TabData } from "../../common/types/tab-data.interface";
 import type { ToolDefinition } from "../../tools/defineTool";
+import { PrimaryActionScope } from "../../shared/keyboard";
 import { ToolErrorBoundary } from "./ToolErrorBoundary";
 import { ToolRuntimeContext } from "./ToolRuntimeContext";
 
@@ -18,9 +19,11 @@ export default function ToolHost({ tab, definition }: ToolHostProps) {
 
   return (
     <ToolRuntimeContext.Provider value={runtime}>
-      <ToolErrorBoundary toolTitle={definition.title}>
-        <Tool />
-      </ToolErrorBoundary>
+      <PrimaryActionScope instanceId={tab.id}>
+        <ToolErrorBoundary toolTitle={definition.title}>
+          <Tool />
+        </ToolErrorBoundary>
+      </PrimaryActionScope>
     </ToolRuntimeContext.Provider>
   );
 }

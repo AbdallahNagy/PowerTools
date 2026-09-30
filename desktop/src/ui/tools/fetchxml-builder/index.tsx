@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
+import { usePrimaryAction } from "../../shared/keyboard";
 import { Button, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
 import { useConnections, useConnectionSelection } from "../../shared/connections";
@@ -126,6 +127,11 @@ function FetchXmlBuilderPage() {
   };
 
   const canRun = !!selectedEntity && !!connectionName && !fieldsLoading && !isPending;
+  usePrimaryAction({
+    label: "Run",
+    enabled: canRun,
+    run: () => handleRun(1),
+  });
   const resultData: FetchResult | null = result ?? null;
 
   return (

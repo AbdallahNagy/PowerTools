@@ -97,6 +97,21 @@ describe("window chrome", () => {
     });
   });
 
+  it("leaves Ctrl+W free so the shell can close the active tab", async () => {
+    const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
+    const template = createApplicationMenuTemplate();
+    const windowMenu = template.find((item) => item.label === "Window");
+
+    expect(windowMenu).toMatchObject({
+      label: "Window",
+      submenu: [
+        { role: "minimize" },
+        { role: "close", accelerator: "" },
+      ],
+    });
+    expect(template.some((item) => item.role === "windowMenu")).toBe(false);
+  });
+
   it("matches File, Edit, View, and Help by label or role", async () => {
     const { findApplicationSubmenu, parseTitleBarMenuId } = await import(
       "../../src/electron/windowChrome.ts"
