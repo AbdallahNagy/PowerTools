@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Group, Panel, Separator } from "react-resizable-panels";
 import { Button, Checkbox, DataTable, Modal, SearchInput, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import { useConnections } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
@@ -426,8 +427,8 @@ function PolymorphicLookupPage() {
           Select an environment from the connection control at the bottom of the tool sidebar.
         </div>
       ) : (
-        <div className="flex min-h-0 flex-1">
-          <section className="flex w-1/2 min-w-0 flex-col gap-2 overflow-hidden border-r border-[var(--color-border-dark)] bg-[var(--color-bg-darker)] p-3">
+        <Group orientation="horizontal" className="flex min-h-0 flex-1">
+          <Panel defaultSize="50%" minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden bg-[var(--color-bg-darker)] p-3">
             <PickerStep
               title="Unmanaged solution"
               summary={solution ? `${solution.friendlyName} (${prefixText(solution.customizationPrefix)})` : null}
@@ -737,9 +738,12 @@ function PolymorphicLookupPage() {
                 </div>
               </PickerStep>
             ) : null}
-          </section>
-
-          <section className="flex w-1/2 min-w-0 flex-col gap-3 overflow-auto bg-[var(--color-bg-darker)] p-3">
+          </Panel>
+          <Separator
+            aria-label="Resize panes"
+            className="w-1 cursor-col-resize bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)]"
+          />
+          <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-3 overflow-auto bg-[var(--color-bg-darker)] p-3">
             {mode == null ? (
               <p className="text-sm text-[var(--color-text-gray)]">Select a lookup or create one.</p>
             ) : (
@@ -815,8 +819,8 @@ function PolymorphicLookupPage() {
             )}
               </>
             )}
-          </section>
-        </div>
+          </Panel>
+        </Group>
       )}
 
       <Modal

@@ -247,7 +247,7 @@ You cannot edit components inside a managed solution. Customizations of a custom
 
 - Tool id `polymorphic-lookup-creator`. Show it in the activity bar (`showInActivityBar: true`).
 - Title: **Polymorphic Lookup Creator**. Tooltip: **Create, update, and delete polymorphic lookups for the selected environment**.
-- One tab only (`allowMultipleInstances: false`). The tab follows the single selected environment.
+- More than one tab (`allowMultipleInstances: true`). Choosing the tool again opens another tab. Each tab keeps its own solution, table, and editor state, and follows the selected environment.
 - Icon: a new monochrome SVG. The activity bar already inverts sidebar icons. Do not reuse an XrmToolBox plugin icon.
 
 #### Title bar
@@ -256,7 +256,7 @@ No title-bar menu item. Leave File, Edit, View, and Help unchanged. The tool ope
 
 #### Tool tab
 
-One tab, two columns, bound to the active connection. The left column is context. The right column is the editor. The tab background is `bg-[var(--color-bg-dark)]`. Each column is `bg-[var(--color-bg-darker)]` with a `border-[var(--color-border-dark)]` divider. No extra windows.
+One surface, two columns, bound to the active connection. The left column is context. The right column is the editor. The tab background is `bg-[var(--color-bg-dark)]`. Each column is `bg-[var(--color-bg-darker)]`. The columns are a horizontal split with a draggable divider: `Group`, `Panel`, and `Separator` from `react-resizable-panels`. The separator is `w-1 cursor-col-resize bg-[var(--color-bg-light)]`, with `hover:bg-[var(--color-primary)]` and `active:bg-[var(--color-primary)]`, and its accessible name is `Resize panes`. Each pane keeps a minimum size so it cannot be dragged away. No extra windows.
 
 1. **No environment.** If no environment is selected, both columns stay empty except one message: select an environment from the connection control at the bottom of the tool sidebar. Do not load solutions or tables.
 2. **Unmanaged solution.** `SearchInput` and a `DataTable` of unmanaged solutions, with display name and publisher customization prefix. One row is selected. The prefix is shown again as `text-[var(--color-text-dark-gray)]` and is the only prefix used for new schema names. A lookup created from this tab is included in that solution. There is no inclusion checkbox.
@@ -298,7 +298,7 @@ Tool-local inputs use `bg-[var(--color-bg-light)]`, `text-[var(--color-text-gray
 #### What not to build
 
 - A File, Edit, View, or Help command for this tool.
-- A second tab, or any compare, copy, or sync across environments.
+- Any compare, copy, or sync across environments.
 - Creating or editing solutions, publishers, or tables, or typing a publisher prefix by hand.
 - A lookup aimed at fewer than two referenced tables, or turning one into a single-target lookup. Removing the column is Delete.
 - Form, view, or app placement of the column, a relationship diagram, or a metadata browser beyond the two table lists.
@@ -310,7 +310,7 @@ Tool-local inputs use `bg-[var(--color-bg-light)]`, `text-[var(--color-text-gray
 ### Implementation notes and test evidence
 
 - Sidecar folder `api/PowerTools/PowerTools.API/Tools/PolymorphicLookup/`, registered from `Program.cs` with `DataverseContextFilter` and `DataverseClientFactory`. Endpoints: `GET /api/polymorphic-lookups/metadata`, `GET /api/polymorphic-lookups/solutions`, `POST /api/polymorphic-lookups`, `POST /api/polymorphic-lookups/relationships`, `PUT /api/polymorphic-lookups/relationships/{schemaName}`, `DELETE /api/polymorphic-lookups/relationships/{schemaName}`, and `DELETE /api/polymorphic-lookups/{entityLogicalName}/{attributeLogicalName}`.
-- Desktop folder `desktop/src/ui/tools/polymorphic-lookup-creator/`, registered once in `desktop/src/ui/tools/registry.tsx`. Activity-bar tool, one tab, no title-bar command. Referencing tables use `CanBeRelatedEntityInRelationship`. Referenced tables use `CanBePrimaryEntityInRelationship`. Cascade is Assign, Merge, Reparent, Share, Unshare, and RollupView = NoCascade, and Delete = RemoveLink. Elastic tables show the helper text and do not change that cascade. Create and Save stay disabled until two referenced tables are checked. Unmanaged solutions are paged at 5,000 rows. `IsManaged`, `IsCustomizable`, `IsSolutionAware`, and `TableType` are requested. A solution-aware referencing table is refused before create. `SolutionUniqueName` is sent only on create lookup and add relationship. Fault `-2147192813` is `DuplicateAttributeSchemaName`. An edit runs add, then delete, then update, and stops on the first fault. No publish and no `AddSolutionComponent`.
+- Desktop folder `desktop/src/ui/tools/polymorphic-lookup-creator/`, registered once in `desktop/src/ui/tools/registry.tsx`. Activity-bar tool, more than one tab, no title-bar command. Referencing tables use `CanBeRelatedEntityInRelationship`. Referenced tables use `CanBePrimaryEntityInRelationship`. Cascade is Assign, Merge, Reparent, Share, Unshare, and RollupView = NoCascade, and Delete = RemoveLink. Elastic tables show the helper text and do not change that cascade. Create and Save stay disabled until two referenced tables are checked. Unmanaged solutions are paged at 5,000 rows. `IsManaged`, `IsCustomizable`, `IsSolutionAware`, and `TableType` are requested. A solution-aware referencing table is refused before create. `SolutionUniqueName` is sent only on create lookup and add relationship. Fault `-2147192813` is `DuplicateAttributeSchemaName`. An edit runs add, then delete, then update, and stops on the first fault. No publish and no `AddSolutionComponent`.
 - Sidecar tests: `dotnet test api/PowerTools/PowerTools.API.PolymorphicLookup.Tests/PowerTools.API.PolymorphicLookup.Tests.csproj -p:UseAppHost=false -p:OutputPath=D:\dev\PowerTools\tmp\poly-bin\` — 21 passed. The default API `bin` output was locked by a running sidecar, so the test build used that alternate output path.
 - From `desktop/`, `npm run check` passed typecheck, `eslint . --max-warnings 0`, and `npm test` (51 files, 243 tests), and `vite build` succeeded. `npm run build` (`tsc -b && vite build`) passed. The first Playwright smoke run timed out after 120 seconds waiting for the Electron window at `http://localhost:5123/` while another Power Tools process was running. A later `npm run test:smoke:run` with port 5123 free passed: 1 test, 13.7s.
 

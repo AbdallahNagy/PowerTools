@@ -3,6 +3,7 @@ import { fetchXmlBuilderTool } from "./fetchxml-builder/tool";
 import { fetchXmlTesterTool } from "./fetchxml-tester/tool";
 import { pluginRegistrationTool } from "./plugin-registration/tool";
 import { polymorphicLookupTool } from "./polymorphic-lookup-creator/tool";
+import { workflowActivitiesTool } from "./workflow-activities-viewer/tool";
 import { createToolRegistry } from "./defineTool";
 import { welcomeTool } from "./welcome/tool";
 
@@ -13,6 +14,7 @@ export const BUILT_IN_TOOLS = [
   fetchXmlTesterTool,
   pluginRegistrationTool,
   polymorphicLookupTool,
+  workflowActivitiesTool,
 ] as const;
 
 const registry = createToolRegistry(BUILT_IN_TOOLS);

@@ -14,6 +14,7 @@ import { fetchXmlTesterTool } from "../src/ui/tools/fetchxml-tester/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
+import { workflowActivitiesTool } from "../src/ui/tools/workflow-activities-viewer/tool";
 
 function TestTool() {
   return null;
@@ -78,6 +79,7 @@ describe("tool registry", () => {
       "fetchxml-tester",
       "plugin-registration",
       "polymorphic-lookup-creator",
+      "workflow-activities-viewer",
     ]);
     expect(ACTIVITY_BAR_TOOLS.map((tool) => tool.id)).toEqual([
       "data-migration",
@@ -85,13 +87,21 @@ describe("tool registry", () => {
       "fetchxml-tester",
       "plugin-registration",
       "polymorphic-lookup-creator",
+      "workflow-activities-viewer",
     ]);
     expect(TOOL_REGISTRY.welcome.allowMultipleInstances).toBe(false);
-    expect(TOOL_REGISTRY["polymorphic-lookup-creator"].allowMultipleInstances).toBe(false);
+    expect(TOOL_REGISTRY["polymorphic-lookup-creator"].allowMultipleInstances).toBe(true);
+    expect(TOOL_REGISTRY["workflow-activities-viewer"].allowMultipleInstances).toBe(true);
+    expect(TOOL_REGISTRY["workflow-activities-viewer"].title).toBe("Workflow Activities Viewer");
+    expect(TOOL_REGISTRY["workflow-activities-viewer"].tooltip).toBe(
+      "See which activated processes reference a custom workflow activity",
+    );
+    expect(TOOL_REGISTRY["workflow-activities-viewer"].showInActivityBar).toBe(true);
     expect(TOOL_REGISTRY["data-migration"]).toBe(dataMigrationTool);
     expect(TOOL_REGISTRY["fetchxml-builder"]).toBe(fetchXmlBuilderTool);
     expect(TOOL_REGISTRY["fetchxml-tester"]).toBe(fetchXmlTesterTool);
     expect(TOOL_REGISTRY["plugin-registration"]).toBe(pluginRegistrationTool);
     expect(TOOL_REGISTRY["polymorphic-lookup-creator"]).toBe(polymorphicLookupTool);
+    expect(TOOL_REGISTRY["workflow-activities-viewer"]).toBe(workflowActivitiesTool);
   });
 });

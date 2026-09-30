@@ -7,7 +7,10 @@ export interface ToolDefinition {
   icon: string;
   showInActivityBar: boolean;
   component: ComponentType;
-  /** Allow opening more than one tab of this tool. Defaults to true. */
+  /**
+   * Allow opening more than one tab of this tool.
+   * Omitted means true. Set false only when a second tab cannot work.
+   */
   allowMultipleInstances?: boolean;
 }
 

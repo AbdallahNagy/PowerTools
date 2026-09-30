@@ -64,6 +64,10 @@ What the developer changed, which checks ran, and the results.
 
 Only decisions the user must make. Write `None.` when there are none. Do not delete questions an earlier role already appended.
 
+## Multiple tabs
+
+Activity-bar tools allow more than one tab by default. Set `allowMultipleInstances: true`. Choosing the tool in the sidebar opens another tab, and each tab keeps its own state. A tool sets `allowMultipleInstances: false` only when a second tab cannot work, and the brief says why. Welcome stays a single tab. One selected environment is not a reason to block a second tab.
+
 ## Developer gate
 
 `power-tools-developer` does not implement, branch, or open a pull request until `desktop/docs/tools/<tool-id>/brief.md` contains both `### Dataverse review` and `### UX`, and each of those sections has at least one sentence or list item. Missing either section means the brief is not ready.

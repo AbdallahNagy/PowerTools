@@ -85,6 +85,25 @@ describe("tab state", () => {
     expect(third.activeTabId).toBe("fetchxml-builder-303-3");
   });
 
+  it("opens another tab when multiple instances are left unspecified", () => {
+    const tool = defineTool({
+      id: "default-tool",
+      title: "Default Tool",
+      icon: "",
+      showInActivityBar: true,
+      component: TestTool,
+    });
+    const first = openToolTab(initialState, tool, 801);
+    const second = openToolTab(first, tool, 802);
+
+    expect(second.tabs.map((tab) => tab.title)).toEqual([
+      "Welcome",
+      "Default Tool",
+      "Default Tool 2",
+    ]);
+    expect(second.activeTabId).toBe("default-tool-802");
+  });
+
   it("activates an existing singleton instead of adding another", () => {
     const withBuilder = openToolTab(initialState, builderTool, 404);
 
