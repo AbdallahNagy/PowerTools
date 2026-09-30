@@ -27,7 +27,7 @@ Implement only what the brief says. The source of truth is:
 
 Shape:
 
-- New folder `desktop/src/ui/tools/<tool-id>/` with a `tool.ts` manifest created by `defineTool`
+- New folder `desktop/src/ui/tools/<tool-id>/` with a `tool.ts` manifest created by `defineTool`. Set `allowMultipleInstances: true` unless the brief says a second tab cannot work and why. Welcome stays `false`.
 - One registration in `desktop/src/ui/tools/registry.tsx`
 - Private components, model, API hooks, state, fixtures, and tests inside that folder
 - Sidecar endpoints under `api/PowerTools/PowerTools.API/Tools/<Tool>/`, registered from `api/PowerTools/PowerTools.API/Program.cs`

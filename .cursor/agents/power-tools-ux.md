@@ -23,6 +23,8 @@ The tool lives in the current desktop shell. Read these before specifying placem
 - Tool sidebar in `desktop/src/ui/components/layout/ActivityBar.tsx` (search, then one entry per activity-bar tool)
 - Tabs and status bar around the tool surface
 
+Activity-bar tools allow more than one tab. Specify `allowMultipleInstances: true`. Choosing the sidebar entry opens another tab. Each tab keeps its own filter, selection, and editor state, and still follows the selected environment. Do not list another tab of this tool under what not to build. Set `allowMultipleInstances: false` only when the capability list cannot work with a second tab, and say why. Welcome is the single-tab exception. Do not copy that pattern.
+
 Reuse shared controls already exported from `desktop/src/ui/shared/ui`:
 
 - `Button`
