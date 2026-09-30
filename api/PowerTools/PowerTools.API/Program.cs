@@ -8,6 +8,7 @@ using PowerTools.API.Tools.Metadata;
 using PowerTools.API.Tools.PluginRegistration;
 using PowerTools.API.Tools.PluginRegistration.Gateway;
 using PowerTools.API.Tools.PolymorphicLookup;
+using PowerTools.API.Tools.SolutionComponentsMover;
 using PowerTools.API.Tools.WorkflowActivities;
 using PowerTools.API.Tools.PluginRegistration.Inspection;
 using PowerTools.API.Tools.PluginRegistration.Services;
@@ -38,6 +39,9 @@ builder.Services.AddScoped<DataverseContextFilter>();
 builder.Services.AddScoped<DataverseTargetContextFilter>();
 builder.Services.AddSingleton<IMigrationJobStore, InMemoryMigrationJobStore>();
 builder.Services.AddHostedService<MigrationJobRunner>();
+builder.Services.AddSingleton<ISolutionCopyJobStore, InMemorySolutionCopyJobStore>();
+builder.Services.AddSingleton<ISolutionCopyDelay, SolutionCopyDelay>();
+builder.Services.AddHostedService<SolutionCopyJobRunner>();
 builder.Services.AddScoped<IPluginRegistrationGateway, DataversePluginRegistrationGateway>();
 builder.Services.AddScoped<CapabilitiesService>();
 builder.Services.AddScoped<CatalogService>();
@@ -93,6 +97,7 @@ app.MapMigrationEndpoints();
 app.MapPluginRegistrationEndpoints();
 app.MapPolymorphicLookupEndpoints();
 app.MapWorkflowActivitiesEndpoints();
+app.MapSolutionComponentsMoverEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would
