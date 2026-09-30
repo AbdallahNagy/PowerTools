@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
@@ -91,6 +91,15 @@ async function editCustomer() {
   fireEvent.click(saveButtons[saveButtons.length - 1]!);
 }
 
+class TestResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+beforeAll(() => vi.stubGlobal("ResizeObserver", TestResizeObserver));
+afterAll(() => vi.unstubAllGlobals());
+
 describe("Polymorphic Lookup Creator", () => {
   beforeEach(() => {
     httpServer.use(...readHandlers());
@@ -98,6 +107,7 @@ describe("Polymorphic Lookup Creator", () => {
 
   it("shrinks the chosen list and expands it again from its summary", async () => {
     renderTool();
+    expect(await screen.findByRole("separator", { name: "Resize panes" })).toBeInTheDocument();
     fireEvent.click(await screen.findByText("Contoso Solution"));
     expect(screen.queryByPlaceholderText("Search solutions")).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search referencing tables")).toBeInTheDocument();

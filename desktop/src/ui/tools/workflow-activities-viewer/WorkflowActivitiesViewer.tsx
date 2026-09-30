@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Group, Panel, Separator } from "react-resizable-panels";
 import { useConnections } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { Button, DataTable, SearchInput, Spinner, ToastProvider, useToast } from "../../shared/ui";
@@ -148,8 +149,8 @@ function WorkflowActivitiesPage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 bg-[var(--color-bg-dark)]">
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col border-r border-[var(--color-border-dark)] bg-[var(--color-bg-darker)]">
+    <Group orientation="horizontal" className="flex min-h-0 flex-1 bg-[var(--color-bg-dark)]">
+      <Panel defaultSize="50%" minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-darker)]">
         <div className="flex shrink-0 items-center gap-2 border-b border-[var(--color-border-dark)] p-3">
           <fieldset disabled={!connectionName} className="m-0 min-w-0 flex-1 border-0 p-0">
             <SearchInput
@@ -177,8 +178,12 @@ function WorkflowActivitiesPage() {
             onRetry={() => void refresh()}
           />
         </div>
-      </section>
-      <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-[var(--color-bg-darker)]">
+      </Panel>
+      <Separator
+        aria-label="Resize panes"
+        className="w-1 cursor-col-resize bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)]"
+      />
+      <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-darker)]">
         <div className="min-h-0 flex-1 overflow-auto p-3">
           {!connectionName ? (
             <p className="text-[var(--color-text-dark-gray)]">{noEnvironmentMessage}</p>
@@ -195,8 +200,8 @@ function WorkflowActivitiesPage() {
             />
           )}
         </div>
-      </section>
-    </div>
+      </Panel>
+    </Group>
   );
 }
 

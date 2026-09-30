@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
@@ -70,6 +70,15 @@ function renderTool(bridgeOverrides: DesktopBridgeOverrides = toolBridge) {
   );
 }
 
+class TestResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+beforeAll(() => vi.stubGlobal("ResizeObserver", TestResizeObserver));
+afterAll(() => vi.unstubAllGlobals());
+
 function activitiesHandler(body: WorkflowActivitiesResponse = activitiesFixture) {
   return http.get("http://localhost/api/workflow-activities", ({ request }) => {
     const environment = request.headers.get("x-environment-url");
@@ -108,6 +117,7 @@ describe("Workflow Activities Viewer", () => {
     expect(await screen.findAllByText(
       "Select an environment from the connection control at the bottom of the tool sidebar.",
     )).toHaveLength(2);
+    expect(screen.getByRole("separator", { name: "Resize panes" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Refresh" })).toBeDisabled();
     expect(screen.getByPlaceholderText("Filter by activity name")).toBeDisabled();
     expect(screen.getByLabelText("tool statuses")).toHaveTextContent("No environment selected");

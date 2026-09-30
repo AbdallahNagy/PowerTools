@@ -183,7 +183,7 @@ No title-bar menu item. Leave File, Edit, View, and Help unchanged. Refresh stay
 
 #### Tool tab
 
-One surface, two columns, on `bg-[var(--color-bg-dark)]`. The left column is the assembly list. The right column is the selected activity. Each column is `bg-[var(--color-bg-darker)]`, split by `border-[var(--color-border-dark)]`. The environment control is the connection footer already on the activity bar.
+One surface, two columns, on `bg-[var(--color-bg-dark)]`. The left column is the assembly list. The right column is the selected activity. Each column is `bg-[var(--color-bg-darker)]`. The columns are a horizontal split with a draggable divider: `Group`, `Panel`, and `Separator` from `react-resizable-panels`. The separator is `w-1 cursor-col-resize bg-[var(--color-bg-light)]`, with `hover:bg-[var(--color-primary)]` and `active:bg-[var(--color-primary)]`, and its accessible name is `Resize panes`. Each pane keeps a minimum size so it cannot be dragged away. The environment control is the connection footer already on the activity bar.
 
 1. **No environment.** Both columns show one message: select an environment from the connection control at the bottom of the tool sidebar. `SearchInput` and **Refresh** are disabled. Do not load activities or processes.
 2. **Assemblies.** After an environment is selected, list custom workflow activities from database-stored plug-in assemblies, grouped by assembly name. Headers are in ascending name order. Each header is a tool-local button: the assembly name in `text-[var(--color-text-white)]`, the number of activities listed under it in `text-[var(--color-text-dark-gray)]`, and `hover:bg-[var(--color-hover-bg)]`. Activities under an expanded header are tool-local rows. These rows are not a new shared control.
@@ -216,7 +216,7 @@ Changing the selected environment clears the filter, the manual expansion, and t
 
 #### Colors
 
-`bg-[var(--color-bg-dark)]` for the tab, `bg-[var(--color-bg-darker)]` for both columns, `text-[var(--color-text-white)]` for the activity name, assembly headers, and the selected row, `text-[var(--color-text-gray)]` for values, `text-[var(--color-text-dark-gray)]` for counts, empty copy, and Unknown, `border-[var(--color-border-dark)]` for the divider, and `hover:bg-[var(--color-hover-bg)]` plus the selected-row fill. No hex values.
+`bg-[var(--color-bg-dark)]` for the tab, `bg-[var(--color-bg-darker)]` for both columns, `text-[var(--color-text-white)]` for the activity name, assembly headers, and the selected row, `text-[var(--color-text-gray)]` for values, `text-[var(--color-text-dark-gray)]` for counts, empty copy, and Unknown, `bg-[var(--color-bg-light)]` for the draggable divider, `hover:bg-[var(--color-primary)]` while dragging or hovering it, and `hover:bg-[var(--color-hover-bg)]` plus the selected-row fill. No hex values.
 
 #### What not to build
 
@@ -248,6 +248,7 @@ Changing the selected environment clears the filter, the manual expansion, and t
   - From `desktop/`: `npm run lint` — passed.
   - From `desktop/`: `npm run build` — passed.
   - From `desktop/`: `npm run check` — passed (typecheck, lint with `--max-warnings 0`, tests, renderer build, and the smoke launch).
+- The two columns use a draggable `react-resizable-panels` separator named `Resize panes`. A fixed half width is not the divider.
 
 ### Open questions
 

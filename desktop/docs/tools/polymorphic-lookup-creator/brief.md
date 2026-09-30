@@ -256,7 +256,7 @@ No title-bar menu item. Leave File, Edit, View, and Help unchanged. The tool ope
 
 #### Tool tab
 
-One tab, two columns, bound to the active connection. The left column is context. The right column is the editor. The tab background is `bg-[var(--color-bg-dark)]`. Each column is `bg-[var(--color-bg-darker)]` with a `border-[var(--color-border-dark)]` divider. No extra windows.
+One tab, two columns, bound to the active connection. The left column is context. The right column is the editor. The tab background is `bg-[var(--color-bg-dark)]`. Each column is `bg-[var(--color-bg-darker)]`. The columns are a horizontal split with a draggable divider: `Group`, `Panel`, and `Separator` from `react-resizable-panels`. The separator is `w-1 cursor-col-resize bg-[var(--color-bg-light)]`, with `hover:bg-[var(--color-primary)]` and `active:bg-[var(--color-primary)]`, and its accessible name is `Resize panes`. Each pane keeps a minimum size so it cannot be dragged away. No extra windows.
 
 1. **No environment.** If no environment is selected, both columns stay empty except one message: select an environment from the connection control at the bottom of the tool sidebar. Do not load solutions or tables.
 2. **Unmanaged solution.** `SearchInput` and a `DataTable` of unmanaged solutions, with display name and publisher customization prefix. One row is selected. The prefix is shown again as `text-[var(--color-text-dark-gray)]` and is the only prefix used for new schema names. A lookup created from this tab is included in that solution. There is no inclusion checkbox.
