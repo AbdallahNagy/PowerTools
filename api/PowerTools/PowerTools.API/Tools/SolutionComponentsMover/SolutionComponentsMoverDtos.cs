@@ -62,7 +62,7 @@ public sealed class CopyComponent
     public required int ComponentType { get; init; }
     public int? RootBehavior { get; init; }
     public bool UnmanagedSource { get; init; }
-    public string Label { get; init; } = "";
+    public string Label { get; set; } = "";
 }
 
 public sealed class PreparedCopy

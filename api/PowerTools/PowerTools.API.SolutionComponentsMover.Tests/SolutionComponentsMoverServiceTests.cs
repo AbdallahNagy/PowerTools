@@ -559,6 +559,76 @@ public sealed class SolutionComponentsMoverServiceTests
     }
 
     [Fact]
+    public void Missing_root_without_a_resolved_name_drops_the_component_id()
+    {
+        var id = Guid.Parse("0ba5bfb4-a8a8-f111-aaac-7c1e528477a1");
+        var text = SolutionComponentFailureText.Format(
+            $"Subcomponent {id:D} cannot be added to the solution because the root component Entity is missing. (0x80048536)",
+            new Dictionary<Guid, string>());
+
+        Assert.Equal(
+            "This component cannot be added because the table it belongs to is not in the target solution. (0x80048536)",
+            text);
+        Assert.DoesNotContain(id.ToString("D"), text, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task A_missing_root_names_the_subcomponent_instead_of_its_id()
+    {
+        var columnId = Guid.Parse("0ba5bfb4-a8a8-f111-aaac-7c1e528477a1");
+        var fake = CopyFake("9.1.0.0", Component(ObjectA, 1, 0, false));
+        fake.OnAdd = _ => throw Fault(
+            unchecked((int)0x80048536),
+            $"Subcomponent {columnId:D} cannot be added to the solution because the root component Entity is missing. (0x80048536)");
+        fake.OnOther = request =>
+        {
+            if (request is RetrieveAttributeRequest attribute && attribute.MetadataId == columnId)
+            {
+                var column = new StringAttributeMetadata
+                {
+                    LogicalName = "name",
+                    SchemaName = "Name",
+                    DisplayName = new Label(new LocalizedLabel("Account Name", 1033), Array.Empty<LocalizedLabel>()),
+                };
+                typeof(AttributeMetadata).GetProperty(nameof(AttributeMetadata.EntityLogicalName))!
+                    .SetValue(column, "account");
+                var response = new RetrieveAttributeResponse();
+                response.Results["AttributeMetadata"] = column;
+                return response;
+            }
+
+            if (request is RetrieveEntityRequest entity &&
+                (entity.MetadataId == ObjectA || entity.LogicalName == "account"))
+            {
+                var table = new EntityMetadata
+                {
+                    LogicalName = "account",
+                    SchemaName = "Account",
+                    DisplayName = new Label(new LocalizedLabel("Account", 1033), Array.Empty<LocalizedLabel>()),
+                };
+                var response = new RetrieveEntityResponse();
+                response.Results["EntityMetadata"] = table;
+                return response;
+            }
+
+            return null;
+        };
+
+        var result = await new SolutionComponentsMoverService(fake).ExecuteAsync(
+            CopyBody([SourceId], [TargetId], allComponents: true, checkBestPractice: false),
+            CancellationToken.None);
+
+        Assert.Null(result.Problem);
+        var entry = Assert.Single(result.Value!.Entries);
+        Assert.False(entry.Succeeded);
+        Assert.Equal("Account", entry.Label);
+        Assert.Equal(
+            "Account Name on Account cannot be added because the table it belongs to is not in the target solution. (0x80048536)",
+            entry.Message);
+        Assert.DoesNotContain(columnId.ToString("D"), entry.Message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public void Unknown_job_is_not_found_and_a_refused_job_is_not_queued()
     {
         var store = new InMemorySolutionCopyJobStore();
@@ -781,6 +851,7 @@ public sealed class SolutionComponentsMoverServiceTests
         public Func<QueryExpression, EntityCollection>? OnQuery { get; set; }
         public Func<OrganizationRequest, OrganizationResponse>? OnMetadata { get; set; }
         public Func<AddSolutionComponentRequest, OrganizationResponse>? OnAdd { get; set; }
+        public Func<OrganizationRequest, OrganizationResponse?>? OnOther { get; set; }
         public List<QueryExpression> Queries { get; } = [];
         public List<OrganizationRequest> Executes { get; } = [];
         public List<(string Entity, int Page, string? Cookie, int Count)> Pages { get; } = [];
@@ -811,6 +882,9 @@ public sealed class SolutionComponentsMoverServiceTests
 
             if (request is AddSolutionComponentRequest add)
                 return Task.FromResult(OnAdd?.Invoke(add) ?? new OrganizationResponse());
+
+            if (OnOther?.Invoke(request) is { } other)
+                return Task.FromResult(other);
 
             throw new InvalidOperationException(request.RequestName);
         }

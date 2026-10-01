@@ -40,7 +40,7 @@ Colors use the CSS variables in that skill, written as Tailwind variable classes
 
 `DataTable` shows each column header in the case you write. Write title case, such as `Display Name` and `Name`. Do not specify all-capital headers. The table does not force uppercase.
 
-When a table can be sorted, sorting is a click on that column header. The first click sorts ascending. The same header again sorts descending. Do not specify a separate row of sort buttons.
+When a table can be sorted, sorting is a click on that column header. The first click sorts ascending. The same header again sorts descending. The active header shows ↑ for ascending and ↓ for descending. Do not specify a separate row of sort buttons.
 
 Status text is published with `useToolStatus`. The tool does not manage status ids.
 

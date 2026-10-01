@@ -160,7 +160,9 @@ describe("Solution Components Mover", () => {
     const displayName = screen.getByRole("columnheader", { name: "Display Name" });
     const name = screen.getByRole("columnheader", { name: "Name" });
     expect(displayName).toHaveAttribute("aria-sort", "ascending");
+    expect(displayName).toHaveTextContent("↑");
     expect(name).toHaveTextContent("Name");
+    expect(name).not.toHaveTextContent("↑");
     expect(displayName.className).not.toMatch(/uppercase/);
     expect(screen.queryByRole("button", { name: /Friendly name/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Unique name/ })).not.toBeInTheDocument();
@@ -171,11 +173,13 @@ describe("Solution Components Mover", () => {
     expect(rows[1]).toHaveTextContent("Managed Core");
     expect(rows[2]).toHaveTextContent("Alpha Widgets");
     expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveAttribute("aria-sort", "ascending");
+    expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveTextContent("↑");
 
     fireEvent.click(installed);
     rows = screen.getAllByRole("row");
     expect(rows[1]).toHaveTextContent("Beta Flows");
     expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveAttribute("aria-sort", "descending");
+    expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveTextContent("↓");
   });
 
   it("reloads solutions from the refresh button", async () => {
@@ -235,6 +239,14 @@ describe("Solution Components Mover", () => {
     fireEvent.click(screen.getByRole("button", { name: "Copy components" }));
     const account = await screen.findByRole("checkbox", { name: "Account" });
     await waitFor(() => expect(account).toBeChecked());
+    const selectAll = screen.getByRole("checkbox", { name: "Select all component types" });
+    expect(selectAll).toBeChecked();
+    expect(screen.queryByRole("button", { name: "Select all" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Clear all" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Invert" })).not.toBeInTheDocument();
+    const cancel = screen.getByRole("button", { name: "Cancel" });
+    const copy = screen.getByRole("button", { name: "Copy" });
+    expect(cancel.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: "Workflow" })).toBeChecked();
     fireEvent.click(account);
     fireEvent.click(screen.getByRole("button", { name: "Copy" }));

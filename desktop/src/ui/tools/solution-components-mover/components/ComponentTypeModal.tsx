@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Button, DataTable, Modal } from "../../../shared/ui";
+import { Button, Checkbox, DataTable, Modal } from "../../../shared/ui";
 import type { ComponentTypeRow } from "../model/types";
 import { LabeledCheckbox } from "./LabeledCheckbox";
 
@@ -46,6 +46,13 @@ export function ComponentTypeModal({
     });
   };
 
+  const listed = types ?? [];
+  const allSelected = listed.length > 0 && listed.every((type) => checked.has(type.componentType));
+  const someSelected = listed.some((type) => checked.has(type.componentType));
+  const setAll = (selected: boolean) => {
+    setChecked(selected ? new Set(listed.map((type) => type.componentType)) : new Set());
+  };
+
   return (
     <Modal
       open={open}
@@ -64,7 +71,21 @@ export function ComponentTypeModal({
           columns={[
             {
               key: "selected",
-              header: "Include",
+              header: (
+                <label
+                  className="inline-flex"
+                  onClick={(event) => event.stopPropagation()}
+                  onDoubleClick={(event) => event.stopPropagation()}
+                >
+                  <Checkbox
+                    checked={allSelected}
+                    indeterminate={!allSelected && someSelected}
+                    disabled={loading || !!errorText || listed.length === 0}
+                    onChange={setAll}
+                  />
+                  <span className="sr-only">Select all component types</span>
+                </label>
+              ),
               render: (row: ComponentTypeRow) => (
                 <LabeledCheckbox
                   label={row.label}
@@ -75,47 +96,23 @@ export function ComponentTypeModal({
             },
             { key: "label", header: "Component type", render: (row: ComponentTypeRow) => row.label },
           ]}
-          rows={types ?? []}
+          rows={listed}
           getRowKey={(row) => String(row.componentType)}
           emptyMessage="No component types"
         />
       )}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={loading || !!errorText || !types || types.length === 0}
-          onClick={() => setChecked(new Set((types ?? []).map((type) => type.componentType)))}
-        >
-          Select all
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={loading || !!errorText}
-          onClick={() => setChecked(new Set())}
-        >
-          Clear all
-        </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          disabled={loading || !!errorText || !types || types.length === 0}
-          onClick={() => setChecked(new Set((types ?? []).filter((type) => !checked.has(type.componentType)).map((type) => type.componentType)))}
-        >
-          Invert
-        </Button>
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
         <Button
           type="button"
           disabled={loading || !!errorText || checked.size === 0}
           onClick={() => onCopy(
-            (types ?? []).filter((type) => checked.has(type.componentType)).map((type) => type.componentType),
-            !!types && types.length > 0 && checked.size === types.length,
+            listed.filter((type) => checked.has(type.componentType)).map((type) => type.componentType),
+            listed.length > 0 && checked.size === listed.length,
           )}
         >
           Copy
         </Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
       </div>
     </Modal>
   );

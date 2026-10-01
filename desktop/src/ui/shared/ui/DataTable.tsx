@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 interface Column<T> {
   key: string;
-  header: string;
+  header: ReactNode;
   render?: (row: T) => ReactNode;
   width?: string;
   sortable?: boolean;
@@ -58,6 +58,11 @@ export function DataTable<T>({
                       onClick={() => onSort(col.key)}
                     >
                       {col.header}
+                      {sorted ? (
+                        <span className="ml-1" aria-hidden="true">
+                          {sortDirection === "desc" ? "↓" : "↑"}
+                        </span>
+                      ) : null}
                     </button>
                   ) : (
                     col.header

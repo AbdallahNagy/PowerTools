@@ -19,6 +19,8 @@ public sealed class SolutionComponentsMoverService(
     private const string RetrieveMetadataChanges = "RetrieveMetadataChanges";
 
     private readonly ISolutionCopyDelay _delay = delay ?? new SolutionCopyDelay();
+    private readonly Dictionary<string, (string IdAttribute, string NameAttribute)> _recordColumns = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<int, string?>? _recordEntities;
 
     public async Task<SolutionComponentsResult<SolutionsResponse>> GetSolutionsAsync(CancellationToken cancellationToken)
     {
@@ -209,7 +211,27 @@ public sealed class SolutionComponentsMoverService(
             }
             catch (Exception ex)
             {
-                job.RecordFailure(Entry(component, targetUniqueName, false, SolutionComponentsMoverFaults.From(ex).Message));
+                var raw = SolutionComponentsMoverFaults.From(ex).Message;
+                var described = await DescribeComponentAsync(component, cancellationToken);
+                if (!string.IsNullOrWhiteSpace(described))
+                    component.Label = described;
+                var names = new Dictionary<Guid, string>();
+                var componentName = FailureName(described, component.Label);
+                if (componentName is not null)
+                    names[component.ObjectId] = componentName;
+                foreach (var id in SolutionComponentFailureText.IdsIn(raw))
+                {
+                    if (names.ContainsKey(id)) continue;
+                    var named = await DescribeUnknownAsync(id, cancellationToken);
+                    if (!string.IsNullOrWhiteSpace(named))
+                        names[id] = named;
+                }
+
+                job.RecordFailure(Entry(
+                    component,
+                    targetUniqueName,
+                    false,
+                    SolutionComponentFailureText.Format(raw, names)));
                 return false;
             }
         }
@@ -724,6 +746,240 @@ public sealed class SolutionComponentsMoverService(
             string text when TimeSpan.TryParse(text, CultureInfo.InvariantCulture, out var span) => span,
             _ => null,
         };
+    }
+
+    private async Task<string?> DescribeComponentAsync(CopyComponent component, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return component.ComponentType switch
+            {
+                1 => await DescribeEntityAsync(component.ObjectId, cancellationToken),
+                2 => await DescribeAttributeAsync(component.ObjectId, cancellationToken),
+                3 or 10 => await DescribeRelationshipAsync(component.ObjectId, cancellationToken),
+                9 => await DescribeOptionSetAsync(component.ObjectId, cancellationToken),
+                _ => await DescribeRecordAsync(component, cancellationToken),
+            };
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<string?> DescribeUnknownAsync(Guid objectId, CancellationToken cancellationToken)
+    {
+        var named = await TryDescribeAsync(() => DescribeAttributeAsync(objectId, cancellationToken))
+            ?? await TryDescribeAsync(() => DescribeEntityAsync(objectId, cancellationToken))
+            ?? await TryDescribeAsync(() => DescribeRelationshipAsync(objectId, cancellationToken));
+        if (!string.IsNullOrWhiteSpace(named)) return named;
+
+        var type = await FindComponentTypeAsync(objectId, cancellationToken);
+        if (type is null or 1 or 2 or 3 or 9 or 10) return null;
+        return await DescribeRecordAsync(
+            new CopyComponent { ObjectId = objectId, ComponentType = type.Value },
+            cancellationToken);
+    }
+
+    private async Task<string?> TryDescribeAsync(Func<Task<string?>> describe)
+    {
+        try
+        {
+            return await describe();
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private async Task<int?> FindComponentTypeAsync(Guid objectId, CancellationToken cancellationToken)
+    {
+        var query = new QueryExpression("solutioncomponent")
+        {
+            ColumnSet = new ColumnSet("componenttype"),
+            TopCount = 1,
+        };
+        query.Criteria.AddCondition("objectid", ConditionOperator.Equal, objectId);
+        var page = await client.RetrieveMultipleAsync(query, cancellationToken);
+        var row = page.Entities.FirstOrDefault();
+        return row is null ? null : ReadInt(row, "componenttype");
+    }
+
+    private async Task<string?> DescribeEntityAsync(Guid metadataId, CancellationToken cancellationToken)
+    {
+        var response = await client.ExecuteAsync(
+            new RetrieveEntityRequest
+            {
+                MetadataId = metadataId,
+                EntityFilters = EntityFilters.Entity,
+            },
+            cancellationToken);
+        return response is RetrieveEntityResponse entity ? MetadataLabel(entity.EntityMetadata) : null;
+    }
+
+    private async Task<string?> DescribeAttributeAsync(Guid metadataId, CancellationToken cancellationToken)
+    {
+        var response = await client.ExecuteAsync(
+            new RetrieveAttributeRequest { MetadataId = metadataId },
+            cancellationToken);
+        if (response is not RetrieveAttributeResponse attribute || attribute.AttributeMetadata is null)
+            return null;
+
+        var metadata = attribute.AttributeMetadata;
+        var attributeName = FirstText(
+            metadata.DisplayName?.UserLocalizedLabel?.Label,
+            metadata.SchemaName,
+            metadata.LogicalName);
+        var entityName = await EntityLabelAsync(metadata.EntityLogicalName, cancellationToken);
+        if (string.IsNullOrWhiteSpace(attributeName)) return entityName;
+        if (string.IsNullOrWhiteSpace(entityName)) return attributeName;
+        return $"{attributeName} on {entityName}";
+    }
+
+    private async Task<string?> EntityLabelAsync(string? logicalName, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(logicalName)) return null;
+        try
+        {
+            var response = await client.ExecuteAsync(
+                new RetrieveEntityRequest
+                {
+                    LogicalName = logicalName,
+                    EntityFilters = EntityFilters.Entity,
+                },
+                cancellationToken);
+            if (response is RetrieveEntityResponse entity)
+            {
+                var label = MetadataLabel(entity.EntityMetadata);
+                if (!string.IsNullOrWhiteSpace(label)) return label;
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch
+        {
+            return logicalName;
+        }
+
+        return logicalName;
+    }
+
+    private async Task<string?> DescribeRelationshipAsync(Guid metadataId, CancellationToken cancellationToken)
+    {
+        var response = await client.ExecuteAsync(
+            new RetrieveRelationshipRequest { MetadataId = metadataId },
+            cancellationToken);
+        if (response is not RetrieveRelationshipResponse relationship) return null;
+        var schema = relationship.RelationshipMetadata?.SchemaName;
+        return string.IsNullOrWhiteSpace(schema) ? null : schema;
+    }
+
+    private async Task<string?> DescribeOptionSetAsync(Guid metadataId, CancellationToken cancellationToken)
+    {
+        var response = await client.ExecuteAsync(
+            new RetrieveOptionSetRequest { MetadataId = metadataId },
+            cancellationToken);
+        if (!response.Results.Contains("OptionSetMetadata") ||
+            response.Results["OptionSetMetadata"] is not OptionSetMetadata metadata)
+        {
+            return null;
+        }
+
+        return FirstText(metadata.DisplayName?.UserLocalizedLabel?.Label, metadata.Name);
+    }
+
+    private async Task<string?> DescribeRecordAsync(CopyComponent component, CancellationToken cancellationToken)
+    {
+        await EnsureRecordEntitiesAsync(cancellationToken);
+        if (_recordEntities is null ||
+            !_recordEntities.TryGetValue(component.ComponentType, out var entityName) ||
+            string.IsNullOrWhiteSpace(entityName))
+        {
+            return null;
+        }
+
+        if (!_recordColumns.TryGetValue(entityName, out var columns))
+        {
+            var response = await client.ExecuteAsync(
+                new RetrieveEntityRequest
+                {
+                    LogicalName = entityName,
+                    EntityFilters = EntityFilters.Entity,
+                },
+                cancellationToken);
+            if (response is not RetrieveEntityResponse entity ||
+                entity.EntityMetadata is null ||
+                string.IsNullOrWhiteSpace(entity.EntityMetadata.PrimaryIdAttribute) ||
+                string.IsNullOrWhiteSpace(entity.EntityMetadata.PrimaryNameAttribute))
+            {
+                return null;
+            }
+
+            columns = (entity.EntityMetadata.PrimaryIdAttribute, entity.EntityMetadata.PrimaryNameAttribute);
+            _recordColumns[entityName] = columns;
+        }
+
+        var query = new QueryExpression(entityName)
+        {
+            ColumnSet = new ColumnSet(columns.NameAttribute),
+            TopCount = 1,
+        };
+        query.Criteria.AddCondition(columns.IdAttribute, ConditionOperator.Equal, component.ObjectId);
+        var page = await client.RetrieveMultipleAsync(query, cancellationToken);
+        var row = page.Entities.FirstOrDefault();
+        var value = row?.GetAttributeValue<string>(columns.NameAttribute);
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+    }
+
+    private async Task EnsureRecordEntitiesAsync(CancellationToken cancellationToken)
+    {
+        if (_recordEntities is not null) return;
+        _recordEntities = [];
+        var version = await LoadVersionAsync(cancellationToken);
+        if (!UsesDefinitions(version)) return;
+
+        var rows = await RetrievePagesAsync(SolutionComponentsMoverQueries.Definitions(), cancellationToken);
+        foreach (var row in rows)
+        {
+            var type = ReadInt(row, "solutioncomponenttype");
+            if (type is null) continue;
+            _recordEntities[type.Value] = row.GetAttributeValue<string>("primaryentityname");
+        }
+    }
+
+    private static string? MetadataLabel(EntityMetadata? table)
+    {
+        if (table is null) return null;
+        var name = TableName(table);
+        return name is "managed table" ? null : name;
+    }
+
+    private static string? FailureName(string? described, string typeLabel)
+    {
+        if (!string.IsNullOrWhiteSpace(described)) return described;
+        if (int.TryParse(typeLabel, NumberStyles.None, CultureInfo.InvariantCulture, out _)) return null;
+        return string.IsNullOrWhiteSpace(typeLabel) ? null : typeLabel;
+    }
+
+    private static string? FirstText(params string?[] values)
+    {
+        foreach (var value in values)
+        {
+            if (!string.IsNullOrWhiteSpace(value)) return value.Trim();
+        }
+
+        return null;
     }
 
     private static CopyEntryDto Entry(CopyComponent component, string targetUniqueName, bool succeeded, string message) =>
