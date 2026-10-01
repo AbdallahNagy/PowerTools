@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateActio
 import { useQuery } from "@tanstack/react-query";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { desktopBridge } from "../../platform/desktopBridge";
-import { useConnections, useConnectionSelection } from "../../shared/connections";
+import { useConnections, useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { Button, Checkbox, DataTable, SearchInput, Spinner, ToastProvider, useToast, type ToastType } from "../../shared/ui";
 import { fetchComponentTypes, fetchCopyJob, fetchSolutions, startCopy } from "./api/solutionComponentsApi";
@@ -23,7 +23,7 @@ import {
 } from "./model/view";
 
 const noEnvironmentMessage =
-  "Select an environment from the connection control at the bottom of the tool sidebar.";
+  "Right-click this tab and choose Change connection.";
 
 type Phase = "idle" | "running" | "refused" | "finished";
 
@@ -37,8 +37,9 @@ export default function SolutionComponentsMover() {
 
 function SolutionComponentsMoverPage() {
   const { showToast } = useToast();
-  const { activeConnectionName, isActiveConnectionLoaded, connections } = useConnections();
-  const { connectionName, setConnectionName } = useConnectionSelection();
+  const { connections } = useConnections();
+  const { connectionName: tabConnectionName } = useTabConnection();
+  const connectionName = tabConnectionName ?? "";
   const [filter, setFilter] = useState("");
   const [sort, setSort] = useState<SortState>(defaultSort);
   const [sources, setSources] = useState<Set<string>>(() => new Set());
@@ -57,11 +58,6 @@ function SolutionComponentsMoverPage() {
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
   const toastedJob = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (!isActiveConnectionLoaded) return;
-    setConnectionName(activeConnectionName ?? "");
-  }, [activeConnectionName, isActiveConnectionLoaded, setConnectionName]);
 
   useEffect(() => {
     setFilter("");

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
@@ -51,7 +52,10 @@ function StatusItemsProbe() {
   );
 }
 
-function renderTool(bridgeOverrides: DesktopBridgeOverrides = toolBridge) {
+function renderTool(
+  bridgeOverrides: DesktopBridgeOverrides = toolBridge,
+  connectionName: string | null = connection.name,
+) {
   return renderWithProviders(
     <ConnectionsProvider>
       <StatusBarProvider>
@@ -60,6 +64,7 @@ function renderTool(bridgeOverrides: DesktopBridgeOverrides = toolBridge) {
             id: "workflow-activities-viewer-test",
             toolId: "workflow-activities-viewer",
             title: "Workflow Activities Viewer",
+            connectionName,
           }}
           definition={workflowActivitiesTool}
         />
@@ -112,10 +117,10 @@ describe("Workflow Activities Viewer", () => {
     renderTool({
       ...toolBridge,
       getActiveConnectionName: async () => null,
-    });
+    }, null);
 
     expect(await screen.findAllByText(
-      "Select an environment from the connection control at the bottom of the tool sidebar.",
+      "Right-click this tab and choose Change connection.",
     )).toHaveLength(2);
     expect(screen.getByRole("separator", { name: "Resize panes" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Refresh" })).toBeDisabled();
@@ -284,14 +289,37 @@ describe("Workflow Activities Viewer", () => {
   });
 
   it("reloads when the selected environment changes", async () => {
-    const view = renderTool();
+    function SwitchableTool() {
+      const [name, setName] = useState(connection.name);
+      return (
+        <ConnectionsProvider>
+          <StatusBarProvider>
+            <button type="button" onClick={() => setName("Other Org")}>
+              Switch tab connection
+            </button>
+            <ToolHost
+              tab={{
+                id: "workflow-activities-viewer-test",
+                toolId: "workflow-activities-viewer",
+                title: "Workflow Activities Viewer",
+                connectionName: name,
+              }}
+              definition={workflowActivitiesTool}
+            />
+            <StatusItemsProbe />
+          </StatusBarProvider>
+        </ConnectionsProvider>
+      );
+    }
+
+    renderWithProviders(<SwitchableTool />, { bridgeOverrides: toolBridge });
     expect(await screen.findByRole("button", { name: /A\.Shared/ })).toBeInTheDocument();
     await openAssembly(/A\.Shared/);
     fireEvent.change(screen.getByPlaceholderText("Filter by activity name"), {
       target: { value: "helper" },
     });
 
-    view.bridge.emitConnectionStatusUpdate("Other Org");
+    fireEvent.click(screen.getByRole("button", { name: "Switch tab connection" }));
     expect(await screen.findByRole("button", { name: /Other\.Assembly/ })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Filter by activity name")).toHaveValue("");
     expect(screen.queryByRole("button", { name: "Other activity" })).not.toBeInTheDocument();

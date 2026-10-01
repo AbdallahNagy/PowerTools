@@ -1,9 +1,9 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { usePrimaryAction } from "../../shared/keyboard";
 import { Button, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
-import { useConnections, useConnectionSelection } from "../../shared/connections";
+import { useConnections, useTabConnection } from "../../shared/connections";
 import type { FetchResult } from "./model/types";
 import { FilterTree } from "./components/filter-builder/FilterTree";
 import { ResultsGrid } from "./components/ResultsGrid";
@@ -30,7 +30,7 @@ export default function FetchXmlBuilder() {
 }
 
 function FetchXmlBuilderPage() {
-  const { connectionName, setConnectionName } = useConnectionSelection();
+  const { connectionName } = useTabConnection();
   const [selectedEntity, setSelectedEntity] = useState<EntityInfo | null>(null);
   const [page, setPage] = useState(1);
   const [pagingCookies, setPagingCookies] = useState<Record<number, string>>({});
@@ -74,6 +74,15 @@ function FetchXmlBuilderPage() {
     setValidationErrors([]);
     setLastFetchXml("");
   };
+  const resetForConnection = useRef(handleSelectEntity);
+  resetForConnection.current = handleSelectEntity;
+  const appliedConnection = useRef(connectionName);
+
+  useEffect(() => {
+    if (appliedConnection.current === connectionName) return;
+    appliedConnection.current = connectionName;
+    resetForConnection.current(null);
+  }, [connectionName]);
 
   const handleEntityChange = (logicalName: string) => {
     const entity = sortedTables.find((e) => e.logicalName === logicalName) ?? null;
@@ -139,25 +148,6 @@ function FetchXmlBuilderPage() {
       <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[#cccccc] overflow-hidden">
       {/* Top bar */}
       <div className="flex items-end gap-4 flex-wrap">
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-[#858585] tracking-wider">Connection</label>
-          <select
-            value={connectionName}
-            onChange={(e) => {
-              setConnectionName(e.target.value);
-              handleSelectEntity(null);
-            }}
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-[#007fd4] w-52"
-          >
-            <option value="">— select —</option>
-            {connections.map((c) => (
-              <option key={c.name} value={c.name}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
         <div className="ml-auto flex items-center gap-2">
           <Button variant="primary" onClick={() => handleRun(1)} disabled={!canRun} className="text-sm py-1.5">
             {isPending ? "Running…" : "Run"}

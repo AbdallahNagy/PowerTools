@@ -11,6 +11,7 @@ import {
   ConnectionsContext,
   type ConnectionsContextValue,
 } from "./ConnectionsContext";
+import { setActiveConnectionSnapshot } from "./activeConnectionSnapshot";
 import type { ConnectionInfo } from "./types";
 
 export function ConnectionsProvider({ children }: { children: ReactNode }) {
@@ -18,6 +19,14 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
   const [activeConnectionName, setActiveConnectionName] = useState<string | null>(null);
   const [isActiveConnectionLoaded, setIsActiveConnectionLoaded] = useState(false);
   const activeConnectionVersion = useRef(0);
+
+  useEffect(() => {
+    setActiveConnectionSnapshot(activeConnectionName, isActiveConnectionLoaded);
+  }, [activeConnectionName, isActiveConnectionLoaded]);
+
+  useEffect(() => {
+    return () => setActiveConnectionSnapshot(null, false);
+  }, []);
 
   useEffect(() => {
     const initialActiveConnectionVersion = activeConnectionVersion.current;

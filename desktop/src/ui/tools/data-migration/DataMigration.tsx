@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ToastProvider, useToast } from "../../shared/ui";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { ConnectionsBar } from "./components/ConnectionsBar";
@@ -10,7 +10,7 @@ import { PreviewModal } from "./components/PreviewModal";
 import { MigrationStatusItem } from "./components/MigrationStatusItem";
 import { useStartMigration, useMigrationJob } from "./api/useMigrationJob";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
-import { useConnectionSelection } from "../../shared/connections";
+import { useTabConnection } from "../../shared/connections";
 import { usePrimaryAction } from "../../shared/keyboard";
 import { useToolStatus } from "../../shared/status";
 
@@ -24,7 +24,7 @@ export default function DataMigration() {
 
 function DataMigrationPage() {
   const { connectionName: sourceName, setConnectionName: setSourceName } =
-    useConnectionSelection();
+    useTabConnection();
   const [targetName, setTargetName] = useState("");
   const [entity, setEntity] = useState<EntityInfo | null>(null);
   const [attributes, setAttributes] = useState<string[]>([]);
@@ -47,14 +47,16 @@ function DataMigrationPage() {
   );
   useToolStatus(statusContent);
 
-  // Metadata hooks now sign each request with the chosen source connection
-  // via `meta.connectionName`, so we just reset dependent local state here
-  // without mutating the global active connection.
-  const changeSource = (name: string) => {
-    setSourceName(name);
+  // Source is this tab's connection. Changing it here or from the tab menu
+  // resets entity state and leaves the active connection alone.
+  useEffect(() => {
     setEntity(null);
     setAttributes([]);
     setFetchFilter("");
+  }, [sourceName]);
+
+  const changeSource = (name: string) => {
+    setSourceName(name);
   };
 
   const selectEntity = (e: EntityInfo) => {
@@ -76,7 +78,7 @@ function DataMigrationPage() {
     !isRunning;
 
   const handleStart = () => {
-    if (!entity) return;
+    if (!entity || !sourceName) return;
     startMigration(
       {
         entityLogicalName: entity.logicalName,
@@ -106,7 +108,7 @@ function DataMigrationPage() {
     <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[#cccccc] overflow-hidden">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <ConnectionsBar
-          sourceName={sourceName}
+          sourceName={sourceName ?? ""}
           targetName={targetName}
           onSourceChange={changeSource}
           onTargetChange={setTargetName}
@@ -160,7 +162,7 @@ function DataMigrationPage() {
         <PreviewModal
           open={previewOpen}
           onClose={() => setPreviewOpen(false)}
-          connectionName={sourceName}
+          connectionName={sourceName ?? ""}
           entityLogicalName={entity.logicalName}
           attributes={attributes}
           fetchXmlFilter={fetchFilter}

@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   desktopBridge,
   type UpdateStatus,
 } from "../../platform/desktopBridge";
-import { useConnections } from "../../shared/connections";
+import { TabProviderContext } from "../../context/TabProviderContext";
 import { useStatusItems } from "../../shared/status";
 import {
   formatAppVersion,
@@ -14,7 +14,9 @@ import {
 const StatusBar = () => {
   const [appVersion, setAppVersion] = useState("");
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus>({ state: "idle" });
-  const { activeConnectionName } = useConnections();
+  const tabs = useContext(TabProviderContext);
+  const activeTab = tabs?.tabs.find((tab) => tab.id === tabs.activeTabId);
+  const connectionName = activeTab?.connectionName || null;
   const items = useStatusItems();
   const updateActionLabel = getUpdateActionLabel(updateStatus);
 
@@ -40,7 +42,7 @@ const StatusBar = () => {
 
   return (
     <div className="h-6 bg-(--color-primary) flex items-center justify-between px-2 text-white text-xs select-none">
-      <span>{activeConnectionName ? `connected to: ${activeConnectionName}` : ""}</span>
+      <span>{connectionName ? `connected to: ${connectionName}` : ""}</span>
       <div className="flex items-center space-x-4">
         {items.map((item) => (
           <div key={item.id} className="flex items-center">
