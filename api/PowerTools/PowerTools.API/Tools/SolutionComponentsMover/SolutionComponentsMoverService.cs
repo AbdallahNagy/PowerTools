@@ -2,6 +2,7 @@ using System.Globalization;
 using Microsoft.Crm.Sdk.Messages;
 using PowerTools.API.Services;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Metadata.Query;
 using Microsoft.Xrm.Sdk.Query;
@@ -12,10 +13,9 @@ public sealed class SolutionComponentsMoverService(
     ISolutionComponentsMoverClient client,
     ISolutionCopyDelay? delay = null)
 {
-    // Microsoft.Crm.Sdk.Proxy 9.0, shipped with the referenced Dataverse client, does not include
-    // RetrieveOptionSetRequest or RetrieveMetadataChangesRequest. Those messages are sent by name
-    // with the same parameters.
-    private const string RetrieveOptionSet = "RetrieveOptionSet";
+    // RetrieveMetadataChangesRequest is not in the referenced proxy assembly. The message is sent
+    // by name with the same parameters. RetrieveOptionSetRequest is in Microsoft.Xrm.Sdk and always
+    // includes MetadataId; a late-bound request that sends only Name is rejected.
     private const string RetrieveMetadataChanges = "RetrieveMetadataChanges";
 
     private readonly ISolutionCopyDelay _delay = delay ?? new SolutionCopyDelay();
@@ -354,7 +354,7 @@ public sealed class SolutionComponentsMoverService(
     private async Task<IReadOnlyList<OptionMetadata>> LoadOptionSetAsync(CancellationToken cancellationToken)
     {
         var response = await client.ExecuteAsync(
-            new OrganizationRequest(RetrieveOptionSet) { ["Name"] = "componenttype" },
+            new RetrieveOptionSetRequest { Name = "componenttype" },
             cancellationToken);
         if (!response.Results.Contains("OptionSetMetadata") ||
             response.Results["OptionSetMetadata"] is not OptionSetMetadata metadata)

@@ -12,7 +12,11 @@ export function LabeledCheckbox({
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <label className="inline-flex" onClick={(event) => event.stopPropagation()}>
+    <label
+      className="inline-flex"
+      onClick={(event) => event.stopPropagation()}
+      onDoubleClick={(event) => event.stopPropagation()}
+    >
       <Checkbox checked={checked} disabled={disabled} onChange={onChange} />
       <span className="sr-only">{label}</span>
     </label>

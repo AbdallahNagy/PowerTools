@@ -10,9 +10,8 @@ import { solutionComponentKeys } from "./api/queryKeys";
 import { ComponentTypeModal } from "./components/ComponentTypeModal";
 import { CopyLog, type LogRow } from "./components/CopyLog";
 import { LabeledCheckbox } from "./components/LabeledCheckbox";
-import { SortButtons } from "./components/SortButtons";
 import { toSolutionComponentsError } from "./model/apiError";
-import type { CopyEntry, SolutionRow, SortState } from "./model/types";
+import type { CopyEntry, SolutionRow, SortColumn, SortState } from "./model/types";
 import {
   defaultSort,
   filterSolutions,
@@ -141,14 +140,14 @@ function SolutionComponentsMoverPage() {
   );
   const environment = connections.find((item) => item.name === connectionName);
   const copyRunning = phase === "running";
-  const solutionsLoading = !!connectionName && solutionsQuery.isFetching;
+  const solutionsLoading = !!connectionName && solutionsQuery.isLoading;
   const canCopy = !!connectionName
     && !solutionsLoading
     && !solutionsQuery.isError
     && sources.size > 0
     && targets.size > 0
     && !copyRunning;
-  const canOpen = !!connectionName && !solutionsLoading && !solutionsQuery.isError && !!focusedId;
+  const canRefresh = !!connectionName && !solutionsQuery.isFetching;
 
   const status = useMemo(() => {
     if (!connectionName) return "No environment selected";
@@ -189,9 +188,8 @@ function SolutionComponentsMoverPage() {
     });
   };
 
-  const openSolution = async () => {
-    const solution = solutions.find((row) => row.id === focusedId);
-    if (!solution) return;
+  const openSolution = async (solution: SolutionRow) => {
+    setFocusedId(solution.id);
     if (!environment?.envUrl) {
       showToast("The environment address is not available.", "error");
       return;
@@ -239,20 +237,25 @@ function SolutionComponentsMoverPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col bg-[var(--color-bg-dark)] text-[var(--color-text-white)]">
-      <div className="flex shrink-0 flex-wrap items-center gap-3 bg-[var(--color-bg-darker)] px-3 py-2">
-        <div className="flex flex-col gap-1">
-          <label className="flex items-center gap-2 text-[var(--color-text-white)]">
-            <Checkbox checked={checkBestPractice} onChange={setCheckBestPractice} />
-            <span>Block a copy that would add a fully included managed table from an unmanaged source.</span>
-          </label>
-          <p className="text-[var(--color-text-dark-gray)]">Copy leaves every source solution unchanged.</p>
+      <div className="flex shrink-0 items-center justify-between gap-3 bg-[var(--color-bg-darker)] px-3 py-2">
+        <label className="flex items-center gap-2 text-[var(--color-text-white)]">
+          <Checkbox checked={checkBestPractice} onChange={setCheckBestPractice} />
+          <span>Block a copy that would add a fully included managed table from an unmanaged source.</span>
+        </label>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            aria-label="Refresh solutions"
+            disabled={!canRefresh}
+            onClick={() => void solutionsQuery.refetch()}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <RefreshIcon />
+          </button>
+          <Button type="button" onClick={() => setModalOpen(true)} disabled={!canCopy}>
+            Copy components
+          </Button>
         </div>
-        <Button type="button" onClick={() => setModalOpen(true)} disabled={!canCopy}>
-          Copy components
-        </Button>
-        <Button type="button" variant="secondary" onClick={() => void openSolution()} disabled={!canOpen}>
-          Open in browser
-        </Button>
       </div>
       <Group orientation="vertical" className="min-h-0 flex-1">
         <Panel minSize="30%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-darker)]">
@@ -260,11 +263,6 @@ function SolutionComponentsMoverPage() {
             <fieldset disabled={!connectionName} className="m-0 border-0 p-0">
               <SearchInput value={filter} onChange={setFilter} placeholder="Filter solutions" />
             </fieldset>
-            <SortButtons
-              sort={sort}
-              disabled={!connectionName}
-              onSort={(column) => setSort((current) => toggleSort(current, column))}
-            />
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-3">
             {!connectionName ? (
@@ -313,17 +311,51 @@ function SolutionComponentsMoverPage() {
                       />
                     ),
                   },
-                  { key: "friendlyName", header: "Friendly name", render: (row: SolutionRow) => row.friendlyName },
-                  { key: "uniqueName", header: "Unique name", render: (row: SolutionRow) => row.uniqueName },
-                  { key: "publisher", header: "Publisher", render: (row: SolutionRow) => row.publisherName ?? "" },
-                  { key: "installed", header: "Installed", render: (row: SolutionRow) => row.installedOn ?? "" },
-                  { key: "version", header: "Version", render: (row: SolutionRow) => row.version },
-                  { key: "managed", header: "Managed", render: (row: SolutionRow) => managedLabel(row.isManaged) },
+                  {
+                    key: "friendlyName",
+                    header: "Display Name",
+                    sortable: true,
+                    render: (row: SolutionRow) => row.friendlyName,
+                  },
+                  {
+                    key: "uniqueName",
+                    header: "Name",
+                    sortable: true,
+                    render: (row: SolutionRow) => row.uniqueName,
+                  },
+                  {
+                    key: "publisherName",
+                    header: "Publisher",
+                    sortable: true,
+                    render: (row: SolutionRow) => row.publisherName ?? "",
+                  },
+                  {
+                    key: "installedOn",
+                    header: "Installed",
+                    sortable: true,
+                    render: (row: SolutionRow) => row.installedOn ?? "",
+                  },
+                  {
+                    key: "version",
+                    header: "Version",
+                    sortable: true,
+                    render: (row: SolutionRow) => row.version,
+                  },
+                  {
+                    key: "isManaged",
+                    header: "Managed",
+                    sortable: true,
+                    render: (row: SolutionRow) => managedLabel(row.isManaged),
+                  },
                 ]}
                 rows={visible}
                 getRowKey={(row) => row.id}
                 selectedKey={focusedId}
+                sortKey={sort.column}
+                sortDirection={sort.direction}
+                onSort={(column) => setSort((current) => toggleSort(current, column as SortColumn))}
                 onRowClick={(row) => setFocusedId(row.id)}
+                onRowDoubleClick={(row) => void openSolution(row)}
                 emptyMessage={solutions.length === 0 ? "No solutions" : "No matching solutions"}
               />
             )}
@@ -362,6 +394,25 @@ function SolutionComponentsMoverPage() {
         onCopy={(componentTypes, allComponents) => void confirmCopy(componentTypes, allComponents)}
       />
     </div>
+  );
+}
+
+function RefreshIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4"
+      aria-hidden="true"
+    >
+      <path d="M20 12a8 8 0 1 1-2.3-5.7" />
+      <path d="M20 4v5h-5" />
+    </svg>
   );
 }
 

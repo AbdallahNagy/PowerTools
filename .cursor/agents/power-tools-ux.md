@@ -38,6 +38,10 @@ Reuse shared controls already exported from `desktop/src/ui/shared/ui`:
 
 Colors use the CSS variables in that skill, written as Tailwind variable classes such as `bg-[var(--color-bg-dark)]`. If a needed color has no variable, add an open question. Do not invent a hex value.
 
+`DataTable` shows each column header in the case you write. Write title case, such as `Display Name` and `Name`. Do not specify all-capital headers. The table does not force uppercase.
+
+When a table can be sorted, sorting is a click on that column header. The first click sorts ascending. The same header again sorts descending. Do not specify a separate row of sort buttons.
+
 Status text is published with `useToolStatus`. The tool does not manage status ids.
 
 When the tool surface is split into two views, left and right or top and bottom, the divider is draggable. Specify `Group`, `Panel`, and `Separator` from `react-resizable-panels`, the same split the shell uses in `desktop/src/ui/components/layout/Layout.tsx`. This is not a new shared control.

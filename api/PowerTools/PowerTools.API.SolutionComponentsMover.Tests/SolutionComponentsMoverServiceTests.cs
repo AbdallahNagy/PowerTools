@@ -1,6 +1,7 @@
 using System.ServiceModel;
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
+using Microsoft.Xrm.Sdk.Messages;
 using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Metadata.Query;
 using Microsoft.Xrm.Sdk.Query;
@@ -103,8 +104,10 @@ public sealed class SolutionComponentsMoverServiceTests
 
         Assert.Null(result.Problem);
         Assert.DoesNotContain(result.Value!.ComponentTypes, type => type.ComponentType == 80);
-        var optionRequest = Assert.Single(fake.Executes, request => request.RequestName == "RetrieveOptionSet");
-        Assert.Equal("componenttype", optionRequest["Name"]);
+        var optionRequest = Assert.IsType<RetrieveOptionSetRequest>(
+            Assert.Single(fake.Executes, request => request.RequestName == "RetrieveOptionSet"));
+        Assert.Equal("componenttype", optionRequest.Name);
+        Assert.Equal(Guid.Empty, optionRequest.MetadataId);
         Assert.Contains(fake.Executes, request => request is RetrieveVersionRequest);
         if (!definitions)
         {

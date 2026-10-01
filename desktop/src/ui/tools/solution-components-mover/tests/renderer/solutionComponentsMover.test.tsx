@@ -114,9 +114,10 @@ describe("Solution Components Mover", () => {
     const separator = screen.getByRole("separator", { name: "Resize panes" });
     expect(separator).toHaveClass("h-1", "cursor-row-resize");
     expect(screen.getByRole("button", { name: "Copy components" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Open in browser" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Open in browser" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refresh solutions" })).toBeDisabled();
     expect(screen.getByPlaceholderText("Filter solutions")).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Friendly name/ })).toBeDisabled();
+    expect(screen.queryByText("Copy leaves every source solution unchanged.")).not.toBeInTheDocument();
     expect(screen.getByLabelText("tool statuses")).toHaveTextContent("No environment selected");
     expect(calls).toBe(0);
   });
@@ -153,19 +154,42 @@ describe("Solution Components Mover", () => {
     expect(screen.getByText("No matching solutions")).toBeInTheDocument();
   });
 
-  it("sorts by the selected column", async () => {
+  it("sorts from the column header and keeps title case", async () => {
     renderTool();
     expect(await screen.findByText("Alpha Widgets")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Installed/ }));
+    const displayName = screen.getByRole("columnheader", { name: "Display Name" });
+    const name = screen.getByRole("columnheader", { name: "Name" });
+    expect(displayName).toHaveAttribute("aria-sort", "ascending");
+    expect(name).toHaveTextContent("Name");
+    expect(displayName.className).not.toMatch(/uppercase/);
+    expect(screen.queryByRole("button", { name: /Friendly name/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Unique name/ })).not.toBeInTheDocument();
+
+    const installed = screen.getByRole("button", { name: "Installed" });
+    fireEvent.click(installed);
     let rows = screen.getAllByRole("row");
     expect(rows[1]).toHaveTextContent("Managed Core");
     expect(rows[2]).toHaveTextContent("Alpha Widgets");
-    expect(screen.getByRole("button", { name: /Installed/ })).toHaveTextContent("Ascending");
+    expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveAttribute("aria-sort", "ascending");
 
-    fireEvent.click(screen.getByRole("button", { name: /Installed/ }));
+    fireEvent.click(installed);
     rows = screen.getAllByRole("row");
     expect(rows[1]).toHaveTextContent("Beta Flows");
-    expect(screen.getByRole("button", { name: /Installed/ })).toHaveTextContent("Descending");
+    expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveAttribute("aria-sort", "descending");
+  });
+
+  it("reloads solutions from the refresh button", async () => {
+    let calls = 0;
+    httpServer.use(http.get("http://localhost/api/solution-components-mover/solutions", () => {
+      calls += 1;
+      return HttpResponse.json(solutionsFixture);
+    }));
+    renderTool();
+    expect(await screen.findByText("Alpha Widgets")).toBeInTheDocument();
+    const before = calls;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh solutions" }));
+    await waitFor(() => expect(calls).toBeGreaterThan(before));
+    expect(screen.getByText("Alpha Widgets")).toBeInTheDocument();
   });
 
   it("shows no solutions after an empty load", async () => {
@@ -276,14 +300,14 @@ describe("Solution Components Mover", () => {
     expect(posts).toBe(0);
   });
 
-  it("opens the focused solution in the browser", async () => {
+  it("opens a solution in the browser on double-click", async () => {
     const openExternalUrl = vi.fn(async () => undefined);
     renderTool({ ...toolBridge, openExternalUrl });
-    fireEvent.click(await screen.findByText("Alpha Widgets"));
-    fireEvent.click(screen.getByRole("button", { name: "Open in browser" }));
+    fireEvent.doubleClick(await screen.findByText("Alpha Widgets"));
     await waitFor(() => expect(openExternalUrl).toHaveBeenCalledWith(
       `https://dev.example.test/tools/solution/edit.aspx?id=${alphaId}`,
     ));
+    expect(screen.queryByRole("button", { name: "Open in browser" })).not.toBeInTheDocument();
     expect(document.querySelector("[data-toast-type]")).toBeNull();
   });
 });
