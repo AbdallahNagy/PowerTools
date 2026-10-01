@@ -29,11 +29,11 @@ describe("empty workspace", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Close all tabs" }));
 
-    expect(screen.getByRole("heading", { name: "Power Tools" })).toBeInTheDocument();
-    expect(screen.getByText("Open a tool")).toBeInTheDocument();
-    expect(
-      screen.getByText("Select one from the sidebar, or press Ctrl+P."),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Power Tools" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(screen.getByText("Select a tool from the sidebar.")).toBeInTheDocument();
+    expect(screen.getByText("Ctrl+P to search tools")).toBeInTheDocument();
+    expect(screen.getByText("Ctrl+B to show or hide the sidebar")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "PowerTools" })).not.toBeInTheDocument();
   });
 });
