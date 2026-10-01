@@ -132,7 +132,7 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
                 id={`${listId}-${tool.id}`}
                 role="option"
                 aria-selected={active}
-                className={`flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm ${
+                className={`flex min-w-0 cursor-pointer items-center gap-2 overflow-hidden px-3 py-1.5 text-sm ${
                   active
                     ? "bg-[var(--color-hover-bg)] text-[var(--color-text-white)]"
                     : "text-[var(--color-text-gray)]"
@@ -148,9 +148,9 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
                   alt=""
                   className="h-5 w-5 brightness-0 invert opacity-80"
                 />
-                <span className="min-w-0 flex-1 truncate">{tool.title}</span>
+                <span className="min-w-0 truncate">{tool.title}</span>
                 {tool.tooltip && tool.tooltip !== tool.title ? (
-                  <span className="truncate text-xs text-[var(--color-text-dark-gray)]">
+                  <span className="min-w-0 flex-1 truncate text-xs text-[var(--color-text-dark-gray)]">
                     {tool.tooltip}
                   </span>
                 ) : null}

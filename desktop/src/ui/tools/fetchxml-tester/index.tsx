@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { useConnections } from "../../shared/connections";
+import { useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { usePrimaryAction } from "../../shared/keyboard";
 import { Button, Checkbox, Spinner, ToastProvider, useToast } from "../../shared/ui";
@@ -27,8 +27,7 @@ export default function FetchXmlTester() {
 }
 
 function FetchXmlTesterPage() {
-  const { activeConnectionName, isActiveConnectionLoaded } = useConnections();
-  const connectionName = isActiveConnectionLoaded ? activeConnectionName ?? "" : "";
+  const { connectionName } = useTabConnection();
   const { showToast } = useToast();
   const library = useQueryLibrary();
   const [fetchXml, setFetchXml] = useState(SAMPLE_FETCH_XML);
@@ -42,7 +41,11 @@ function FetchXmlTesterPage() {
 
   const hasQuery = fetchXml.trim().length > 0;
   const visibleQueries = useMemo(
-    () => filterQueries(library.queries, { connectionName, allEnvironments, search }),
+    () => filterQueries(library.queries, {
+      connectionName: connectionName ?? "",
+      allEnvironments,
+      search,
+    }),
     [allEnvironments, connectionName, library.queries, search],
   );
 
@@ -56,7 +59,6 @@ function FetchXmlTesterPage() {
   const handleExecute = () => {
     const emptyMessage = emptyFetchMessage(fetchXml);
     if (emptyMessage || isPending) return;
-    if (!isActiveConnectionLoaded) return;
     if (!connectionName) {
       showToast("Select a connection before running the query.", "error");
       return;

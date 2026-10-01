@@ -32,7 +32,7 @@ Read the closest nested `AGENTS.md` before recommending file placement.
 - Keep components, models, API hooks, state, fixtures, and tests private to that folder.
 - Import only public shared/platform modules. Never import another tool's private files or shell internals.
 - Use `desktop/src/ui/shared/api/client.ts` (`apiGet`, `apiPost`, `apiPut`, `apiDelete`) with `meta.connectionName` and, when needed, `meta.targetConnectionName`.
-- Use `useConnections` / `useConnectionSelection` for environment selection.
+- Use `useTabConnection` for the tab's environment and pass `meta.connectionName`. Do not add an in-tool connection field. Use `useConnections` for the connection list.
 - Publish status-bar content with `useToolStatus`.
 - Reuse shared UI from `desktop/src/ui/shared/ui` and shared contracts from `desktop/src/ui/shared/contracts`.
 - Renderer code must not call raw IPC, `window.electron`, or the Dataverse SDK.

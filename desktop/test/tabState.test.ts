@@ -7,6 +7,7 @@ import {
   closeTab,
   createInitialTabState,
   openToolTab,
+  setTabConnection,
   type TabState,
 } from "../src/ui/shell/tabs/tabState";
 import { defineTool } from "../src/ui/tools/defineTool";
@@ -60,11 +61,13 @@ describe("tab state", () => {
           id: "fetchxml-builder-101",
           toolId: "fetchxml-builder",
           title: "FetchXML Builder",
+          connectionName: null,
         },
         {
           id: "fetchxml-builder-202",
           toolId: "fetchxml-builder",
           title: "FetchXML Builder 2",
+          connectionName: null,
         },
       ],
       activeTabId: "fetchxml-builder-202",
@@ -83,6 +86,50 @@ describe("tab state", () => {
       "fetchxml-builder-303-3",
     ]);
     expect(third.activeTabId).toBe("fetchxml-builder-303-3");
+  });
+
+  it("stamps the connection and numbers only tabs that share it", () => {
+    const primary = openToolTab(initialState, builderTool, 111, "Primary");
+    const secondary = openToolTab(primary, builderTool, 112, "Secondary");
+    const primaryAgain = openToolTab(secondary, builderTool, 113, "Primary");
+
+    expect(primaryAgain.tabs.slice(1)).toEqual([
+      {
+        id: "fetchxml-builder-111",
+        toolId: "fetchxml-builder",
+        title: "FetchXML Builder",
+        connectionName: "Primary",
+      },
+      {
+        id: "fetchxml-builder-112",
+        toolId: "fetchxml-builder",
+        title: "FetchXML Builder",
+        connectionName: "Secondary",
+      },
+      {
+        id: "fetchxml-builder-113",
+        toolId: "fetchxml-builder",
+        title: "FetchXML Builder 2",
+        connectionName: "Primary",
+      },
+    ]);
+  });
+
+  it("rebinds one tab without changing its title or the other tabs", () => {
+    const first = openToolTab(initialState, builderTool, 121, "Primary");
+    const second = openToolTab(first, builderTool, 122, "Primary");
+
+    const rebound = setTabConnection(second, "fetchxml-builder-121", "Secondary");
+
+    expect(rebound.tabs[1]).toEqual({
+      id: "fetchxml-builder-121",
+      toolId: "fetchxml-builder",
+      title: "FetchXML Builder",
+      connectionName: "Secondary",
+    });
+    expect(rebound.tabs[2]).toBe(second.tabs[2]);
+    expect(setTabConnection(rebound, "fetchxml-builder-121", "Secondary")).toBe(rebound);
+    expect(setTabConnection(rebound, "missing", "Other")).toBe(rebound);
   });
 
   it("opens another tab when multiple instances are left unspecified", () => {

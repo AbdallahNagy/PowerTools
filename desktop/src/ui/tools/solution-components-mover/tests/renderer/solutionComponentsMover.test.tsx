@@ -51,7 +51,10 @@ function StatusItemsProbe() {
   );
 }
 
-function renderTool(bridgeOverrides: DesktopBridgeOverrides = toolBridge) {
+function renderTool(
+  bridgeOverrides: DesktopBridgeOverrides = toolBridge,
+  connectionName: string | null = connection.name,
+) {
   return renderWithProviders(
     <ConnectionsProvider>
       <StatusBarProvider>
@@ -60,6 +63,7 @@ function renderTool(bridgeOverrides: DesktopBridgeOverrides = toolBridge) {
             id: "solution-components-mover-test",
             toolId: "solution-components-mover",
             title: "Solution Components Mover",
+            connectionName,
           }}
           definition={solutionComponentsMoverTool}
         />
@@ -106,10 +110,10 @@ describe("Solution Components Mover", () => {
     renderTool({
       ...toolBridge,
       getActiveConnectionName: async () => null,
-    });
+    }, null);
 
     expect(await screen.findAllByText(
-      "Select an environment from the connection control at the bottom of the tool sidebar.",
+      "Right-click this tab and choose Change connection.",
     )).toHaveLength(2);
     const separator = screen.getByRole("separator", { name: "Resize panes" });
     expect(separator).toHaveClass("h-1", "cursor-row-resize");

@@ -333,8 +333,10 @@ app.whenReady().then(async () => {
 
     connections[name] = conn;
 
-    // First connection becomes active automatically
-    if (activeConnectionName === null) {
+    // First connection becomes active automatically. Later saves stay on the
+    // tab that asked for them and leave the active connection unchanged.
+    const becameActive = activeConnectionName === null;
+    if (becameActive) {
       activeConnectionName = name;
     }
 
@@ -348,7 +350,9 @@ app.whenReady().then(async () => {
     const senderWindow = BrowserWindow.fromWebContents(event.sender);
     senderWindow?.close();
 
-    mainWindow.webContents.send("connection-status-update", name);
+    if (becameActive) {
+      mainWindow.webContents.send("connection-status-update", activeConnectionName);
+    }
     broadcastConnections();
   });
 

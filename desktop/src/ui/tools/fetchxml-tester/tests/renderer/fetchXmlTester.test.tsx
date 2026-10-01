@@ -48,7 +48,12 @@ function renderTool() {
     <ConnectionsProvider>
       <StatusBarProvider>
         <ToolHost
-          tab={{ id: "fetchxml-tester-1", toolId: "fetchxml-tester", title: "FetchXML Tester" }}
+          tab={{
+            id: "fetchxml-tester-1",
+            toolId: "fetchxml-tester",
+            title: "FetchXML Tester",
+            connectionName: connection.name,
+          }}
           definition={fetchXmlTesterTool}
         />
         <StatusItemsProbe />

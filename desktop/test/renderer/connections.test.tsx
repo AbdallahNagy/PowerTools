@@ -1,19 +1,17 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
 
 import {
   ConnectionsProvider,
-  useConnectionSelection,
   useConnections,
 } from "../../src/ui/shared/connections";
 import { StatusBarProvider } from "../../src/ui/shared/status";
+import { TabProvider } from "../../src/ui/context/TabContext";
+import { useTabs } from "../../src/ui/context/useTabs";
 import ToolHost from "../../src/ui/shell/tool-runtime/ToolHost";
-import FetchXmlBuilder from "../../src/ui/tools/fetchxml-builder";
 import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { renderWithProviders } from "../support/render";
-import { httpServer } from "../support/httpServer";
 
 class TestResizeObserver {
   observe() {}
@@ -49,9 +47,30 @@ function HostedDataMigration() {
         id: "data-migration-test",
         toolId: "data-migration",
         title: "Data Migration",
+        connectionName: null,
       }}
       definition={TOOL_REGISTRY["data-migration"]}
     />
+  );
+}
+
+function OpenToolProbe() {
+  const { openTool, tabs } = useTabs();
+  return (
+    <>
+      <button type="button" onClick={() => openTool("fetchxml-builder")}>
+        Open FetchXML Builder
+      </button>
+      <button type="button" onClick={() => openTool("data-migration")}>
+        Open Data Migration
+      </button>
+      <output aria-label="tab connections">
+        {tabs
+          .filter((tab) => tab.toolId !== "welcome")
+          .map((tab) => `${tab.toolId}:${tab.connectionName ?? "none"}`)
+          .join("|")}
+      </output>
+    </>
   );
 }
 
@@ -105,19 +124,6 @@ function ConnectionCommands() {
       </button>
       <output aria-label="command result">{result}</output>
       <ConnectionState label="command connection state" />
-    </>
-  );
-}
-
-function ConnectionSelection() {
-  const { connectionName, setConnectionName } = useConnectionSelection();
-
-  return (
-    <>
-      <button type="button" onClick={() => setConnectionName("Secondary")}>
-        Select secondary
-      </button>
-      <output aria-label="tool connection">{connectionName || "none"}</output>
     </>
   );
 }
@@ -235,28 +241,6 @@ describe("shared connections", () => {
     );
   });
 
-  it("applies the active connection once without replacing a tool selection", async () => {
-    const activeConnection = deferred<string | null>();
-    renderWithProviders(
-      <ConnectionsProvider>
-        <ConnectionSelection />
-      </ConnectionsProvider>,
-      {
-        bridgeOverrides: {
-          getActiveConnectionName: () => activeConnection.promise,
-        },
-      },
-    );
-
-    expect(screen.getByRole("status", { name: "tool connection" })).toHaveTextContent("none");
-    fireEvent.click(screen.getByRole("button", { name: "Select secondary" }));
-    await act(async () => activeConnection.resolve("Primary"));
-
-    expect(screen.getByRole("status", { name: "tool connection" })).toHaveTextContent(
-      "Secondary",
-    );
-  });
-
   it("preserves command results and updates the active name after selection", async () => {
     const createConnectionWindow = vi.fn(async () => undefined);
     const deleteConnection = vi.fn(async () => ({
@@ -324,7 +308,15 @@ describe("shared connections", () => {
     const getActiveConnectionName = vi.fn(async () => null);
     renderWithProviders(
       <ConnectionsProvider>
-        <FetchXmlBuilder />
+        <ToolHost
+          tab={{
+            id: "fetchxml-builder-load",
+            toolId: "fetchxml-builder",
+            title: "FetchXML Builder",
+            connectionName: null,
+          }}
+          definition={TOOL_REGISTRY["fetchxml-builder"]}
+        />
       </ConnectionsProvider>,
       { bridgeOverrides: { getActiveConnectionName, listConnections } },
     );
@@ -351,23 +343,20 @@ describe("shared connections", () => {
     expect(getActiveConnectionName).toHaveBeenCalledTimes(1);
   });
 
-  it("defaults a newly opened FetchXML Builder to the current active connection", async () => {
-    httpServer.use(
-      http.get("http://localhost/api/metadata/entities", () => HttpResponse.json([])),
-    );
-    const { bridge, rerender } = renderWithProviders(
+  it("stamps new tool tabs with the active connection and leaves them when it changes", async () => {
+    const setActiveConnection = vi.fn(async () => ({ success: true as const }));
+    const { bridge } = renderWithProviders(
       <ConnectionsProvider>
-        <ConnectionState label="connection state" />
+        <TabProvider>
+          <ConnectionState label="connection state" />
+          <OpenToolProbe />
+        </TabProvider>
       </ConnectionsProvider>,
       {
         bridgeOverrides: {
           getActiveConnectionName: async () => "Primary",
-          getConnection: async (name) => ({
-            ...availableConnections.find((connection) => connection.name === name)!,
-            token: "test-token",
-            expiresOn: "2099-01-01T00:00:00.000Z",
-          }),
           listConnections: async () => availableConnections,
+          setActiveConnection,
         },
       },
     );
@@ -378,52 +367,17 @@ describe("shared connections", () => {
     });
     act(() => bridge.emitConnectionStatusUpdate("Secondary"));
 
-    rerender(
-      <ConnectionsProvider>
-        <FetchXmlBuilder />
-      </ConnectionsProvider>,
-    );
+    fireEvent.click(screen.getByRole("button", { name: "Open FetchXML Builder" }));
+    fireEvent.click(screen.getByRole("button", { name: "Open Data Migration" }));
 
-    const [connectionSelect] = await screen.findAllByRole("combobox");
-    await waitFor(() => expect(connectionSelect).toHaveValue("Secondary"));
-  });
-
-  it("defaults a newly opened Data Migration tool to the current active connection", async () => {
-    httpServer.use(
-      http.get("http://localhost/api/metadata/entities", () => HttpResponse.json([])),
+    expect(screen.getByRole("status", { name: "tab connections" })).toHaveTextContent(
+      "fetchxml-builder:Secondary|data-migration:Secondary",
     );
-    const { bridge, rerender } = renderWithProviders(
-      <ConnectionsProvider>
-        <ConnectionState label="connection state" />
-      </ConnectionsProvider>,
-      {
-        bridgeOverrides: {
-          getActiveConnectionName: async () => "Primary",
-          getConnection: async (name) => ({
-            ...availableConnections.find((connection) => connection.name === name)!,
-            token: "test-token",
-            expiresOn: "2099-01-01T00:00:00.000Z",
-          }),
-          listConnections: async () => availableConnections,
-        },
-      },
-    );
-    await waitFor(() => {
-      expect(screen.getByRole("status", { name: "connection state" })).toHaveTextContent(
-        "Primary,Secondary|Primary",
-      );
-    });
-    act(() => bridge.emitConnectionStatusUpdate("Secondary"));
+    expect(setActiveConnection).not.toHaveBeenCalled();
 
-    rerender(
-      <ConnectionsProvider>
-        <StatusBarProvider>
-          <HostedDataMigration />
-        </StatusBarProvider>
-      </ConnectionsProvider>,
+    act(() => bridge.emitConnectionStatusUpdate("Primary"));
+    expect(screen.getByRole("status", { name: "tab connections" })).toHaveTextContent(
+      "fetchxml-builder:Secondary|data-migration:Secondary",
     );
-
-    const [sourceSelect] = await screen.findAllByRole("combobox");
-    await waitFor(() => expect(sourceSelect).toHaveValue("Secondary"));
   });
 });

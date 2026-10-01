@@ -34,10 +34,24 @@ function createInstanceId(
   return `${baseId}-${suffix}`;
 }
 
+function instanceTitle(
+  tool: ToolTabDefinition,
+  sameTool: readonly TabData[],
+  connectionName: string | null,
+): string {
+  const sameConnectionCount = sameTool.filter(
+    (tab) => (tab.connectionName ?? null) === connectionName,
+  ).length;
+  return sameConnectionCount === 0
+    ? tool.title
+    : `${tool.title} ${sameConnectionCount + 1}`;
+}
+
 export function openToolTab(
   state: TabState,
   tool: ToolTabDefinition,
   timestamp: number,
+  connectionName: string | null = null,
 ): TabState {
   const sameTool = state.tabs.filter((tab) => tab.toolId === tool.id);
 
@@ -49,17 +63,37 @@ export function openToolTab(
   }
 
   const instanceId = createInstanceId(tool.id, state.tabs, timestamp);
-  const title =
-    sameTool.length === 0
-      ? tool.title
-      : `${tool.title} ${sameTool.length + 1}`;
+  const boundConnection = connectionName ?? null;
 
   return {
     tabs: [
       ...state.tabs,
-      { id: instanceId, toolId: tool.id, title },
+      {
+        id: instanceId,
+        toolId: tool.id,
+        title: instanceTitle(tool, sameTool, boundConnection),
+        connectionName: boundConnection,
+      },
     ],
     activeTabId: instanceId,
+  };
+}
+
+export function setTabConnection(
+  state: TabState,
+  tabId: string,
+  connectionName: string | null,
+): TabState {
+  const tab = state.tabs.find((candidate) => candidate.id === tabId);
+  if (!tab || (tab.connectionName ?? null) === connectionName) return state;
+
+  return {
+    ...state,
+    tabs: state.tabs.map((candidate) =>
+      candidate.id === tabId
+        ? { ...candidate, connectionName }
+        : candidate,
+    ),
   };
 }
 

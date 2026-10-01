@@ -1,9 +1,21 @@
 import type { TabProps } from "../../common/types/tab-props.interface";
 
-function Tab({ title, active = false, onClick, onClose }: TabProps) {
+function Tab({
+  title,
+  connectionName,
+  active = false,
+  onClick,
+  onClose,
+  onContextMenu,
+}: TabProps) {
+  const label = connectionName ? `${title}, ${connectionName}` : title;
+
   return (
     <div
+      aria-label={label}
+      title={label}
       onClick={onClick}
+      onContextMenu={onContextMenu}
       className={`
         group flex items-center h-9 px-4 border-t-2 border-transparent cursor-pointer select-none
         ${
@@ -13,7 +25,12 @@ function Tab({ title, active = false, onClick, onClose }: TabProps) {
         }
       `}
     >
-      <span className="mr-2">{title}</span>
+      <span className="mr-2 truncate">{title}</span>
+      {connectionName ? (
+        <span className="mr-2 max-w-32 truncate text-xs text-(--color-text-dark-gray)">
+          {connectionName}
+        </span>
+      ) : null}
       {onClose && (
         <button
           onClick={(e) => {
