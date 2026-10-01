@@ -14,6 +14,7 @@ import { fetchXmlTesterTool } from "../src/ui/tools/fetchxml-tester/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
+import { solutionComponentsMoverTool } from "../src/ui/tools/solution-components-mover/tool";
 import { workflowActivitiesTool } from "../src/ui/tools/workflow-activities-viewer/tool";
 
 function TestTool() {
@@ -79,6 +80,7 @@ describe("tool registry", () => {
       "fetchxml-tester",
       "plugin-registration",
       "polymorphic-lookup-creator",
+      "solution-components-mover",
       "workflow-activities-viewer",
     ]);
     expect(ACTIVITY_BAR_TOOLS.map((tool) => tool.id)).toEqual([
@@ -87,6 +89,7 @@ describe("tool registry", () => {
       "fetchxml-tester",
       "plugin-registration",
       "polymorphic-lookup-creator",
+      "solution-components-mover",
       "workflow-activities-viewer",
     ]);
     expect(TOOL_REGISTRY.welcome.allowMultipleInstances).toBe(false);
@@ -102,6 +105,13 @@ describe("tool registry", () => {
     expect(TOOL_REGISTRY["fetchxml-tester"]).toBe(fetchXmlTesterTool);
     expect(TOOL_REGISTRY["plugin-registration"]).toBe(pluginRegistrationTool);
     expect(TOOL_REGISTRY["polymorphic-lookup-creator"]).toBe(polymorphicLookupTool);
+    expect(TOOL_REGISTRY["solution-components-mover"].allowMultipleInstances).toBe(true);
+    expect(TOOL_REGISTRY["solution-components-mover"].title).toBe("Solution Components Mover");
+    expect(TOOL_REGISTRY["solution-components-mover"].tooltip).toBe(
+      "Copy solution components from selected solutions into unmanaged solutions in the same environment",
+    );
+    expect(TOOL_REGISTRY["solution-components-mover"].showInActivityBar).toBe(true);
+    expect(TOOL_REGISTRY["solution-components-mover"]).toBe(solutionComponentsMoverTool);
     expect(TOOL_REGISTRY["workflow-activities-viewer"]).toBe(workflowActivitiesTool);
   });
 });
