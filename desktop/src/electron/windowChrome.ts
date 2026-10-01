@@ -60,16 +60,26 @@ export function getMainWindowOptions(
   };
 }
 
+export function createApplicationMenuTemplate(): Electron.MenuItemConstructorOptions[] {
+  return [
+    { role: "fileMenu" },
+    { role: "editMenu" },
+    { role: "viewMenu" },
+    {
+      label: "Window",
+      submenu: [
+        { role: "minimize" },
+        // The Close role defaults to CmdOrCtrl+W. An empty accelerator keeps
+        // that shortcut for closing the active tab. Alt+F4 still closes the window.
+        { role: "close", accelerator: "" },
+      ],
+    },
+    { role: "help" },
+  ];
+}
+
 export function installApplicationMenu(): void {
-  Menu.setApplicationMenu(
-    Menu.buildFromTemplate([
-      { role: "fileMenu" },
-      { role: "editMenu" },
-      { role: "viewMenu" },
-      { role: "windowMenu" },
-      { role: "help" },
-    ]),
-  );
+  Menu.setApplicationMenu(Menu.buildFromTemplate(createApplicationMenuTemplate()));
 }
 
 function senderWindow(event: IpcMainInvokeEvent): BrowserWindow | null {

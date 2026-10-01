@@ -3,6 +3,7 @@ import type { MouseEvent } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Spinner, ToastProvider, useToast } from "../../shared/ui";
 import { useConnectionSelection } from "../../shared/connections";
+import { usePrimaryAction } from "../../shared/keyboard";
 import { useToolStatus } from "../../shared/status";
 import { useCapabilities } from "./api/useCapabilities";
 import { useCatalog } from "./api/useCatalog";
@@ -215,6 +216,12 @@ function PluginRegistrationPage() {
   } else if (connectionName && tree.length === 0) {
     emptyMessage = "No plug-in assemblies found.";
   }
+
+  usePrimaryAction({
+    label: "Register assembly",
+    enabled: Boolean(connectionName),
+    run: () => setAssemblyDialog({}),
+  });
 
   return (
     <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[var(--color-text-gray)] overflow-hidden">

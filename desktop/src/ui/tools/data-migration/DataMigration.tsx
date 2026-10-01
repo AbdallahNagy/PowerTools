@@ -11,6 +11,7 @@ import { MigrationStatusItem } from "./components/MigrationStatusItem";
 import { useStartMigration, useMigrationJob } from "./api/useMigrationJob";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
 import { useConnectionSelection } from "../../shared/connections";
+import { usePrimaryAction } from "../../shared/keyboard";
 import { useToolStatus } from "../../shared/status";
 
 export default function DataMigration() {
@@ -94,6 +95,12 @@ function DataMigrationPage() {
       },
     );
   };
+
+  usePrimaryAction({
+    label: "Start Migration",
+    enabled: canStart,
+    run: handleStart,
+  });
 
   return (
     <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[#cccccc] overflow-hidden">

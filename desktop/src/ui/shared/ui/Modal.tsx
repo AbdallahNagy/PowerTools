@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { APP_MODAL_ATTRIBUTE } from "../keyboard/appModal";
 import { Spinner } from "./Spinner";
 
 interface ModalProps {
@@ -45,6 +46,7 @@ export function Modal({
 
   return (
     <div
+      {...{ [APP_MODAL_ATTRIBUTE]: "" }}
       className={`fixed inset-0 ${zClass} flex items-center justify-center bg-black/50 p-6`}
       onMouseDown={handleClose}
     >

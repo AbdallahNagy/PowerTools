@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { useConnections } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
+import { usePrimaryAction } from "../../shared/keyboard";
 import { Button, Checkbox, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import { useQueryLibrary } from "./api/useQueryLibrary";
 import { useRunFetch } from "./api/useRunFetch";
@@ -67,6 +68,13 @@ function FetchXmlTesterPage() {
     });
   };
 
+  const executeEnabled = hasQuery && !isPending;
+  usePrimaryAction({
+    label: "Execute",
+    enabled: executeEnabled,
+    run: handleExecute,
+  });
+
   const handleFormat = () => {
     if (isPending) return;
     try {
@@ -119,7 +127,7 @@ function FetchXmlTesterPage() {
           <Button type="button" variant="secondary" onClick={handleFormat} disabled={isPending}>
             Format
           </Button>
-          <Button type="button" onClick={handleExecute} disabled={!hasQuery || isPending}>
+          <Button type="button" onClick={handleExecute} disabled={!executeEnabled}>
             Execute
           </Button>
           {isPending ? <Spinner /> : null}

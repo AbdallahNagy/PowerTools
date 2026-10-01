@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Button, Checkbox, DataTable, Modal, SearchInput, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import { useConnections } from "../../shared/connections";
+import { usePrimaryAction } from "../../shared/keyboard";
 import { useToolStatus } from "../../shared/status";
 import {
   addRelationship,
@@ -945,6 +946,12 @@ function LookupActions({
   onSave: () => void;
   onCancel: () => void;
 }) {
+  usePrimaryAction({
+    label: mode === "new" ? "Create lookup" : "Save",
+    enabled: mode === "new" ? createEnabled : saveEnabled,
+    run: mode === "new" ? onCreate : onSave,
+  });
+
   return (
     <div className="flex gap-2">
       {mode === "new" ? (

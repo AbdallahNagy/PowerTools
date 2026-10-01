@@ -1,15 +1,27 @@
 import { useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
+import { useTabs } from "../../context/useTabs";
+import { useShellShortcuts } from "../../shell/keyboard/useShellShortcuts";
+import { ConnectionsProvider } from "../../shared/connections";
+import { StatusBarProvider } from "../../shared/status";
+import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 import ActivityBar from "./ActivityBar";
+import CommandPalette from "./CommandPalette";
 import TabBar from "./TabBar";
 import StatusBar from "./StatusBar";
 import TitleBar from "./TitleBar";
-import { ConnectionsProvider } from "../../shared/connections";
-import { StatusBarProvider } from "../../shared/status";
 
 const Layout = () => {
   const [sidebarVisible, setSidebarVisible] = useState(true);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const { openTool } = useTabs();
+
+  useShellShortcuts({
+    quickOpen,
+    onQuickOpenChange: setQuickOpen,
+    onToggleSidebar: () => setSidebarVisible((visible) => !visible),
+  });
 
   return (
     <ConnectionsProvider>
@@ -51,6 +63,15 @@ const Layout = () => {
             </Group>
           </div>
           <StatusBar />
+          <CommandPalette
+            open={quickOpen}
+            tools={ACTIVITY_BAR_TOOLS}
+            onClose={() => setQuickOpen(false)}
+            onOpen={(toolId) => {
+              openTool(toolId);
+              setQuickOpen(false);
+            }}
+          />
         </div>
       </StatusBarProvider>
     </ConnectionsProvider>
