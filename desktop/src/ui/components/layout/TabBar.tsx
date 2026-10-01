@@ -1,6 +1,7 @@
 import { memo, useState } from "react";
 import Tab from "./TabHeader";
 import TabConnectionMenu from "./TabConnectionMenu";
+import EmptyWorkspace from "./EmptyWorkspace";
 import { useTabs } from "../../context/useTabs";
 import ToolHost from "../../shell/tool-runtime/ToolHost";
 import { TOOL_REGISTRY } from "../../tools/registry";
@@ -53,19 +54,23 @@ function TabBar() {
         />
       ) : null}
       <div className="flex-1 flex flex-col overflow-hidden bg-(--color-bg-dark)">
-        {tabs.map((tab) => {
-          const isActive = tab.id === activeTabId;
-          return (
-            <div
-              key={tab.id}
-              className={
-                isActive ? "flex flex-1 flex-col min-h-0" : "hidden"
-              }
-            >
-              <TabContent tab={tab} />
-            </div>
-          );
-        })}
+        {tabs.length === 0 ? (
+          <EmptyWorkspace />
+        ) : (
+          tabs.map((tab) => {
+            const isActive = tab.id === activeTabId;
+            return (
+              <div
+                key={tab.id}
+                className={
+                  isActive ? "flex flex-1 flex-col min-h-0" : "hidden"
+                }
+              >
+                <TabContent tab={tab} />
+              </div>
+            );
+          })
+        )}
       </div>
     </>
   );
