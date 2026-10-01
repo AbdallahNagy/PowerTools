@@ -98,6 +98,7 @@ function renderTool(tabId: string) {
             id: tabId,
             toolId: "plugin-registration",
             title: "Plugin Registration",
+            connectionName: connection.name,
           }}
           definition={pluginRegistrationTool}
         />

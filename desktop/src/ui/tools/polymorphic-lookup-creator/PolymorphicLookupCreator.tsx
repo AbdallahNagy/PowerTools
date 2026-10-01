@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Button, Checkbox, DataTable, Modal, SearchInput, Spinner, ToastProvider, useToast } from "../../shared/ui";
-import { useConnections } from "../../shared/connections";
+import { useTabConnection } from "../../shared/connections";
 import { usePrimaryAction } from "../../shared/keyboard";
 import { useToolStatus } from "../../shared/status";
 import {
@@ -46,34 +46,29 @@ export default function PolymorphicLookupCreator() {
 }
 
 function useSessionConnection(dirty: boolean) {
-  const { activeConnectionName, isActiveConnectionLoaded, setActiveConnection } = useConnections();
-  const [sessionName, setSessionName] = useState<string | null>(null);
+  const { connectionName: tabConnectionName, setConnectionName } = useTabConnection();
+  const [sessionName, setSessionName] = useState<string | null>(tabConnectionName);
   const [pendingName, setPendingName] = useState<string | null | undefined>(undefined);
-  const initialized = useRef(false);
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
+  const sessionRef = useRef(sessionName);
+  sessionRef.current = sessionName;
 
   useEffect(() => {
-    if (!isActiveConnectionLoaded) return;
-    if (!initialized.current) {
-      initialized.current = true;
-      setSessionName(activeConnectionName);
-      return;
-    }
-    if (activeConnectionName === sessionName) {
+    if (tabConnectionName === sessionRef.current) {
       setPendingName(undefined);
       return;
     }
     if (!dirtyRef.current) {
-      setSessionName(activeConnectionName);
+      setSessionName(tabConnectionName);
       return;
     }
-    setPendingName(activeConnectionName);
-  }, [activeConnectionName, isActiveConnectionLoaded, sessionName]);
+    setPendingName(tabConnectionName);
+  }, [tabConnectionName]);
 
   return {
-    connectionName: isActiveConnectionLoaded ? sessionName : null,
-    ready: isActiveConnectionLoaded,
+    connectionName: sessionName,
+    ready: true,
     pendingName,
     confirmSwitch() {
       setSessionName(pendingName ?? null);
@@ -81,7 +76,7 @@ function useSessionConnection(dirty: boolean) {
     },
     cancelSwitch() {
       setPendingName(undefined);
-      if (sessionName) void setActiveConnection(sessionName);
+      setConnectionName(sessionRef.current);
     },
   };
 }
@@ -425,7 +420,7 @@ function PolymorphicLookupPage() {
         </div>
       ) : !connection.connectionName ? (
         <div className="flex flex-1 items-center justify-center p-6 text-sm text-[var(--color-text-gray)]">
-          Select an environment from the connection control at the bottom of the tool sidebar.
+          Right-click this tab and choose Change connection.
         </div>
       ) : (
         <Group orientation="horizontal" className="flex min-h-0 flex-1">

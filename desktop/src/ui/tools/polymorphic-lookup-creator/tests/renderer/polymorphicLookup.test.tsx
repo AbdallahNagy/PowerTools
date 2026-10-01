@@ -51,6 +51,7 @@ function renderTool() {
             id: "polymorphic-lookup-creator-test",
             toolId: "polymorphic-lookup-creator",
             title: "Polymorphic Lookup Creator",
+            connectionName: connection.name,
           }}
           definition={polymorphicLookupTool}
         />

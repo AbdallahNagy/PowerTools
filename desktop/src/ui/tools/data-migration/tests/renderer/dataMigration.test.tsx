@@ -106,6 +106,7 @@ describe("Data Migration", () => {
               id: "data-migration-characterization",
               toolId: "data-migration",
               title: "Data Migration",
+              connectionName: sourceConnection.name,
             }}
             definition={dataMigrationTool}
           />

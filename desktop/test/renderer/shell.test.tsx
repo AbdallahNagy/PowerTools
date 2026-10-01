@@ -5,6 +5,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest
 import ActivityBar from "../../src/ui/components/layout/ActivityBar";
 import Layout from "../../src/ui/components/layout/Layout";
 import StatusBar from "../../src/ui/components/layout/StatusBar";
+import TabBar from "../../src/ui/components/layout/TabBar";
 import { TabProvider } from "../../src/ui/context/TabContext";
 import { useTabs } from "../../src/ui/context/useTabs";
 import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
@@ -295,10 +296,11 @@ describe("renderer shell", () => {
       <ConnectionsProvider>
         <TabProvider>
           <ActivityBar />
+          <TabBar />
+          <StatusBarProvider>
+            <StatusBar />
+          </StatusBarProvider>
         </TabProvider>
-        <StatusBarProvider>
-          <StatusBar />
-        </StatusBarProvider>
       </ConnectionsProvider>,
       {
         bridgeOverrides: {
@@ -312,23 +314,39 @@ describe("renderer shell", () => {
 
     const connection = await screen.findByRole("button", { name: "Connection: Primary" });
     expect(connection).toHaveTextContent("Primary");
-    expect(screen.getByText("connected to: Primary")).toBeInTheDocument();
+    expect(screen.queryByText("connected to: Primary")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "connected to: Primary" })).not.toBeInTheDocument();
     expect(listConnections).toHaveBeenCalledTimes(1);
     expect(getActiveConnectionName).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", {
+      name: "Build, run, and refine FetchXML queries",
+    }));
+    expect(await screen.findByText("connected to: Primary")).toBeInTheDocument();
 
     act(() => bridge.emitConnectionStatusUpdate("Secondary"));
     expect(screen.getByRole("button", { name: "Connection: Secondary" })).toHaveTextContent(
       "Secondary",
     );
+    expect(screen.getByText("connected to: Primary")).toBeInTheDocument();
+    expect(setActiveConnection).not.toHaveBeenCalled();
+
+    fireEvent.contextMenu(screen.getByLabelText("FetchXML Builder, Primary"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Change connection" }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Secondary" }));
     expect(screen.getByText("connected to: Secondary")).toBeInTheDocument();
+    expect(screen.getByLabelText("FetchXML Builder, Secondary")).toBeInTheDocument();
+    expect(setActiveConnection).not.toHaveBeenCalled();
+
+    fireEvent.contextMenu(screen.getByLabelText("FetchXML Builder, Secondary"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Change connection" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Add connection" }));
+    expect(createConnectionWindow).toHaveBeenCalledTimes(1);
+    expect(setActiveConnection).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Connection: Secondary" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Primary" }));
     expect(setActiveConnection).toHaveBeenCalledWith("Primary");
-
-    fireEvent.click(await screen.findByRole("button", { name: "Connection: Primary" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Add connection" }));
-    expect(createConnectionWindow).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("connected to: Secondary")).toBeInTheDocument();
   });
 });

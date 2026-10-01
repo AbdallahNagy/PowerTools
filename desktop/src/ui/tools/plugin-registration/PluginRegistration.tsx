@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Spinner, ToastProvider, useToast } from "../../shared/ui";
-import { useConnectionSelection } from "../../shared/connections";
+import { useTabConnection } from "../../shared/connections";
 import { usePrimaryAction } from "../../shared/keyboard";
 import { useToolStatus } from "../../shared/status";
 import { useCapabilities } from "./api/useCapabilities";
@@ -50,7 +50,7 @@ interface ConfirmState {
 }
 
 function PluginRegistrationPage() {
-  const { connectionName, setConnectionName } = useConnectionSelection();
+  const { connectionName } = useTabConnection();
   const { showToast } = useToast();
   const [search, setSearch] = useState("");
   const [showSystem, setShowSystem] = useState(false);
@@ -113,6 +113,7 @@ function PluginRegistrationPage() {
     name: string,
     id: string,
   ) => {
+    if (!connectionName) return;
     setConfirm({
       title: `Unregister ${kind}`,
       message: unregisterMessage(kind, name, id, connectionName, catalogQuery.data),
@@ -206,7 +207,7 @@ function PluginRegistrationPage() {
     setMenu({ x: event.clientX, y: event.clientY, node });
   };
 
-  let emptyMessage = "Select a connection to load plug-in registrations.";
+  let emptyMessage = "Right-click this tab and choose Change connection.";
   if (connectionName && catalogQuery.isLoading) emptyMessage = "Loading registrations…";
   else if (connectionName && catalogQuery.isError) {
     emptyMessage =
@@ -226,8 +227,6 @@ function PluginRegistrationPage() {
   return (
     <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[var(--color-text-gray)] overflow-hidden">
       <ToolHeader
-        connectionName={connectionName}
-        onConnectionChange={setConnectionName}
         search={search}
         onSearchChange={setSearch}
         showSystem={showSystem}

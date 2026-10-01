@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { useConnections } from "../../shared/connections";
+import { useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { Button, DataTable, SearchInput, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import { fetchActivityProcesses, useActivityProcesses, useWorkflowActivities } from "./api/workflowActivitiesApi";
@@ -19,7 +19,7 @@ import {
 } from "./model/view";
 
 const noEnvironmentMessage =
-  "Select an environment from the connection control at the bottom of the tool sidebar.";
+  "Right-click this tab and choose Change connection.";
 
 const processColumns = [
   { key: "name", header: "Process", render: (row: ProcessRow) => row.name },
@@ -47,8 +47,7 @@ export default function WorkflowActivitiesViewer() {
 }
 
 function WorkflowActivitiesPage() {
-  const { activeConnectionName, isActiveConnectionLoaded } = useConnections();
-  const connectionName = isActiveConnectionLoaded ? activeConnectionName ?? "" : "";
+  const { connectionName } = useTabConnection();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState("");
@@ -165,7 +164,7 @@ function WorkflowActivitiesPage() {
         </div>
         <div className="min-h-0 flex-1 overflow-auto p-3">
           <AssemblyList
-            connectionName={connectionName}
+            connectionName={connectionName ?? ""}
             loading={activitiesQuery.isFetching}
             errorText={activitiesQuery.isError ? toWorkflowActivitiesError(activitiesQuery.error) : null}
             assemblies={visible}

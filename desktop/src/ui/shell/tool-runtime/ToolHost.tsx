@@ -6,14 +6,18 @@ import { ToolErrorBoundary } from "./ToolErrorBoundary";
 import { ToolRuntimeContext } from "./ToolRuntimeContext";
 
 interface ToolHostProps {
-  tab: Pick<TabData, "id" | "toolId" | "title">;
+  tab: Pick<TabData, "id" | "toolId" | "title" | "connectionName">;
   definition: ToolDefinition;
 }
 
 export default function ToolHost({ tab, definition }: ToolHostProps) {
   const runtime = useMemo(
-    () => ({ toolId: tab.toolId, instanceId: tab.id }),
-    [tab.id, tab.toolId],
+    () => ({
+      toolId: tab.toolId,
+      instanceId: tab.id,
+      connectionName: tab.connectionName ?? null,
+    }),
+    [tab.connectionName, tab.id, tab.toolId],
   );
   const Tool = definition.component;
 
