@@ -2,6 +2,7 @@ import { fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderWithProviders } from "../../../../../../test/support/render";
+import { PUBLIC_TOOLS } from "../../../publicCatalog";
 import WelcomeTab from "../../index";
 import { welcomeTool } from "../../tool";
 
@@ -32,5 +33,16 @@ describe("Welcome tool", () => {
     expect(openedUrls).toEqual([
       "https://github.com/AbdallahNagy/PowerTools",
     ]);
+  });
+
+  it("lists every public tool from the catalog", () => {
+    renderWithProviders(<WelcomeTab />);
+
+    for (const tool of PUBLIC_TOOLS) {
+      expect(
+        screen.getByRole("heading", { name: tool.title }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(tool.description)).toBeInTheDocument();
+    }
   });
 });

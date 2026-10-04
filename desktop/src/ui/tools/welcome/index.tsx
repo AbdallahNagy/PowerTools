@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { desktopBridge } from "../../platform/desktopBridge";
+import { PUBLIC_TOOLS } from "../publicCatalog";
 
 const features: {
   icon: ReactElement;
@@ -62,25 +63,6 @@ const features: {
     title: "Open source",
     description:
       "Built in the open so developers can inspect how it works, suggest improvements, and shape the toolkit over time.",
-  },
-];
-
-const tools: {
-  title: string;
-  description: string;
-}[] = [
-  {
-    title: "Data Migration",
-    description:
-      "Move data between Dataverse environments with a guided, developer-friendly workflow that is easier to understand and control.",
-  },
-  {
-    title: "FetchXML Builder",
-    description: "Build, test, and refine FetchXML queries in a cleaner workspace built for fast iteration.",
-  },
-  {
-    title: "FetchXML Tester",
-    description: "Paste a FetchXML query, run it as written, and keep a local library of the queries you use.",
   },
 ];
 
@@ -291,7 +273,7 @@ export default function WelcomeTab() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {tools.map((tool) => (
+          {PUBLIC_TOOLS.map((tool) => (
             <div
               key={tool.title}
               className="rounded-lg p-5"

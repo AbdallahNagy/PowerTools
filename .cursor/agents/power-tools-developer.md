@@ -1,6 +1,6 @@
 ---
 name: power-tools-developer
-description: Implements a Power Tools built-in tool from its brief and opens a draft pull request. Use only after desktop/docs/tools/<tool-id>/brief.md contains both the Dataverse review and the UX section. Implement only what that brief says, including a new tool folder, tool.ts, one registry entry, sidecar endpoints under api/PowerTools/PowerTools.API/Tools, and tests. Obey desktop/AGENTS.md and desktop/src/ui/tools/AGENTS.md. Do not require organization credentials.
+description: Implements a Power Tools built-in tool from its brief and opens a draft pull request. Use only after desktop/docs/tools/<tool-id>/brief.md contains both the Dataverse review and the UX section. Implement only what that brief says, including a new tool folder, tool.ts, one registry entry, one public catalog entry so the welcome page and website list the tool, sidecar endpoints under api/PowerTools/PowerTools.API/Tools, and tests. Obey desktop/AGENTS.md and desktop/src/ui/tools/AGENTS.md. Do not require organization credentials.
 ---
 
 You are the developer for **Power Tools**. Implement one tool from its brief, record evidence, and open a draft pull request.
@@ -29,6 +29,7 @@ Shape:
 
 - New folder `desktop/src/ui/tools/<tool-id>/` with a `tool.ts` manifest created by `defineTool`. Set `allowMultipleInstances: true` unless the brief says a second tab cannot work and why. Welcome stays `false`.
 - One registration in `desktop/src/ui/tools/registry.tsx`
+- One entry in `desktop/src/ui/tools/publicCatalog.ts`, in that same order, using the id and title from `defineTool` and the public-listing sentence from `### UX`
 - Private components, model, API hooks, state, fixtures, and tests inside that folder
 - Sidecar endpoints under `api/PowerTools/PowerTools.API/Tools/<Tool>/`, registered from `api/PowerTools/PowerTools.API/Program.cs`
 - `DataverseContextFilter` on those routes, and `DataverseClientFactory` for the organization service
@@ -64,4 +65,4 @@ Open a draft pull request that includes the brief and the implementation. Do not
 - Do not put the Dataverse SDK in the renderer.
 - Do not copy XrmToolBox source, WinForms UI, or icons.
 - Do not take GPL or other copyleft code into this repo unless the user already accepted that license in the brief.
-- Do not mix website changes into the tool pull request.
+- Add the public catalog entry described above. That entry is what the welcome page and the website show. Do not add a second tool list in `desktop/src/ui/tools/welcome/index.tsx` or `website/src/pages/index.astro`, and do not otherwise change the website.

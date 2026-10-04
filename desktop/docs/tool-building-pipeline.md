@@ -68,6 +68,14 @@ Only decisions the user must make. Write `None.` when there are none. Do not del
 
 Activity-bar tools allow more than one tab by default. Set `allowMultipleInstances: true`. Choosing the tool in the sidebar opens another tab, and each tab keeps its own state. A tool sets `allowMultipleInstances: false` only when a second tab cannot work, and the brief says why. Welcome stays a single tab. One selected environment is not a reason to block a second tab.
 
+## Public listing
+
+Activity-bar tools appear on the welcome page and the website from one list: `desktop/src/ui/tools/publicCatalog.ts`.
+
+`PUBLIC_TOOLS` follows `ACTIVITY_BAR_TOOLS` in `desktop/src/ui/tools/registry.tsx`. Each entry uses that tool's id and title, plus the one-sentence description from `### UX`.
+
+The welcome page and `website/src/pages/index.astro` render `PUBLIC_TOOLS`. Adding a tool means adding that catalog entry. It does not mean editing either screen's tool markup. Welcome is not a public tool.
+
 ## Developer gate
 
 `power-tools-developer` does not implement, branch, or open a pull request until `desktop/docs/tools/<tool-id>/brief.md` contains both `### Dataverse review` and `### UX`, and each of those sections has at least one sentence or list item. Missing either section means the brief is not ready.

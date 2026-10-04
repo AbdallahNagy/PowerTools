@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import heroImage from "../assets/images/hero-image.png";
+import { PUBLIC_TOOLS } from "../../../desktop/src/ui/tools/publicCatalog";
 
 const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
 const baseUrl = import.meta.env.BASE_URL;
@@ -72,32 +73,27 @@ const localPath = (path: string) =>
     </div>
   </section>
 
-  <section class="section split-section">
-    <div>
-      <p class="eyebrow">Current tools</p>
-      <h2>A toolkit, starting with the workflows developers need often.</h2>
-      <p class="lead">
-        PowerTools is not a single-purpose utility. It is a desktop workspace
-        for Dataverse developer tools, beginning with Data Migration and
-        FetchXML Builder.
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">Current tools</p>
+        <h2>A toolkit for the workflows developers need often.</h2>
+      </div>
+      <p>
+        PowerTools is a desktop workspace for Dataverse developer tools. Each
+        tool below is in the app today.
       </p>
     </div>
 
-    <div class="stack">
-      <article class="feature-card">
-        <h3 class="tool">Data Migration</h3>
-        <p>
-          Move data between Dataverse environments with a guided,
-          developer-friendly workflow that is easier to understand and control.
-        </p>
-      </article>
-      <article class="feature-card">
-        <h3 class="tool">FetchXML Builder</h3>
-        <p>
-          Build, test, and refine FetchXML queries in a cleaner workspace built
-          for fast iteration.
-        </p>
-      </article>
+    <div class="tool-grid">
+      {
+        PUBLIC_TOOLS.map((tool) => (
+          <article class="feature-card">
+            <h3 class="tool">{tool.title}</h3>
+            <p>{tool.description}</p>
+          </article>
+        ))
+      }
     </div>
   </section>
 

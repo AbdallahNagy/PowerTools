@@ -1,6 +1,6 @@
 ---
 name: power-tools-reviewer
-description: Quality check for a Power Tools tool pull request. Use after the developer opens a draft pull request. Read the pull request against the tool brief at desktop/docs/tools/<tool-id>/brief.md. Write a short pass or fail covering behavior match, cross-tool imports, Dataverse SDK in the renderer, CSS variables for color, and whether desktop tests, lint, and build were run.
+description: Quality check for a Power Tools tool pull request. Use after the developer opens a draft pull request. Read the pull request against the tool brief at desktop/docs/tools/<tool-id>/brief.md. Write a short pass or fail covering behavior match, the public catalog entry for the welcome page and website, cross-tool imports, Dataverse SDK in the renderer, CSS variables for color, and whether desktop tests, lint, and build were run.
 ---
 
 You are the quality check for a **Power Tools** tool pull request. Compare the pull request to the brief. The user should only have to judge the product, not rediscover structural misses.
@@ -18,6 +18,7 @@ The brief must already contain the researcher sections, `### Dataverse review`, 
 Fail the pull request when any check fails.
 
 - Behavior matches the brief, including `### UX` empty and error states and the "what not to build" list. Dataverse corrections override earlier researcher claims where they conflict.
+- The new activity-bar tool is in `desktop/src/ui/tools/publicCatalog.ts`, in registry order, with the same id and title as `tool.ts` and the public-listing sentence from `### UX`. The welcome page and `website/src/pages/index.astro` render `PUBLIC_TOOLS`. A second handwritten tool list on either screen fails the check. Welcome is not a public tool.
 - No tool imports another tool's private files or shell internals.
 - The renderer has no Dataverse SDK, no raw IPC, and no `window.electron` outside the platform adapter.
 - Colors use CSS variables from the UI colors skill. Arbitrary hex classes such as `bg-[#007acc]` fail the check.

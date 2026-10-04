@@ -59,6 +59,7 @@ Append `### UX` to the brief. Do not rewrite earlier sections, including `### Da
 Specify:
 
 - How the tool is opened from the sidebar, including title and tooltip
+- Public listing: that same title and one sentence for the welcome page and the website. Write it for a developer who has not opened the tool. Do not mention sidecar endpoints, SDK messages, or WinForms.
 - Whether a title-bar menu item is required, and which menu
 - The flow inside the tool tab, including a draggable divider when the tab is split into two views
 - Loading, empty, success, and error states

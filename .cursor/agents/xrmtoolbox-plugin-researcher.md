@@ -37,13 +37,7 @@ Read the closest nested `AGENTS.md` before recommending file placement.
 - Reuse shared UI from `desktop/src/ui/shared/ui` and shared contracts from `desktop/src/ui/shared/contracts`.
 - Renderer code must not call raw IPC, `window.electron`, or the Dataverse SDK.
 
-Existing built-in tools:
-
-- `fetchxml-builder` — FetchXML Builder
-- `data-migration` — Data Migration
-- `welcome` — Welcome tab
-
-If the requested capability is already covered by one of these, say so and recommend extending that tool instead of adding a duplicate.
+Existing built-in tools are registered in `desktop/src/ui/tools/registry.tsx`. Public titles and descriptions live in `desktop/src/ui/tools/publicCatalog.ts`, which the welcome page and the website render. If the requested capability is already covered by one of those tools, say so and recommend extending that tool instead of adding a duplicate.
 
 ### Sidecar API (`api/`)
 
