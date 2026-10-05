@@ -1,6 +1,6 @@
 # Tool-building pipeline
 
-New Dataverse tools start with the `xrmtoolbox-plugin-researcher` agent. Cursor does not pass one agent's chat to the next. Handoff is the brief file below. Dataverse review and UX run in parallel after research. The developer starts only when both sections are written.
+New Dataverse tools start with the `xrmtoolbox-plugin-researcher` agent. Neither Cursor nor Claude Code passes one agent's chat to the next. Handoff is the brief file below. Dataverse review and UX run in parallel after research. The developer starts only when both sections are written.
 
 ```mermaid
 flowchart LR
@@ -13,6 +13,12 @@ flowchart LR
   dev --> pr[Pull request]
   pr --> review[Quality check]
 ```
+
+## Cursor and Claude Code
+
+The agents are defined once in `.cursor/agents/`. `.claude/agents/` holds generated copies with the same names, so Claude Code runs the same agents. After editing an agent in `.cursor/agents/`, run `node scripts/sync-agents.mjs` from the repository root and commit both files. Claude Code also runs the sync when a session starts, and the `Agents sync` workflow fails a pull request whose copies are stale. Do not edit `.claude/agents/*.md` directly.
+
+In Claude Code, `/build-tool <tool name>` runs every stage below in order and stops at the same user decisions.
 
 ## Roles
 
