@@ -205,3 +205,110 @@ Register `app.MapBulkWorkflowExecutionEndpoints()`, the job store singleton and 
   - `/home/user/PowerTools/api/PowerTools/PowerTools.API/Services/MigrationJobRunner.cs`
   - `/home/user/PowerTools/api/PowerTools/PowerTools.API/Tools/SolutionComponentsMover/SolutionComponentsMoverEndpoints.cs`
 - Brief destination for the pipeline (not written by me): `/home/user/PowerTools/desktop/docs/tools/bulk-workflow-execution/brief.md`
+
+### UX
+
+Written from `### What it does` only. The scope is: pick an activated on-demand classic workflow, pick a view on its entity or paste FetchXML, count the matching records, run the workflow on that set in batches with an optional delay, watch progress and estimated time, stop after the current batch, and read the final started and error counts.
+
+**Opening the tool**
+
+- Sidebar entry in `ActivityBar.tsx`, title `Bulk Workflow Execution`, tooltip `Run an on-demand workflow against every record a view or FetchXML query returns`.
+- `showInActivityBar: true`, `allowMultipleInstances: true`. Each click on the sidebar entry opens another tab. Each tab keeps its own workflow selection, view selection, FetchXML text, run settings and run, and follows the selected environment. Two tabs can run two different workflows at once.
+- No title-bar menu item. `File`, `Edit`, `View` and `Help` stay unchanged.
+
+**Public listing**
+
+- Title: `Bulk Workflow Execution`
+- Description: `Run an on-demand workflow against every record a view or FetchXML query returns, in batches you can pace and stop.`
+
+**Layout: setup view**
+
+The tab has two views: setup and run. Setup is a horizontal split built from `Group`, `Panel` and `Separator` from `react-resizable-panels`, as in `Layout.tsx`.
+
+- Left panel, `Workflows` (default size 30, `minSize` 20).
+  - `SearchInput` with placeholder `Filter workflows`. It filters by name and entity in the tab, without a new request.
+  - `DataTable` with columns `Name`, `Entity` and `Mode`. `Entity` shows the entity display name, with the logical name in muted text. `Mode` shows `Background` or `Real-time`. All three columns sort by a click on the header: first click ascending, second click descending, ↑ or ↓ on the active header. Default sort is `Name` ascending.
+  - A row click selects the workflow (`selectedKey`). Changing the workflow clears the view selection, the FetchXML and the count.
+- Separator between left and right: named `Resize panes`, `w-1 cursor-col-resize bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)]`.
+- Right panel (`minSize` 40) is itself a vertical split (`orientation="vertical"`).
+  - Top panel, `Views` (default size 40, `minSize` 20).
+    - Header line: the selected workflow name and its entity display name. Before a workflow is picked, the panel shows only the empty state below.
+    - `SearchInput` with placeholder `Filter views`.
+    - `DataTable` with columns `Name` and `Type` (`System` or `Personal`), both sortable by header click. Default sort is `Type` then `Name`, system views first. No divider rows between system and personal views; the `Type` column carries that.
+    - A row click replaces the editor text below with that view's FetchXML, without a prompt.
+  - Separator: named `Resize panes`, `h-1 cursor-row-resize`, same colors as above.
+  - Bottom panel, `Query and run` (`minSize` 30).
+    - A tool-local `<textarea aria-label="FetchXML">` with `spellCheck={false}`, monospace, `bg-[var(--color-bg-light)] text-[var(--color-text-white)]`, focus border `var(--color-primary)`. Users can edit the loaded FetchXML or paste their own. Editing the text deselects the view row and clears the count.
+    - Settings row with two tool-local number inputs:
+      - `Batch size`, 1 to 1000, default 100. Values outside the range are clamped on blur.
+      - `Delay between batches (seconds)`, 0 to 300, default 0.
+    - Muted helper text under the settings when the selected workflow is real-time: `Real-time workflows run inside each batch. Use a smaller batch size.`
+    - Action row:
+      - `Button` variant `secondary`, `Count records`. Enabled when a workflow is selected and the editor is not empty.
+      - Count result text next to it, for example `1,284 records match`.
+      - `Button` variant `primary`, `Start`. Enabled only when the count for the current workflow and current FetchXML text is done and above zero. Any change to the workflow or the text disables it again.
+
+**Start confirmation**
+
+`Start` opens a `Modal` titled `Start workflows`. It shows the workflow name, its mode, the entity, the record count, the batch size and the delay. It adds a warning line when the count is above 10,000 (`This queues a large number of workflow jobs.`) or when the workflow is real-time. Buttons: `Cancel` (`secondary`) and `Start {count} workflows` (`primary`). While the start request is in flight the modal is `busy` with `busyLabel` `Starting…`.
+
+**Run view**
+
+After the start request succeeds, the tab replaces the setup split with a single run view. Workflow, query and settings cannot change during a run.
+
+- Header: workflow name, entity, environment name the run started on, and the batch size and delay.
+- Phase `collecting`: `Spinner` with `Collecting record IDs…`.
+- Phase `running`: `ProgressBar` with `value` = processed and `max` = total, label `{processed} of {total}`. Below it: `Started {succeeded}`, `Errors {failed}`, `About {time} remaining`. Time is formatted as `1 h 4 min`, `3 min`, or `under 1 min`; it shows `Estimating…` until the first batch finishes.
+- `Button` variant `secondary`, `Stop`. A click changes it to disabled `Stopping after current batch…`. There is no confirmation.
+- Errors `DataTable`, shown as soon as one error exists, with columns `Record ID` and `Error`, both sortable by header click. `emptyMessage` is not needed because the table is hidden at zero errors. If the error list was capped, a muted line says `Showing the first {n} errors.`
+- End states, same view, `Stop` replaced by `Button` variant `primary`, `New run`:
+  - `completed`: `Finished. {succeeded} started, {failed} errors.`
+  - `cancelled`: `Stopped. {succeeded} started, {failed} errors, {total - processed} not run.`
+  - `failed`: `The run failed: {message}`, plus the counts reached before the failure.
+- `New run` returns to setup with the same workflow, view, FetchXML and settings, and clears the count so the user counts again before another start.
+- Polling stops at an end state. A `useToast` toast announces the end state, so the user sees it from another tab.
+- If the tab is closed while a run is active, the tab sends the stop request for that run. A closed tab cannot show the run, so it does not leave it going unseen.
+
+**Status bar (`useToolStatus`)**
+
+- Setup: `{n} on-demand workflows`.
+- Counting: `Counting records…`.
+- Running: `Running {processed}/{total}`.
+- End: `Finished: {succeeded} started, {failed} errors`, `Stopped: …`, or `Run failed`.
+
+**Loading, empty, success and error states**
+
+| Where | Loading | Empty | Error |
+| --- | --- | --- | --- |
+| No environment selected | | Whole tab: `Connect to an environment to list on-demand workflows.` | |
+| Workflows | `Spinner` in the left panel | `No activated on-demand workflows in this environment.` A filter with no match: `No workflows match the filter.` | Message in the panel plus `Button` variant `secondary`, `Retry` |
+| Views | `Spinner` in the top panel | No workflow: `Select a workflow to see its views.` No views: `No views for {entity}. Paste FetchXML below.` | Message plus `Retry`. The editor stays usable for pasted FetchXML |
+| Count | `Count records` disabled with `Spinner` and `Counting…` | Zero: `No records match. There is nothing to run.` `Start` stays disabled | The server message under the editor, for example a wrong root entity, an aggregate query, or malformed FetchXML |
+| Start | Modal `busy` | | Modal stays open and shows the message; `Start` re-enables |
+| Run polling | | | A failed poll shows `Lost contact with the run. Retrying…` and keeps polling; the run is not assumed failed |
+
+Environment change in a tab during setup reloads the workflows and clears every selection, the FetchXML and the count. During a run, the run stays bound to the environment it started on, and the header keeps that environment's name. The setup reloads for the new environment after `New run`.
+
+**Colors**
+
+- Panels `bg-[var(--color-bg-dark)]`, panel headers `bg-[var(--color-bg-darker)]`, editor and inputs `bg-[var(--color-bg-light)]`.
+- Primary text `text-[var(--color-text-white)]`, secondary `text-[var(--color-text-gray)]`, helper and muted text `text-[var(--color-text-dark-gray)]`.
+- Borders `border-[var(--color-border-dark)]`, focus `border-[var(--color-primary)]`, hover `hover:bg-[var(--color-hover-bg)]`.
+- No error or warning color exists. Until one is added, error and warning lines use `text-[var(--color-text-white)]` with a leading `Error:` or `Warning:` word. See open questions.
+
+**Shared controls to reuse**
+
+`Button`, `DataTable`, `Modal`, `ProgressBar`, `SearchInput`, `Spinner`, `useToast`, plus the `react-resizable-panels` split. The FetchXML textarea and the two number inputs are tool-local elements, not new shared controls. `Checkbox` is not needed.
+
+**What not to build**
+
+- No hand-off to FetchXML Builder or any message bus. Users paste FetchXML from FetchXML Builder or FetchXML Tester.
+- No business process flows, actions, cloud flows, or real-time and background workflows that are not on-demand.
+- No record preview grid, no per-record selection, and no column display of the matched records. The count is the only preview.
+- No links to system jobs, no retry of failed records, no export of the error list, and no saved run history.
+- No reattaching to a run after its tab is closed.
+- No WinForms layout: no single long form with stacked group boxes, no combo-box view list with a divider entry, no message boxes for results, no help or donate text, no plugin icons or wording.
+
+### Open questions
+
+- Colors: the palette has no error or warning variable. Should `colors.css` gain one (for example `--color-error` and `--color-warning`) for the count, start and run error lines and the large-run and real-time warnings? Until then the UX uses white text with an `Error:` or `Warning:` prefix.
