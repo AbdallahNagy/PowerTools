@@ -44,6 +44,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The smoke test starts the sidecar with `dotnet run`. On a cold runner
+      # that compiles the API first, which can outlast the sidecar's 30 s
+      # ready timeout and leave the app stuck on its startup error dialog.
+      # Building here makes the smoke test's `dotnet run` an up-to-date check.
+      - name: Build sidecar
+        run: dotnet build ../api/PowerTools/PowerTools.API/PowerTools.API.csproj
+
       - name: Run desktop checks
         run: npm run check
 
