@@ -24,6 +24,8 @@ These are the **only** approved colors for this project, defined in `src/ui/inde
 | `--color-text-dark-gray` | `#808080` | Muted / disabled text |
 | `--color-border-dark` | `#1e1e1e` | Borders and dividers |
 | `--color-hover-bg` | `#363636` | Hover background state |
+| `--color-error` | `#f48771` | Error text and icons (failed requests, run errors) |
+| `--color-warning` | `#cca700` | Warning text and icons (risky or large operations) |
 
 
 ## Rules
@@ -46,6 +48,8 @@ These are the **only** approved colors for this project, defined in `src/ui/inde
 | Muted text | `text-[var(--color-text-dark-gray)]` |
 | Border / divider | `border-[var(--color-border-dark)]` |
 | Hover background | `hover:bg-[var(--color-hover-bg)]` |
+| Error text | `text-[var(--color-error)]` |
+| Warning text | `text-[var(--color-warning)]` |
 
 ## Adding a New Color
 

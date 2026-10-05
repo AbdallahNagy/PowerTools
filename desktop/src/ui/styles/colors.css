@@ -17,4 +17,8 @@
   
   /* Hover states */
   --color-hover-bg: #363636;
+
+  /* Status colors */
+  --color-error: #f48771;
+  --color-warning: #cca700;
 }

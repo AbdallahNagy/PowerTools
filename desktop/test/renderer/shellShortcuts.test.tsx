@@ -135,7 +135,7 @@ describe("shell keyboard shortcuts", () => {
 
     fireEvent.keyDown(document.body, { key: "p", ctrlKey: true });
     fireEvent.change(screen.getByRole("combobox", { name: "Open tool" }), {
-      target: { value: "workflow" },
+      target: { value: "workflow activities" },
     });
     expect(screen.getByRole("option", { name: /Workflow Activities Viewer/ })).toBeInTheDocument();
     expect(screen.queryByRole("option", { name: /Data Migration/ })).not.toBeInTheDocument();
@@ -143,8 +143,10 @@ describe("shell keyboard shortcuts", () => {
 
     fireEvent.keyDown(document.body, { key: "p", ctrlKey: true });
     fireEvent.change(screen.getByRole("combobox", { name: "Open tool" }), {
-      target: { value: "fetch" },
+      target: { value: "fetchxml" },
     });
+    expect(screen.getByRole("option", { name: /FetchXML Builder/ })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Open tool" }), { key: "ArrowDown" });
     fireEvent.keyDown(screen.getByRole("combobox", { name: "Open tool" }), { key: "ArrowDown" });
     fireEvent.keyDown(screen.getByRole("combobox", { name: "Open tool" }), { key: "Enter" });
 

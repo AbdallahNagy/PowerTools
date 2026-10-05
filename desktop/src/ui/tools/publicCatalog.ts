@@ -17,6 +17,12 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
       "Browse every table in an environment and inspect its fields, types, and lookups.",
   },
   {
+    id: "bulk-workflow-execution",
+    title: "Bulk Workflow Execution",
+    description:
+      "Run an on-demand workflow against every record a view or FetchXML query returns, in batches you can pace and stop.",
+  },
+  {
     id: "data-migration",
     title: "Data Migration",
     description:
