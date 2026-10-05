@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
+using PowerTools.API.Tools.AttributeExplorer;
 using PowerTools.API.Tools.BulkWorkflowExecution;
 using PowerTools.API.Tools.Connection;
 using PowerTools.API.Tools.DataMigration;
@@ -94,6 +95,7 @@ app.Use(async (ctx, next) =>
 // ── Endpoint groups — one per tool ───────────────────────────────────────────
 app.MapConnectionEndpoints();
 app.MapMetadataEndpoints();
+app.MapAttributeExplorerEndpoints();
 app.MapFetchEndpoints();
 app.MapDataMigrationEndpoints();
 app.MapPreviewEndpoints();

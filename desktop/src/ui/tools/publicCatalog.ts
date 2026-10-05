@@ -11,6 +11,12 @@ export interface PublicTool {
  */
 export const PUBLIC_TOOLS: readonly PublicTool[] = [
   {
+    id: "attribute-explorer",
+    title: "Attribute Explorer",
+    description:
+      "Browse every table in an environment and inspect its fields, types, and lookups.",
+  },
+  {
     id: "bulk-workflow-execution",
     title: "Bulk Workflow Execution",
     description:

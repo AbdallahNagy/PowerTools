@@ -13,6 +13,7 @@ Power Tools is a Windows desktop app for Dataverse and Dynamics 365 developers. 
 
 | Tool | What you can do |
 | --- | --- |
+| [Attribute Explorer](desktop/src/ui/tools/attribute-explorer/) | Browse every table in an environment and inspect its fields, types, and lookups. |
 | [Data Migration](desktop/src/ui/tools/data-migration/) | Move data between Dataverse environments with a guided workflow. |
 | [FetchXML Builder](desktop/src/ui/tools/fetchxml-builder/) | Build, run, and refine FetchXML queries. |
 | [FetchXML Tester](desktop/src/ui/tools/fetchxml-tester/) | Run FetchXML as written and keep a query library. |
