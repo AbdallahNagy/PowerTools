@@ -424,3 +424,4 @@ Environment change in a tab during setup reloads the workflows and clears every 
 ### Open questions
 
 - Colors: the palette has no error or warning variable. Should `colors.css` gain one (for example `--color-error` and `--color-warning`) for the count, start and run error lines and the large-run and real-time warnings? Until then the UX uses white text with an `Error:` or `Warning:` prefix.
+  - **Answer (user):** add them to `colors.css`. Added `--color-error: #f48771` and `--color-warning: #cca700` under a "Status colors" group in `desktop/src/ui/styles/colors.css`, and listed both in `desktop/.agents/skills/ui-colors/SKILL.md`. Use `text-[var(--color-error)]` and `text-[var(--color-warning)]` for the error and warning lines, keeping the `Error:` and `Warning:` prefixes so the meaning does not rely on colour alone.
