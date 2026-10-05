@@ -123,10 +123,12 @@ export function buildDetailSections(attribute: AttributeInfo): DetailSection[] {
 /** One entry per lookup target, paired with the relationship that points at it. */
 export function relatedTables(attribute: AttributeInfo): RelatedTableView[] {
   const relationships = attribute.relationships ?? [];
+  // Owner lookups have one relationship to "owner" rather than one per target.
+  const shared = relationships.length === 1 ? relationships[0].schemaName : null;
   return (attribute.targets ?? []).map((target) => ({
     logicalName: target,
     relationship:
-      relationships.find((item) => item.referencedEntity === target)?.schemaName ?? null,
+      relationships.find((item) => item.referencedEntity === target)?.schemaName ?? shared,
   }));
 }
 

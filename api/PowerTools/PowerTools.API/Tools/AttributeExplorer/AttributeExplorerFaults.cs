@@ -52,8 +52,7 @@ public static class AttributeExplorerFaults
 
     public static AttributeExplorerProblem From(Exception exception)
     {
-        var fault = exception as FaultException<OrganizationServiceFault>
-            ?? exception.InnerException as FaultException<OrganizationServiceFault>;
+        var fault = FindFault(exception);
         var message = DataverseErrorFormatter.Format(exception);
         if (fault?.Detail.ErrorDetails is { } details && details.Contains("Retry-After"))
         {
@@ -74,6 +73,17 @@ public static class AttributeExplorerFaults
             StatusCodes.Status400BadRequest,
             DataverseErrorCode,
             message);
+    }
+
+    private static FaultException<OrganizationServiceFault>? FindFault(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is FaultException<OrganizationServiceFault> fault)
+                return fault;
+        }
+
+        return null;
     }
 
     private static bool IsServiceProtection(int errorCode) =>

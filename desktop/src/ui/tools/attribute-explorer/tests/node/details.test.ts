@@ -104,6 +104,18 @@ describe("field details", () => {
     expect(relatedTables(byLogical("name"))).toEqual([]);
   });
 
+  it("pairs owner lookups with their single relationship to owner", () => {
+    const owner = attribute({
+      logicalName: "ownerid",
+      targets: ["systemuser", "team"],
+      relationships: [{ schemaName: "owner_accounts", referencedEntity: "owner" }],
+    });
+    expect(relatedTables(owner)).toEqual([
+      { logicalName: "systemuser", relationship: "owner_accounts" },
+      { logicalName: "team", relationship: "owner_accounts" },
+    ]);
+  });
+
   it("builds option lists for choices and yes/no", () => {
     expect(optionsView(byLogical("industrycode"))).toEqual({
       name: "account_industrycode",

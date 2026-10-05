@@ -455,6 +455,85 @@ describe("Attribute Explorer", () => {
     expect(screen.queryByRole("button", { name: "Annual Revenue" })).not.toBeInTheDocument();
   });
 
+  it("does not retry a failed fields request automatically", async () => {
+    let calls = 0;
+    httpServer.use(
+      http.get(attributesUrl, () => {
+        calls += 1;
+        return HttpResponse.json(
+          { code: "table_not_found", message: "This table no longer exists. Refresh metadata." },
+          { status: 404 },
+        );
+      }),
+    );
+    renderTool();
+    await selectTable(/Account/);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("This table no longer exists.");
+    expect(calls).toBe(1);
+  });
+
+  it("keeps a table picked while refresh is running", async () => {
+    let refreshing = false;
+    let release: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    httpServer.use(
+      http.get(tablesUrl, async () => {
+        if (!refreshing) return HttpResponse.json(tablesFixture);
+        await gate;
+        return HttpResponse.json({
+          tables: tablesFixture.tables.filter((t) => t.logicalName !== "account"),
+        });
+      }),
+    );
+    renderTool();
+    await selectTable(/Account/);
+    await screen.findByText("Account Name");
+
+    refreshing = true;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+    await selectTable(/Contact/);
+    release?.();
+
+    await waitFor(() => expect(document.querySelector("[data-toast-type='success']")).not.toBeNull());
+    expect(await screen.findByText("Full Name")).toBeInTheDocument();
+    expect(screen.queryByText("Select a table to see its fields.")).not.toBeInTheDocument();
+  });
+
+  it("does not reopen a field modal that refresh closed", async () => {
+    let phase = 0;
+    httpServer.use(
+      http.get(attributesUrl, () =>
+        HttpResponse.json(
+          phase === 1
+            ? {
+                ...accountResponse,
+                attributes: accountResponse.attributes.filter((a) => a.logicalName !== "revenue"),
+              }
+            : accountResponse,
+        ),
+      ),
+    );
+    renderTool();
+    await selectTable(/Account/);
+    fireEvent.click(await screen.findByRole("button", { name: "Annual Revenue" }));
+    expect(screen.getByRole("heading", { name: "Annual Revenue", level: 3 })).toBeInTheDocument();
+
+    phase = 1;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Annual Revenue", level: 3 })).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(screen.getByRole("button", { name: "Refresh metadata" })).toBeEnabled());
+
+    phase = 2;
+    fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+    expect(await screen.findByRole("button", { name: "Annual Revenue" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Annual Revenue", level: 3 })).not.toBeInTheDocument();
+  });
+
   it("reports a table load failure and retries", async () => {
     let calls = 0;
     httpServer.use(

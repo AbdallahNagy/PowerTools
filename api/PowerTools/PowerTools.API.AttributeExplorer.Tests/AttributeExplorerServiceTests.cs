@@ -431,6 +431,27 @@ public sealed class AttributeExplorerServiceTests
     }
 
     [Fact]
+    public async Task Service_protection_is_recognized_deep_in_the_exception_chain()
+    {
+        var fake = new FakeAttributeExplorerClient
+        {
+            ThrowOnAll = new AggregateException(
+                new InvalidOperationException(
+                    "wrapped",
+                    FakeAttributeExplorerClient.Fault(
+                        AttributeExplorerFaults.NumberOfRequestsLimitExceeded,
+                        "Too many requests.",
+                        "00:00:30"))),
+        };
+
+        var result = await new AttributeExplorerService(fake).GetTablesAsync(CancellationToken.None);
+
+        Assert.Equal(429, result.Problem!.Status);
+        Assert.Equal("service_protection", result.Problem.Code);
+        Assert.Contains("Retry after 00:00:30", result.Problem.Message);
+    }
+
+    [Fact]
     public async Task Blank_table_name_is_not_found_without_calling_dataverse()
     {
         var fake = new FakeAttributeExplorerClient();

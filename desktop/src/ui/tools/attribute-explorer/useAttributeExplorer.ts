@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTabConnection } from "../../shared/connections";
 import { useToast } from "../../shared/ui";
@@ -21,13 +21,23 @@ export function useAttributeExplorer() {
   const [openFieldName, setOpenFieldName] = useState<string | null>(null);
   const [sort, setSort] = useState<SortState>(DEFAULT_SORT);
 
-  useEffect(() => {
+  // Reset during render, not in an effect, so the new connection never renders
+  // (or queries) with the previous connection's selection.
+  const [stateConnection, setStateConnection] = useState(connection);
+  if (stateConnection !== connection) {
+    setStateConnection(connection);
     setTableQuery("");
     setFieldQuery("");
     setSelectedName(null);
     setOpenFieldName(null);
     setSort(DEFAULT_SORT);
-  }, [connectionName]);
+  }
+
+  // Refresh awaits the network; read the latest selection after each await.
+  const selectedNameRef = useRef(selectedName);
+  selectedNameRef.current = selectedName;
+  const openFieldNameRef = useRef(openFieldName);
+  openFieldNameRef.current = openFieldName;
 
   const tablesQuery = useTables(connection);
   const tables = useMemo(() => tablesQuery.data?.tables ?? [], [tablesQuery.data]);
@@ -128,8 +138,9 @@ export function useAttributeExplorer() {
     });
 
     let failed = false;
-    if (selectedName) {
-      const stillThere = tablesResult.data.tables.some((table) => table.logicalName === selectedName);
+    const current = selectedNameRef.current;
+    if (current) {
+      const stillThere = tablesResult.data.tables.some((table) => table.logicalName === current);
       if (!stillThere) {
         setSelectedName(null);
         setFieldQuery("");
@@ -137,11 +148,19 @@ export function useAttributeExplorer() {
       } else {
         const attributesResult = await refetchAttributes();
         failed = attributesResult.isError;
+        const openName = openFieldNameRef.current;
+        if (
+          openName &&
+          attributesResult.data &&
+          !attributesResult.data.attributes.some((attribute) => attribute.logicalName === openName)
+        ) {
+          setOpenFieldName(null);
+        }
       }
     }
 
     if (!failed) showToast("Metadata refreshed", "success");
-  }, [connection, queryClient, refetchAttributes, refetchTables, selectedName, showToast]);
+  }, [connection, queryClient, refetchAttributes, refetchTables, showToast]);
 
   return {
     connectionName: connection,

@@ -7,7 +7,10 @@ function connection(connectionName: string) {
   return { meta: { connectionName } };
 }
 
-/** Metadata is cached for the tab session. Only Refresh metadata refetches. */
+/**
+ * Metadata is cached for the tab session. Only Refresh metadata refetches.
+ * No automatic retry: a throttled or missing table should surface at once.
+ */
 export function useTables(connectionName: string | null) {
   return useQuery({
     queryKey: attributeExplorerKeys.tables(connectionName ?? ""),
@@ -15,6 +18,7 @@ export function useTables(connectionName: string | null) {
       apiGet<TablesResponse>("/api/attribute-explorer/tables", connection(connectionName ?? "")),
     enabled: !!connectionName,
     staleTime: Infinity,
+    retry: false,
   });
 }
 
@@ -28,5 +32,6 @@ export function useTableAttributes(connectionName: string | null, logicalName: s
       ),
     enabled: !!connectionName && !!logicalName,
     staleTime: Infinity,
+    retry: false,
   });
 }

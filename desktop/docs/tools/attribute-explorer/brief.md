@@ -184,7 +184,7 @@ tests/
   - extra grid columns
   - relationship or key browsers
   - comparing environments
-  - showing `AttributeOf` companion fields
+  - showing `AttributeOf` companion fields (a later toggle is possible if users ask; the user was told they are hidden)
 
 ### Implementation notes and test evidence
 
@@ -229,6 +229,14 @@ API, using the Ubuntu .NET 10 SDK because the official .NET 9 installer host (`b
 - `dotnet test PowerTools.sln`: pass for all test projects, including 26 of 26 in `PowerTools.API.AttributeExplorer.Tests`.
 - Not verified: the live Dataverse calls, because the tests use a fake client and no organization credentials. The SDK property assumptions (`IsFilterable`, `IsRetrievable`, `SourceType`, `IsValidForAdvancedFind`) compile, but their runtime values on older on-premises builds were not checked.
 
+Review follow-up:
+- Queries set `retry: false` so throttling and missing-table errors surface at once, as the Dataverse review requires.
+- Refresh reads the current selection after its awaits, so a table picked mid-refresh is kept, and it clears the open field when refresh removes it.
+- The connection reset runs during render, so a new connection never queries with the old selection.
+- Owner lookups pair each target with their single `owner` relationship.
+- Fault mapping walks the whole exception chain for service protection.
+- Re-ran `npm run typecheck`, `npm run lint -- --max-warnings 0`, and `npm test` (379 tests): all pass. `dotnet test PowerTools.API.AttributeExplorer.Tests`: 27 of 27 pass.
+
 ### Open questions
 
-- Whether to show `AttributeOf` companion fields (for example `…name` and `…yominame`) later, behind a toggle. They are excluded for now.
+None.
