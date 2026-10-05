@@ -206,6 +206,118 @@ Register `app.MapBulkWorkflowExecutionEndpoints()`, the job store singleton and 
   - `/home/user/PowerTools/api/PowerTools/PowerTools.API/Tools/SolutionComponentsMover/SolutionComponentsMoverEndpoints.cs`
 - Brief destination for the pipeline (not written by me): `/home/user/PowerTools/desktop/docs/tools/bulk-workflow-execution/brief.md`
 
+### Dataverse review
+
+**Evidence used.** `learn.microsoft.com` is blocked by the egress proxy, so I read the Microsoft documentation source instead: a sparse clone of `MicrosoftDocs/powerapps-docs` (`main`), specifically `developer/data-platform/org-service/execute-multiple-requests.md`, `developer/data-platform/api-limits.md`, `developer/data-platform/fetchxml/page-results.md`, `fetchxml/reference/fetch.md`, `includes/cc-ordering-paging.md`, `reference/entities/workflow.md` and `includes/data-service-error-codes.md`. I also read the Power Tools connection code: `Services/DataverseClientFactory.cs`, `ThirdParty/Data8.PowerPlatform.Dataverse.Client/OnPremiseClient.cs` and `Services/MigrationJobRunner.cs`. Claims below marked "not re-verified" come from platform knowledge that I could not check against a reachable Microsoft page this session.
+
+**Messages**
+
+- `ExecuteWorkflow` is the right message. SDK: `Microsoft.Crm.Sdk.Messages.ExecuteWorkflowRequest { WorkflowId, EntityId }` (optional `InputArguments` is not needed for classic workflows). Web API equivalent: `POST workflows(<id>)/Microsoft.Dynamics.CRM.ExecuteWorkflow` with `{ "EntityId": "<guid>" }`. The sidecar uses the SDK, so the Web API form is reference only.
+- `ExecuteWorkflowResponse.Id` is the `asyncoperation` (system job) id for a background workflow. What it holds for a real-time workflow is not re-verified; do not build a link on it for real-time runs.
+- Pass the **definition** id (`type = 1`). The researcher's filter `category = 0`, `type = 1`, `statecode = 1`, `ondemand = true` is correct. `activeworkflowid NotNull` becomes redundant once `statecode = 1` is in the filter; keeping it is harmless. Exclude `statecode = 2` (Suspended), which the plugin did not do explicitly.
+- Platform faults the tool should map to readable messages: `ExecuteNotOnDemandWorkflow` (`0x80045046`, "Workflow must be marked as on-demand or child workflow") and `WorkflowIsNotOnDemand` (`0x80045059`). These happen if the workflow is deactivated or edited between listing and running. Treat that as a per-item fault, not a crash.
+- Add to `GET /workflows` columns: `mode`, `runas`, `scope`, `ismanaged`, `asyncautodelete`. `asyncautodelete = true` means successful system jobs delete themselves, so any "open system job" link will 404 later.
+
+**Metadata**
+
+- `primaryentity` on `workflow` is an EntityName (logical name). Resolve the primary id attribute via `EntityMetadata.PrimaryIdAttribute` (`GET /api/metadata/entities` as planned). Do not assume `<entity>id`; activity tables use `activityid`.
+- The root `<entity name>` must equal `primaryentity`. This check is correct and needed.
+
+**Paging and the ID snapshot (corrections)**
+
+- Page size: 5,000 is the default and maximum for standard tables, **500 for elastic tables**. Read `count` back from what the server returns rather than assuming 5,000, or detect elastic tables from metadata (`TableType = "Elastic"`).
+- `top` **cannot** be combined with `page`, `count` or `returntotalrecordcount`, and cannot exceed 5,000 (`fetch.md`). "Honour `top` as a cap" is right only if the rewrite then sends **one** request with `top` and **no** paging attributes. Calling `FetchXmlPaging.Apply` on a query that has `top` produces an invalid query. Either reject `top` with a typed 400 or special-case it. Do not mix the two.
+- Paging cookies are not returned for some queries, for example when results are ordered by a `link-entity` attribute. When there is no cookie, Dataverse falls back to simple paging, which is **capped at 50,000 rows total**. View FetchXML often orders on link-entity columns. The id-only rewrite must therefore:
+  - remove every `<order>` element, including those inside link-entities;
+  - add a single `<order attribute="{primaryId}" />` on the root entity. This gives a deterministic order and keeps paging cookies available;
+  - keep `distinct="true"` when link-entities are present. With `distinct`, Dataverse does not add the primary-key order itself, so the explicit order above is required (`cc-ordering-paging.md`).
+- If a page comes back with `MoreRecords = true` and no paging cookie, fail the count with a typed error rather than silently stopping at 50,000.
+- Strip `returntotalrecordcount`, any existing `page`, `count` and `paging-cookie` from the user's FetchXML before applying paging.
+- `aggregate="true"` must be rejected (it returns no row ids). Also reject `<attribute aggregate=...>` / `groupby` which only appear with aggregate.
+- The plugin used `FetchXmlToQueryExpressionRequest`. That round-trip is unnecessary and the researcher is right to drop it; paging FetchXML directly is the documented model.
+- Snapshotting ids before execution is correct. Paging forward is consistent, but a workflow that changes filtered columns while the query is still being paged would shift pages (`cc-ordering-paging.md`: "Paging is dynamic"). Complete the snapshot before the first `ExecuteWorkflow`, as planned.
+
+**Batching (corrections)**
+
+- **Researcher claim wrong:** "Batches run one after another, which is correct, because the platform limits how many `ExecuteMultiple` calls can run in parallel." The limit of 2 concurrent `ExecuteMultiple` calls was **removed**; service protection limits replaced it (`execute-multiple-requests.md`, `api-limits.md`). Sequential batches are still the right choice, but the reasons are async-queue load and the execution-time limit, not an `ExecuteMultiple` concurrency cap.
+- **Researcher claim imprecise:** "1000 is the platform maximum." 1,000 is typical and is the online value, but the maximum is set per deployment and can be lower on-premises. When it is exceeded, the whole call faults **before the first request runs**, and `fault.Detail.ErrorDetails["MaxBatchSize"]` carries the limit. Handle that fault by shrinking the batch and resending the same batch. This is safe because nothing in it ran.
+- `ExecuteMultiple` is not transactional. Each item runs in its own database transaction. A real-time workflow that faults rolls back only its own item. Partial success is normal and expected.
+- `ExecuteMultiple` cannot contain another `ExecuteMultiple`; `ExecuteWorkflow` items are fine.
+- `ContinueOnError = true` is right.
+- **`ReturnResponses`.** With `ContinueOnError = true, ReturnResponses = false`, `Responses` contains **only** faulted items (doc table: 6 requests, 2 faults returns 2 items). The `MigrationJobRunner.ProcessBatch` pattern that the brief says to reuse sets `ReturnResponses = true` and increments `Processed` once per response item. If that loop is copied with `ReturnResponses = false`, processed and succeeded counts will be wrong. Either:
+  - use `ReturnResponses = true` (recommended: positive confirmation per item, and `ExecuteWorkflowResponse.Id` gives the system job id for background runs; the payload is small), or
+  - keep `false` and compute `succeeded = sent − faults`, mapping faults by `RequestIndex`.
+- Empty `ExecuteMultiple`: not covered in the docs I could read. Behaviour is unverified. Skipping empty batches, as the researcher says, avoids the question.
+- Default batch size: Microsoft's guidance (`api-limits.md`, "Avoid large batches") is to start small, around 10, because larger batches increase execution time per request. For background workflows each item only queues a job, so 100 is reasonable. For **real-time** workflows the work happens inside the request; default much lower (for example 10 to 25) to stay under client timeouts.
+
+**Throttling, timeouts and retries (online)**
+
+- Service protection limits are per user, over a 5-minute sliding window: 6,000 requests, 20 minutes (1,200,000 ms) of combined execution time, and 52 concurrent requests. Error codes: `-2147015902` (requests), `-2147015903` (execution time), `-2147015898` (concurrency). An `ExecuteMultiple` counts as **one** request against the number-of-requests limit, but its full duration counts against execution time. Real-time workflow logic adds to the triggering request's execution time.
+- Batching does not avoid Power Platform request entitlement limits; those are evaluated separately.
+- `ServiceClient` (`Microsoft.PowerPlatform.Dataverse.Client` 1.2.10, as pinned in the csproj) retries service protection faults and honours `Retry-After` itself. Not re-verified: the exact default `MaxRetryCount` and `RetryPauseTime`. The runner should still catch a final throttling fault, set the job to a paused or failed state, and report it, rather than crash.
+- **Duplicate-start risk (not in the brief).** `ExecuteWorkflow` is not idempotent: a second call starts a second job. If a whole `ExecuteMultiple` call fails with a **timeout** or a dropped connection, some items may already have run on the server. Do **not** resend that batch automatically. Record those record ids as "outcome unknown" and keep going or stop, so the user can check the system jobs. Resending is only safe for faults raised before execution starts: service protection rejections and the `MaxBatchSize` fault. The `ServiceClient` online default `MaxConnectionTimeout` is about 4 minutes (not re-verified); a 100-item real-time batch can exceed it.
+
+**Privileges and connection**
+
+- Single connection, delegated user token (online) or AD/claims credentials (on-premises), as `DataverseClientFactory` already does. **Do not set `CallerId`.** Impersonation is not needed and would require `prvActOnBehalfOfAnotherUser`.
+- Required (not re-verified against a Microsoft page this session; the security-role reference was not in the reachable docs):
+  - **Execute Workflow Job** (`prvWorkflowExecution`, Core Records tab, Miscellaneous privileges). This is the privilege the researcher flagged. It is the one that allows starting on-demand workflows. Treat its absence as a per-item privilege fault the tool reports, not a precondition the tool checks.
+  - Read on `workflow` (Process). Without read at a scope that covers the workflow's owner, the workflow is not listed.
+  - Read on `savedquery` (System view) and `userquery` (Saved view). `userquery` RetrieveMultiple returns only views the caller owns or that are shared with them.
+  - Read on the target table at a scope that covers the records. Records the caller cannot read are not returned by the snapshot query, so they are never attempted.
+- **Researcher claim imprecise:** "The workflow runs in the caller's context." For an on-demand start, a background workflow runs as the user who started it. A real-time workflow's `runas` (0 Owner, 1 Calling User) decides its context for automatic triggers; for an on-demand start it runs as the calling user (not re-verified). Show `runas` and `mode` in the picker and the confirmation so the user knows whose privileges the steps use.
+- `scope` (User, Business Unit, Parent: Child Business Units, Organization) controls which records automatic triggers apply to. Whether the server enforces `scope` for an on-demand `ExecuteWorkflow` call is unverified; expect possible per-item faults on records outside it and surface them.
+- `WhoAmI` is not needed for the run. It is optional for showing "runs as <user>" in the confirmation.
+
+**Online versus on-premises**
+
+- On-premises uses the Data8 `OnPremiseClient`. Its operation timeout is **2 minutes** (`OnPremiseClient.cs` L185) and it has **no** `Retry-After` handling. On-premises Dataverse does not enforce the online service protection limits, so that is acceptable, but the shorter timeout makes the duplicate-start risk above more likely. Use smaller default batches on-premises, especially for real-time workflows.
+- `ExecuteMultiple` max batch size may be lower on-premises; handle the `MaxBatchSize` fault as described.
+- Whether on-premises (9.x) still enforces the historic limit of 2 concurrent `ExecuteMultiple` calls is unverified. Sequential batches make it moot.
+- Elastic tables and Power Automate on-demand flows exist only online.
+
+**Solution and managed limits**
+
+- `ExecuteWorkflow` does not modify the workflow or any solution component. Running a workflow in a managed layer is allowed; `ismanaged` is informational only. The tool creates no solution components.
+- The tool does create data: one `asyncoperation` per record for background workflows, plus workflow logs depending on the environment's retention settings. Large runs consume database (log) storage. This belongs in the large-run warning.
+- Cancelling the Power Tools job stops new batches only. System jobs already queued keep running. Cancelling them would mean updating each `asyncoperation` to Canceled, which is out of scope. The UI copy must not suggest otherwise.
+
+**Scope corrections**
+
+- **Researcher claim wrong:** "`ExecuteWorkflow` only applies to category 0." The error catalogue includes `ModernFlowMustBeMarkedAsOnDemandForExecuteWorkflow` and `NoValidModernFlowTriggerForExecute`, so `ExecuteWorkflow` also accepts on-demand Power Automate flows (category 5) with a Dataverse trigger. Keeping category 5 out of scope is still a valid product choice; record it as a choice, not a platform limit.
+- The `ExecuteNotOnDemandWorkflow` message says "on-demand **or child** workflow". Child-only workflows (`subprocess = true`, `ondemand = false`) can also be started by `ExecuteWorkflow`. The plugin and the brief exclude them, which matches the "Run Workflow" UI. Keep the exclusion.
+
+**Failure modes summary**
+
+| Failure | Where | Handling |
+| --- | --- | --- |
+| Malformed FetchXML, `aggregate`, entity mismatch, `top` with paging | `/count`, `/runs` validation | Typed 400 before any server call |
+| No paging cookie with more records (simple-paging fallback, 50,000 cap) | Snapshot | Fail the snapshot with a typed error; never truncate silently |
+| `MaxBatchSize` fault | Whole batch, before execution | Shrink and resend |
+| Service protection fault after `ServiceClient` retries are exhausted | Whole batch, before execution | Stop or pause the job and report; safe to resume the same batch |
+| Timeout or connection drop | Whole batch, outcome unknown | Do not resend; mark the ids "outcome unknown" |
+| Workflow deactivated or no longer on-demand mid-run | Per item | Fault per item; consider stopping after the first batch where every item faulted |
+| Missing privilege, record deleted since snapshot, workflow step error (real-time) | Per item | Record id and fault message |
+
+**Plugin and research claims that are wrong**
+
+- An `ExecuteMultiple` concurrency limit is not the reason for sequential batches; that limit was removed.
+- 1,000 is not a fixed platform maximum; it is configurable per deployment.
+- `ExecuteWorkflow` is not limited to category 0.
+- The workflow does not simply "run in the caller's context"; it depends on `mode` and `runas`.
+- The plan to reuse the `MigrationJobRunner` fault loop with `ReturnResponses = false` would miscount processed and succeeded items.
+- Applying `FetchXmlPaging` to a query that has `top` produces an invalid request.
+
+**Unverified after this review**
+
+- Exact Microsoft wording for the "Execute Workflow Job" (`prvWorkflowExecution`) requirement on `ExecuteWorkflow`.
+- `ExecuteWorkflowResponse.Id` for real-time workflows.
+- Empty `ExecuteMultiple` behaviour (moot if empty batches are skipped).
+- Server enforcement of workflow `scope` on on-demand calls.
+- `ServiceClient` 1.2.10 default retry count, pause and connection timeout.
+- On-premises concurrency limit for `ExecuteMultiple`.
+- XrmToolBox catalog metadata and the repo license, which this review did not re-check.
+
 ### UX
 
 Written from `### What it does` only. The scope is: pick an activated on-demand classic workflow, pick a view on its entity or paste FetchXML, count the matching records, run the workflow on that set in batches with an optional delay, watch progress and estimated time, stop after the current batch, and read the final started and error counts.
