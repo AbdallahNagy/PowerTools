@@ -1,3 +1,4 @@
+import { bulkWorkflowExecutionTool } from "./bulk-workflow-execution/tool";
 import { dataMigrationTool } from "./data-migration/tool";
 import { fetchXmlBuilderTool } from "./fetchxml-builder/tool";
 import { fetchXmlTesterTool } from "./fetchxml-tester/tool";
@@ -10,6 +11,7 @@ import { welcomeTool } from "./welcome/tool";
 
 export const BUILT_IN_TOOLS = [
   welcomeTool,
+  bulkWorkflowExecutionTool,
   dataMigrationTool,
   fetchXmlBuilderTool,
   fetchXmlTesterTool,

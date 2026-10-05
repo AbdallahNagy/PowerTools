@@ -9,6 +9,7 @@ import {
   BUILT_IN_TOOLS,
   TOOL_REGISTRY,
 } from "../src/ui/tools/registry";
+import { bulkWorkflowExecutionTool } from "../src/ui/tools/bulk-workflow-execution/tool";
 import { fetchXmlBuilderTool } from "../src/ui/tools/fetchxml-builder/tool";
 import { fetchXmlTesterTool } from "../src/ui/tools/fetchxml-tester/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
@@ -75,6 +76,7 @@ describe("tool registry", () => {
   it("keeps Welcome singleton and projects the existing activity order", () => {
     expect(BUILT_IN_TOOLS.map((tool) => tool.id)).toEqual([
       "welcome",
+      "bulk-workflow-execution",
       "data-migration",
       "fetchxml-builder",
       "fetchxml-tester",
@@ -84,6 +86,7 @@ describe("tool registry", () => {
       "workflow-activities-viewer",
     ]);
     expect(ACTIVITY_BAR_TOOLS.map((tool) => tool.id)).toEqual([
+      "bulk-workflow-execution",
       "data-migration",
       "fetchxml-builder",
       "fetchxml-tester",
@@ -113,5 +116,11 @@ describe("tool registry", () => {
     expect(TOOL_REGISTRY["solution-components-mover"].showInActivityBar).toBe(true);
     expect(TOOL_REGISTRY["solution-components-mover"]).toBe(solutionComponentsMoverTool);
     expect(TOOL_REGISTRY["workflow-activities-viewer"]).toBe(workflowActivitiesTool);
+    expect(TOOL_REGISTRY["bulk-workflow-execution"]).toBe(bulkWorkflowExecutionTool);
+    expect(bulkWorkflowExecutionTool.allowMultipleInstances).toBe(true);
+    expect(bulkWorkflowExecutionTool.showInActivityBar).toBe(true);
+    expect(bulkWorkflowExecutionTool.tooltip).toBe(
+      "Run an on-demand workflow against every record a view or FetchXML query returns",
+    );
   });
 });

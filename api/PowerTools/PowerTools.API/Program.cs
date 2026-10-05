@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
+using PowerTools.API.Tools.BulkWorkflowExecution;
 using PowerTools.API.Tools.Connection;
 using PowerTools.API.Tools.DataMigration;
 using PowerTools.API.Tools.Fetch;
@@ -42,6 +43,9 @@ builder.Services.AddHostedService<MigrationJobRunner>();
 builder.Services.AddSingleton<ISolutionCopyJobStore, InMemorySolutionCopyJobStore>();
 builder.Services.AddSingleton<ISolutionCopyDelay, SolutionCopyDelay>();
 builder.Services.AddHostedService<SolutionCopyJobRunner>();
+builder.Services.AddSingleton<IBulkWorkflowJobStore, InMemoryBulkWorkflowJobStore>();
+builder.Services.AddSingleton<IBulkWorkflowDelay, BulkWorkflowDelay>();
+builder.Services.AddHostedService<BulkWorkflowJobRunner>();
 builder.Services.AddScoped<IPluginRegistrationGateway, DataversePluginRegistrationGateway>();
 builder.Services.AddScoped<CapabilitiesService>();
 builder.Services.AddScoped<CatalogService>();
@@ -98,6 +102,7 @@ app.MapPluginRegistrationEndpoints();
 app.MapPolymorphicLookupEndpoints();
 app.MapWorkflowActivitiesEndpoints();
 app.MapSolutionComponentsMoverEndpoints();
+app.MapBulkWorkflowExecutionEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would
