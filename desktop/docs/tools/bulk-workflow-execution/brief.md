@@ -421,6 +421,59 @@ Environment change in a tab during setup reloads the workflows and clears every 
 - No reattaching to a run after its tab is closed.
 - No WinForms layout: no single long form with stacked group boxes, no combo-box view list with a divider entry, no message boxes for results, no help or donate text, no plugin icons or wording.
 
+### Implementation notes and test evidence
+
+**Sidecar** (`api/PowerTools/PowerTools.API/Tools/BulkWorkflowExecution/`, group `/api/bulk-workflow-execution` with `DataverseContextFilter`; the organization service comes from `DataverseClientFactory`):
+
+- `BulkWorkflowExecutionEndpoints.cs`: `GET /workflows`, `GET /views?entity=`, `POST /count`, `POST /runs`, `GET /runs/{jobId}`, `POST /runs/{jobId}/cancel`.
+- `BulkWorkflowExecutionQueries.cs`: the workflow filter is `category = 0`, `type = 1`, `statecode = 1`, `ondemand = true` and `primaryentity != none`. It returns `mode`, `runas`, `scope`, `ismanaged` and `asyncautodelete`. Both view queries read only `name` and `fetchxml`, and both are sorted.
+- `BulkWorkflowFetchXml.cs` is a pure class with the checks and the ID-only rewrite.
+  - It rejects malformed XML (DTD prohibited), `aggregate`, `groupby` and `dategrouping`, an entity mismatch, and `top` above 5,000. All return typed 400s.
+  - The rewrite removes every attribute and every `<order>` (link-entities included) and adds one order on `EntityMetadata.PrimaryIdAttribute`. It sets `distinct` when link-entities are present and strips `page`, `count`, `paging-cookie` and `returntotalrecordcount`.
+  - A query with `top` is sent once and never paged, as the Dataverse review requires.
+- `BulkWorkflowExecutionService.cs`: the count and the snapshot page at 5,000, or 500 for elastic tables, and de-duplicate IDs. If `MoreRecords` is true with no paging cookie, they fail with `PagingCookieMissing` and never cut the list short.
+- `BulkWorkflowJob.cs`, `BulkWorkflowJobRunner.cs` and `BulkWorkflowRunExecutor.cs` hold an in-memory job store and a hosted runner. Each run is its own task, so two tabs can run at once. Batches inside a run are sequential.
+  - Batches are `ExecuteMultiple` with `ContinueOnError = true` and `ReturnResponses = false`. Succeeded is computed as sent minus faults, and each fault is mapped to its record by `RequestIndex`, as the review says.
+  - Empty batches are never sent. The delay runs only between batches, and Stop cuts it short. Stop takes effect after the batch in flight.
+  - A `MaxBatchSize` fault shrinks the batch and resends the same records.
+  - A service-protection fault that survives `ServiceClient`'s retries fails the run without counting the batch.
+  - Any other whole-batch failure, such as a timeout, is not resent. Its records are listed as "outcome unknown".
+  - A batch in which every item is `ExecuteNotOnDemandWorkflow` or `WorkflowIsNotOnDemand` stops the run.
+  - The error list is capped at 500, and `errorsCapped` says so.
+- `Program.cs` registers the store, the delay, the hosted runner and `MapBulkWorkflowExecutionEndpoints()`.
+- New test project: `api/PowerTools/PowerTools.API.BulkWorkflowExecution.Tests`, added to `PowerTools.sln`, with a fake `IBulkWorkflowClient` and no Dataverse connection.
+
+**Desktop** (`desktop/src/ui/tools/bulk-workflow-execution/`):
+
+- `tool.ts` (`allowMultipleInstances: true`), `BulkWorkflowExecution.tsx`, an icon, `api/` (`bulkWorkflowApi.ts`, `queryKeys.ts`), `model/` (`types.ts`, `apiError.ts`, `run.ts`, `view.ts`) and `components/` (`WorkflowList`, `ViewList`, `QueryPanel`, `StartModal`, `RunView`, `Notice`).
+- One entry each in `registry.tsx` and `publicCatalog.ts`, in registry order, using the public-listing sentence from `### UX`.
+- The tool follows `### UX`:
+  - Layout: resizable workflow, view and query panes, with in-tab filtering and header-click sorting.
+  - Selection: picking a workflow loads its views, and picking a view replaces the editor text.
+  - Count gate: `Start` is enabled only for a finished non-zero count of the current workflow and text.
+  - Start: a confirmation modal shows mode, run-as for real-time workflows, entity, records, batch size and delay. It warns above 10,000 records and for real-time workflows.
+  - Run view: the collecting spinner, progress, started and error counts, time remaining, `Stop` / `Stopping after current batch…`, a sortable errors table with the capped line, the end-state lines, `New run`, and an end-of-run toast.
+  - Status bar: the texts from `### UX` through `useToolStatus`.
+  - Closing the tab during an active run sends the cancel request.
+- Real-time workflows default to a batch size of 25 instead of 100, as the Dataverse review recommends.
+- Error and warning lines use `text-[var(--color-error)]` and `text-[var(--color-warning)]`, keeping the `Error:` / `Warning:` prefixes. These are the variables added for the colour question (commit 8e8c965); this change does not redefine them.
+- Tests:
+  - node: `tests/node/run.test.ts` and `tests/node/view.test.ts`.
+  - renderer: `tests/renderer/bulkWorkflowExecution.test.tsx`, which runs against MSW handlers and `tests/fixtures.ts`. It covers the picker cascade, filtering, the count gate, a zero count and the error line, the confirmation and its large-run warning, the run with progress, errors, stop, cancelled end and `New run`, the failed end state, the collecting phase, and cancel on tab close.
+  - `desktop/test/toolRegistry.test.ts` lists the new tool.
+  - `desktop/test/renderer/shellShortcuts.test.tsx` now searches the palette for `workflow activities` and `fetchxml`. The new tool's title and tooltip also match the old queries `workflow` and `fetch`. The test still checks arrow-key selection.
+
+**Commands and results**
+
+- `npm test` (desktop): 66 files, 322 tests passed. The tool's own tests: 3 files, 18 tests.
+- `npm run lint`: no warnings or errors.
+- `npm run build`: passed. The only warning is Vite's existing chunk-size warning.
+- `npm run check`: typecheck, lint with `--max-warnings 0`, unit tests and the renderer build passed. The Playwright Electron smoke test (`test:smoke:run`) timed out after 120 s in this container, even under `xvfb-run`. It fails the same way on base commit 8e8c965, before any of this tool's code, so the cause is the headless container (Electron running as root with no session bus), not this change.
+- `dotnet build` (solution): 0 warnings, 0 errors. The container has only the .NET 8 SDK and the .NET 9 download host is blocked, so the build and the tests used the .NET 10 SDK from the Ubuntu archive. The tests ran with `DOTNET_ROLL_FORWARD=Major` against the .NET 10 runtime. All projects still target `net9.0`.
+- `dotnet test`: `PowerTools.API.BulkWorkflowExecution.Tests` 40 passed. The other suites also passed: PluginRegistration 81, SolutionComponentsMover 26, PolymorphicLookup 22, WorkflowActivities 16.
+
+**Not run:** the Electron smoke test, for the reason above. No check ran against a live Dataverse environment; the items under "Unverified after this review" are still unverified.
+
 ### Open questions
 
 - Colors: the palette has no error or warning variable. Should `colors.css` gain one (for example `--color-error` and `--color-warning`) for the count, start and run error lines and the large-run and real-time warnings? Until then the UX uses white text with an `Error:` or `Warning:` prefix.
