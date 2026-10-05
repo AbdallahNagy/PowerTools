@@ -385,6 +385,28 @@ describe("Attribute Explorer", () => {
     expect(attributeCalls).toBe(2);
   });
 
+  it("reloads fields of previously viewed tables after refresh", async () => {
+    const calls: string[] = [];
+    httpServer.use(
+      http.get(attributesUrl, ({ params }) => {
+        calls.push(String(params.name));
+        return responseFor(params.name);
+      }),
+    );
+    renderTool();
+    await selectTable(/Account/);
+    await screen.findByText("Account Name");
+    await selectTable(/Contact/);
+    await screen.findByText("Full Name");
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+    await waitFor(() => expect(document.querySelector("[data-toast-type='success']")).toHaveTextContent("Metadata refreshed"));
+    expect(calls).toEqual(["account", "contact", "contact"]);
+
+    await selectTable(/Account/);
+    await waitFor(() => expect(calls).toEqual(["account", "contact", "contact", "account"]));
+  });
+
   it("clears the selection when refresh no longer returns the table", async () => {
     let refreshed = false;
     httpServer.use(

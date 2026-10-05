@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTabConnection } from "../../shared/connections";
 import { useToast } from "../../shared/ui";
 import { useTableAttributes, useTables } from "./api/attributeExplorerApi";
+import { attributeExplorerKeys } from "./api/queryKeys";
 import { toAttributeExplorerError } from "./model/apiError";
 import { filterAttributes, filterTables } from "./model/search";
 import { DEFAULT_SORT, nextSort, sortAttributes, type SortKey, type SortState } from "./model/sort";
@@ -10,6 +12,7 @@ import { DEFAULT_SORT, nextSort, sortAttributes, type SortKey, type SortState } 
 export function useAttributeExplorer() {
   const { connectionName } = useTabConnection();
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const connection = connectionName || null;
 
   const [tableQuery, setTableQuery] = useState("");
@@ -118,6 +121,12 @@ export function useAttributeExplorer() {
     const tablesResult = await refetchTables();
     if (tablesResult.isError || !tablesResult.data) return;
 
+    // Fields cached for other tables are stale too; they reload when next selected.
+    await queryClient.invalidateQueries({
+      queryKey: attributeExplorerKeys.allAttributes(connection),
+      refetchType: "none",
+    });
+
     let failed = false;
     if (selectedName) {
       const stillThere = tablesResult.data.tables.some((table) => table.logicalName === selectedName);
@@ -132,7 +141,7 @@ export function useAttributeExplorer() {
     }
 
     if (!failed) showToast("Metadata refreshed", "success");
-  }, [connection, refetchAttributes, refetchTables, selectedName, showToast]);
+  }, [connection, queryClient, refetchAttributes, refetchTables, selectedName, showToast]);
 
   return {
     connectionName: connection,
