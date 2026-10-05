@@ -11,6 +11,7 @@ import {
 } from "../src/ui/tools/registry";
 import { fetchXmlBuilderTool } from "../src/ui/tools/fetchxml-builder/tool";
 import { fetchXmlTesterTool } from "../src/ui/tools/fetchxml-tester/tool";
+import { attributeExplorerTool } from "../src/ui/tools/attribute-explorer/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
@@ -75,6 +76,7 @@ describe("tool registry", () => {
   it("keeps Welcome singleton and projects the existing activity order", () => {
     expect(BUILT_IN_TOOLS.map((tool) => tool.id)).toEqual([
       "welcome",
+      "attribute-explorer",
       "data-migration",
       "fetchxml-builder",
       "fetchxml-tester",
@@ -84,6 +86,7 @@ describe("tool registry", () => {
       "workflow-activities-viewer",
     ]);
     expect(ACTIVITY_BAR_TOOLS.map((tool) => tool.id)).toEqual([
+      "attribute-explorer",
       "data-migration",
       "fetchxml-builder",
       "fetchxml-tester",
@@ -100,6 +103,10 @@ describe("tool registry", () => {
       "See which activated processes reference a custom workflow activity",
     );
     expect(TOOL_REGISTRY["workflow-activities-viewer"].showInActivityBar).toBe(true);
+    expect(TOOL_REGISTRY["attribute-explorer"]).toBe(attributeExplorerTool);
+    expect(TOOL_REGISTRY["attribute-explorer"].allowMultipleInstances).toBe(true);
+    expect(TOOL_REGISTRY["attribute-explorer"].title).toBe("Attribute Explorer");
+    expect(TOOL_REGISTRY["attribute-explorer"].showInActivityBar).toBe(true);
     expect(TOOL_REGISTRY["data-migration"]).toBe(dataMigrationTool);
     expect(TOOL_REGISTRY["fetchxml-builder"]).toBe(fetchXmlBuilderTool);
     expect(TOOL_REGISTRY["fetchxml-tester"]).toBe(fetchXmlTesterTool);
