@@ -16,7 +16,7 @@ function CloseAllTabs() {
 }
 
 describe("empty workspace", () => {
-  it("prompts to open a tool when every tab is closed", () => {
+  it("lists keyboard shortcuts when every tab is closed", () => {
     render(
       <TabProvider>
         <CloseAllTabs />
@@ -31,9 +31,13 @@ describe("empty workspace", () => {
 
     expect(screen.queryByRole("heading", { name: "Power Tools" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
-    expect(screen.getByText("Select a tool from the sidebar.")).toBeInTheDocument();
-    expect(screen.getByText("Ctrl+P to search tools")).toBeInTheDocument();
-    expect(screen.getByText("Ctrl+B to show or hide the sidebar")).toBeInTheDocument();
+    expect(screen.getByText("to search tools").nextElementSibling).toHaveTextContent("Ctrl+P");
+    expect(screen.getByText("to perform main tool action").nextElementSibling).toHaveTextContent(
+      "Ctrl+Enter",
+    );
+    expect(screen.getByText("to show or hide the sidebar").nextElementSibling).toHaveTextContent(
+      "Ctrl+B",
+    );
     expect(screen.queryByRole("heading", { name: "PowerTools" })).not.toBeInTheDocument();
   });
 });
