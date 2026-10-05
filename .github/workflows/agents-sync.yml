@@ -1,0 +1,36 @@
+name: Agents sync
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".cursor/agents/**"
+      - ".claude/agents/**"
+      - "scripts/sync-agents.mjs"
+      - ".github/workflows/agents-sync.yml"
+  pull_request:
+    paths:
+      - ".cursor/agents/**"
+      - ".claude/agents/**"
+      - "scripts/sync-agents.mjs"
+      - ".github/workflows/agents-sync.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Check Claude agents match Cursor agents
+        run: node scripts/sync-agents.mjs --check
