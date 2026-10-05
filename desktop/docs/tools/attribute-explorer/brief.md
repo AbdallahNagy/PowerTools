@@ -186,6 +186,49 @@ tests/
   - comparing environments
   - showing `AttributeOf` companion fields
 
+### Implementation notes and test evidence
+
+**Files and endpoints added**
+
+- Sidecar, `api/PowerTools/PowerTools.API/Tools/AttributeExplorer/`: `AttributeExplorerEndpoints.cs`, `AttributeExplorerClient.cs`, `AttributeExplorerService.cs`, `AttributeExplorerMapper.cs`, `AttributeExplorerDtos.cs`, `AttributeExplorerFaults.cs`. Registered in `Program.cs` with `MapAttributeExplorerEndpoints()` after the metadata endpoints. The shared `/api/metadata/*` endpoints are unchanged.
+- Endpoints, both behind `DataverseContextFilter`: `GET /api/attribute-explorer/tables` and `GET /api/attribute-explorer/tables/{logicalName}/attributes`. Problem JSON is `{ code, message }` with `table_not_found` (404), `service_protection` (429), and `dataverse_error` (400).
+- Sidecar tests: `api/PowerTools/PowerTools.API.AttributeExplorer.Tests/` (xUnit, fake `IAttributeExplorerClient`), added to `PowerTools.sln`. 26 tests cover private-table exclusion, intersect tables kept, `AttributeOf` exclusion, label fallback, type details for string, memo, number types, date and time, lookup (targets and own relationships only), choice, multi-select, status, and boolean, request filters (`Entity` only, then `Attributes | Relationships`, both as-if-published), `table_not_found` by error code, by message, and inside a wrapping exception, blank table name, other faults, service protection with Retry-After, and cancellation.
+- Renderer, `desktop/src/ui/tools/attribute-explorer/`: `tool.ts`, `attribute-explorer-icon.svg`, `AttributeExplorer.tsx`, `useAttributeExplorer.ts`, `api/`, `model/` (`types`, `apiError`, `search`, `attributeType`, `requiredLevel`, `sort`, `details`), `components/` (`TablesPane`, `FieldsPane`, `FieldDetailsModal`, `CopyButton`), and `tests/` (`fixtures.ts`, `node/*.test.ts`, `renderer/attributeExplorer.test.tsx`).
+- Registered first after Welcome in `desktop/src/ui/tools/registry.tsx` and in the same position in `desktop/src/ui/tools/publicCatalog.ts`. `desktop/test/toolRegistry.test.ts` was updated for the new tool. `README.md` got one row in its tool table.
+
+**Behavior taken from the brief**
+
+- Split view, tables left (30%, min 20%) and fields right, with a top toolbar holding **Refresh metadata**.
+- Grid columns are exactly Display name, Logical name, Type, Related table, Required. All sortable, default display name ascending. Field search, copy buttons for logical and schema names, and no custom-only toggle, as decided with the user.
+- Both queries use `staleTime: Infinity`. Only Refresh metadata refetches. Refresh keeps both searches and the selection, clears the selection when the table is gone, closes the modal when its field is gone, and shows "Metadata refreshed".
+- The details modal derives its open state from the loaded field list, so it closes by itself when the field disappears. Related-table links close the modal, select the table, and clear the table search when it would hide that table. A target that is not in the table list (for example a private table) is shown as plain text.
+- Status bar texts and the no-connection message follow the UX section. Colors use `var(--color-...)` tokens only.
+
+**Decisions inside the brief's room**
+
+- The tool-owned sidecar problem codes use the snake_case names the brief gives (`table_not_found`, `dataverse_error`), not the PascalCase codes used by Workflow Activities. A `service_protection` (429) code was added so throttling shows the Dataverse message and its Retry-After value.
+- `minValue` and `maxValue` are sent as invariant-culture strings so Big integer values keep full precision. Default values are sent as display text: `Label (value)` for choices, the option label for yes/no.
+- For yes/no fields the Options section lists the true and false labels with values 1 and 0 and no option set name, because the brief's DTO has no option set for booleans.
+- `SearchInput` has no autofocus prop, so the tables pane focuses its input from an effect instead of changing the shared component.
+- The icon uses `stroke="#ffffff"` exactly like the other tool icons, because it is an image asset and cannot read CSS variables.
+
+**Commands run and results**
+
+From `desktop/` (after `npm ci`, which succeeded):
+
+- `npm run typecheck`: pass
+- `npm run lint -- --max-warnings 0`: pass
+- `npm test`: pass, 69 files, 374 tests
+- `npm run build:renderer`: pass (existing chunk size warning only)
+- `npm run build`: pass
+- `npm run test:smoke:run`: could not run here. Under `xvfb-run` Electron starts but the window never reaches the app URL before the 120 s test timeout, and the proxy denied a Chromium download host. This looks like a container limitation (root user, no sandbox, restricted network), not a result of this change. Not verified.
+
+API, using the Ubuntu .NET 10 SDK because the official .NET 9 installer host (`builds.dotnet.microsoft.com`) is blocked by the egress policy, with `DOTNET_ROLL_FORWARD=Major` so the net9.0 test projects run on the 10.0 runtime:
+
+- `dotnet build PowerTools.API.AttributeExplorer.Tests`: pass, 0 warnings. This compiles `PowerTools.API` against its net9.0 target.
+- `dotnet test PowerTools.sln`: pass for all test projects, including 26 of 26 in `PowerTools.API.AttributeExplorer.Tests`.
+- Not verified: the live Dataverse calls, because the tests use a fake client and no organization credentials. The SDK property assumptions (`IsFilterable`, `IsRetrievable`, `SourceType`, `IsValidForAdvancedFind`) compile, but their runtime values on older on-premises builds were not checked.
+
 ### Open questions
 
 - Whether to show `AttributeOf` companion fields (for example `…name` and `…yominame`) later, behind a toggle. They are excluded for now.
