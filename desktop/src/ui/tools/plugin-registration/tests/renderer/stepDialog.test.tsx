@@ -237,7 +237,7 @@ describe("StepDialog", () => {
 
     const toast = await screen.findByText("Step registered.");
     expect(toast.closest("[data-toast-type]")).toHaveAttribute("data-toast-type", "success");
-    expect(toast.closest("[data-toast-type]")).toHaveClass("bg-[var(--color-primary)]");
+    expect(toast.closest("[data-toast-type]")).toHaveClass("border-l-ok");
     expect(screen.queryByRole("status", { name: "Registering step…" })).not.toBeInTheDocument();
   });
 

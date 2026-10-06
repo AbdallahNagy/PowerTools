@@ -303,7 +303,7 @@ describe("Attribute Explorer", () => {
     fireEvent.change(screen.getByPlaceholderText("Search by display or logical name"), {
       target: { value: "acc" },
     });
-    expect(within(screen.getByRole("list", { name: "Tables" })).queryByRole("button", { name: /Contact/ })).toBeNull();
+    expect(within(screen.getByRole("list", { name: "Tables", hidden: true })).queryByRole("button", { name: /Contact/ })).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "contact" }));
 
@@ -522,7 +522,7 @@ describe("Attribute Explorer", () => {
     expect(screen.getByRole("heading", { name: "Annual Revenue", level: 3 })).toBeInTheDocument();
 
     phase = 1;
-    fireEvent.click(screen.getByRole("button", { name: "Refresh metadata" }));
+    fireEvent.click(screen.getByRole("button", { name: "Refresh metadata", hidden: true }));
     await waitFor(() =>
       expect(screen.queryByRole("heading", { name: "Annual Revenue", level: 3 })).not.toBeInTheDocument(),
     );
@@ -617,7 +617,7 @@ describe("Attribute Explorer", () => {
       target: { value: "acc" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Switch tab connection" }));
+    fireEvent.click(screen.getByRole("button", { name: "Switch tab connection", hidden: true }));
 
     expect(await screen.findByRole("button", { name: /Other Table/ })).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search by display or logical name")).toHaveValue("");

@@ -34,9 +34,9 @@ export function DataTable<T>({
   onSort,
 }: DataTableProps<T>) {
   return (
-    <div className="w-full overflow-auto rounded-sm border border-[#3c3c3c]">
-      <table className="w-full text-sm text-[#cccccc] border-collapse">
-        <thead className="bg-[#252526] sticky top-0 z-10">
+    <div className="w-full overflow-auto rounded-sm border border-line">
+      <table className="w-full text-sm text-fg border-collapse">
+        <thead className="bg-surface sticky top-0 z-10">
           <tr>
             {columns.map((col) => {
               const sortable = col.sortable === true && onSort != null;
@@ -48,7 +48,7 @@ export function DataTable<T>({
                 <th
                   key={col.key}
                   aria-sort={ariaSort}
-                  className="text-left px-3 py-2 font-medium text-[#858585] text-xs tracking-wider border-b border-[#3c3c3c]"
+                  className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line"
                   style={col.width ? { width: col.width } : undefined}
                 >
                   {sortable ? (
@@ -77,7 +77,7 @@ export function DataTable<T>({
             <tr>
               <td
                 colSpan={columns.length}
-                className="px-3 py-6 text-center text-[#858585] text-xs"
+                className="px-3 py-6 text-center text-fg-muted text-xs"
               >
                 {emptyMessage}
               </td>
@@ -92,9 +92,9 @@ export function DataTable<T>({
                   onClick={onRowClick ? () => onRowClick(row) : undefined}
                   onDoubleClick={onRowDoubleClick ? () => onRowDoubleClick(row) : undefined}
                   aria-selected={selectedKey != null ? selected : undefined}
-                  className={`border-b border-[#3c3c3c] last:border-0 transition-colors ${
-                    selected ? "bg-[var(--color-hover-bg)]" : ""
-                  } ${onRowClick || onRowDoubleClick ? "cursor-pointer hover:bg-[var(--color-hover-bg)]" : ""}`}
+                  className={`border-b border-line last:border-0 transition-colors ${
+                    selected ? "bg-accent-soft" : ""
+                  } ${onRowClick || onRowDoubleClick ? "cursor-pointer hover:bg-hover" : ""}`}
                 >
                   {columns.map((col) => (
                     <td key={col.key} className="px-3 py-2">

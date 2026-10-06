@@ -219,10 +219,10 @@ describe("shell keyboard shortcuts", () => {
     fireEvent.keyDown(document.body, { key: "p", ctrlKey: true });
     fireEvent.keyDown(document.body, { key: "Enter" });
 
-    expect(screen.getByRole("status", { name: "active tab" })).toHaveTextContent("welcome");
-    expect(screen.getByRole("status", { name: "sidebar" })).toHaveTextContent("visible");
+    expect(screen.getByRole("status", { name: "active tab", hidden: true })).toHaveTextContent("welcome");
+    expect(screen.getByRole("status", { name: "sidebar", hidden: true })).toHaveTextContent("visible");
     expect(screen.queryByRole("combobox", { name: "Open tool" })).not.toBeInTheDocument();
-    expect(screen.getByRole("status", { name: "primary runs" })).toHaveTextContent("0");
+    expect(screen.getByRole("status", { name: "primary runs", hidden: true })).toHaveTextContent("0");
     expect(document.querySelector("[data-app-modal]")).not.toBeNull();
   });
 

@@ -1,6 +1,6 @@
 ---
 name: ui-colors
-description: "Use when making any UI modification that involves color. Power Tools has one palette, defined as role-based tokens in src/ui/styles/theme.css. Use the token utilities (bg-surface, text-fg-muted, border-line, bg-accent...) and never hardcoded colors such as bg-[#hex], text-blue-500 or rgba() literals. If no token fits, ask the user before adding one."
+description: "Use when making any UI modification that involves color or shared controls. Power Tools has one palette, defined as role-based tokens in src/ui/styles/theme.css. Use the token utilities (bg-surface, text-fg-muted, border-line, bg-accent...) and never hardcoded colors such as bg-[#hex], text-blue-500 or rgba() literals. If no token fits, ask the user before adding one."
 ---
 
 # Power Tools color palette
@@ -88,6 +88,32 @@ For a translucent variant, use Tailwind's opacity modifier on a token, for examp
 3. Pick a token by **role**, not by how it looks today. Body text is `text-fg` even if `fg-strong` looks nicer in one spot.
 4. If no token fits the role, **stop and ask the user** before adding one. A new token needs a dark value, a light value and a row in this file.
 5. Prefer shared controls from `src/ui/shared/ui` over raw `<input>`, `<select>` and `<button>`, so colors stay in one place.
+6. ESLint rejects hardcoded colors in `src/ui/shared/**`. The rule widens to tools and shell as they migrate.
+
+## Shared controls
+
+Import from `src/ui/shared/ui`. Each one already uses the palette, so a tool only adds layout classes. Every control takes `className`, merged with `cn()` so a later class overrides an earlier one.
+
+| Control | Use for | Notes |
+|---|---|---|
+| `Button` | Every button | `variant`: `primary` (one per screen, the main action), `secondary`, `ghost` (toolbars, icon buttons), `danger` (destructive). `size`: `md`, `sm`. Defaults to `type="button"`. |
+| `Field` | Label, hint, and error for one control | Wires `id`, `aria-describedby`, and `aria-invalid` to the control inside it. |
+| `Input`, `Textarea`, `Select` | Text fields and dropdowns | `Select` is a styled native `<select>`. Put them inside `Field` for a label. |
+| `SearchInput` | Filtering a list | Has a search icon and a clear button. |
+| `Checkbox` | Boolean choice | Supports `indeterminate`. |
+| `Modal` | Dialogs | Radix Dialog: traps focus, closes the top dialog on Escape or outside click, hides the background from screen readers. `busy` blocks closing and shows a spinner. |
+| `Tabs` | Switching views inside a tool, such as Results / FetchXML | Arrow keys move between tabs. |
+| `Menu` | Actions behind one button | Keyboard navigation and type-ahead. `null` in `items` draws a separator. |
+| `Tooltip` | A short hint for an icon-only button | Never the only label; icon buttons still need `aria-label`. |
+| `Badge` | A state or category, such as Managed or Custom | `tone`: `neutral`, `accent`, `ok`, `warn`, `danger`. |
+| `Alert` | An inline message about the current screen | `tone`: `info`, `ok`, `warn`, `danger`. Errors and warnings are announced. |
+| `EmptyState` | Where content will appear | Say what goes here and the next step, for example "Select a table to see its fields." |
+| `Toolbar` | The row of controls at the top of a tool or panel | Put the primary action in `end`. |
+| `DataTable` | Tabular results | Sorting and row selection. |
+| `ProgressBar`, `Spinner` | Long operations | `ProgressBar` exposes `role="progressbar"`. |
+| `useToast` | Brief confirmation after an action, such as "Step registered." | `success`, `info`, `error`. Errors are announced. |
+
+Icons come from `lucide-react`. Size them 14–16 in dense UI, and set `aria-hidden="true"` when text already labels the control.
 
 ## Legacy names (do not use in new code)
 
