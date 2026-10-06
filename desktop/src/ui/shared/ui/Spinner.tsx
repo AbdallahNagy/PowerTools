@@ -1,10 +1,18 @@
-export function Spinner({ size = 16 }: { size?: number }) {
+import { cn } from "./cn";
+
+interface SpinnerProps {
+  size?: number;
+  className?: string;
+}
+
+export function Spinner({ size = 16, className }: SpinnerProps) {
   return (
     <svg
-      className="animate-spin text-[var(--color-primary)]"
+      className={cn("animate-spin text-accent-text", className)}
       style={{ width: size, height: size }}
       viewBox="0 0 24 24"
       fill="none"
+      aria-hidden="true"
     >
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path

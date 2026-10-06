@@ -33,11 +33,15 @@
     "@azure/msal-node": "^2.0.0",
     "@tanstack/react-query": "^5.99.0",
     "axios": "^1.15.0",
+    "clsx": "^2.1.1",
     "electron-updater": "^6.8.9",
+    "lucide-react": "^1.52.0",
+    "radix-ui": "^1.7.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-resizable-panels": "^4.11.2",
-    "react-router-dom": "^7.9.6"
+    "react-router-dom": "^7.9.6",
+    "tailwind-merge": "^3.7.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

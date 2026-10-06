@@ -84,12 +84,12 @@ describe("renderer context contracts", () => {
     expect(screen.getByText("First toast")).toBeInTheDocument();
     expect(screen.getByText("Second toast")).toBeInTheDocument();
 
-    fireEvent.click(screen.getAllByRole("button", { name: "✕" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Dismiss notification" })[0]);
     expect(screen.queryByText("First toast")).not.toBeInTheDocument();
     expect(screen.getByText("Second toast")).toBeInTheDocument();
   });
 
-  it("uses the app primary color for finished toasts and red for errors", () => {
+  it("marks finished toasts as success and errors as alerts", () => {
     render(<ToastProvider><ToastControls /></ToastProvider>);
 
     fireEvent.click(screen.getByRole("button", { name: "Show first" }));
@@ -98,9 +98,10 @@ describe("renderer context contracts", () => {
     const success = screen.getByText("First toast").closest("[data-toast-type]");
     const error = screen.getByText("Second toast").closest("[data-toast-type]");
     expect(success).toHaveAttribute("data-toast-type", "success");
-    expect(success).toHaveClass("bg-[var(--color-primary)]");
+    expect(success).toHaveAttribute("role", "status");
+    expect(success).toHaveClass("border-l-ok");
     expect(error).toHaveAttribute("data-toast-type", "error");
-    expect(error).toHaveClass("bg-[#3c1e1e]");
-    expect(error).toHaveClass("border-red-700");
+    expect(error).toHaveAttribute("role", "alert");
+    expect(error).toHaveClass("border-l-danger");
   });
 });

@@ -25,4 +25,29 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Colors come from theme tokens (desktop/.agents/skills/ui-colors/SKILL.md).
+    // Enforced where code is already migrated; widened as migration continues.
+    files: ['src/ui/shared/**/*.{ts,tsx}'],
+    ignores: ['**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': ['error', ...hardcodedColorRules()],
+    },
+  },
 )
+
+function hardcodedColorRules() {
+  const patterns = [
+    ['\\[#[0-9a-fA-F]{3,8}\\]', 'Use a theme token class (bg-surface, text-fg-muted) instead of an arbitrary hex color.'],
+    ['#[0-9a-fA-F]{3}([0-9a-fA-F]{3})?\\b', 'Use var(--color-<token>) instead of a hex color.'],
+    ['rgba?\\(', 'Use a theme token, with an opacity modifier or color-mix(), instead of rgb()/rgba().'],
+    [
+      '\\b(bg|text|border|ring|fill|stroke|outline|divide|placeholder|accent|from|via|to)-(slate|gray|zinc|neutral|stone|red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|white)\\b',
+      'Use a theme token class instead of a Tailwind palette color.',
+    ],
+  ]
+  return patterns.flatMap(([pattern, message]) => [
+    { selector: `Literal[value=/${pattern}/]`, message },
+    { selector: `TemplateElement[value.raw=/${pattern}/]`, message },
+  ])
+}

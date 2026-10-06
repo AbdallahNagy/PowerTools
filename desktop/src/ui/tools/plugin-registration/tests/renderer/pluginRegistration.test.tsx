@@ -219,7 +219,7 @@ describe("Plugin Registration", () => {
 
     const toast = await screen.findByText("Step unregistered.");
     expect(toast.closest("[data-toast-type]")).toHaveAttribute("data-toast-type", "success");
-    expect(toast.closest("[data-toast-type]")).toHaveClass("bg-[var(--color-primary)]");
+    expect(toast.closest("[data-toast-type]")).toHaveClass("border-l-ok");
     expect(screen.queryByRole("status", { name: "Unregistering…" })).not.toBeInTheDocument();
   });
 
