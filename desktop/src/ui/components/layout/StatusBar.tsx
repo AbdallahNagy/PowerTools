@@ -41,7 +41,7 @@ const StatusBar = () => {
   };
 
   return (
-    <div className="h-6 bg-(--color-primary) flex items-center justify-between px-2 text-white text-xs select-none">
+    <div className="h-6 bg-accent flex items-center justify-between px-2 text-accent-fg text-xs select-none">
       <span>{connectionName ? `connected to: ${connectionName}` : ""}</span>
       <div className="flex items-center space-x-4">
         {items.map((item) => (
@@ -52,7 +52,7 @@ const StatusBar = () => {
         {updateActionLabel && (
           <button
             type="button"
-            className="hover:bg-white/15 px-1 rounded cursor-pointer disabled:cursor-default disabled:opacity-80"
+            className="hover:bg-accent-fg/15 px-1 rounded cursor-pointer disabled:cursor-default disabled:opacity-80"
             onClick={runUpdateAction}
             disabled={isUpdateActionDisabled(updateStatus)}
             title={

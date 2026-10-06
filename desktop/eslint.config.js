@@ -27,8 +27,7 @@ export default tseslint.config(
   },
   {
     // Colors come from theme tokens (desktop/.agents/skills/ui-colors/SKILL.md).
-    // Enforced where code is already migrated; widened as migration continues.
-    files: ['src/ui/shared/**/*.{ts,tsx}'],
+    files: ['src/ui/**/*.{ts,tsx}'],
     ignores: ['**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-syntax': ['error', ...hardcodedColorRules()],

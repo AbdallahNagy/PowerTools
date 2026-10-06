@@ -39,11 +39,11 @@ export function MigrationOptions({
       >
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox checked={doCreate} onChange={onCreateChange} />
-          <span className="text-sm text-[#cccccc]">Create</span>
+          <span className="text-sm text-fg">Create</span>
         </label>
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox checked={doUpdate} onChange={onUpdateChange} />
-          <span className="text-sm text-[#cccccc]">Update</span>
+          <span className="text-sm text-fg">Update</span>
         </label>
       </div>
 

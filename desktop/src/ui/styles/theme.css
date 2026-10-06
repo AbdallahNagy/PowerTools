@@ -41,6 +41,14 @@
   --color-ok: #5cbf7a;
   --color-ok-soft: color-mix(in srgb, var(--color-ok) 14%, transparent);
 
+  /* Secondary hue (orange): OR logic, application-required fields */
+  --color-alt: #e39a5f;
+  --color-alt-soft: color-mix(in srgb, var(--color-alt) 14%, transparent);
+
+  /* Nesting guides for deeper filter groups (after line and accent-text) */
+  --color-nest-a: #3a4d2a;
+  --color-nest-b: #4d2e52;
+
   /* Keyboard focus ring */
   --color-focus: var(--color-accent-text);
 }
@@ -72,4 +80,9 @@
   --color-danger: #c2412d;
   --color-warn: #9a6b00;
   --color-ok: #2f7d45;
+
+  --color-alt: #a3541c;
+
+  --color-nest-a: #a9c79a;
+  --color-nest-b: #cfaed6;
 }

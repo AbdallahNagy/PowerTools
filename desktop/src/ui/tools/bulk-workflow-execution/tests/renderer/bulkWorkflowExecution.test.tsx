@@ -225,7 +225,7 @@ describe("Bulk Workflow Execution", () => {
     expect(alert).toHaveTextContent(
       "Error: The query returns contact records, but the workflow runs on account.",
     );
-    expect(alert).toHaveClass("text-[var(--color-error)]");
+    expect(alert).toHaveAttribute("data-tone", "danger");
     expect(startButton()).toBeDisabled();
   });
 
@@ -249,7 +249,7 @@ describe("Bulk Workflow Execution", () => {
     expect(details.getByText("0 s")).toBeInTheDocument();
     const warning = screen.getByText(/This queues a large number of workflow jobs\./);
     expect(warning).toHaveTextContent("Warning:");
-    expect(warning).toHaveClass("text-[var(--color-warning)]");
+    expect(warning).toHaveAttribute("data-tone", "warn");
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.queryByText("Start workflows")).not.toBeInTheDocument();

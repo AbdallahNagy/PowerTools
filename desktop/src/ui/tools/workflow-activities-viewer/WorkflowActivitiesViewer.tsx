@@ -148,9 +148,9 @@ function WorkflowActivitiesPage() {
   };
 
   return (
-    <Group orientation="horizontal" className="flex min-h-0 flex-1 bg-[var(--color-bg-dark)]">
-      <Panel defaultSize="50%" minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-darker)]">
-        <div className="flex shrink-0 items-center gap-2 border-b border-[var(--color-border-dark)] p-3">
+    <Group orientation="horizontal" className="flex min-h-0 flex-1 bg-canvas">
+      <Panel defaultSize="50%" minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-surface">
+        <div className="flex shrink-0 items-center gap-2 border-b border-line p-3">
           <fieldset disabled={!connectionName} className="m-0 min-w-0 flex-1 border-0 p-0">
             <SearchInput
               value={filter}
@@ -180,14 +180,14 @@ function WorkflowActivitiesPage() {
       </Panel>
       <Separator
         aria-label="Resize panes"
-        className="w-1 cursor-col-resize bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)]"
+        className="w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent"
       />
-      <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-darker)]">
+      <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-surface">
         <div className="min-h-0 flex-1 overflow-auto p-3">
           {!connectionName ? (
-            <p className="text-[var(--color-text-dark-gray)]">{noEnvironmentMessage}</p>
+            <p className="text-fg-muted">{noEnvironmentMessage}</p>
           ) : !selected ? (
-            <p className="text-[var(--color-text-dark-gray)]">Select an activity.</p>
+            <p className="text-fg-muted">Select an activity.</p>
           ) : (
             <ActivityDetail
               activity={selected}
@@ -230,7 +230,7 @@ function AssemblyList({
   onRetry: () => void;
 }) {
   if (!connectionName) {
-    return <p className="text-[var(--color-text-dark-gray)]">{noEnvironmentMessage}</p>;
+    return <p className="text-fg-muted">{noEnvironmentMessage}</p>;
   }
   if (loading) {
     return (
@@ -242,20 +242,20 @@ function AssemblyList({
   if (errorText) {
     return (
       <div className="flex flex-col items-start gap-3">
-        <p role="alert" className="text-[var(--color-text-gray)]">{errorText}</p>
+        <p role="alert" className="text-fg">{errorText}</p>
         <Button type="button" variant="secondary" onClick={onRetry}>Retry</Button>
       </div>
     );
   }
   if (totalAssemblies === 0) {
     return (
-      <p className="text-[var(--color-text-dark-gray)]">
+      <p className="text-fg-muted">
         No custom workflow activities in database-stored assemblies.
       </p>
     );
   }
   if (assemblies.length === 0) {
-    return <p className="text-[var(--color-text-dark-gray)]">No activities match this filter.</p>;
+    return <p className="text-fg-muted">No activities match this filter.</p>;
   }
 
   return (
@@ -268,13 +268,13 @@ function AssemblyList({
             <button
               type="button"
               aria-expanded={open}
-              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-[var(--color-hover-bg)]"
+              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-hover"
               onClick={() => onToggle(group.assemblyId)}
             >
-              <span className={group.name.trim() ? "truncate text-[var(--color-text-white)]" : "truncate text-[var(--color-text-dark-gray)]"}>
+              <span className={group.name.trim() ? "truncate text-fg-strong" : "truncate text-fg-muted"}>
                 {label}
               </span>
-              <span className="text-[var(--color-text-dark-gray)]">
+              <span className="text-fg-muted">
                 {group.activities.length}
                 <span className="sr-only"> activities</span>
               </span>
@@ -290,8 +290,8 @@ function AssemblyList({
                       aria-current={selected ? "true" : undefined}
                       className={`block w-full px-6 py-1.5 text-left ${
                         selected
-                          ? "bg-[var(--color-hover-bg)] text-[var(--color-text-white)]"
-                          : "text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)]"
+                          ? "bg-hover text-fg-strong"
+                          : "text-fg hover:bg-hover"
                       }`}
                       onClick={() => onSelect(activity.pluginTypeId)}
                     >
@@ -326,7 +326,7 @@ function ActivityDetail({
   const name = activity.name.trim() ? activity.name : "";
   return (
     <div className="flex flex-col gap-4">
-      <h2 className={name ? "text-base text-[var(--color-text-white)]" : "text-base text-[var(--color-text-dark-gray)]"}>
+      <h2 className={name ? "text-base text-fg-strong" : "text-base text-fg-muted"}>
         {name || "Unknown"}
       </h2>
       <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
@@ -344,13 +344,13 @@ function ActivityDetail({
           </div>
         ) : errorText ? (
           <div className="flex flex-col items-start gap-3">
-            <p role="alert" className="text-[var(--color-text-gray)]">{errorText}</p>
+            <p role="alert" className="text-fg">{errorText}</p>
             <Button type="button" variant="secondary" onClick={onRetry}>Retry</Button>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
             {truncated ? (
-              <p className="text-[var(--color-text-dark-gray)]">The process list stopped early.</p>
+              <p className="text-fg-muted">The process list stopped early.</p>
             ) : null}
             <DataTable
               columns={processColumns}
@@ -369,8 +369,8 @@ function DetailField({ label, value }: { label: string; value: string | null }) 
   const missing = !value || value.trim().length === 0;
   return (
     <>
-      <dt className="text-[var(--color-text-dark-gray)]">{label}</dt>
-      <dd className={missing ? "text-[var(--color-text-dark-gray)]" : "text-[var(--color-text-gray)]"}>
+      <dt className="text-fg-muted">{label}</dt>
+      <dd className={missing ? "text-fg-muted" : "text-fg"}>
         {missing ? "Unknown" : value}
       </dd>
     </>
@@ -380,13 +380,13 @@ function DetailField({ label, value }: { label: string; value: string | null }) 
 function ArgumentSection({ title, empty, names }: { title: string; empty: string; names: string[] }) {
   return (
     <section>
-      <h3 className="text-[var(--color-text-dark-gray)]">{title}</h3>
+      <h3 className="text-fg-muted">{title}</h3>
       {names.length === 0 ? (
-        <p className="text-[var(--color-text-dark-gray)]">{empty}</p>
+        <p className="text-fg-muted">{empty}</p>
       ) : (
         <ul>
           {names.map((name, index) => (
-            <li key={`${name}-${index}`} className="text-[var(--color-text-gray)]">{name}</li>
+            <li key={`${name}-${index}`} className="text-fg">{name}</li>
           ))}
         </ul>
       )}

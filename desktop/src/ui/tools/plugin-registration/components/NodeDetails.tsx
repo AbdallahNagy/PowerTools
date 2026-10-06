@@ -14,19 +14,19 @@ interface NodeDetailsProps {
 export function NodeDetails({ node }: NodeDetailsProps) {
   if (!node) {
     return (
-      <p className="text-sm text-[var(--color-text-dark-gray)] p-3">
+      <p className="text-sm text-fg-muted p-3">
         Select a registration to inspect it.
       </p>
     );
   }
 
   return (
-    <div className="overflow-auto flex-1 min-h-0 p-3 text-sm text-[var(--color-text-gray)]">
-      <h2 className="text-[var(--color-text-white)] font-semibold mb-3">{node.label}</h2>
+    <div className="overflow-auto flex-1 min-h-0 p-3 text-sm text-fg">
+      <h2 className="text-fg-strong font-semibold mb-3">{node.label}</h2>
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2">
         {rowsFor(node).map((row) => (
           <div key={row.label} className="contents">
-            <dt className="text-[var(--color-text-dark-gray)]">{row.label}</dt>
+            <dt className="text-fg-muted">{row.label}</dt>
             <dd className="break-all">{row.value}</dd>
           </div>
         ))}

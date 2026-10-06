@@ -31,7 +31,7 @@ export function ToolHeader({
             placeholder="Search assemblies, types, steps…"
           />
         </div>
-        <label className="flex items-center gap-2 text-xs text-[var(--color-text-dark-gray)] pb-1.5">
+        <label className="flex items-center gap-2 text-xs text-fg-muted pb-1.5">
           <Checkbox checked={showSystem} onChange={onShowSystemChange} id="show-system" />
           Show system
         </label>

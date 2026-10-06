@@ -38,7 +38,7 @@ export function FieldsPane({
 }: FieldsPaneProps) {
   if (!hasConnection) {
     return (
-      <p className="p-3 text-[var(--color-text-dark-gray)]">
+      <p className="p-3 text-fg-muted">
         Right-click this tab and choose Change connection.
       </p>
     );
@@ -47,7 +47,7 @@ export function FieldsPane({
   if (!table) {
     return (
       <div className="flex flex-1 items-center justify-center p-6">
-        <p className="text-[var(--color-text-dark-gray)]">Select a table to see its fields.</p>
+        <p className="text-fg-muted">Select a table to see its fields.</p>
       </div>
     );
   }
@@ -61,10 +61,10 @@ export function FieldsPane({
         <button
           type="button"
           onClick={() => onOpenField(field)}
-          className={`max-w-full truncate text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)] ${
+          className={`max-w-full truncate text-left hover:underline focus:outline-none focus-visible:ring-1 focus-visible:ring-focus ${
             field.displayName?.trim()
-              ? "text-[var(--color-text-white)]"
-              : "text-[var(--color-text-dark-gray)]"
+              ? "text-fg-strong"
+              : "text-fg-muted"
           }`}
         >
           {displayLabel(field)}
@@ -101,7 +101,7 @@ export function FieldsPane({
       header: "Required",
       sortable: true,
       render: (field: AttributeInfo) => (
-        <span className={field.requiredLevel === "None" ? "text-[var(--color-text-dark-gray)]" : ""}>
+        <span className={field.requiredLevel === "None" ? "text-fg-muted" : ""}>
           {requiredLevelLabel(field.requiredLevel)}
         </span>
       ),
@@ -110,19 +110,19 @@ export function FieldsPane({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-col gap-2 border-b border-[var(--color-border-dark)] p-3">
+      <div className="flex shrink-0 flex-col gap-2 border-b border-line p-3">
         <div className="flex items-baseline justify-between gap-3">
           <div className="flex min-w-0 items-baseline gap-2">
-            <h2 className="truncate text-sm font-semibold text-[var(--color-text-white)]">
+            <h2 className="truncate text-sm font-semibold text-fg-strong">
               {displayLabel(table)}
             </h2>
-            <span className="truncate font-mono text-xs text-[var(--color-text-dark-gray)]">
+            <span className="truncate font-mono text-xs text-fg-muted">
               {table.logicalName}
             </span>
             <CopyButton value={table.logicalName} label="Copy logical name" />
           </div>
           {!loading && !errorText ? (
-            <span className="shrink-0 text-xs text-[var(--color-text-dark-gray)]">
+            <span className="shrink-0 text-xs text-fg-muted">
               {fieldsCountLabel(fields.length, totalFields)}
             </span>
           ) : null}
@@ -137,11 +137,11 @@ export function FieldsPane({
         {loading ? (
           <div role="status" aria-label="Loading fields" className="flex items-center justify-center gap-2 p-6">
             <Spinner />
-            <span className="text-[var(--color-text-gray)]">Loading fields…</span>
+            <span className="text-fg">Loading fields…</span>
           </div>
         ) : errorText ? (
           <div className="flex flex-col items-start gap-3">
-            <p role="alert" className="text-[var(--color-text-gray)]">{errorText}</p>
+            <p role="alert" className="text-fg">{errorText}</p>
             <Button type="button" variant="secondary" onClick={onRetry}>Retry</Button>
           </div>
         ) : (

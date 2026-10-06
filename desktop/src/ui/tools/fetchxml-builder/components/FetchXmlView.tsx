@@ -32,11 +32,11 @@ export function FetchXmlView({ fetchXml }: FetchXmlViewProps) {
       </div>
 
       {fetchXml ? (
-        <pre className="text-xs text-[#cccccc] bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm p-4 overflow-auto whitespace-pre-wrap break-all flex-1 min-h-0 font-mono">
+        <pre className="text-xs text-fg bg-canvas border border-line rounded-sm p-4 overflow-auto whitespace-pre-wrap break-all flex-1 min-h-0 font-mono">
           {pretty}
         </pre>
       ) : (
-        <div className="flex items-center justify-center flex-1 text-[#555] text-sm border border-dashed border-[#3c3c3c] rounded-sm">
+        <div className="flex items-center justify-center flex-1 text-fg-muted text-sm border border-dashed border-line rounded-sm">
           Run a query to see the generated FetchXML.
         </div>
       )}

@@ -36,14 +36,14 @@ export default function TabConnectionMenu({
   return (
     <div
       role="menu"
-      className="fixed z-50 min-w-48 border border-[var(--color-border-dark)] bg-[var(--color-bg-light)] py-1 text-sm text-[var(--color-text-gray)]"
+      className="fixed z-50 min-w-48 border border-line bg-raised py-1 text-sm text-fg"
       style={{ left: x, top: y }}
       onMouseDown={(event) => event.stopPropagation()}
     >
       {listing ? (
         <>
           {connections.length === 0 && (
-            <div className="px-3 py-1.5 text-[var(--color-text-dark-gray)]">No connections</div>
+            <div className="px-3 py-1.5 text-fg-muted">No connections</div>
           )}
           {connections.map((connection) => {
             const selected = connection.name === connectionName;
@@ -53,7 +53,7 @@ export default function TabConnectionMenu({
                 type="button"
                 role="menuitemradio"
                 aria-checked={selected}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong"
                 onClick={() => {
                   onSelect(connection.name);
                   onClose();
@@ -64,11 +64,11 @@ export default function TabConnectionMenu({
               </button>
             );
           })}
-          <div className="mt-1 border-t border-[var(--color-border-dark)] pt-1">
+          <div className="mt-1 border-t border-line pt-1">
             <button
               type="button"
               role="menuitem"
-              className="w-full px-3 py-1.5 text-left hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+              className="w-full px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong"
               onClick={() => {
                 void createConnectionWindow();
                 onClose();
@@ -82,7 +82,7 @@ export default function TabConnectionMenu({
         <button
           type="button"
           role="menuitem"
-          className="w-full px-3 py-1.5 text-left hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+          className="w-full px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong"
           onClick={() => setListing(true)}
         >
           Change connection

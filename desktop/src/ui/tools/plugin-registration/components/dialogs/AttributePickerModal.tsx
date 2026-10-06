@@ -88,7 +88,7 @@ export function AttributePickerModal({
             type="button"
             onClick={selectAllVisible}
             disabled={selectionDisabled || allVisibleSelected}
-            className="text-xs whitespace-nowrap text-[var(--color-primary)] hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
+            className="text-xs whitespace-nowrap text-accent-text hover:underline disabled:cursor-not-allowed disabled:no-underline disabled:opacity-50"
           >
             Select all
           </button>
@@ -96,22 +96,22 @@ export function AttributePickerModal({
             type="button"
             onClick={selectNoneVisible}
             disabled={selectionDisabled || noneVisibleSelected}
-            className="text-xs whitespace-nowrap text-[var(--color-text-dark-gray)] hover:text-[var(--color-text-white)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="text-xs whitespace-nowrap text-fg-muted hover:text-fg-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             Select none
           </button>
         </div>
-        <span className="text-xs whitespace-nowrap text-[var(--color-text-dark-gray)]">
+        <span className="text-xs whitespace-nowrap text-fg-muted">
           {selected.length} selected
         </span>
       </div>
-      <div className="max-h-72 min-h-40 overflow-auto border border-[var(--color-border-dark)] bg-[var(--color-bg-light)]">
+      <div className="max-h-72 min-h-40 overflow-auto border border-line bg-raised">
         {isLoading ? (
           <div className="flex justify-center p-6">
             <Spinner />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="p-3 text-sm text-[var(--color-text-dark-gray)]">
+          <p className="p-3 text-sm text-fg-muted">
             No attributes match the search.
           </p>
         ) : (
@@ -120,7 +120,7 @@ export function AttributePickerModal({
             return (
               <label
                 key={attribute.logicalName}
-                className="flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-left text-sm text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)]"
+                className="flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-left text-sm text-fg hover:bg-hover"
               >
                 <Checkbox
                   checked={isChecked}
@@ -128,7 +128,7 @@ export function AttributePickerModal({
                 />
                 <span>
                   {attribute.displayName}{" "}
-                  <span className="text-[var(--color-text-dark-gray)]">
+                  <span className="text-fg-muted">
                     ({attribute.logicalName})
                   </span>
                 </span>

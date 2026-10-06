@@ -39,7 +39,7 @@ export function ResultsGrid({
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-[#858585] text-sm p-4">
+      <div className="flex items-center gap-2 text-fg-muted text-sm p-4">
         <Spinner size={16} /> Running query…
       </div>
     );
@@ -47,7 +47,7 @@ export function ResultsGrid({
 
   if (error) {
     return (
-      <div className="text-sm text-[#f48771] bg-[#3c1e1e] border border-red-700 rounded-sm px-4 py-3">
+      <div className="text-sm text-danger bg-danger-soft border border-danger rounded-sm px-4 py-3">
         {error}
       </div>
     );
@@ -55,7 +55,7 @@ export function ResultsGrid({
 
   if (!result) {
     return (
-      <div className="flex items-center justify-center flex-1 text-[#555] text-sm">
+      <div className="flex items-center justify-center flex-1 text-fg-muted text-sm">
         Run a query to see results.
       </div>
     );
@@ -92,7 +92,7 @@ export function ResultsGrid({
   return (
     <div className="flex flex-col gap-2 flex-1 min-h-0">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-xs text-[#858585]">
+        <span className="text-xs text-fg-muted">
           {formatFetchResultSummary({
             fetchedCount: result.records.length,
             totalEstimate: result.totalEstimate,
@@ -101,15 +101,15 @@ export function ResultsGrid({
         </span>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto border border-[#3c3c3c] rounded-sm">
-        <table className="w-full text-sm text-[#cccccc] border-collapse">
-          <thead className="bg-[#252526] sticky top-0 z-10">
+      <div className="flex-1 min-h-0 overflow-auto border border-line rounded-sm">
+        <table className="w-full text-sm text-fg border-collapse">
+          <thead className="bg-surface sticky top-0 z-10">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col}
                   onClick={() => handleSort(col)}
-                  className="text-left px-3 py-2 font-medium text-[#858585] text-xs tracking-wider border-b border-[#3c3c3c] cursor-pointer hover:text-[#cccccc] whitespace-nowrap select-none"
+                  className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line cursor-pointer hover:text-fg whitespace-nowrap select-none"
                 >
                   {displayNames[col] ?? col}
                   {sortCol === col && (
@@ -122,7 +122,7 @@ export function ResultsGrid({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length || 1} className="px-3 py-6 text-center text-[#858585] text-xs">
+                <td colSpan={columns.length || 1} className="px-3 py-6 text-center text-fg-muted text-xs">
                   No records found.
                 </td>
               </tr>
@@ -134,7 +134,7 @@ export function ResultsGrid({
                   key={String(row.id)}
                   onClick={() => handleOpenRecord(row)}
                   title={canOpenRecord ? "Open record in Dynamics CRM" : undefined}
-                  className={`border-b border-[#3c3c3c] last:border-0 hover:bg-[#2a2d2e] ${
+                  className={`border-b border-line last:border-0 hover:bg-hover ${
                     canOpenRecord ? "cursor-pointer" : ""
                   }`}
                 >
@@ -156,11 +156,11 @@ export function ResultsGrid({
         <Button variant="ghost" className="text-xs py-0.5 px-2" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
           ← Prev
         </Button>
-        <span className="text-xs text-[#858585]">Page {page}</span>
+        <span className="text-xs text-fg-muted">Page {page}</span>
         <Button variant="ghost" className="text-xs py-0.5 px-2" onClick={() => onPageChange(page + 1)} disabled={!result.moreRecords}>
           Next →
         </Button>
-        <span className="text-xs text-[#858585] ml-auto">{PAGE_SIZE} per page</span>
+        <span className="text-xs text-fg-muted ml-auto">{PAGE_SIZE} per page</span>
       </div>
     </div>
   );

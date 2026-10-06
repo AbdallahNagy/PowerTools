@@ -413,18 +413,18 @@ function PolymorphicLookupPage() {
   const discardOpen = connection.pendingName !== undefined || modal === "discard";
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[var(--color-bg-dark)] text-[var(--color-text-white)]">
+    <div className="flex h-full min-h-0 flex-col bg-canvas text-fg-strong">
       {!connection.ready ? (
         <div className="flex flex-1 items-center justify-center p-6">
           <Spinner />
         </div>
       ) : !connection.connectionName ? (
-        <div className="flex flex-1 items-center justify-center p-6 text-sm text-[var(--color-text-gray)]">
+        <div className="flex flex-1 items-center justify-center p-6 text-sm text-fg">
           Right-click this tab and choose Change connection.
         </div>
       ) : (
         <Group orientation="horizontal" className="flex min-h-0 flex-1">
-          <Panel defaultSize="50%" minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden bg-[var(--color-bg-darker)] p-3">
+          <Panel defaultSize="50%" minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden bg-surface p-3">
             <PickerStep
               title="Unmanaged solution"
               summary={solution ? `${solution.friendlyName} (${prefixText(solution.customizationPrefix)})` : null}
@@ -464,7 +464,7 @@ function PolymorphicLookupPage() {
                 }
               />
               {solution ? (
-                <p className="text-xs text-[var(--color-text-dark-gray)]">
+                <p className="text-xs text-fg-muted">
                   Prefix {prefixText(solution.customizationPrefix)}
                 </p>
               ) : null}
@@ -512,12 +512,12 @@ function PolymorphicLookupPage() {
                   }
                 />
                 {elastic ? (
-                  <p className="text-xs text-[var(--color-text-dark-gray)]">
+                  <p className="text-xs text-fg-muted">
                     This referencing table is elastic.
                   </p>
                 ) : null}
                 {table?.isSolutionAware ? (
-                  <p className="text-xs text-[var(--color-text-dark-gray)]">
+                  <p className="text-xs text-fg-muted">
                     Polymorphic lookups are not supported on a solution-aware table.
                   </p>
                 ) : null}
@@ -666,12 +666,12 @@ function PolymorphicLookupPage() {
                     placeholder="Search attributes"
                   />
                   {drafts.length < 2 ? (
-                    <p className="text-xs text-[var(--color-text-dark-gray)]">
+                    <p className="text-xs text-fg-muted">
                       Select at least two attributes.
                     </p>
                   ) : null}
                   {ownTableError ? (
-                    <p role="alert" className="text-xs text-[var(--color-text-white)]">
+                    <p role="alert" className="text-xs text-fg-strong">
                       {ownTableError}
                     </p>
                   ) : null}
@@ -737,15 +737,15 @@ function PolymorphicLookupPage() {
           </Panel>
           <Separator
             aria-label="Resize panes"
-            className="w-1 cursor-col-resize bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)]"
+            className="w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent"
           />
-          <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-3 overflow-auto bg-[var(--color-bg-darker)] p-3">
+          <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-3 overflow-auto bg-surface p-3">
             {mode == null ? (
-              <p className="text-sm text-[var(--color-text-gray)]">Select a lookup or create one.</p>
+              <p className="text-sm text-fg">Select a lookup or create one.</p>
             ) : (
               <>
             {ownTableError ? (
-              <p role="alert" className="text-xs text-[var(--color-text-white)]">
+              <p role="alert" className="text-xs text-fg-strong">
                 {ownTableError}
               </p>
             ) : null}
@@ -757,7 +757,7 @@ function PolymorphicLookupPage() {
                   onChange={(patch) => updateDraft(selectedDraft.referencedLogicalName, patch)}
                 />
                 {elastic ? (
-                  <p className="text-xs text-[var(--color-text-dark-gray)]">
+                  <p className="text-xs text-fg-muted">
                     This referencing table is elastic.
                   </p>
                 ) : null}
@@ -787,7 +787,7 @@ function PolymorphicLookupPage() {
               </>
             ) : (
               <>
-                <p className="text-sm text-[var(--color-text-gray)]">Select an attribute.</p>
+                <p className="text-sm text-fg">Select an attribute.</p>
                 <LookupActions
                   mode={mode}
                   createEnabled={createEnabled}
@@ -827,7 +827,7 @@ function PolymorphicLookupPage() {
           else setModal(null);
         }}
       >
-        <p className="text-sm text-[var(--color-text-gray)]">Discard unsaved lookup changes?</p>
+        <p className="text-sm text-fg">Discard unsaved lookup changes?</p>
         <div className="flex justify-end gap-2">
           <Button
             variant="secondary"
@@ -864,8 +864,8 @@ function PolymorphicLookupPage() {
           if (!writePhase) setModal(null);
         }}
       >
-        <p className="text-sm text-[var(--color-text-gray)]">These referenced tables will be removed:</p>
-        <ul className="list-disc pl-5 text-sm text-[var(--color-text-white)]">
+        <p className="text-sm text-fg">These referenced tables will be removed:</p>
+        <ul className="list-disc pl-5 text-sm text-fg-strong">
           {(pendingPlan.current?.deletes ?? []).map((draft) => (
             <li key={draft.referencedLogicalName}>
               {referencedTables.find((item) => item.logicalName === draft.referencedLogicalName)?.displayName ??
@@ -897,7 +897,7 @@ function PolymorphicLookupPage() {
           if (!writePhase) setModal(null);
         }}
       >
-        <p className="text-sm text-[var(--color-text-gray)]">
+        <p className="text-sm text-fg">
           Delete {selectedLookup?.displayName ?? displayName} ({selectedLookup?.schemaName ?? schemaName})?
         </p>
         <div className="flex justify-end gap-2">
@@ -986,10 +986,10 @@ function PickerStep({
         aria-expanded={expanded}
         aria-label={summary ? `${title}, ${summary}` : title}
         onClick={onToggle}
-        className="flex w-full items-center gap-2 rounded-sm border border-[var(--color-border-dark)] bg-[var(--color-bg-light)] px-3 py-2 text-left hover:bg-[var(--color-hover-bg)]"
+        className="flex w-full items-center gap-2 rounded-sm border border-line bg-raised px-3 py-2 text-left hover:bg-hover"
       >
         <svg
-          className={`h-3 w-3 shrink-0 text-[var(--color-text-dark-gray)] ${expanded ? "rotate-90" : ""}`}
+          className={`h-3 w-3 shrink-0 text-fg-muted ${expanded ? "rotate-90" : ""}`}
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -998,9 +998,9 @@ function PickerStep({
         >
           <path d="m9 6 6 6-6 6" />
         </svg>
-        <span className="text-sm text-[var(--color-text-white)]">{title}</span>
+        <span className="text-sm text-fg-strong">{title}</span>
         {summary ? (
-          <span className="truncate text-xs text-[var(--color-text-dark-gray)]">{summary}</span>
+          <span className="truncate text-xs text-fg-muted">{summary}</span>
         ) : null}
       </button>
       {expanded ? <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">{children}</div> : null}
@@ -1031,15 +1031,15 @@ function ListSection({
 }) {
   return (
     <div className={showHeading ? "flex min-h-0 flex-1 flex-col gap-2" : "flex min-h-0 flex-1 flex-col gap-2"}>
-      {showHeading ? <h2 className="text-sm text-[var(--color-text-white)]">{title}</h2> : null}
+      {showHeading ? <h2 className="text-sm text-fg-strong">{title}</h2> : null}
       <SearchInput value={search} onChange={onSearch} placeholder={placeholder} />
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+        <div className="flex items-center gap-2 text-sm text-fg">
           <Spinner />
         </div>
       ) : null}
       {error ? (
-        <div className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+        <div className="flex items-center gap-2 text-sm text-fg">
           <span>{error}</span>
           <Button variant="secondary" onClick={onRetry}>
             Retry
@@ -1063,7 +1063,7 @@ function RelationshipFields({
 }) {
   const split = splitSchema(draft.schemaName);
   return (
-    <div className="flex flex-col gap-3 border-t border-[var(--color-border-dark)] pt-3">
+    <div className="flex flex-col gap-3 border-t border-line pt-3">
       <SchemaField
         id="relationship-schema-name"
         label="Relationship schema name"
@@ -1076,7 +1076,7 @@ function RelationshipFields({
             : (value) => onChange({ fragment: value, fragmentEdited: true })
         }
       />
-      <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+      <label className="flex items-center gap-2 text-sm text-fg">
         <Checkbox
           id="advanced-find"
           checked={draft.isValidForAdvancedFind}

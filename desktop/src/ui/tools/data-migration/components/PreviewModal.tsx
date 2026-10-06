@@ -74,7 +74,7 @@ export function PreviewModal({
       widthClass="max-w-4xl"
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm text-[#858585]">
+        <p className="text-sm text-fg-muted">
           {data?.totalEstimate != null
             ? `Showing page ${page} · ~${data.totalEstimate.toLocaleString()} total records`
             : `Page ${page}`}
@@ -83,19 +83,19 @@ export function PreviewModal({
       </div>
 
       {error && (
-        <p className="text-sm text-[#f48771] bg-[#3c1e1e] border border-red-700 rounded-sm px-3 py-2">
+        <p className="text-sm text-danger bg-danger-soft border border-danger rounded-sm px-3 py-2">
           {(error as Error).message}
         </p>
       )}
 
-      <div className="flex-1 min-h-48 overflow-auto border border-[#3c3c3c] rounded-sm">
-        <table className="w-full text-sm text-[#cccccc] border-collapse">
-          <thead className="bg-[#252526] sticky top-0">
+      <div className="flex-1 min-h-48 overflow-auto border border-line rounded-sm">
+        <table className="w-full text-sm text-fg border-collapse">
+          <thead className="bg-surface sticky top-0">
             <tr>
               {displayAttrs.map((a) => (
                 <th
                   key={a}
-                  className="text-left px-3 py-2 text-xs font-medium text-[#858585] border-b border-[#3c3c3c]"
+                  className="text-left px-3 py-2 text-xs font-medium text-fg-muted border-b border-line"
                 >
                   {a}
                 </th>
@@ -106,12 +106,12 @@ export function PreviewModal({
             {(data?.records ?? []).map((row, i) => (
               <tr
                 key={i}
-                className="border-b border-[#3c3c3c] last:border-0 hover:bg-[#2a2d2e]"
+                className="border-b border-line last:border-0 hover:bg-hover"
               >
                 {displayAttrs.map((a) => (
                   <td
                     key={a}
-                    className="px-3 py-2 text-xs text-[#cccccc] max-w-[200px] truncate"
+                    className="px-3 py-2 text-xs text-fg max-w-[200px] truncate"
                   >
                     {String(row[a] ?? "")}
                   </td>
@@ -122,7 +122,7 @@ export function PreviewModal({
               <tr>
                 <td
                   colSpan={displayAttrs.length}
-                  className="px-3 py-6 text-center text-[#858585] text-xs"
+                  className="px-3 py-6 text-center text-fg-muted text-xs"
                 >
                   No records found matching the filter criteria.
                 </td>
@@ -137,16 +137,16 @@ export function PreviewModal({
           type="button"
           onClick={goPrev}
           disabled={page <= 1 || isLoading}
-          className="text-xs text-[#858585] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-xs text-fg-muted hover:text-fg-strong disabled:opacity-40 disabled:cursor-not-allowed"
         >
           ← Prev
         </button>
-        <span className="text-xs text-[#858585]">Page {page}</span>
+        <span className="text-xs text-fg-muted">Page {page}</span>
         <button
           type="button"
           onClick={goNext}
           disabled={!data?.moreRecords || isLoading}
-          className="text-xs text-[#858585] hover:text-white disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-xs text-fg-muted hover:text-fg-strong disabled:opacity-40 disabled:cursor-not-allowed"
         >
           Next →
         </button>

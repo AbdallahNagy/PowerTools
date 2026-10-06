@@ -30,10 +30,10 @@ interface GroupNodeProps {
 }
 
 const DEPTH_COLORS = [
-  "border-[#3c3c3c]",
+  "border-line",
   "border-accent-text/30",
-  "border-[#2d3a1e]",
-  "border-[#3a1e3a]",
+  "border-nest-a",
+  "border-nest-b",
 ];
 
 export function GroupNode({
@@ -69,7 +69,7 @@ export function GroupNode({
             onMouseUp={() => {
               handleArmed.current = false;
             }}
-            className="text-[#858585] hover:text-white cursor-grab active:cursor-grabbing select-none text-sm leading-none px-0.5"
+            className="text-fg-muted hover:text-fg-strong cursor-grab active:cursor-grabbing select-none text-sm leading-none px-0.5"
           >
             ⠿
           </span>
@@ -80,7 +80,7 @@ export function GroupNode({
           className={`text-xs font-bold px-2 py-0.5 rounded border transition-colors ${
             group.logic === "and"
               ? "border-accent-text text-accent-text bg-accent-soft hover:bg-accent-text/25"
-              : "border-[#cc7832] text-[#cc7832] bg-[#2d1e0e] hover:bg-[#3a2512]"
+              : "border-alt text-alt bg-alt-soft hover:bg-alt/25"
           }`}
         >
           {group.logic.toUpperCase()}
@@ -89,7 +89,7 @@ export function GroupNode({
         <button
           type="button"
           onClick={() => actions.addCondition(group.id)}
-          className="text-xs text-[#858585] hover:text-[#cccccc] px-1.5 py-0.5 rounded hover:bg-[#2a2d2e]"
+          className="text-xs text-fg-muted hover:text-fg px-1.5 py-0.5 rounded hover:bg-hover"
         >
           + condition
         </button>
@@ -97,7 +97,7 @@ export function GroupNode({
         <button
           type="button"
           onClick={() => actions.addGroup(group.id)}
-          className="text-xs text-[#858585] hover:text-[#cccccc] px-1.5 py-0.5 rounded hover:bg-[#2a2d2e]"
+          className="text-xs text-fg-muted hover:text-fg px-1.5 py-0.5 rounded hover:bg-hover"
         >
           + group
         </button>
@@ -106,7 +106,7 @@ export function GroupNode({
           <button
             type="button"
             onClick={() => actions.remove(group.id)}
-            className="ml-auto text-xs text-[#858585] hover:text-[#f48771] px-1.5 py-0.5 rounded hover:bg-[#2a2d2e]"
+            className="ml-auto text-xs text-fg-muted hover:text-danger px-1.5 py-0.5 rounded hover:bg-hover"
           >
             Remove group
           </button>
@@ -114,7 +114,7 @@ export function GroupNode({
       </div>
 
       {groupErrors.map((e) => (
-        <p key={e.message} className="text-xs text-[#f48771]">
+        <p key={e.message} className="text-xs text-danger">
           {e.message}
         </p>
       ))}

@@ -4,6 +4,7 @@ import { useTabs } from "../../context/useTabs";
 import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 import ConnectionFooter from "./ConnectionFooter";
 import { filterSidebarItems } from "./sidebarSearch";
+import { Input } from "../../shared/ui";
 
 const ActivityBar = () => {
   const { openTool } = useTabs();
@@ -16,16 +17,16 @@ const ActivityBar = () => {
   return (
     <nav
       aria-label="Tools"
-      className="h-full w-full bg-[var(--color-bg-darker)] flex flex-col select-none border-r border-[var(--color-border-dark)]"
+      className="h-full w-full bg-surface flex flex-col select-none border-r border-line"
     >
       <div className="p-2">
-        <input
+        <Input
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search tools"
           aria-label="Search tools"
-          className="w-full px-2 py-1.5 text-sm bg-[var(--color-bg-light)] text-[var(--color-text-gray)] placeholder:text-[var(--color-text-dark-gray)] border border-[var(--color-border-dark)] rounded-sm focus:outline-none focus:border-[var(--color-primary)]"
+          className="bg-raised"
         />
       </div>
 
@@ -36,7 +37,7 @@ const ActivityBar = () => {
             type="button"
             title={tool.tooltip || tool.title}
             aria-label={tool.tooltip || tool.title}
-            className="mb-0.5 flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+            className="mb-0.5 flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-fg hover:bg-hover hover:text-fg-strong"
             onClick={() => openTool(tool.id)}
           >
             <img
@@ -49,7 +50,7 @@ const ActivityBar = () => {
         ))}
 
         {tools.length === 0 && (
-          <p className="px-2 py-1.5 text-sm text-[var(--color-text-dark-gray)]">
+          <p className="px-2 py-1.5 text-sm text-fg-muted">
             No matching tools
           </p>
         )}

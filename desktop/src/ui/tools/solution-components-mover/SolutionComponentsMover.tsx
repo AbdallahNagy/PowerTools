@@ -232,9 +232,9 @@ function SolutionComponentsMoverPage() {
   };
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col bg-[var(--color-bg-dark)] text-[var(--color-text-white)]">
-      <div className="flex shrink-0 items-center justify-between gap-3 bg-[var(--color-bg-darker)] px-3 py-2">
-        <label className="flex items-center gap-2 text-[var(--color-text-white)]">
+    <div className="flex h-full min-h-0 flex-1 flex-col bg-canvas text-fg-strong">
+      <div className="flex shrink-0 items-center justify-between gap-3 bg-surface px-3 py-2">
+        <label className="flex items-center gap-2 text-fg-strong">
           <Checkbox checked={checkBestPractice} onChange={setCheckBestPractice} />
           <span>Block a copy that would add a fully included managed table from an unmanaged source.</span>
         </label>
@@ -244,7 +244,7 @@ function SolutionComponentsMoverPage() {
             aria-label="Refresh solutions"
             disabled={!canRefresh}
             onClick={() => void solutionsQuery.refetch()}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-fg hover:bg-hover hover:text-fg-strong disabled:cursor-not-allowed disabled:opacity-50"
           >
             <RefreshIcon />
           </button>
@@ -254,7 +254,7 @@ function SolutionComponentsMoverPage() {
         </div>
       </div>
       <Group orientation="vertical" className="min-h-0 flex-1">
-        <Panel minSize="30%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-darker)]">
+        <Panel minSize="30%" className="flex min-h-0 min-w-0 flex-col bg-surface">
           <div className="flex shrink-0 flex-col gap-2 p-3">
             <fieldset disabled={!connectionName} className="m-0 border-0 p-0">
               <SearchInput value={filter} onChange={setFilter} placeholder="Filter solutions" />
@@ -262,14 +262,14 @@ function SolutionComponentsMoverPage() {
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-3">
             {!connectionName ? (
-              <p className="text-[var(--color-text-dark-gray)]">{noEnvironmentMessage}</p>
+              <p className="text-fg-muted">{noEnvironmentMessage}</p>
             ) : solutionsLoading ? (
               <div role="status" aria-label="Loading solutions">
                 <Spinner />
               </div>
             ) : solutionsQuery.isError ? (
               <div className="flex flex-col items-start gap-3">
-                <p role="alert" className="text-[var(--color-text-gray)]">
+                <p role="alert" className="text-fg">
                   {toSolutionComponentsError(solutionsQuery.error)}
                 </p>
                 <Button type="button" variant="secondary" onClick={() => void solutionsQuery.refetch()}>
@@ -359,11 +359,11 @@ function SolutionComponentsMoverPage() {
         </Panel>
         <Separator
           aria-label="Resize panes"
-          className="h-1 cursor-row-resize bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)]"
+          className="h-1 cursor-row-resize bg-raised hover:bg-accent active:bg-accent"
         />
-        <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-darker)]">
+        <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-surface">
           {!connectionName ? (
-            <p className="p-3 text-[var(--color-text-dark-gray)]">{noEnvironmentMessage}</p>
+            <p className="p-3 text-fg-muted">{noEnvironmentMessage}</p>
           ) : (
             <CopyLog
               environmentName={logEnvironmentName}

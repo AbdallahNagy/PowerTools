@@ -26,7 +26,7 @@ const Layout = () => {
   return (
     <ConnectionsProvider>
       <StatusBarProvider>
-        <div className="flex flex-col h-full w-full bg-[var(--color-bg-dark)]">
+        <div className="flex flex-col h-full w-full bg-canvas">
           <TitleBar
             sidebarVisible={sidebarVisible}
             onToggleSidebar={() => setSidebarVisible((visible) => !visible)}
@@ -50,7 +50,7 @@ const Layout = () => {
               {sidebarVisible ? (
                 <Separator
                   aria-label="Resize sidebar"
-                  className="w-1 cursor-col-resize bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)]"
+                  className="w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent"
                 />
               ) : null}
               <Panel

@@ -37,7 +37,7 @@ export function CopyButton({ value, label }: CopyButtonProps) {
         event.stopPropagation();
         void copy();
       }}
-      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-[var(--color-text-dark-gray)] hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--color-primary)]"
+      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-sm text-fg-muted hover:bg-hover hover:text-fg-strong focus:outline-none focus-visible:ring-1 focus-visible:ring-focus"
     >
       {copied ? (
         <svg

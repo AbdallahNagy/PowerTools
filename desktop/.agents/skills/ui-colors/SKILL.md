@@ -62,6 +62,17 @@ description: "Use when making any UI modification that involves color or shared 
 | `ok` | `#5cbf7a` | `#2f7d45` | Success, connected state, completed rows |
 | `ok-soft` | `ok` at 14% | same | Success banner background |
 
+### Secondary hue and nesting
+
+| Token | Dark | Light | Use |
+|---|---|---|---|
+| `alt` | `#e39a5f` | `#a3541c` | Second category color next to `accent-text`: the OR toggle in filter groups, "Application required" field tags. Not a status. |
+| `alt-soft` | `alt` at 14% | same | Background behind `alt` text |
+| `nest-a` | `#3a4d2a` | `#a9c79a` | Left guide line for the third level of nested filter groups |
+| `nest-b` | `#4d2e52` | `#cfaed6` | Left guide line for the fourth level of nested filter groups |
+
+Filter-group nesting cycles `line`, `accent-text/30`, `nest-a`, `nest-b`.
+
 ## Recipes
 
 | Element | Classes |
@@ -88,7 +99,8 @@ For a translucent variant, use Tailwind's opacity modifier on a token, for examp
 3. Pick a token by **role**, not by how it looks today. Body text is `text-fg` even if `fg-strong` looks nicer in one spot.
 4. If no token fits the role, **stop and ask the user** before adding one. A new token needs a dark value, a light value and a row in this file.
 5. Prefer shared controls from `src/ui/shared/ui` over raw `<input>`, `<select>` and `<button>`, so colors stay in one place.
-6. ESLint rejects hardcoded colors in `src/ui/shared/**`. The rule widens to tools and shell as they migrate.
+6. ESLint rejects hardcoded hex, `rgb()`/`rgba()` and Tailwind palette colors anywhere in `src/ui/**` except tests. `bg-black/50` for modal overlays is allowed.
+7. To assert a tone in a test, put a `data-tone` attribute on the element and assert that, not the color class.
 
 ## Shared controls
 
@@ -115,9 +127,9 @@ Import from `src/ui/shared/ui`. Each one already uses the palette, so a tool onl
 
 Icons come from `lucide-react`. Size them 14–16 in dense UI, and set `aria-hidden="true"` when text already labels the control.
 
-## Legacy names (do not use in new code)
+## Legacy names (removed)
 
-`src/ui/styles/colors.css` aliases the old names to the tokens while components migrate. Replace them as you touch code:
+The old variable names (`--color-primary`, `--color-bg-dark`, `--color-text-gray`, `--color-border-dark`, `--color-hover-bg`, `--color-error`, `--color-warning` and the rest of `colors.css`) no longer exist. If you see one in an old brief or branch, translate it:
 
 | Legacy | Use instead |
 |---|---|
@@ -133,4 +145,4 @@ Icons come from `lucide-react`. Size them 14–16 in dense UI, and set `aria-hid
 | `--color-error` | `danger` |
 | `--color-warning` | `warn` |
 
-Old VS Code hex values still in the code map the same way: `#1e1e1e` → `canvas`, `#252526` → `surface`, `#2d2d2d`/`#3c3c3c` (background) → `raised`, `#3c3c3c` (border) → `line`, `#2a2d2e` → `hover`, `#cccccc` → `fg`, `#858585` → `fg-muted`, `#f48771` → `danger`, `#3c1e1e` → `danger-soft`.
+Old VS Code hex values map the same way: `#1e1e1e` → `canvas`, `#252526` → `surface`, `#2d2d2d`/`#3c3c3c` (background) → `raised`, `#3c3c3c` (border) → `line`, `#2a2d2e` → `hover`, `#cccccc` → `fg`, `#858585`/`#555` → `fg-muted`, `#f48771` → `danger`, `#3c1e1e` → `danger-soft`, `#73c991` → `ok`, `#cc7832`/`#e8a87c` → `alt`.

@@ -225,7 +225,7 @@ function PluginRegistrationPage() {
   });
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[var(--color-text-gray)] overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-fg overflow-hidden">
       <ToolHeader
         search={search}
         onSearchChange={setSearch}
@@ -243,7 +243,7 @@ function PluginRegistrationPage() {
       />
 
       <Group className="flex flex-1 min-h-0">
-        <Panel defaultSize="65%" minSize="15%" className="flex flex-col min-h-0 bg-[var(--color-bg-darker)]">
+        <Panel defaultSize="65%" minSize="15%" className="flex flex-col min-h-0 bg-surface">
           <RegistrationTree
             nodes={tree}
             expanded={expanded}
@@ -255,8 +255,8 @@ function PluginRegistrationPage() {
             emptyMessage={emptyMessage}
           />
         </Panel>
-        <Separator className="w-1 mx-1 cursor-col-resize bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)] transition-colors" />
-        <Panel minSize="15%" className="flex flex-col min-h-0 bg-[var(--color-bg-darker)]">
+        <Separator className="w-1 mx-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent transition-colors" />
+        <Panel minSize="15%" className="flex flex-col min-h-0 bg-surface">
           <NodeDetails node={selectedNode} />
         </Panel>
       </Group>

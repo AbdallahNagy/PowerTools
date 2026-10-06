@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Checkbox, Modal, useToast } from "../../../../shared/ui";
+import { Button, Checkbox, Input, Modal, useToast } from "../../../../shared/ui";
 import { useEntityAttributes } from "../../api/useEntityAttributes";
 import { useImageMutations } from "../../api/useImageMutations";
 import { IMAGE_TYPE_LABELS, type ImageDto, type StepDto } from "../../model/contracts";
@@ -91,9 +91,9 @@ export function ImageDialog({
         busyLabel={image ? "Updating image…" : "Registering image…"}
       >
         <FormField label="Name" htmlFor="image-name" problem={problemFor(problems, "name")}>
-          <input
+          <Input
             id="image-name"
-            className={fieldControlClass}
+            className="bg-raised"
             value={form.name}
             onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
           />
@@ -103,9 +103,9 @@ export function ImageDialog({
           htmlFor="image-alias"
           problem={problemFor(problems, "entityAlias")}
         >
-          <input
+          <Input
             id="image-alias"
-            className={fieldControlClass}
+            className="bg-raised"
             value={form.entityAlias}
             onChange={(event) =>
               setForm((current) => ({ ...current, entityAlias: event.target.value }))
@@ -117,8 +117,8 @@ export function ImageDialog({
             <label
               className={`flex items-center gap-2 text-sm ${
                 availability.pre
-                  ? "text-[var(--color-text-gray)]"
-                  : "text-[var(--color-text-dark-gray)] cursor-not-allowed"
+                  ? "text-fg"
+                  : "text-fg-muted cursor-not-allowed"
               }`}
             >
               <Checkbox
@@ -131,8 +131,8 @@ export function ImageDialog({
             <label
               className={`flex items-center gap-2 text-sm ${
                 availability.post
-                  ? "text-[var(--color-text-gray)]"
-                  : "text-[var(--color-text-dark-gray)] cursor-not-allowed"
+                  ? "text-fg"
+                  : "text-fg-muted cursor-not-allowed"
               }`}
             >
               <Checkbox

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { usePrimaryAction } from "../../shared/keyboard";
-import { Button, Spinner, ToastProvider, useToast } from "../../shared/ui";
+import { Button, Field, Select, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
 import { useConnections, useTabConnection } from "../../shared/connections";
 import type { FetchResult } from "./model/types";
@@ -145,7 +145,7 @@ function FetchXmlBuilderPage() {
 
   return (
     <FetchXmlBuilderProvider connectionName={connectionName || null} tables={tables ?? []}>
-      <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[#cccccc] overflow-hidden">
+      <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-fg overflow-hidden">
       {/* Top bar */}
       <div className="flex items-end gap-4 flex-wrap">
         <div className="ml-auto flex items-center gap-2">
@@ -160,14 +160,13 @@ function FetchXmlBuilderPage() {
         {/* Left: entity selector + filters */}
         <Panel defaultSize="50%" minSize="30%" className="flex flex-col min-h-0 min-w-0 gap-3 overflow-hidden">
           {/* Entity selection */}
-          <div className="flex flex-col gap-1 shrink-0 min-w-0">
-            <label className="text-xs text-[#858585] tracking-wider">Table</label>
+          <Field label="Table" className="shrink-0 min-w-0">
             <div className="flex items-center gap-2 min-w-0">
-              <select
+              <Select
                 value={selectedEntity?.logicalName ?? ""}
                 onChange={(e) => handleEntityChange(e.target.value)}
                 disabled={!connectionName || tablesLoading}
-                className="w-72 shrink-0 truncate bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-focus disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-72 shrink-0 [&>select]:truncate [&>select]:bg-raised"
               >
                 <option value="">
                   {!connectionName
@@ -181,24 +180,24 @@ function FetchXmlBuilderPage() {
                     {e.displayName} ({e.logicalName})
                   </option>
                 ))}
-              </select>
+              </Select>
               {tablesLoading && <Spinner size={14} />}
               <Button variant="ghost" onClick={handleClearAll} className="text-xs py-1 px-2 shrink-0 ml-auto">
                 Clear all
               </Button>
             </div>
             {tablesError && (
-              <p className="text-xs text-[#f48771] mt-1">{(tablesError as Error).message}</p>
+              <p className="text-xs text-danger mt-1">{(tablesError as Error).message}</p>
             )}
-          </div>
+          </Field>
 
           {/* Filters */}
           <div className="flex flex-col gap-2 flex-1 min-h-0">
             <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-[#858585] tracking-wider">Filters</span>
-              {fieldsLoading && <span className="text-xs text-[#858585]">Loading fields…</span>}
+              <span className="text-xs text-fg-muted tracking-wider">Filters</span>
+              {fieldsLoading && <span className="text-xs text-fg-muted">Loading fields…</span>}
               {validationErrors.length > 0 && (
-                <span className="text-xs text-[#f48771]">
+                <span className="text-xs text-danger">
                   {validationErrors.length} error{validationErrors.length > 1 ? "s" : ""}
                 </span>
               )}
@@ -217,17 +216,17 @@ function FetchXmlBuilderPage() {
                   actions={tree}
                 />
               ) : (
-                <p className="text-xs text-[#858585] italic">Select a table to build filters.</p>
+                <p className="text-xs text-fg-muted italic">Select a table to build filters.</p>
               )}
             </div>
           </div>
         </Panel>
 
-        <Separator className="w-1 mx-1 cursor-col-resize bg-(--color-bg-light) hover:bg-(--color-primary) active:bg-(--color-primary) transition-colors" />
+        <Separator className="w-1 mx-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent transition-colors" />
 
         {/* Right: results / fetchxml toggle */}
         <Panel defaultSize="50%" minSize="30%" className="flex flex-col min-h-0 min-w-0 gap-2 overflow-hidden">
-          <div className="flex items-center gap-1 border-b border-[#3c3c3c] shrink-0">
+          <div className="flex items-center gap-1 border-b border-line shrink-0">
             <ViewTab active={rightView === "results"} onClick={() => setRightView("results")}>
               Results
             </ViewTab>
@@ -272,8 +271,8 @@ function ViewTab({ active, onClick, children }: ViewTabProps) {
       onClick={onClick}
       className={`text tracking-wider px-3 py-1.5 border-b-2 transition-colors -mb-px ${
         active
-          ? "border-accent-text text-[#cccccc]"
-          : "border-transparent text-[#858585] hover:text-[#cccccc]"
+          ? "border-accent-text text-fg"
+          : "border-transparent text-fg-muted hover:text-fg"
       }`}
     >
       {children}

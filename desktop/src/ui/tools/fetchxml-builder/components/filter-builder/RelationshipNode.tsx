@@ -73,12 +73,12 @@ export function RelationshipNode({
           onMouseUp={() => {
             handleArmed.current = false;
           }}
-          className="cursor-grab select-none px-0.5 text-sm leading-none text-[#858585] hover:text-white active:cursor-grabbing"
+          className="cursor-grab select-none px-0.5 text-sm leading-none text-fg-muted hover:text-fg-strong active:cursor-grabbing"
         >
           ⠿
         </span>
-        <span className="text-xs text-[#858585]">Related</span>
-        <span className="max-w-72 truncate text-sm font-medium text-[#cccccc]" title={relationshipLabel(node)}>
+        <span className="text-xs text-fg-muted">Related</span>
+        <span className="max-w-72 truncate text-sm font-medium text-fg" title={relationshipLabel(node)}>
           {relationshipLabel(node)}
         </span>
         <div className="ml-auto flex items-center gap-1">
@@ -86,7 +86,7 @@ export function RelationshipNode({
             type="button"
             title="Duplicate related table filter"
             onClick={() => actions.duplicate(node.id)}
-            className="rounded px-1 py-0.5 text-xs text-[#858585] hover:bg-[#2a2d2e] hover:text-white"
+            className="rounded px-1 py-0.5 text-xs text-fg-muted hover:bg-hover hover:text-fg-strong"
           >
             ⧉
           </button>
@@ -94,7 +94,7 @@ export function RelationshipNode({
             type="button"
             title="Remove related table filter"
             onClick={() => actions.remove(node.id)}
-            className="rounded px-1 py-0.5 text-xs text-[#858585] hover:bg-[#2a2d2e] hover:text-[#f48771]"
+            className="rounded px-1 py-0.5 text-xs text-fg-muted hover:bg-hover hover:text-danger"
           >
             ✕
           </button>
@@ -102,9 +102,9 @@ export function RelationshipNode({
       </div>
 
       {fieldsQuery.isLoading || relationshipsQuery.isLoading ? (
-        <p className="py-2 pl-2 text-xs text-[#858585]">Loading related table metadata...</p>
+        <p className="py-2 pl-2 text-xs text-fg-muted">Loading related table metadata...</p>
       ) : error ? (
-        <p className="py-2 pl-2 text-xs text-[#f48771]">
+        <p className="py-2 pl-2 text-xs text-danger">
           {(error as Error).message || "Could not load related table metadata."}
         </p>
       ) : (

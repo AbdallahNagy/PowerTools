@@ -45,7 +45,7 @@ const ConnectionFooter = () => {
 
   return (
     <div
-      className="relative shrink-0 border-t border-[var(--color-border-dark)] p-1"
+      className="relative shrink-0 border-t border-line p-1"
       ref={containerRef}
     >
       <button
@@ -53,13 +53,13 @@ const ConnectionFooter = () => {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={activeName ? `Connection: ${activeName}` : "Not connected"}
-        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-fg hover:bg-hover hover:text-fg-strong"
         onClick={() => setOpen((current) => !current)}
       >
         <span
           aria-hidden="true"
           className={`h-2 w-2 shrink-0 rounded-full ${
-            activeName ? "bg-[var(--color-primary)]" : "bg-[var(--color-text-dark-gray)]"
+            activeName ? "bg-accent" : "bg-fg-muted"
           }`}
         />
         <span className="truncate">{label}</span>
@@ -68,10 +68,10 @@ const ConnectionFooter = () => {
       {open && (
         <div
           role="menu"
-          className="absolute bottom-full left-1 right-1 z-50 mb-1 border border-[var(--color-border-dark)] bg-[var(--color-bg-light)] py-1 text-[var(--color-text-gray)]"
+          className="absolute bottom-full left-1 right-1 z-50 mb-1 border border-line bg-raised py-1 text-fg"
         >
           {connections.length === 0 && (
-            <div className="px-3 py-1.5 text-[var(--color-text-dark-gray)]">No connections</div>
+            <div className="px-3 py-1.5 text-fg-muted">No connections</div>
           )}
 
           {connections.map((connection) => {
@@ -80,7 +80,7 @@ const ConnectionFooter = () => {
             return (
               <div
                 key={connection.name}
-                className="group flex items-center justify-between hover:bg-[var(--color-hover-bg)]"
+                className="group flex items-center justify-between hover:bg-hover"
               >
                 <button
                   type="button"
@@ -121,7 +121,7 @@ const ConnectionFooter = () => {
                     type="button"
                     title="Delete connection"
                     aria-label={`Delete ${connection.name}`}
-                    className="shrink-0 px-2 text-[var(--color-text-dark-gray)] hover:text-[var(--color-text-white)]"
+                    className="shrink-0 px-2 text-fg-muted hover:text-fg-strong"
                     onClick={() => setConfirmingDelete(connection.name)}
                   >
                     Delete
@@ -131,11 +131,11 @@ const ConnectionFooter = () => {
             );
           })}
 
-          <div className="mt-1 border-t border-[var(--color-border-dark)] pt-1">
+          <div className="mt-1 border-t border-line pt-1">
             <button
               type="button"
               role="menuitem"
-              className="w-full px-3 py-1 text-left hover:bg-[var(--color-hover-bg)]"
+              className="w-full px-3 py-1 text-left hover:bg-hover"
               onClick={addConnection}
             >
               Add connection

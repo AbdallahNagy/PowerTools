@@ -34,7 +34,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
   return (
     <header
       data-testid="title-bar"
-      className="app-drag flex h-8 shrink-0 items-stretch bg-[var(--color-bg-darker)] text-[var(--color-text-gray)] text-xs select-none border-b border-[var(--color-border-dark)]"
+      className="app-drag flex h-8 shrink-0 items-stretch bg-surface text-fg text-xs select-none border-b border-line"
     >
       <div className="app-no-drag flex items-stretch">
         <span className="flex items-center pl-2 pr-1">
@@ -46,7 +46,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
             type="button"
             aria-haspopup="menu"
             aria-label={TITLE_BAR_MENU_LABELS[menuId]}
-            className="px-2.5 hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+            className="px-2.5 hover:bg-hover hover:text-fg-strong"
             onClick={(event) => popupMenu(menuId, event.currentTarget)}
           >
             {TITLE_BAR_MENU_LABELS[menuId]}
@@ -58,7 +58,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
           aria-label={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
           aria-pressed={sidebarVisible}
           title={sidebarVisible ? "Hide sidebar" : "Show sidebar"}
-          className={`flex w-8 items-center justify-center hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)] ml-12 ${sidebarVisible ? "text-[var(--color-primary)]" : ""
+          className={`flex w-8 items-center justify-center hover:bg-hover hover:text-fg-strong ml-12 ${sidebarVisible ? "text-accent-text" : ""
             }`}
           onClick={onToggleSidebar}
         >
@@ -78,7 +78,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
       </div>
 
       <div
-        className="flex flex-1 items-center justify-center text-[var(--color-text-dark-gray)]"
+        className="flex flex-1 items-center justify-center text-fg-muted"
         onDoubleClick={() => {
           void desktopBridge.toggleMaximizeWindow();
         }}
@@ -91,7 +91,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
           type="button"
           aria-label="Minimize"
           title="Minimize"
-          className="flex w-11 items-center justify-center hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+          className="flex w-11 items-center justify-center hover:bg-hover hover:text-fg-strong"
           onClick={() => {
             void desktopBridge.minimizeWindow();
           }}
@@ -104,7 +104,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
           type="button"
           aria-label={maximized ? "Restore" : "Maximize"}
           title={maximized ? "Restore" : "Maximize"}
-          className="flex w-11 items-center justify-center hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+          className="flex w-11 items-center justify-center hover:bg-hover hover:text-fg-strong"
           onClick={() => {
             void desktopBridge.toggleMaximizeWindow();
           }}
@@ -136,7 +136,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
           type="button"
           aria-label="Close"
           title="Close"
-          className="flex w-11 items-center justify-center hover:bg-[var(--color-hover-bg)] hover:text-[var(--color-text-white)]"
+          className="flex w-11 items-center justify-center hover:bg-hover hover:text-fg-strong"
           onClick={() => {
             void desktopBridge.closeWindow();
           }}

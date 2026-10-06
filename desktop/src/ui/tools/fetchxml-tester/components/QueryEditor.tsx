@@ -1,3 +1,5 @@
+import { Textarea } from "../../../shared/ui";
+
 interface QueryEditorProps {
   value: string;
   onChange: (value: string) => void;
@@ -7,7 +9,7 @@ interface QueryEditorProps {
 export function QueryEditor({ value, onChange, onExecute }: QueryEditorProps) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <textarea
+      <Textarea
         aria-label="FetchXML"
         spellCheck={false}
         value={value}
@@ -18,7 +20,7 @@ export function QueryEditor({ value, onChange, onExecute }: QueryEditorProps) {
             onExecute();
           }
         }}
-        className="min-h-24 w-full flex-1 resize-none rounded-sm border border-[var(--color-border-dark)] bg-[var(--color-bg-darker)] p-3 font-mono text-xs leading-5 text-[var(--color-text-white)] focus:border-[var(--color-primary)] focus:outline-none"
+        className="min-h-24 flex-1 resize-none bg-surface p-3 font-mono text-xs leading-5 text-fg-strong"
       />
     </div>
   );

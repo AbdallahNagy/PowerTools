@@ -21,7 +21,7 @@ export function FetchXmlModal({ open, fetchXml, onClose }: FetchXmlModalProps) {
           Copy to clipboard
         </Button>
       </div>
-      <pre className="text-xs text-[#cccccc] bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm p-4 overflow-auto whitespace-pre-wrap break-all flex-1 min-h-0 font-mono">
+      <pre className="text-xs text-fg bg-canvas border border-line rounded-sm p-4 overflow-auto whitespace-pre-wrap break-all flex-1 min-h-0 font-mono">
         {pretty}
       </pre>
     </Modal>

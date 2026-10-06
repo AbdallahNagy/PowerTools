@@ -40,16 +40,16 @@ export function ViewList({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-baseline gap-2 border-b border-[var(--color-border-dark)] bg-[var(--color-bg-darker)] px-3 py-2">
-        <h2 className="text-sm font-medium text-[var(--color-text-white)]">Views</h2>
+      <div className="flex shrink-0 items-baseline gap-2 border-b border-line bg-surface px-3 py-2">
+        <h2 className="text-sm font-medium text-fg-strong">Views</h2>
         {workflow ? (
-          <span className="truncate text-sm text-[var(--color-text-gray)]">
-            {workflow.name} <span className="text-[var(--color-text-dark-gray)]">· {entityName}</span>
+          <span className="truncate text-sm text-fg">
+            {workflow.name} <span className="text-fg-muted">· {entityName}</span>
           </span>
         ) : null}
       </div>
       {!workflow ? (
-        <p className="p-3 text-sm text-[var(--color-text-dark-gray)]">Select a workflow to see its views.</p>
+        <p className="p-3 text-sm text-fg-muted">Select a workflow to see its views.</p>
       ) : (
         <>
           <div className="shrink-0 p-3">
@@ -64,7 +64,7 @@ export function ViewList({
                 <Button type="button" variant="secondary" onClick={onRetry}>Retry</Button>
               </div>
             ) : views.length === 0 ? (
-              <p className="text-sm text-[var(--color-text-dark-gray)]">
+              <p className="text-sm text-fg-muted">
                 No views for {entityName}. Paste FetchXML below.
               </p>
             ) : (

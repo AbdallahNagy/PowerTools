@@ -31,42 +31,42 @@ export function EntityListPanel({
           onChange={setSearch}
           placeholder="Search entities…"
         />
-        <span className="text-xs text-[#858585] whitespace-nowrap">
+        <span className="text-xs text-fg-muted whitespace-nowrap">
           {filtered.length}
         </span>
       </div>
 
       {error && (
-        <p className="text-sm text-[#f48771] bg-[#3c1e1e] border border-red-700 rounded-sm px-3 py-2">
+        <p className="text-sm text-danger bg-danger-soft border border-danger rounded-sm px-3 py-2">
           {(error as Error).message}
         </p>
       )}
 
       {!connectionName ? (
-        <p className="text-xs text-[#858585] italic mt-2">
+        <p className="text-xs text-fg-muted italic mt-2">
           Select a source connection.
         </p>
       ) : isLoading ? (
-        <div className="flex items-center gap-2 text-[#858585] text-sm mt-2">
+        <div className="flex items-center gap-2 text-fg-muted text-sm mt-2">
           <Spinner size={14} /> Loading entities…
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-auto border border-[#3c3c3c] rounded-sm">
+        <div className="flex-1 min-h-0 overflow-auto border border-line rounded-sm">
           {filtered.map((e) => (
             <button
               key={e.logicalName}
               type="button"
               onClick={() => onSelect(e)}
-              className={`w-full text-left px-3 py-1.5 border-b border-[#3c3c3c] last:border-0 transition-colors ${
+              className={`w-full text-left px-3 py-1.5 border-b border-line last:border-0 transition-colors ${
                 selected?.logicalName === e.logicalName
                   ? "bg-accent-soft"
-                  : "hover:bg-[#2a2d2e]"
+                  : "hover:bg-hover"
               }`}
             >
-              <span className="text-sm text-[#cccccc] font-medium">
+              <span className="text-sm text-fg font-medium">
                 {e.displayName}
               </span>
-              <span className="ml-2 text-xs text-[#858585] font-mono">
+              <span className="ml-2 text-xs text-fg-muted font-mono">
                 {e.logicalName}
               </span>
               {e.isCustom && (
@@ -77,7 +77,7 @@ export function EntityListPanel({
             </button>
           ))}
           {filtered.length === 0 && (
-            <p className="px-3 py-4 text-xs text-[#858585]">
+            <p className="px-3 py-4 text-xs text-fg-muted">
               {search ? "No entities match your search." : "No entities found."}
             </p>
           )}

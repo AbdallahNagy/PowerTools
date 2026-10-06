@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Modal, SearchInput, Spinner } from "../../../../shared/ui";
+import { Button, Field, Modal, SearchInput, Select, Spinner } from "../../../../shared/ui";
 import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import type { FieldMetadata } from "../../model/types";
 import { useLookupRecords, type LookupRecord } from "../../hooks/useLookupRecords";
@@ -79,21 +79,20 @@ export function LookupPickerModal({
       widthClass="max-w-3xl"
     >
       <div className="flex items-end gap-3 shrink-0">
-        <div className="flex flex-col gap-1 min-w-56">
-          <label className="text-xs text-[#858585] tracking-wider">Target Table</label>
-          <select
+        <Field label="Target Table" className="min-w-56">
+          <Select
             value={selectedTarget}
             onChange={(e) => setSelectedTarget(e.target.value)}
             disabled={targetTables.length <= 1}
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-focus disabled:opacity-70"
+            className="[&>select]:bg-raised"
           >
             {targetTables.map((table) => (
               <option key={table.logicalName} value={table.logicalName}>
                 {table.displayName} ({table.logicalName})
               </option>
             ))}
-          </select>
-        </div>
+          </Select>
+        </Field>
 
         <div className="flex-1 min-w-64">
           <SearchInput
@@ -104,33 +103,33 @@ export function LookupPickerModal({
         </div>
       </div>
 
-      <div className="min-h-64 max-h-[52vh] overflow-auto border border-[#3c3c3c] rounded-sm">
+      <div className="min-h-64 max-h-[52vh] overflow-auto border border-line rounded-sm">
         {!selectedEntity ? (
-          <div className="p-4 text-sm text-[#f48771]">
+          <div className="p-4 text-sm text-danger">
             No target table metadata is available for this lookup.
           </div>
         ) : isLoading ? (
-          <div className="flex items-center gap-2 p-4 text-sm text-[#858585]">
+          <div className="flex items-center gap-2 p-4 text-sm text-fg-muted">
             <Spinner size={16} /> Loading records...
           </div>
         ) : error ? (
-          <div className="p-4 text-sm text-[#f48771]">
+          <div className="p-4 text-sm text-danger">
             {(error as Error).message}
           </div>
         ) : records && records.length > 0 ? (
-          <table className="w-full text-sm text-[#cccccc] border-collapse">
-            <thead className="bg-[#252526] sticky top-0 z-10">
+          <table className="w-full text-sm text-fg border-collapse">
+            <thead className="bg-surface sticky top-0 z-10">
               <tr>
                 {mode === "multiple" && (
-                  <th className="px-3 py-2 w-8 border-b border-[#3c3c3c]" />
+                  <th className="px-3 py-2 w-8 border-b border-line" />
                 )}
-                <th className="text-left px-3 py-2 font-medium text-[#858585] text-xs tracking-wider border-b border-[#3c3c3c]">
+                <th className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line">
                   Name
                 </th>
-                <th className="text-left px-3 py-2 font-medium text-[#858585] text-xs tracking-wider border-b border-[#3c3c3c]">
+                <th className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line">
                   ID
                 </th>
-                <th className="text-left px-3 py-2 font-medium text-[#858585] text-xs tracking-wider border-b border-[#3c3c3c]">
+                <th className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line">
                   Created On
                 </th>
               </tr>
@@ -148,7 +147,7 @@ export function LookupPickerModal({
                     }
                     onSelect?.({ ...record, target: selectedEntity.logicalName });
                   }}
-                  className="border-b border-[#3c3c3c] last:border-0 hover:bg-[#2a2d2e] cursor-pointer"
+                  className="border-b border-line last:border-0 hover:bg-hover cursor-pointer"
                 >
                   {mode === "multiple" && (
                     <td className="px-3 py-2 w-8">
@@ -164,10 +163,10 @@ export function LookupPickerModal({
                   <td className="px-3 py-2 text-xs max-w-sm truncate" title={record.name}>
                     {record.name}
                   </td>
-                  <td className="px-3 py-2 text-xs max-w-xs truncate text-[#858585]" title={record.id}>
+                  <td className="px-3 py-2 text-xs max-w-xs truncate text-fg-muted" title={record.id}>
                     {record.id}
                   </td>
-                  <td className="px-3 py-2 text-xs whitespace-nowrap text-[#858585]" title={record.createdOn ?? ""}>
+                  <td className="px-3 py-2 text-xs whitespace-nowrap text-fg-muted" title={record.createdOn ?? ""}>
                     {formatCreatedOn(record.createdOn)}
                   </td>
                 </tr>
@@ -176,15 +175,15 @@ export function LookupPickerModal({
             </tbody>
           </table>
         ) : (
-          <div className="p-4 text-sm text-[#858585]">
+          <div className="p-4 text-sm text-fg-muted">
             No records found.
           </div>
         )}
       </div>
 
       {mode === "multiple" && (
-        <div className="flex items-center justify-between gap-3 pt-2 border-t border-[#3c3c3c]">
-          <span className="text-xs text-[#858585]">
+        <div className="flex items-center justify-between gap-3 pt-2 border-t border-line">
+          <span className="text-xs text-fg-muted">
             {pendingCount} selected
           </span>
           <div className="flex items-center gap-2">

@@ -24,7 +24,7 @@ function TabBar() {
 
   return (
     <>
-      <div className="flex bg-(--color-bg-darker)">
+      <div className="flex bg-surface">
         {tabs.map((tab) => (
           <Tab
             key={tab.id}
@@ -53,7 +53,7 @@ function TabBar() {
           onClose={() => setMenu(null)}
         />
       ) : null}
-      <div className="flex-1 flex flex-col overflow-hidden bg-(--color-bg-dark)">
+      <div className="flex-1 flex flex-col overflow-hidden bg-canvas">
         {tabs.length === 0 ? (
           <EmptyWorkspace />
         ) : (

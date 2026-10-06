@@ -123,7 +123,7 @@ function FetchXmlTesterPage() {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-[var(--color-bg-dark)] p-4 text-[var(--color-text-gray)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden bg-canvas p-4 text-fg">
       <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <Button type="button" variant="secondary" onClick={handleFormat} disabled={isPending}>
@@ -133,7 +133,7 @@ function FetchXmlTesterPage() {
             Execute
           </Button>
           {isPending ? <Spinner /> : null}
-          <label className="flex items-center gap-2 text-xs text-[var(--color-text-gray)]">
+          <label className="flex items-center gap-2 text-xs text-fg">
             <Checkbox
               checked={showFormatted}
               onChange={setShowFormatted}
@@ -170,10 +170,10 @@ function FetchXmlTesterPage() {
         >
           <Group orientation="vertical" className="flex min-h-0 flex-1">
             <Panel defaultSize="42%" minSize="22%" className="flex min-h-0 flex-col gap-2">
-              <div className="text-xs text-[var(--color-text-gray)]">FetchXML</div>
+              <div className="text-xs text-fg">FetchXML</div>
               <QueryEditor value={fetchXml} onChange={setFetchXml} onExecute={handleExecute} />
             </Panel>
-            <Separator className="my-1 h-1 cursor-row-resize bg-[var(--color-bg-light)] transition-colors hover:bg-[var(--color-primary)]" />
+            <Separator className="my-1 h-1 cursor-row-resize bg-raised transition-colors hover:bg-accent" />
             <Panel minSize="25%" className="flex min-h-0 flex-col">
               <ResultsPanel result={result} />
             </Panel>
@@ -182,7 +182,7 @@ function FetchXmlTesterPage() {
 
         {showQueryLibrary ? (
           <>
-            <Separator className="mx-1 w-1 cursor-col-resize bg-[var(--color-bg-light)] transition-colors hover:bg-[var(--color-primary)]" />
+            <Separator className="mx-1 w-1 cursor-col-resize bg-raised transition-colors hover:bg-accent" />
             <Panel defaultSize="30%" minSize="18%" className="flex min-h-0 min-w-0 flex-col">
               <QueryLibrary
                 queries={visibleQueries}

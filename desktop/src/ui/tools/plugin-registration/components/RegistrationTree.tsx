@@ -25,7 +25,7 @@ export function RegistrationTree({
 }: RegistrationTreeProps) {
   if (nodes.length === 0) {
     return (
-      <p className="text-sm text-[var(--color-text-dark-gray)] p-3">{emptyMessage}</p>
+      <p className="text-sm text-fg-muted p-3">{emptyMessage}</p>
     );
   }
 

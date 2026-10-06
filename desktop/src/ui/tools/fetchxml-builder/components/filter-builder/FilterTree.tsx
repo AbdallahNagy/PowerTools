@@ -29,7 +29,7 @@ export function FilterTree({
   actions,
 }: FilterTreeProps) {
   return (
-    <div className="w-fit max-w-full flex flex-col gap-3 p-3 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm overflow-x-auto">
+    <div className="w-fit max-w-full flex flex-col gap-3 p-3 bg-canvas border border-line rounded-sm overflow-x-auto">
       <DragProvider root={root}>
         <GroupNode
           group={root}

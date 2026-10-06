@@ -1,5 +1,6 @@
 import type { FieldType, Operator } from "../../model/types";
 import { getOperatorsForType } from "../../model/operators";
+import { Select } from "../../../../shared/ui";
 
 interface OperatorPickerProps {
   value: Operator | null;
@@ -11,11 +12,11 @@ export function OperatorPicker({ value, fieldType, onChange }: OperatorPickerPro
   const options = fieldType ? getOperatorsForType(fieldType) : [];
 
   return (
-    <select
+    <Select
       value={value ?? ""}
       onChange={(e) => onChange(e.target.value as Operator)}
       disabled={!fieldType}
-      className="w-36 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus disabled:opacity-40"
+      className="w-36 shrink-0 [&>select]:py-1"
     >
       <option value="" disabled>
         Operator…
@@ -25,6 +26,6 @@ export function OperatorPicker({ value, fieldType, onChange }: OperatorPickerPro
           {o.label}
         </option>
       ))}
-    </select>
+    </Select>
   );
 }

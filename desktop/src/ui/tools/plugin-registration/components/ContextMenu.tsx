@@ -23,7 +23,7 @@ export function ContextMenu({ x, y, actions, onSelect, onClose }: ContextMenuPro
   return (
     <ul
       role="menu"
-      className="fixed z-50 min-w-48 bg-[var(--color-bg-darker)] border border-[var(--color-border-dark)] rounded-sm py-1 shadow-lg"
+      className="fixed z-50 min-w-48 bg-surface border border-line rounded-sm py-1 shadow-lg"
       style={{ left: x, top: y }}
       onMouseDown={(event) => event.stopPropagation()}
     >
@@ -34,7 +34,7 @@ export function ContextMenu({ x, y, actions, onSelect, onClose }: ContextMenuPro
             role="menuitem"
             disabled={!!action.disabledReason}
             title={action.disabledReason}
-            className="w-full text-left px-3 py-1.5 text-sm text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full text-left px-3 py-1.5 text-sm text-fg hover:bg-hover disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={() => {
               onSelect(action);
               onClose();

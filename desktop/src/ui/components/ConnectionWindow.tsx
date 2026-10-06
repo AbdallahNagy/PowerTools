@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { desktopBridge } from "../platform/desktopBridge";
+import { Field, Input } from "../shared/ui";
 
 type ConnectionFormData = {
   crmType: "online" | "onpremise";
@@ -56,9 +57,9 @@ const ConnectionWindow = () => {
   const isOnline = formData.crmType === "online";
 
   return (
-    <div className="h-screen w-screen bg-[#1e1e1e] text-[#cccccc] flex flex-col p-6 box-border overflow-y-auto">
+    <div className="h-screen w-screen bg-canvas text-fg flex flex-col p-6 box-border overflow-y-auto">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 max-w-md w-full mx-auto">
-        <h3 className="font-bold mb-6 text-white">Connect to Dynamics 365</h3>
+        <h3 className="font-bold mb-6 text-fg-strong">Connect to Dynamics 365</h3>
 
         <div className="flex flex-col gap-2">
           <label className="text-xs">CRM Type</label>
@@ -88,21 +89,16 @@ const ConnectionWindow = () => {
           </div>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="serverUrl" className="text-xs">
-            Server URL
-          </label>
-          <input
+        <Field label="Server URL" id="serverUrl" hint={isOnline ? "A browser window will open for Microsoft login." : undefined}>
+          <Input
             type="text"
             name="serverUrl"
-            id="serverUrl"
             value={formData.serverUrl}
             onChange={handleChange}
             placeholder="org.crm.dynamics.com"
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
+            className="p-2 bg-raised"
           />
-          {isOnline && <span className="text-xs text-[#858585]">A browser window will open for Microsoft login.</span>}
-        </div>
+        </Field>
 
         {!isOnline && (
           <>
@@ -134,51 +130,39 @@ const ConnectionWindow = () => {
               </div>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="username" className="text-xs">
-                Username / Email
-              </label>
-              <input
+            <Field label="Username / Email" id="username">
+              <Input
                 type="text"
                 name="username"
-                id="username"
                 value={formData.username}
                 onChange={handleChange}
-                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
+                className="p-2 bg-raised"
               />
-            </div>
+            </Field>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="password" className="text-xs">
-                Password
-              </label>
-              <input
+            <Field label="Password" id="password">
+              <Input
                 type="password"
                 name="password"
-                id="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
+                className="p-2 bg-raised"
               />
-            </div>
+            </Field>
 
-            <div className="flex flex-col gap-1">
-              <label htmlFor="domain" className="text-xs">
-                Domain
-              </label>
-              <input
+            <Field label="Domain" id="domain">
+              <Input
                 type="text"
                 name="domain"
-                id="domain"
                 value={formData.domain}
                 onChange={handleChange}
-                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
+                className="p-2 bg-raised"
               />
-            </div>
+            </Field>
           </>
         )}
 
-        {error && <p className="text-sm text-[#f48771] bg-[#3c3c3c] px-3 py-2 rounded-sm">{error}</p>}
+        {error && <p className="text-sm text-danger bg-raised px-3 py-2 rounded-sm">{error}</p>}
 
         <button
           type="submit"
