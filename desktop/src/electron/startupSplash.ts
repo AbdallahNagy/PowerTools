@@ -43,7 +43,7 @@ export function createStartupSplashWindow() {
     center: true,
     alwaysOnTop: true,
     autoHideMenuBar: true,
-    backgroundColor: "#1e1e1e",
+    backgroundColor: "#14171c",
     icon: getAppIconPath(),
     webPreferences: {
       sandbox: true,

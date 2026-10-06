@@ -1,76 +1,60 @@
+@import "tailwindcss" source(".");
+@import "./styles/theme.css";
 @import "./styles/colors.css";
 
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@layer base {
+  html,
+  body,
+  #root {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
 
-  color-scheme: light dark;
-  color: #ffffffde;
-  background-color: #242424;
+  body {
+    min-width: 320px;
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: system-ui, "Segoe UI", sans-serif;
+    line-height: 1.5;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  button {
+    cursor: pointer;
+  }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  button:disabled {
+    cursor: not-allowed;
+  }
 
-html, body, #root {
-  margin: 0;
-  padding: 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-}
+  /*
+   * Visible keyboard focus. Components that hide the outline with
+   * `focus:outline-none` still get it on keyboard focus; text fields keep
+   * their own border-based focus style.
+   */
+  :is(a, button, summary, [role="button"], [role="tab"], [role="menuitem"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--color-focus) !important;
+    outline-offset: 1px;
+  }
 
-body {
-  margin: 0;
-  min-width: 320px;
-}
-
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  /* padding: 0.6em 1.2em; */
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  /* background-color: #1a1a1a; */
-  cursor: pointer;
-  outline: none;
-}
-
-
-button:focus,
-button:focus-visible {
-  outline: none;
-}
-
-.connection-select {
-  color-scheme: dark;
+  ::selection {
+    background-color: var(--color-accent-soft);
+  }
 }
 
 .connection-select option {
-  background: var(--color-bg-darker);
-  color: var(--color-text-white);
+  background: var(--color-surface);
+  color: var(--color-fg);
 }
 
 .connection-select option:disabled {
-  color: var(--color-text-dark-gray);
+  color: var(--color-fg-muted);
 }
 
 .app-drag {
@@ -83,18 +67,21 @@ button:focus-visible {
   app-region: no-drag;
 }
 
-/* Dark scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-::-webkit-scrollbar-track {
-  background: var(--color-bg-light);
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: var(--color-text-dark-gray);
+  background: var(--color-line-strong);
   border-radius: 4px;
 }
-::-webkit-scrollbar-corner {
-  background: var(--color-bg-light);
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fg-muted);
 }

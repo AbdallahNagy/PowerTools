@@ -126,7 +126,7 @@ export async function acquireTokenInteractive(
     scopes: scopesFor(envUrl),
     openBrowser: openAuthBrowserWindow,
     successTemplate: `
-      <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#1e1e1e;color:#cccccc">
+      <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#14171c;color:#d3d8df">
         <h2 style="color:#4ec9b0">&#10003; Microsoft sign-in complete</h2>
         <p>PowerTools is validating access to Dataverse. You can close this tab and return to PowerTools.</p>
       </body></html>`,

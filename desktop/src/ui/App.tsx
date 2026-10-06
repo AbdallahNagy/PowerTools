@@ -1,4 +1,3 @@
-import "./App.css";
 import Layout from "./components/layout/Layout";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import ConnectionWindow from "./components/ConnectionWindow";

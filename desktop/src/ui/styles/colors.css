@@ -1,24 +1,23 @@
+/*
+ * Legacy color names, kept as aliases while components migrate to the role
+ * tokens in theme.css. Do not use these in new code. This file is deleted
+ * once no component references it.
+ */
 :root {
-  /* Primary colors */
-  --color-primary: #007acc;
-  
-  /* Background colors */
-  --color-bg-dark: #1e1e1e;
-  --color-bg-darker: #252526;
-  --color-bg-light: #2d2d2d;
-  
-  /* Text colors */
-  --color-text-white: #ffffff;
-  --color-text-gray: #cccccc;
-  --color-text-dark-gray: #808080;
-  
-  /* Border colors */
-  --color-border-dark: #1e1e1e;
-  
-  /* Hover states */
-  --color-hover-bg: #363636;
+  --color-primary: var(--color-accent);
 
-  /* Status colors */
-  --color-error: #f48771;
-  --color-warning: #cca700;
+  --color-bg-dark: var(--color-canvas);
+  --color-bg-darker: var(--color-surface);
+  --color-bg-light: var(--color-raised);
+
+  --color-text-white: var(--color-fg-strong);
+  --color-text-gray: var(--color-fg);
+  --color-text-dark-gray: var(--color-fg-muted);
+
+  --color-border-dark: var(--color-line);
+
+  --color-hover-bg: var(--color-hover);
+
+  --color-error: var(--color-danger);
+  --color-warning: var(--color-warn);
 }

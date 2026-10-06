@@ -93,7 +93,7 @@ describe("window chrome", () => {
       show: false,
       frame: false,
       autoHideMenuBar: true,
-      backgroundColor: "#252526",
+      backgroundColor: "#1b1f26",
     });
   });
 

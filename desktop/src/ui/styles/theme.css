@@ -1,0 +1,75 @@
+/*
+ * Power Tools design tokens.
+ *
+ * Tokens are named by role, not by value, so every theme can redefine them.
+ * Tailwind generates utilities from each `--color-*` name:
+ *   --color-canvas   -> bg-canvas, text-canvas, border-canvas
+ *   --color-fg-muted -> text-fg-muted
+ *
+ * Dark is the default. Light values live under [data-theme="light"].
+ * See desktop/.agents/skills/ui-colors/SKILL.md before adding a token.
+ */
+
+@theme {
+  /* Surfaces, from back to front */
+  --color-canvas: #14171c;
+  --color-surface: #1b1f26;
+  --color-raised: #232832;
+  --color-hover: #2a303a;
+
+  /* Lines */
+  --color-line: #2e3540;
+  --color-line-strong: #3d4654;
+
+  /* Text */
+  --color-fg-strong: #f3f5f8;
+  --color-fg: #d3d8df;
+  --color-fg-muted: #8b94a3;
+
+  /* Accent: fill for buttons and selection, text for links on surfaces */
+  --color-accent: #1f8075;
+  --color-accent-hover: #1a6d64;
+  --color-accent-fg: #ffffff;
+  --color-accent-text: #3fbfae;
+  --color-accent-soft: color-mix(in srgb, var(--color-accent-text) 14%, transparent);
+
+  /* Status */
+  --color-danger: #f0846f;
+  --color-danger-soft: color-mix(in srgb, var(--color-danger) 14%, transparent);
+  --color-warn: #e0b13a;
+  --color-warn-soft: color-mix(in srgb, var(--color-warn) 14%, transparent);
+  --color-ok: #5cbf7a;
+  --color-ok-soft: color-mix(in srgb, var(--color-ok) 14%, transparent);
+
+  /* Keyboard focus ring */
+  --color-focus: var(--color-accent-text);
+}
+
+:root {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-raised: #eef0f3;
+  --color-hover: #e4e7ec;
+
+  --color-line: #d6dae1;
+  --color-line-strong: #c1c7d0;
+
+  --color-fg-strong: #0f1216;
+  --color-fg: #2a303a;
+  --color-fg-muted: #5f6877;
+
+  --color-accent: #1f7f74;
+  --color-accent-hover: #1a6d64;
+  --color-accent-fg: #ffffff;
+  --color-accent-text: #1a6e64;
+
+  --color-danger: #c2412d;
+  --color-warn: #9a6b00;
+  --color-ok: #2f7d45;
+}
