@@ -30,7 +30,7 @@ const ConnectionNamingWindow = () => {
             id="connectionName"
             value={connectionName}
             onChange={(e) => setConnectionName(e.target.value)}
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
             autoFocus
           />
         </div>
@@ -38,7 +38,7 @@ const ConnectionNamingWindow = () => {
         <button
           type="submit"
           disabled={!connectionName.trim()}
-          className="bg-[#007fd4] hover:bg-[#0069b4] text-white py-2 px-4 rounded-sm font-thin transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-accent hover:bg-accent-hover text-accent-fg py-2 px-4 rounded-sm font-thin transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Save
         </button>

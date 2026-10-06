@@ -53,7 +53,7 @@ export function MigrationOptions({
           onClick={onOpenFilter}
           disabled={filterDisabled}
         >
-          Filter{hasFilter && <span className="ml-1 text-[#007fd4]">●</span>}
+          Filter{hasFilter && <span className="ml-1 text-accent-text">●</span>}
         </Button>
         <Button
           variant="secondary"

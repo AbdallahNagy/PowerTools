@@ -70,7 +70,7 @@ const ConnectionWindow = () => {
                 value="online"
                 checked={formData.crmType === "online"}
                 onChange={handleChange}
-                className="accent-[#007fd4]"
+                className="accent-accent"
               />
               <span className="text-sm">Online</span>
             </label>
@@ -81,7 +81,7 @@ const ConnectionWindow = () => {
                 value="onpremise"
                 checked={formData.crmType === "onpremise"}
                 onChange={handleChange}
-                className="accent-[#007fd4]"
+                className="accent-accent"
               />
               <span className="text-sm">On-Premise</span>
             </label>
@@ -99,7 +99,7 @@ const ConnectionWindow = () => {
             value={formData.serverUrl}
             onChange={handleChange}
             placeholder="org.crm.dynamics.com"
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
           />
           {isOnline && <span className="text-xs text-[#858585]">A browser window will open for Microsoft login.</span>}
         </div>
@@ -116,7 +116,7 @@ const ConnectionWindow = () => {
                     value="ad"
                     checked={formData.authMode === "ad"}
                     onChange={handleChange}
-                    className="accent-[#007fd4]"
+                    className="accent-accent"
                   />
                   <span className="text-sm">Active Directory</span>
                 </label>
@@ -127,7 +127,7 @@ const ConnectionWindow = () => {
                     value="ifd"
                     checked={formData.authMode === "ifd"}
                     onChange={handleChange}
-                    className="accent-[#007fd4]"
+                    className="accent-accent"
                   />
                   <span className="text-sm">IFD</span>
                 </label>
@@ -144,7 +144,7 @@ const ConnectionWindow = () => {
                 id="username"
                 value={formData.username}
                 onChange={handleChange}
-                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
               />
             </div>
 
@@ -158,7 +158,7 @@ const ConnectionWindow = () => {
                 id="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
               />
             </div>
 
@@ -172,7 +172,7 @@ const ConnectionWindow = () => {
                 id="domain"
                 value={formData.domain}
                 onChange={handleChange}
-                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-[#007fd4]"
+                className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
               />
             </div>
           </>
@@ -183,7 +183,7 @@ const ConnectionWindow = () => {
         <button
           type="submit"
           disabled={loading}
-          className="mt-4 bg-[#007fd4] hover:bg-[#0069b4] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2 px-4 rounded-sm font-thin transition-colors"
+          className="mt-4 bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-accent-fg py-2 px-4 rounded-sm font-thin transition-colors"
         >
           {loading ? "Authenticating…" : "Connect"}
         </button>

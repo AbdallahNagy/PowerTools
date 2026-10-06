@@ -19,7 +19,7 @@ export function SearchInput({ value, onChange, placeholder = "Search…" }: Sear
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         className="w-full pl-8 pr-8 py-1.5 bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm rounded-sm
-                   placeholder-[#858585] focus:outline-none focus:border-[#007fd4]"
+                   placeholder-[#858585] focus:outline-none focus:border-focus"
       />
       {value && (
         <button

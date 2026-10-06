@@ -85,7 +85,7 @@ export function LookupPickerModal({
             value={selectedTarget}
             onChange={(e) => setSelectedTarget(e.target.value)}
             disabled={targetTables.length <= 1}
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-[#007fd4] disabled:opacity-70"
+            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-focus disabled:opacity-70"
           >
             {targetTables.map((table) => (
               <option key={table.logicalName} value={table.logicalName}>
@@ -157,7 +157,7 @@ export function LookupPickerModal({
                         checked={selected}
                         onChange={() => toggleRecord(record)}
                         onClick={(e) => e.stopPropagation()}
-                        className="accent-[#007fd4]"
+                        className="accent-accent"
                       />
                     </td>
                   )}

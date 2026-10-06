@@ -75,7 +75,7 @@ export default function WelcomeTab() {
         <div
           className="pointer-events-none absolute inset-0"
           style={{
-            background: "radial-gradient(ellipse 70% 50% at 50% 0%, rgba(0,122,204,0.18) 0%, transparent 70%)",
+            background: "radial-gradient(ellipse 70% 50% at 50% 0%, color-mix(in srgb, var(--color-accent-text) 18%, transparent) 0%, transparent 70%)",
           }}
         />
 
@@ -84,8 +84,8 @@ export default function WelcomeTab() {
           <span
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-widest uppercase"
             style={{
-              background: "rgba(0,122,204,0.15)",
-              border: "1px solid rgba(0,122,204,0.4)",
+              background: "color-mix(in srgb, var(--color-accent-text) 15%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--color-accent-text) 40%, transparent)",
               color: "var(--color-primary)",
             }}
           >
@@ -99,7 +99,7 @@ export default function WelcomeTab() {
           <h1
             className="text-5xl sm:text-6xl font-bold leading-tight tracking-tight"
             style={{
-              background: "linear-gradient(135deg, #fff 40%, var(--color-primary) 100%)",
+              background: "linear-gradient(135deg, var(--color-fg-strong) 40%, var(--color-accent-text) 100%)",
               WebkitBackgroundClip: "text",
               WebkitTextFillColor: "transparent",
               backgroundClip: "text",
@@ -118,7 +118,7 @@ export default function WelcomeTab() {
               className="px-5 py-2.5 rounded-md text-sm font-medium transition-opacity hover:opacity-90 active:opacity-75"
               style={{
                 background: "var(--color-primary)",
-                color: "#fff",
+                color: "var(--color-accent-fg)",
               }}
               onClick={() => {
                 const el = document.getElementById("pt-features");
@@ -202,9 +202,9 @@ export default function WelcomeTab() {
               style={
                 feature.highlight
                   ? {
-                      background: "linear-gradient(135deg, rgba(0,122,204,0.18) 0%, rgba(0,122,204,0.06) 100%)",
-                      border: "1px solid rgba(0,122,204,0.45)",
-                      boxShadow: "0 0 24px rgba(0,122,204,0.12)",
+                      background: "linear-gradient(135deg, color-mix(in srgb, var(--color-accent-text) 18%, transparent) 0%, color-mix(in srgb, var(--color-accent-text) 6%, transparent) 100%)",
+                      border: "1px solid color-mix(in srgb, var(--color-accent-text) 45%, transparent)",
+                      boxShadow: "0 0 24px color-mix(in srgb, var(--color-accent-text) 12%, transparent)",
                     }
                   : {
                       background: "var(--color-bg-darker)",
@@ -212,13 +212,13 @@ export default function WelcomeTab() {
                     }
               }
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(0,122,204,0.45)";
-                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 20px rgba(0,122,204,0.1)";
+                (e.currentTarget as HTMLDivElement).style.borderColor = "color-mix(in srgb, var(--color-accent-text) 45%, transparent)";
+                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 20px color-mix(in srgb, var(--color-accent-text) 10%, transparent)";
               }}
               onMouseLeave={(e) => {
                 if (feature.highlight) {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(0,122,204,0.45)";
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 24px rgba(0,122,204,0.12)";
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "color-mix(in srgb, var(--color-accent-text) 45%, transparent)";
+                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 24px color-mix(in srgb, var(--color-accent-text) 12%, transparent)";
                 } else {
                   (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)";
                   (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
@@ -229,7 +229,7 @@ export default function WelcomeTab() {
                 <div
                   className="flex items-center justify-center w-11 h-11 rounded-md shrink-0"
                   style={{
-                    background: feature.highlight ? "rgba(0,122,204,0.2)" : "rgba(0,122,204,0.12)",
+                    background: feature.highlight ? "color-mix(in srgb, var(--color-accent-text) 20%, transparent)" : "color-mix(in srgb, var(--color-accent-text) 12%, transparent)",
                     color: "var(--color-primary)",
                   }}
                 >
@@ -239,9 +239,9 @@ export default function WelcomeTab() {
                   <span
                     className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wider uppercase"
                     style={{
-                      background: "rgba(0,122,204,0.2)",
+                      background: "color-mix(in srgb, var(--color-accent-text) 20%, transparent)",
                       color: "var(--color-primary)",
-                      border: "1px solid rgba(0,122,204,0.35)",
+                      border: "1px solid color-mix(in srgb, var(--color-accent-text) 35%, transparent)",
                     }}
                   >
                     New
@@ -279,7 +279,7 @@ export default function WelcomeTab() {
               className="rounded-lg p-5"
               style={{
                 background: "var(--color-bg-darker)",
-                border: "1px solid rgba(0,122,204,0.22)",
+                border: "1px solid color-mix(in srgb, var(--color-accent-text) 22%, transparent)",
               }}
             >
               <h3 className="text-base font-semibold mt-4 mb-2" style={{ color: "var(--color-text-white)" }}>
@@ -297,8 +297,8 @@ export default function WelcomeTab() {
       <div
         className="mx-6 mb-12 rounded-xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6 max-w-5xl lg:mx-auto"
         style={{
-          background: "linear-gradient(135deg, rgba(0,122,204,0.12) 0%, rgba(0,122,204,0.04) 100%)",
-          border: "1px solid rgba(0,122,204,0.2)",
+          background: "linear-gradient(135deg, color-mix(in srgb, var(--color-accent-text) 12%, transparent) 0%, color-mix(in srgb, var(--color-accent-text) 4%, transparent) 100%)",
+          border: "1px solid color-mix(in srgb, var(--color-accent-text) 20%, transparent)",
         }}
       >
         <div className="text-center sm:text-left">
@@ -314,7 +314,7 @@ export default function WelcomeTab() {
           style={{
             background: "var(--color-bg-dark)",
             color: "var(--color-primary)",
-            border: "1px solid rgba(0,122,204,0.3)",
+            border: "1px solid color-mix(in srgb, var(--color-accent-text) 30%, transparent)",
           }}
         >
           Connect → Select tool → Go

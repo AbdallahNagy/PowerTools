@@ -167,7 +167,7 @@ function FetchXmlBuilderPage() {
                 value={selectedEntity?.logicalName ?? ""}
                 onChange={(e) => handleEntityChange(e.target.value)}
                 disabled={!connectionName || tablesLoading}
-                className="w-72 shrink-0 truncate bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-[#007fd4] disabled:opacity-60 disabled:cursor-not-allowed"
+                className="w-72 shrink-0 truncate bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-focus disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="">
                   {!connectionName
@@ -272,7 +272,7 @@ function ViewTab({ active, onClick, children }: ViewTabProps) {
       onClick={onClick}
       className={`text tracking-wider px-3 py-1.5 border-b-2 transition-colors -mb-px ${
         active
-          ? "border-[#007fd4] text-[#cccccc]"
+          ? "border-accent-text text-[#cccccc]"
           : "border-transparent text-[#858585] hover:text-[#cccccc]"
       }`}
     >
