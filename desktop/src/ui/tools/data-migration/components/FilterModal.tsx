@@ -74,7 +74,7 @@ export function FilterModal({
           placeholder={`<filter>\n  <condition attribute="statecode" operator="eq" value="0" />\n</filter>`}
           spellCheck={false}
           className="w-full h-32 font-mono text-xs bg-[#1e1e1e] border border-[#3c3c3c] text-[#cccccc]
-                     rounded-sm p-3 resize-none focus:outline-none focus:border-[#007fd4]
+                     rounded-sm p-3 resize-none focus:outline-none focus:border-focus
                      placeholder-[#555]"
         />
         {xmlError && <p className="text-xs text-[#f48771] mt-1">{xmlError}</p>}

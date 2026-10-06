@@ -55,7 +55,7 @@ export function ValueInput({
           <button
             type="button"
             onClick={() => setLookupOpen(true)}
-            className="flex items-center justify-between gap-2 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] hover:border-[#007fd4] focus:outline-none focus:border-[#007fd4]"
+            className="flex items-center justify-between gap-2 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] hover:border-accent-text focus:outline-none focus:border-focus"
           >
             <span className="truncate text-[#858585]">
               {selected.length ? `${selected.length} selected` : "Select records..."}
@@ -67,7 +67,7 @@ export function ValueInput({
               {selected.map((v) => (
                 <span
                   key={v}
-                  className="inline-flex items-center gap-1 bg-[#1e2d3c] text-[#9cdcfe] text-xs px-1.5 py-0.5 rounded max-w-48"
+                  className="inline-flex items-center gap-1 bg-accent-soft text-accent-text text-xs px-1.5 py-0.5 rounded max-w-48"
                   title={v}
                 >
                   <span className="truncate">{valueLabels?.[v] ?? v}</span>
@@ -119,7 +119,7 @@ export function ValueInput({
           onChange={(e) =>
             onChange(Array.from(e.target.selectedOptions, (o) => o.value))
           }
-          className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4] h-20"
+          className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus h-20"
         >
           {field.optionSet.map((o) => (
             <option key={o.value} value={String(o.value)}>
@@ -144,7 +144,7 @@ export function ValueInput({
               }
             }}
             placeholder="Enter value..."
-            className="flex-1 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+            className="flex-1 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
           />
         </div>
         {selected.length > 0 && (
@@ -152,7 +152,7 @@ export function ValueInput({
             {selected.map((v) => (
               <span
                 key={v}
-                className="inline-flex items-center gap-1 bg-[#1e2d3c] text-[#007fd4] text-xs px-1.5 py-0.5 rounded"
+                className="inline-flex items-center gap-1 bg-accent-soft text-accent-text text-xs px-1.5 py-0.5 rounded"
               >
                 {v}
                 <button
@@ -183,7 +183,7 @@ export function ValueInput({
           readOnly
           placeholder="Select record..."
           title={strValue}
-          className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm pl-2 pr-8 py-1 text-sm text-[#cccccc] placeholder-[#858585] focus:outline-none focus:border-[#007fd4]"
+          className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm pl-2 pr-8 py-1 text-sm text-[#cccccc] placeholder-[#858585] focus:outline-none focus:border-focus"
         />
         <button
           type="button"
@@ -219,7 +219,7 @@ export function ValueInput({
       <select
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
-        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
       >
         <option value="" disabled>Select…</option>
         {field.optionSet.map((o) => (
@@ -238,7 +238,7 @@ export function ValueInput({
         type="date"
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
-        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
       />
     );
   }
@@ -250,7 +250,7 @@ export function ValueInput({
         type="number"
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
-        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
       />
     );
   }
@@ -262,7 +262,7 @@ export function ValueInput({
       value={strValue}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Value…"
-      className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-[#007fd4]"
+      className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
     />
   );
 }

@@ -55,8 +55,8 @@ export function getMainWindowOptions(
     ...options,
     frame: false,
     autoHideMenuBar: true,
-    // Matches --color-bg-darker so the frameless chrome has no white flash.
-    backgroundColor: "#252526",
+    // Matches --color-surface (theme.css) so the frameless chrome has no white flash.
+    backgroundColor: "#1b1f26",
   };
 }
 

@@ -31,7 +31,7 @@ interface GroupNodeProps {
 
 const DEPTH_COLORS = [
   "border-[#3c3c3c]",
-  "border-[#1e3a5f]",
+  "border-accent-text/30",
   "border-[#2d3a1e]",
   "border-[#3a1e3a]",
 ];
@@ -79,7 +79,7 @@ export function GroupNode({
           onClick={() => actions.toggleLogic(group.id)}
           className={`text-xs font-bold px-2 py-0.5 rounded border transition-colors ${
             group.logic === "and"
-              ? "border-[#007fd4] text-[#007fd4] bg-[#1e2d3c] hover:bg-[#1e3a5f]"
+              ? "border-accent-text text-accent-text bg-accent-soft hover:bg-accent-text/25"
               : "border-[#cc7832] text-[#cc7832] bg-[#2d1e0e] hover:bg-[#3a2512]"
           }`}
         >

@@ -45,13 +45,13 @@ export function TableSelector({ connectionName, selected, onSelect }: TableSelec
               type="button"
               onClick={() => onSelect(e)}
               className={`w-full text-left px-3 py-1.5 border-b border-[#3c3c3c] last:border-0 transition-colors ${
-                selected?.logicalName === e.logicalName ? "bg-[#1e2530]" : "hover:bg-[#2a2d2e]"
+                selected?.logicalName === e.logicalName ? "bg-accent-soft" : "hover:bg-[#2a2d2e]"
               }`}
             >
               <span className="text-sm text-[#cccccc] font-medium">{e.displayName}</span>
               <span className="ml-2 text-xs text-[#858585] font-mono">{e.logicalName}</span>
               {e.isCustom && (
-                <span className="ml-2 text-xs px-1 py-0.5 rounded bg-[#1e2d3c] text-[#007fd4]">Custom</span>
+                <span className="ml-2 text-xs px-1 py-0.5 rounded bg-accent-soft text-accent-text">Custom</span>
               )}
             </button>
           ))}

@@ -46,7 +46,7 @@ export function RelationshipNode({
   return (
     <div
       draggable
-      className={`border-l-2 border-[#007fd4] pl-3 ${isDragging ? "opacity-40" : ""}`}
+      className={`border-l-2 border-accent-text pl-3 ${isDragging ? "opacity-40" : ""}`}
       onDragStart={(event) => {
         if (!handleArmed.current) {
           event.preventDefault();

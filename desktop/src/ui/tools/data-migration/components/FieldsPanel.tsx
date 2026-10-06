@@ -77,7 +77,7 @@ export function FieldsPanel({
           <button
             type="button"
             onClick={selectAll}
-            className="text-xs text-[#007fd4] hover:underline whitespace-nowrap"
+            className="text-xs text-accent-text hover:underline whitespace-nowrap"
           >
             Select all
           </button>
@@ -136,7 +136,7 @@ export function FieldsPanel({
                       isLocked
                         ? "opacity-60"
                         : "cursor-pointer hover:bg-[#2a2d2e]"
-                    } ${isChecked ? "bg-[#1e2530]" : ""}`}
+                    } ${isChecked ? "bg-accent-soft" : ""}`}
                   >
                     <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                       <Checkbox

@@ -63,7 +63,7 @@ function ConnectionSelect({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm
-                   focus:outline-none focus:border-[#007fd4] w-52"
+                   focus:outline-none focus:border-focus w-52"
       >
         <option value="">— select —</option>
         {connections.map((c) => (

@@ -12,7 +12,7 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
       :root {
         color-scheme: dark;
         font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        background: #1e1e1e;
+        background: #14171c;
         color: #ffffff;
       }
 
@@ -23,8 +23,8 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
       body {
         align-items: center;
         background:
-          linear-gradient(135deg, rgba(0, 122, 204, 0.16), transparent 42%),
-          #1e1e1e;
+          linear-gradient(135deg, rgba(42, 157, 143, 0.16), transparent 42%),
+          #14171c;
         display: flex;
         height: 100vh;
         justify-content: center;
@@ -59,7 +59,7 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
       }
 
       p {
-        color: #cccccc;
+        color: #d3d8df;
         font-size: 13px;
         line-height: 1.5;
         margin: 0;
@@ -75,7 +75,7 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
       .spinner {
         animation: spin 0.9s linear infinite;
         border: 2px solid rgba(255, 255, 255, 0.22);
-        border-top-color: #4fc1ff;
+        border-top-color: #3fbfae;
         border-radius: 999px;
         height: 18px;
         width: 18px;

@@ -39,7 +39,7 @@ export function DropSlot({ parentId, index, onDrop }: DropSlotProps) {
         endDrag();
       }}
       className={`h-1 -my-0.5 rounded-sm transition-colors ${
-        active ? (over ? "bg-[#007fd4]" : "bg-[#264f78]/40") : ""
+        active ? (over ? "bg-accent" : "bg-accent-soft") : ""
       }`}
     />
   );

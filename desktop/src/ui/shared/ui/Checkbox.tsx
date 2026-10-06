@@ -22,7 +22,7 @@ export function Checkbox({ checked, onChange, disabled, id, indeterminate = fals
       checked={checked}
       disabled={disabled}
       onChange={(e) => onChange(e.target.checked)}
-      className="w-4 h-4 accent-[#007fd4] cursor-pointer disabled:cursor-not-allowed"
+      className="w-4 h-4 accent-accent cursor-pointer disabled:cursor-not-allowed"
     />
   );
 }
