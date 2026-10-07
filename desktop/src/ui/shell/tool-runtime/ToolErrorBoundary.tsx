@@ -26,11 +26,11 @@ export class ToolErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div role="alert" className="m-4 rounded border border-red-500/40 bg-red-950/30 p-4 text-sm text-red-100">
-          <p className="font-semibold">
+        <div role="alert" className="m-4 rounded border border-danger/40 bg-danger-soft p-4 text-sm text-fg">
+          <p className="font-semibold text-danger">
             {this.props.toolTitle} encountered an unexpected error.
           </p>
-          <p className="mt-1 text-red-200">
+          <p className="mt-1 text-fg-muted">
             Close and reopen this tab to try again.
           </p>
         </div>

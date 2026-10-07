@@ -1,5 +1,4 @@
-const fieldClass =
-  "w-full rounded-sm border border-[var(--color-border-dark)] bg-[var(--color-bg-light)] px-2 py-1.5 text-sm text-[var(--color-text-gray)] focus:border-[var(--color-primary)] focus:outline-none disabled:cursor-not-allowed disabled:opacity-60";
+import { Input, Select } from "../../../shared/ui";
 
 export function ToolTextInput({
   id,
@@ -15,9 +14,9 @@ export function ToolTextInput({
   readOnly?: boolean;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs text-[var(--color-text-dark-gray)]" htmlFor={id}>
+    <label className="flex flex-col gap-1 text-xs text-fg-muted" htmlFor={id}>
       {label}
-      <input
+      <Input
         id={id}
         aria-label={label}
         readOnly={readOnly}
@@ -25,7 +24,7 @@ export function ToolTextInput({
         onChange={(event) => {
           if (!readOnly) onChange?.(event.target.value);
         }}
-        className={fieldClass}
+        className="bg-raised"
       />
     </label>
   );
@@ -47,9 +46,9 @@ export function ToolSelect({
   onChange?: (value: string) => void;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs text-[var(--color-text-dark-gray)]" htmlFor={id}>
+    <label className="flex flex-col gap-1 text-xs text-fg-muted" htmlFor={id}>
       {label}
-      <select
+      <Select
         id={id}
         aria-label={label}
         disabled={disabled}
@@ -57,14 +56,14 @@ export function ToolSelect({
         onChange={(event) => {
           if (!disabled) onChange?.(event.target.value);
         }}
-        className={fieldClass}
+        className="w-full [&>select]:bg-raised"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
             {option.label}
           </option>
         ))}
-      </select>
+      </Select>
     </label>
   );
 }
@@ -85,11 +84,11 @@ export function SchemaField({
   onChange?: (value: string) => void;
 }) {
   return (
-    <label className="flex flex-col gap-1 text-xs text-[var(--color-text-dark-gray)]" htmlFor={id}>
+    <label className="flex flex-col gap-1 text-xs text-fg-muted" htmlFor={id}>
       {label}
       <span className="flex min-w-0 items-center gap-1">
-        <span className="shrink-0 text-[var(--color-text-dark-gray)]">{prefix}</span>
-        <input
+        <span className="shrink-0 text-fg-muted">{prefix}</span>
+        <Input
           id={id}
           aria-label={label}
           readOnly={readOnly}
@@ -97,7 +96,7 @@ export function SchemaField({
           onChange={(event) => {
             if (!readOnly) onChange?.(event.target.value);
           }}
-          className={fieldClass}
+          className="bg-raised"
         />
       </span>
     </label>

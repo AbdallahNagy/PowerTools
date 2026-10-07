@@ -1,6 +1,5 @@
 @import "tailwindcss" source(".");
 @import "./styles/theme.css";
-@import "./styles/colors.css";
 
 @layer base {
   html,

@@ -87,7 +87,7 @@ export function ConditionNode({
           onMouseUp={() => {
             handleArmed.current = false;
           }}
-          className="text-[#858585] hover:text-white cursor-grab active:cursor-grabbing select-none text-sm leading-none px-0.5"
+          className="text-fg-muted hover:text-fg-strong cursor-grab active:cursor-grabbing select-none text-sm leading-none px-0.5"
         >
           ⠿
         </span>
@@ -128,7 +128,7 @@ export function ConditionNode({
             type="button"
             title="Duplicate"
             onClick={() => actions.duplicate(condition.id)}
-            className="text-[#858585] hover:text-white text-xs px-1 py-0.5 rounded hover:bg-[#2a2d2e]"
+            className="text-fg-muted hover:text-fg-strong text-xs px-1 py-0.5 rounded hover:bg-hover"
           >
             ⧉
           </button>
@@ -137,7 +137,7 @@ export function ConditionNode({
             title="Remove"
             onClick={() => actions.remove(condition.id)}
             disabled={!canRemove}
-            className="text-[#858585] hover:text-[#f48771] text-xs px-1 py-0.5 rounded hover:bg-[#2a2d2e] disabled:opacity-30"
+            className="text-fg-muted hover:text-danger text-xs px-1 py-0.5 rounded hover:bg-hover disabled:opacity-30"
           >
             ✕
           </button>
@@ -145,7 +145,7 @@ export function ConditionNode({
       </div>
 
       {nodeErrors.map((e) => (
-        <p key={e.message} className="text-xs text-[#f48771] pl-6">
+        <p key={e.message} className="text-xs text-danger pl-6">
           {e.message}
         </p>
       ))}

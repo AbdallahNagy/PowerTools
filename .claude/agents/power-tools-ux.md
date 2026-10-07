@@ -38,7 +38,7 @@ Reuse shared controls already exported from `desktop/src/ui/shared/ui`:
 - `Spinner`
 - `Toast` and `useToast`
 
-Colors use the CSS variables in that skill, written as Tailwind variable classes such as `bg-[var(--color-bg-dark)]`. If a needed color has no variable, add an open question. Do not invent a hex value.
+Colors use the theme token classes in that skill, such as `bg-canvas`, `text-fg-muted` and `border-line`. If a needed color has no token, add an open question. Do not invent a hex value.
 
 `DataTable` shows each column header in the case you write. Write title case, such as `Display Name` and `Name`. Do not specify all-capital headers. The table does not force uppercase.
 
@@ -50,7 +50,7 @@ When the tool surface is split into two views, left and right or top and bottom,
 
 - A horizontal split uses a `w-1 cursor-col-resize` separator. A vertical split sets `orientation="vertical"` and uses an `h-1 cursor-row-resize` separator.
 - Name the separator, for example `Resize panes`.
-- Color it `bg-[var(--color-bg-light)]`, with `hover:bg-[var(--color-primary)]` and `active:bg-[var(--color-primary)]`.
+- Color it `bg-raised`, with `hover:bg-accent` and `active:bg-accent`.
 - Give each pane a `minSize` so neither view can be dragged away.
 - Do not use a fixed half width or a static border as the only divider.
 
@@ -68,7 +68,7 @@ Specify:
 - Shared controls to reuse, named from the list above
 - What not to build, including capabilities outside `### What it does` and any WinForms layout you refuse to copy
 
-Append a bullet under `### Open questions` only for an ambiguous tool name, a GPL or other copyleft license, two real product scopes, or a missing color variable. Otherwise decide inside the UX section.
+Append a bullet under `### Open questions` only for an ambiguous tool name, a GPL or other copyleft license, two real product scopes, or a missing color token. Otherwise decide inside the UX section.
 
 ## Constraints
 

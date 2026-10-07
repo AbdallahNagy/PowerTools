@@ -21,15 +21,15 @@ export function FormField({
         htmlFor={htmlFor}
         className={`text-xs ${
           disabled
-            ? "text-[var(--color-text-dark-gray)] cursor-not-allowed"
-            : "text-[var(--color-text-dark-gray)]"
+            ? "text-fg-muted cursor-not-allowed"
+            : "text-fg-muted"
         }`}
       >
         {label}
       </label>
       {children}
       {problem ? (
-        <p role="alert" className="text-xs text-[var(--color-text-white)]">
+        <p role="alert" className="text-xs text-fg-strong">
           {problem}
         </p>
       ) : null}
@@ -38,4 +38,4 @@ export function FormField({
 }
 
 export const fieldControlClass =
-  "bg-[var(--color-bg-light)] border border-[var(--color-border-dark)] text-[var(--color-text-gray)] text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-[var(--color-primary)] w-full disabled:text-[var(--color-text-dark-gray)] disabled:cursor-not-allowed disabled:opacity-60";
+  "bg-raised border border-line text-fg text-sm px-2 py-1.5 rounded-sm focus:outline-none focus:border-focus w-full disabled:text-fg-muted disabled:cursor-not-allowed disabled:opacity-60";

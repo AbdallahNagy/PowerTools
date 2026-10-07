@@ -7,6 +7,7 @@ import type {
   RelationshipMetadata,
   RelationshipPathSegment,
 } from "../../model/types";
+import { Select } from "../../../../shared/ui";
 
 interface FieldPickerProps {
   value: FieldReference | null | undefined;
@@ -48,7 +49,7 @@ export function FieldPicker({
         : "";
 
   return (
-    <select
+    <Select
       value={selectedValue}
       onChange={(event) => {
         const next = event.target.value;
@@ -63,7 +64,7 @@ export function FieldPicker({
           onSelectRelationship(createRelationshipPathSegment(relationship, path, label));
         }
       }}
-      className="w-56 shrink-0 rounded-sm border border-[#3c3c3c] bg-[#1e1e1e] px-2 py-1 text-sm text-[#cccccc] focus:border-focus focus:outline-none"
+      className="w-56 shrink-0 [&>select]:py-1"
     >
       <option value="" disabled>
         Select field...
@@ -90,7 +91,7 @@ export function FieldPicker({
           ))}
         </optgroup>
       )}
-    </select>
+    </Select>
   );
 }
 

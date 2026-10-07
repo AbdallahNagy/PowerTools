@@ -105,7 +105,7 @@ function DataMigrationPage() {
   });
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-[#cccccc] overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-fg overflow-hidden">
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <ConnectionsBar
           sourceName={sourceName ?? ""}
@@ -133,7 +133,7 @@ function DataMigrationPage() {
         <Panel defaultSize="35%" minSize="15%" className="flex flex-col min-h-0">
           <EntityListPanel connectionName={sourceName || null} selected={entity} onSelect={selectEntity} />
         </Panel>
-        <Separator className="w-1 mx-1 cursor-col-resize bg-(--color-bg-light) hover:bg-(--color-primary) active:bg-(--color-primary) transition-colors" />
+        <Separator className="w-1 mx-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent transition-colors" />
         <Panel minSize="15%" className="flex flex-col min-h-0">
           <FieldsPanel
             entityLogicalName={entity?.logicalName ?? null}

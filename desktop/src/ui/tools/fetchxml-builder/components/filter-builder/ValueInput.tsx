@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FieldMetadata, FilterCondition, Operator } from "../../model/types";
 import { NO_VALUE_OPERATORS, MULTI_VALUE_OPERATORS } from "../../model/operators";
+import { Input, Select } from "../../../../shared/ui";
 import { LookupPickerModal, type SelectedLookupRecord } from "./LookupPickerModal";
 
 interface ValueInputProps {
@@ -55,9 +56,9 @@ export function ValueInput({
           <button
             type="button"
             onClick={() => setLookupOpen(true)}
-            className="flex items-center justify-between gap-2 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] hover:border-accent-text focus:outline-none focus:border-focus"
+            className="flex items-center justify-between gap-2 bg-canvas border border-line rounded-sm px-2 py-1 text-sm text-fg hover:border-accent-text focus:outline-none focus:border-focus"
           >
-            <span className="truncate text-[#858585]">
+            <span className="truncate text-fg-muted">
               {selected.length ? `${selected.length} selected` : "Select records..."}
             </span>
             <SearchIcon />
@@ -81,7 +82,7 @@ export function ValueInput({
                         valueLabels: nextLabels,
                       });
                     }}
-                    className="hover:text-white"
+                    className="hover:text-fg-strong"
                   >
                     ×
                   </button>
@@ -119,7 +120,7 @@ export function ValueInput({
           onChange={(e) =>
             onChange(Array.from(e.target.selectedOptions, (o) => o.value))
           }
-          className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus h-20"
+          className="w-40 shrink-0 bg-canvas border border-line rounded-sm px-2 py-1 text-sm text-fg focus:outline-none focus:border-focus h-20"
         >
           {field.optionSet.map((o) => (
             <option key={o.value} value={String(o.value)}>
@@ -133,7 +134,7 @@ export function ValueInput({
     return (
       <div className="w-40 shrink-0 flex flex-col gap-1">
         <div className="flex gap-1">
-          <input
+          <Input
             type="text"
             value={multiRaw}
             onChange={(e) => setMultiRaw(e.target.value)}
@@ -144,7 +145,7 @@ export function ValueInput({
               }
             }}
             placeholder="Enter value..."
-            className="flex-1 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
+            className="flex-1 py-1"
           />
         </div>
         {selected.length > 0 && (
@@ -158,7 +159,7 @@ export function ValueInput({
                 <button
                   type="button"
                   onClick={() => onChange(selected.filter((x) => x !== v))}
-                  className="hover:text-white"
+                  className="hover:text-fg-strong"
                 >
                   ×
                 </button>
@@ -177,19 +178,19 @@ export function ValueInput({
 
     return (
       <div className="relative w-56 shrink-0">
-        <input
+        <Input
           type="text"
           value={displayValue}
           readOnly
           placeholder="Select record..."
           title={strValue}
-          className="w-full bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm pl-2 pr-8 py-1 text-sm text-[#cccccc] placeholder-[#858585] focus:outline-none focus:border-focus"
+          className="pl-2 pr-8 py-1"
         />
         <button
           type="button"
           title="Search records"
           onClick={() => setLookupOpen(true)}
-          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-[#858585] hover:text-white rounded hover:bg-[#2a2d2e]"
+          className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-fg-muted hover:text-fg-strong rounded hover:bg-hover"
         >
           <SearchIcon />
         </button>
@@ -216,10 +217,10 @@ export function ValueInput({
   // Choice / boolean: render a select
   if (field.optionSet) {
     return (
-      <select
+      <Select
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
-        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
+        className="w-40 shrink-0 [&>select]:py-1"
       >
         <option value="" disabled>Select…</option>
         {field.optionSet.map((o) => (
@@ -227,18 +228,18 @@ export function ValueInput({
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
     );
   }
 
   // DateTime
   if (field.attributeType === "DateTime") {
     return (
-      <input
+      <Input
         type="date"
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
-        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
+        className="w-40 shrink-0 py-1"
       />
     );
   }
@@ -246,23 +247,23 @@ export function ValueInput({
   // Number types
   if (["Integer", "BigInt", "Decimal", "Double", "Money"].includes(field.attributeType)) {
     return (
-      <input
+      <Input
         type="number"
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
-        className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
+        className="w-40 shrink-0 py-1"
       />
     );
   }
 
   // Default: text
   return (
-    <input
+    <Input
       type="text"
       value={strValue}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Value…"
-      className="w-40 shrink-0 bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm px-2 py-1 text-sm text-[#cccccc] focus:outline-none focus:border-focus"
+      className="w-40 shrink-0 py-1"
     />
   );
 }

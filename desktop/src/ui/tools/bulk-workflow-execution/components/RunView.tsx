@@ -43,20 +43,20 @@ export function RunView({
   ];
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-auto bg-[var(--color-bg-dark)] p-4">
+    <div className="flex min-h-0 flex-1 flex-col overflow-auto bg-canvas p-4">
       <div className="flex max-w-4xl flex-col gap-4">
         <header className="flex flex-col gap-1">
-          <h2 className="text-base text-[var(--color-text-white)]">{info.workflow.name}</h2>
-          <p className="text-sm text-[var(--color-text-gray)]">
+          <h2 className="text-base text-fg-strong">{info.workflow.name}</h2>
+          <p className="text-sm text-fg">
             {info.entityName} · {modeLabel(info.workflow.mode)} · {info.connectionName}
           </p>
-          <p className="text-sm text-[var(--color-text-dark-gray)]">
+          <p className="text-sm text-fg-muted">
             Batch size {formatCount(info.batchSize)}, delay {info.delaySeconds} s between batches
           </p>
         </header>
 
         {lostContact ? (
-          <p role="status" className="text-sm text-[var(--color-text-gray)]">
+          <p role="status" className="text-sm text-fg">
             Lost contact with the run. Retrying…
           </p>
         ) : null}
@@ -70,7 +70,7 @@ export function RunView({
               max={run.total}
               label={`${formatCount(run.processed)} of ${formatCount(run.total)}`}
             />
-            <div className="flex flex-wrap gap-4 text-sm text-[var(--color-text-gray)]">
+            <div className="flex flex-wrap gap-4 text-sm text-fg">
               <span>Started {formatCount(run.succeeded)}</span>
               <span>Errors {formatCount(run.failed)}</span>
               {!ended ? <span>About {formatRemaining(run.estimatedSecondsRemaining)} remaining</span> : null}
@@ -82,13 +82,13 @@ export function RunView({
           run.status === "failed" ? (
             <div className="flex flex-col gap-1">
               <ErrorLine>{endSummary(run)}</ErrorLine>
-              <p className="text-sm text-[var(--color-text-gray)]">
+              <p className="text-sm text-fg">
                 {formatCount(run.succeeded)} started, {formatCount(run.failed)} errors,{" "}
                 {formatCount(Math.max(0, run.total - run.processed))} not run.
               </p>
             </div>
           ) : (
-            <p role="status" className="text-sm text-[var(--color-text-white)]">{endSummary(run)}</p>
+            <p role="status" className="text-sm text-fg-strong">{endSummary(run)}</p>
           )
         ) : null}
 
@@ -105,7 +105,7 @@ export function RunView({
               >
                 {stopping || run?.status === "cancelling" ? "Stopping after current batch…" : "Stop"}
               </Button>
-              <p className="text-sm text-[var(--color-text-dark-gray)]">
+              <p className="text-sm text-fg-muted">
                 Stop sends no more batches. System jobs already queued keep running.
               </p>
             </>
@@ -114,9 +114,9 @@ export function RunView({
 
         {run && run.errors.length > 0 ? (
           <div className="flex flex-col gap-2">
-            <h3 className="text-sm text-[var(--color-text-white)]">Errors</h3>
+            <h3 className="text-sm text-fg-strong">Errors</h3>
             {run.errorsCapped ? (
-              <p className="text-sm text-[var(--color-text-dark-gray)]">
+              <p className="text-sm text-fg-muted">
                 Showing the first {formatCount(run.errors.length)} errors.
               </p>
             ) : null}

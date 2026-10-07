@@ -63,7 +63,7 @@ export function ComponentTypeModal({
     >
       {errorText ? (
         <div className="flex flex-col items-start gap-3">
-          <p role="alert" className="text-[var(--color-text-gray)]">{errorText}</p>
+          <p role="alert" className="text-fg">{errorText}</p>
           <Button type="button" variant="secondary" onClick={onRetry}>Retry</Button>
         </div>
       ) : (

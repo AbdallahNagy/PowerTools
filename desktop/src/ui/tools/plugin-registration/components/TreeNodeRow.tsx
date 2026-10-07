@@ -31,8 +31,8 @@ export function TreeNodeRow({
       <div
         className={`flex items-center gap-1 py-0.5 pr-2 text-sm ${
           isSelected
-            ? "bg-[var(--color-hover-bg)] text-[var(--color-text-white)]"
-            : "text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)]"
+            ? "bg-hover text-fg-strong"
+            : "text-fg hover:bg-hover"
         }`}
         style={{ paddingLeft: `${depth * 16 + 4}px` }}
         onContextMenu={(event) => {
@@ -46,7 +46,7 @@ export function TreeNodeRow({
             type="button"
             aria-label={isExpanded ? `Collapse ${node.label}` : `Expand ${node.label}`}
             onClick={() => onToggle(node.id)}
-            className="w-5 h-5 flex items-center justify-center text-[var(--color-text-dark-gray)]"
+            className="w-5 h-5 flex items-center justify-center text-fg-muted"
           >
             {isExpanded ? "▾" : "▸"}
           </button>

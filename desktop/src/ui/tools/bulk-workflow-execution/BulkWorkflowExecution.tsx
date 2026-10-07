@@ -37,7 +37,7 @@ import { defaultViewSort, defaultWorkflowSort, entityLabel } from "./model/view"
 
 const POLL_INTERVAL_MS = 1000;
 const separatorClass =
-  "bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)]";
+  "bg-raised hover:bg-accent active:bg-accent";
 
 export default function BulkWorkflowExecution() {
   return (
@@ -260,8 +260,8 @@ function BulkWorkflowExecutionPage() {
 
   if (!connectionName) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center bg-[var(--color-bg-dark)] p-6">
-        <p className="text-sm text-[var(--color-text-dark-gray)]">
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-canvas p-6">
+        <p className="text-sm text-fg-muted">
           Connect to an environment to list on-demand workflows.
         </p>
       </div>
@@ -270,8 +270,8 @@ function BulkWorkflowExecutionPage() {
 
   return (
     <>
-      <Group orientation="horizontal" className="flex min-h-0 flex-1 bg-[var(--color-bg-dark)]">
-        <Panel defaultSize="30%" minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-dark)]">
+      <Group orientation="horizontal" className="flex min-h-0 flex-1 bg-canvas">
+        <Panel defaultSize="30%" minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-canvas">
           <WorkflowList
             workflows={workflows}
             loading={workflowsQuery.isLoading}
@@ -289,7 +289,7 @@ function BulkWorkflowExecutionPage() {
         <Separator aria-label="Resize panes" className={`w-1 cursor-col-resize ${separatorClass}`} />
         <Panel minSize="40%" className="flex min-h-0 min-w-0 flex-col">
           <Group orientation="vertical" className="min-h-0 flex-1">
-            <Panel defaultSize="40%" minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-dark)]">
+            <Panel defaultSize="40%" minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-canvas">
               <ViewList
                 workflow={workflow}
                 entityName={entityName}
@@ -306,7 +306,7 @@ function BulkWorkflowExecutionPage() {
               />
             </Panel>
             <Separator aria-label="Resize panes" className={`h-1 cursor-row-resize ${separatorClass}`} />
-            <Panel minSize="30%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-dark)]">
+            <Panel minSize="30%" className="flex min-h-0 min-w-0 flex-col bg-canvas">
               <QueryPanel
                 fetchXml={fetchXml}
                 onFetchXmlChange={editFetchXml}

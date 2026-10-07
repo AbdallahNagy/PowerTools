@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Modal } from "../../../shared/ui";
+import { Button, Field, Modal, Textarea } from "../../../shared/ui";
 
 interface FilterModalProps {
   open: boolean;
@@ -65,31 +65,34 @@ export function FilterModal({
   return (
     <Modal open={open} onClose={onClose} title="FetchXML Filter">
       <div>
-        <label className="text-xs text-[#858585] tracking-wider block mb-1.5">
-          Filter <span className="normal-case text-[#555]">(optional)</span>
-        </label>
-        <textarea
-          value={draft}
-          onChange={(e) => handleChange(e.target.value)}
-          placeholder={`<filter>\n  <condition attribute="statecode" operator="eq" value="0" />\n</filter>`}
-          spellCheck={false}
-          className="w-full h-32 font-mono text-xs bg-[#1e1e1e] border border-[#3c3c3c] text-[#cccccc]
-                     rounded-sm p-3 resize-none focus:outline-none focus:border-focus
-                     placeholder-[#555]"
-        />
-        {xmlError && <p className="text-xs text-[#f48771] mt-1">{xmlError}</p>}
-        <p className="text-xs text-[#858585] mt-1">
+        <Field
+          label={
+            <>
+              Filter <span className="font-normal">(optional)</span>
+            </>
+          }
+          error={xmlError || undefined}
+        >
+          <Textarea
+            value={draft}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder={`<filter>\n  <condition attribute="statecode" operator="eq" value="0" />\n</filter>`}
+            spellCheck={false}
+            className="h-32 font-mono text-xs p-3 resize-none"
+          />
+        </Field>
+        <p className="text-xs text-fg-muted mt-1">
           Enter only the{" "}
-          <code className="text-[#cccccc]">&lt;filter&gt;</code> element. Leave
+          <code className="text-fg">&lt;filter&gt;</code> element. Leave
           blank to migrate all records.
         </p>
       </div>
 
       <div>
-        <p className="text-xs text-[#858585] tracking-wider mb-1.5">
+        <p className="text-xs text-fg-muted tracking-wider mb-1.5">
           Composed FetchXML
         </p>
-        <pre className="text-xs font-mono bg-[#1e1e1e] border border-[#3c3c3c] rounded-sm p-3 overflow-auto max-h-40 text-[#858585] whitespace-pre-wrap">
+        <pre className="text-xs font-mono bg-canvas border border-line rounded-sm p-3 overflow-auto max-h-40 text-fg-muted whitespace-pre-wrap">
           {composed}
         </pre>
       </div>

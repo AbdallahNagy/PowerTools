@@ -34,7 +34,7 @@ export function CopyLog({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
       {environmentName ? (
-        <h2 className="text-sm text-[var(--color-text-dark-gray)]">{environmentName}</h2>
+        <h2 className="text-sm text-fg-muted">{environmentName}</h2>
       ) : null}
       <div className="flex gap-2">
         <Button type="button" variant="secondary" onClick={onClear} disabled={running || rows.length === 0}>

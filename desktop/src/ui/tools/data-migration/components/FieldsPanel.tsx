@@ -10,10 +10,10 @@ interface FieldsPanelProps {
 }
 
 const reqColors: Record<string, string> = {
-  SystemRequired: "bg-[#3c2020] text-[#f48771]",
-  ApplicationRequired: "bg-[#3c2d20] text-[#e8a87c]",
-  Recommended: "bg-[#1e2d1e] text-[#73c991]",
-  None: "bg-[#2d2d2d] text-[#858585]",
+  SystemRequired: "bg-danger-soft text-danger",
+  ApplicationRequired: "bg-alt-soft text-alt",
+  Recommended: "bg-ok-soft text-ok",
+  None: "bg-raised text-fg-muted",
 };
 
 export function FieldsPanel({
@@ -59,7 +59,7 @@ export function FieldsPanel({
 
   if (!entityLogicalName) {
     return (
-      <div className="flex flex-1 items-center justify-center text-sm text-[#858585] border border-dashed border-[#3c3c3c] rounded-sm">
+      <div className="flex flex-1 items-center justify-center text-sm text-fg-muted border border-dashed border-line rounded-sm">
         Select an entity to see its fields.
       </div>
     );
@@ -84,42 +84,42 @@ export function FieldsPanel({
           <button
             type="button"
             onClick={selectNone}
-            className="text-xs text-[#858585] hover:text-white whitespace-nowrap"
+            className="text-xs text-fg-muted hover:text-fg-strong whitespace-nowrap"
           >
             Select none
           </button>
-          <span className="text-xs text-[#858585] whitespace-nowrap">
+          <span className="text-xs text-fg-muted whitespace-nowrap">
             {selected.length} selected
           </span>
         </div>
       </div>
 
       {error && (
-        <p className="text-sm text-[#f48771] bg-[#3c1e1e] border border-red-700 rounded-sm px-3 py-2">
+        <p className="text-sm text-danger bg-danger-soft border border-danger rounded-sm px-3 py-2">
           {(error as Error).message}
         </p>
       )}
 
       {isLoading ? (
-        <div className="flex items-center gap-2 text-[#858585] text-sm mt-2">
+        <div className="flex items-center gap-2 text-fg-muted text-sm mt-2">
           <Spinner size={14} /> Loading attributes…
         </div>
       ) : (
-        <div className="flex-1 min-h-0 overflow-auto border border-[#3c3c3c] rounded-sm">
+        <div className="flex-1 min-h-0 overflow-auto border border-line rounded-sm">
           <table className="w-full text-sm">
-            <thead className="bg-[#252526] sticky top-0">
+            <thead className="bg-surface sticky top-0">
               <tr>
                 <th className="w-10 px-3 py-2" />
-                <th className="text-left px-3 py-2 text-xs font-medium text-[#858585] uppercase">
+                <th className="text-left px-3 py-2 text-xs font-medium text-fg-muted uppercase">
                   Display Name
                 </th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-[#858585] uppercase">
+                <th className="text-left px-3 py-2 text-xs font-medium text-fg-muted uppercase">
                   Logical Name
                 </th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-[#858585] uppercase">
+                <th className="text-left px-3 py-2 text-xs font-medium text-fg-muted uppercase">
                   Type
                 </th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-[#858585] uppercase">
+                <th className="text-left px-3 py-2 text-xs font-medium text-fg-muted uppercase">
                   Required
                 </th>
               </tr>
@@ -132,10 +132,10 @@ export function FieldsPanel({
                   <tr
                     key={attr.logicalName}
                     onClick={() => !isLocked && toggle(attr.logicalName)}
-                    className={`border-b border-[#3c3c3c] last:border-0 transition-colors ${
+                    className={`border-b border-line last:border-0 transition-colors ${
                       isLocked
                         ? "opacity-60"
-                        : "cursor-pointer hover:bg-[#2a2d2e]"
+                        : "cursor-pointer hover:bg-hover"
                     } ${isChecked ? "bg-accent-soft" : ""}`}
                   >
                     <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
@@ -145,14 +145,14 @@ export function FieldsPanel({
                         disabled={isLocked}
                       />
                     </td>
-                    <td className="px-3 py-2 text-[#cccccc] font-medium">
+                    <td className="px-3 py-2 text-fg font-medium">
                       {attr.displayName}
                     </td>
-                    <td className="px-3 py-2 text-[#858585] font-mono text-xs">
+                    <td className="px-3 py-2 text-fg-muted font-mono text-xs">
                       {attr.logicalName}
                     </td>
                     <td className="px-3 py-2">
-                      <span className="text-xs bg-[#2d2d2d] text-[#858585] px-1.5 py-0.5 rounded">
+                      <span className="text-xs bg-raised text-fg-muted px-1.5 py-0.5 rounded">
                         {attr.attributeType}
                       </span>
                     </td>

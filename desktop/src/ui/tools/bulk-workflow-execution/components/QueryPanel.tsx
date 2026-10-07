@@ -1,10 +1,9 @@
 import { useId } from "react";
-import { Button, Spinner } from "../../../shared/ui";
+import { Button, Input, Spinner, Textarea } from "../../../shared/ui";
 import { formatCount, MAX_BATCH_SIZE, MAX_DELAY_SECONDS, MIN_BATCH_SIZE } from "../model/run";
 import { ErrorLine } from "./Notice";
 
-const inputClass =
-  "w-24 rounded-sm border border-[var(--color-border-dark)] bg-[var(--color-bg-light)] px-2 py-1 text-sm text-[var(--color-text-white)] focus:border-[var(--color-primary)] focus:outline-none";
+const inputClass = "w-24 bg-raised py-1 text-fg-strong";
 
 export function QueryPanel({
   fetchXml,
@@ -46,21 +45,21 @@ export function QueryPanel({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center border-b border-[var(--color-border-dark)] bg-[var(--color-bg-darker)] px-3 py-2">
-        <h2 className="text-sm font-medium text-[var(--color-text-white)]">Query and run</h2>
+      <div className="flex shrink-0 items-center border-b border-line bg-surface px-3 py-2">
+        <h2 className="text-sm font-medium text-fg-strong">Query and run</h2>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto p-3">
-        <textarea
+        <Textarea
           aria-label="FetchXML"
           spellCheck={false}
           value={fetchXml}
           onChange={(event) => onFetchXmlChange(event.target.value)}
-          className="min-h-32 flex-1 resize-none rounded-sm border border-[var(--color-border-dark)] bg-[var(--color-bg-light)] p-2 font-mono text-sm text-[var(--color-text-white)] focus:border-[var(--color-primary)] focus:outline-none"
+          className="min-h-32 flex-1 resize-none bg-raised p-2 font-mono text-fg-strong"
         />
         <div className="flex flex-wrap items-center gap-4">
-          <label htmlFor={batchId} className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+          <label htmlFor={batchId} className="flex items-center gap-2 text-sm text-fg">
             Batch size
-            <input
+            <Input
               id={batchId}
               type="number"
               min={MIN_BATCH_SIZE}
@@ -71,9 +70,9 @@ export function QueryPanel({
               className={inputClass}
             />
           </label>
-          <label htmlFor={delayId} className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+          <label htmlFor={delayId} className="flex items-center gap-2 text-sm text-fg">
             Delay between batches (seconds)
-            <input
+            <Input
               id={delayId}
               type="number"
               min={0}
@@ -86,7 +85,7 @@ export function QueryPanel({
           </label>
         </div>
         {realtime ? (
-          <p className="text-sm text-[var(--color-text-dark-gray)]">
+          <p className="text-sm text-fg-muted">
             Real-time workflows run inside each batch. Use a smaller batch size.
           </p>
         ) : null}
@@ -102,7 +101,7 @@ export function QueryPanel({
             )}
           </Button>
           {matchedCount != null && matchedCount > 0 ? (
-            <span className="text-sm text-[var(--color-text-gray)]">
+            <span className="text-sm text-fg">
               {matchedCount === 1 ? "1 record matches" : `${formatCount(matchedCount)} records match`}
             </span>
           ) : null}
@@ -111,7 +110,7 @@ export function QueryPanel({
           </Button>
         </div>
         {matchedCount === 0 ? (
-          <p className="text-sm text-[var(--color-text-gray)]">No records match. There is nothing to run.</p>
+          <p className="text-sm text-fg">No records match. There is nothing to run.</p>
         ) : null}
         {countError ? <ErrorLine>{countError}</ErrorLine> : null}
       </div>

@@ -80,7 +80,7 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
       <div
         role="dialog"
         aria-label="Open tool"
-        className="mx-auto mt-12 flex w-full max-w-lg flex-col overflow-hidden rounded-sm border border-[var(--color-border-dark)] bg-[var(--color-bg-darker)] shadow-xl"
+        className="mx-auto mt-12 flex w-full max-w-lg flex-col overflow-hidden rounded-sm border border-line bg-surface shadow-xl"
         onMouseDown={(event) => event.stopPropagation()}
       >
         <input
@@ -116,7 +116,7 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
               openSelected();
             }
           }}
-          className="w-full border-b border-[var(--color-border-dark)] bg-[var(--color-bg-light)] px-3 py-2 text-sm text-[var(--color-text-gray)] placeholder:text-[var(--color-text-dark-gray)] focus:outline-none"
+          className="w-full border-b border-line bg-raised px-3 py-2 text-sm text-fg placeholder:text-fg-muted focus:outline-none"
         />
         <ul
           id={listId}
@@ -134,8 +134,8 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
                 aria-selected={active}
                 className={`flex min-w-0 cursor-pointer items-center gap-2 overflow-hidden px-3 py-1.5 text-sm ${
                   active
-                    ? "bg-[var(--color-hover-bg)] text-[var(--color-text-white)]"
-                    : "text-[var(--color-text-gray)]"
+                    ? "bg-hover text-fg-strong"
+                    : "text-fg"
                 }`}
                 onMouseEnter={() => setHighlight(index)}
                 onMouseDown={(event) => {
@@ -150,7 +150,7 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
                 />
                 <span className="min-w-0 truncate">{tool.title}</span>
                 {tool.tooltip && tool.tooltip !== tool.title ? (
-                  <span className="min-w-0 flex-1 truncate text-xs text-[var(--color-text-dark-gray)]">
+                  <span className="min-w-0 flex-1 truncate text-xs text-fg-muted">
                     {tool.tooltip}
                   </span>
                 ) : null}
@@ -158,12 +158,12 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
             );
           })}
           {results.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-[var(--color-text-dark-gray)]">
+            <li className="px-3 py-2 text-sm text-fg-muted">
               No matching tools
             </li>
           ) : null}
         </ul>
-        <p className="border-t border-[var(--color-border-dark)] px-3 py-1.5 text-xs text-[var(--color-text-dark-gray)]">
+        <p className="border-t border-line px-3 py-1.5 text-xs text-fg-muted">
           Enter to open · Esc to close
         </p>
       </div>

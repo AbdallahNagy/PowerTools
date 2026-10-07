@@ -26,7 +26,7 @@ export function QueryLibrary({
 
   return (
     <section aria-label="Query library" className="flex h-full min-h-0 flex-1 flex-col gap-2">
-      <div className="text-xs text-[var(--color-text-gray)]">Query library</div>
+      <div className="text-xs text-fg">Query library</div>
       <div className="flex items-center gap-3 flex-wrap">
         <div className="w-64">
           <SearchInput
@@ -35,7 +35,7 @@ export function QueryLibrary({
             placeholder="Search saved queries"
           />
         </div>
-        <label className="flex items-center gap-2 text-xs text-[var(--color-text-gray)]">
+        <label className="flex items-center gap-2 text-xs text-fg">
           <Checkbox
             checked={allEnvironments}
             onChange={onAllEnvironmentsChange}

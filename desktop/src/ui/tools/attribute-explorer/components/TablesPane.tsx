@@ -50,11 +50,11 @@ export function TablesPane({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 flex-col gap-2 border-b border-[var(--color-border-dark)] p-3">
+      <div className="flex shrink-0 flex-col gap-2 border-b border-line p-3">
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-sm font-semibold text-[var(--color-text-white)]">Tables</h2>
+          <h2 className="text-sm font-semibold text-fg-strong">Tables</h2>
           {tables.length > 0 ? (
-            <span className="text-xs text-[var(--color-text-dark-gray)]">
+            <span className="text-xs text-fg-muted">
               {tablesCountLabel(visible.length, tables.length)}
             </span>
           ) : null}
@@ -71,21 +71,21 @@ export function TablesPane({
       </div>
       <div ref={listRef} onKeyDown={onKeyDown} className="min-h-0 flex-1 overflow-auto">
         {!hasConnection ? (
-          <p className="p-3 text-[var(--color-text-dark-gray)]">
+          <p className="p-3 text-fg-muted">
             Right-click this tab and choose Change connection.
           </p>
         ) : loading ? (
           <div role="status" aria-label="Loading tables" className="flex items-center justify-center gap-2 p-6">
             <Spinner />
-            <span className="text-[var(--color-text-gray)]">Loading tables…</span>
+            <span className="text-fg">Loading tables…</span>
           </div>
         ) : errorText ? (
           <div className="flex flex-col items-start gap-3 p-3">
-            <p role="alert" className="text-[var(--color-text-gray)]">{errorText}</p>
+            <p role="alert" className="text-fg">{errorText}</p>
             <Button type="button" variant="secondary" onClick={onRetry}>Retry</Button>
           </div>
         ) : visible.length === 0 ? (
-          <p className="p-3 text-[var(--color-text-dark-gray)]">
+          <p className="p-3 text-fg-muted">
             {tables.length === 0 ? "No tables found." : `No tables match "${query.trim()}".`}
           </p>
         ) : (
@@ -99,16 +99,16 @@ export function TablesPane({
                     data-logical-name={table.logicalName}
                     aria-current={selected ? "true" : undefined}
                     onClick={() => onSelect(table.logicalName)}
-                    className={`flex w-full flex-col items-start px-3 py-1.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-[var(--color-primary)] ${
+                    className={`flex w-full flex-col items-start px-3 py-1.5 text-left focus:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-focus ${
                       selected
-                        ? "bg-[var(--color-primary)] text-[var(--color-text-white)]"
-                        : "text-[var(--color-text-gray)] hover:bg-[var(--color-hover-bg)]"
+                        ? "bg-accent text-accent-fg"
+                        : "text-fg hover:bg-hover"
                     }`}
                   >
                     <span className="w-full truncate">{displayLabel(table)}</span>
                     <span
                       className={`w-full truncate font-mono text-xs ${
-                        selected ? "text-[var(--color-text-white)]" : "text-[var(--color-text-dark-gray)]"
+                        selected ? "text-fg-strong" : "text-fg-muted"
                       }`}
                     >
                       {table.logicalName}

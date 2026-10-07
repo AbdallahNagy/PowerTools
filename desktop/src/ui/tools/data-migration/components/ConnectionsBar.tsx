@@ -2,6 +2,7 @@ import {
   useConnections,
   type ConnectionInfo,
 } from "../../../shared/connections";
+import { Field, Select } from "../../../shared/ui";
 
 interface ConnectionsBarProps {
   sourceName: string;
@@ -27,7 +28,7 @@ export function ConnectionsBar({
         connections={connections}
         onChange={onSourceChange}
       />
-      <span className="text-[#858585] pb-1.5">→</span>
+      <span className="text-fg-muted pb-1.5">→</span>
       <ConnectionSelect
         label="Target"
         value={targetName}
@@ -55,15 +56,11 @@ function ConnectionSelect({
   onChange,
 }: ConnectionSelectProps) {
   return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs text-[#858585] tracking-wider">
-        {label}
-      </label>
-      <select
+    <Field label={label}>
+      <Select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] text-sm px-2 py-1.5 rounded-sm
-                   focus:outline-none focus:border-focus w-52"
+        className="w-52 [&>select]:bg-raised"
       >
         <option value="">— select —</option>
         {connections.map((c) => (
@@ -71,7 +68,7 @@ function ConnectionSelect({
             {c.name}
           </option>
         ))}
-      </select>
-    </div>
+      </Select>
+    </Field>
   );
 }

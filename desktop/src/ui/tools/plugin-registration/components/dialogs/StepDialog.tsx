@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Checkbox, Modal, Spinner, useToast } from "../../../../shared/ui";
+import { Button, Checkbox, Input, Modal, Select, Spinner, Textarea, useToast } from "../../../../shared/ui";
 import { useEntityAttributes } from "../../api/useEntityAttributes";
 import { useStepMutations } from "../../api/useStepMutations";
 import { useStepOptions } from "../../api/useStepOptions";
@@ -177,9 +177,9 @@ export function StepDialog({
             <div className="grid grid-cols-2 gap-6 min-h-0">
               <div className="flex flex-col gap-3">
                 <FormField label="Message" htmlFor="step-message" problem={problemFor(problems, "messageId")}>
-                  <select
+                  <Select
                     id="step-message"
-                    className={fieldControlClass}
+                    className="[&>select]:bg-raised"
                     value={form.messageId}
                     onChange={(event) =>
                       setForm((current) =>
@@ -193,7 +193,7 @@ export function StepDialog({
                         {message.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </FormField>
                 <FormField
                   label="Primary entity"
@@ -201,9 +201,9 @@ export function StepDialog({
                   problem={problemFor(problems, "filterId")}
                   disabled={!primaryEnabled}
                 >
-                  <select
+                  <Select
                     id="step-primary-entity"
-                    className={fieldControlClass}
+                    className="[&>select]:bg-raised"
                     value={form.primaryEntity}
                     disabled={!primaryEnabled}
                     onChange={(event) =>
@@ -223,16 +223,16 @@ export function StepDialog({
                         {name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </FormField>
                 <FormField
                   label="Secondary entity"
                   htmlFor="step-secondary-entity"
                   disabled={!secondaryEnabled}
                 >
-                  <select
+                  <Select
                     id="step-secondary-entity"
-                    className={fieldControlClass}
+                    className="[&>select]:bg-raised"
                     value={form.secondaryEntity}
                     disabled={!secondaryEnabled}
                     onChange={(event) =>
@@ -252,7 +252,7 @@ export function StepDialog({
                         {name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </FormField>
                 <FormField
                   label="Filtering attributes"
@@ -271,9 +271,9 @@ export function StepDialog({
                   </button>
                 </FormField>
                 <FormField label="Impersonating user" htmlFor="step-user">
-                  <select
+                  <Select
                     id="step-user"
-                    className={fieldControlClass}
+                    className="[&>select]:bg-raised"
                     value={form.impersonatingUserId}
                     onChange={(event) =>
                       setForm((current) => ({
@@ -289,13 +289,13 @@ export function StepDialog({
                         {user.unavailable ? " (unavailable)" : ""}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </FormField>
                 <FormField label="Execution order" htmlFor="step-rank" problem={problemFor(problems, "rank")}>
-                  <input
+                  <Input
                     id="step-rank"
                     type="number"
-                    className={fieldControlClass}
+                    className="bg-raised"
                     value={form.rank}
                     onChange={(event) =>
                       setForm((current) => ({ ...current, rank: Number(event.target.value) }))
@@ -312,8 +312,8 @@ export function StepDialog({
                             key={stage}
                             className={`flex items-center gap-2 text-sm ${
                               disabled
-                                ? "text-[var(--color-text-dark-gray)] cursor-not-allowed"
-                                : "text-[var(--color-text-gray)]"
+                                ? "text-fg-muted cursor-not-allowed"
+                                : "text-fg"
                             }`}
                           >
                             <input
@@ -338,8 +338,8 @@ export function StepDialog({
                             key={mode}
                             className={`flex items-center gap-2 text-sm ${
                               disabled
-                                ? "text-[var(--color-text-dark-gray)] cursor-not-allowed"
-                                : "text-[var(--color-text-gray)]"
+                                ? "text-fg-muted cursor-not-allowed"
+                                : "text-fg"
                             }`}
                           >
                             <input
@@ -360,7 +360,7 @@ export function StepDialog({
                     problem={problemFor(problems, "supportedDeployment")}
                   >
                     <div className="flex flex-col gap-1">
-                      <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+                      <label className="flex items-center gap-2 text-sm text-fg">
                         <Checkbox
                           checked={flags.server}
                           onChange={(checked) =>
@@ -376,7 +376,7 @@ export function StepDialog({
                         />
                         Server
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-[var(--color-text-gray)]">
+                      <label className="flex items-center gap-2 text-sm text-fg">
                         <Checkbox
                           checked={flags.offline}
                           onChange={(checked) =>
@@ -398,8 +398,8 @@ export function StepDialog({
                 <label
                   className={`flex items-center gap-2 text-sm ${
                     asyncDeleteEnabled
-                      ? "text-[var(--color-text-gray)]"
-                      : "text-[var(--color-text-dark-gray)] opacity-60 cursor-not-allowed"
+                      ? "text-fg"
+                      : "text-fg-muted opacity-60 cursor-not-allowed"
                   }`}
                 >
                   <Checkbox
@@ -415,9 +415,9 @@ export function StepDialog({
 
               <div className="flex flex-col gap-3">
                 <FormField label="Name" htmlFor="step-name" problem={problemFor(problems, "name")}>
-                  <input
+                  <Input
                     id="step-name"
-                    className={fieldControlClass}
+                    className="bg-raised"
                     value={form.name}
                     onChange={(event) =>
                       setForm((current) => ({ ...current, name: event.target.value }))
@@ -425,9 +425,9 @@ export function StepDialog({
                   />
                 </FormField>
                 <FormField label="Description" htmlFor="step-description">
-                  <input
+                  <Input
                     id="step-description"
-                    className={fieldControlClass}
+                    className="bg-raised"
                     value={form.description}
                     onChange={(event) =>
                       setForm((current) => ({ ...current, description: event.target.value }))
@@ -439,9 +439,9 @@ export function StepDialog({
                   htmlFor="step-configuration"
                   problem={problemFor(problems, "configuration")}
                 >
-                  <textarea
+                  <Textarea
                     id="step-configuration"
-                    className={`${fieldControlClass} min-h-28`}
+                    className="bg-raised min-h-28"
                     value={form.configuration}
                     onChange={(event) =>
                       setForm((current) => ({ ...current, configuration: event.target.value }))
@@ -479,9 +479,9 @@ export function StepDialog({
                       ))}
                   </div>
                   {form.secureConfigurationAction === "replace" ? (
-                    <textarea
+                    <Textarea
                       aria-label="Replacement secure configuration"
-                      className={`${fieldControlClass} min-h-20`}
+                      className="bg-raised min-h-20"
                       value={form.secureConfiguration}
                       onChange={(event) =>
                         setForm((current) => ({

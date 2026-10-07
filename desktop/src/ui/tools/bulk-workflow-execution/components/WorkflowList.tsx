@@ -53,7 +53,7 @@ export function WorkflowList({
           <span>
             {label}
             {label !== row.primaryEntity ? (
-              <span className="ml-1 text-[var(--color-text-dark-gray)]">{row.primaryEntity}</span>
+              <span className="ml-1 text-fg-muted">{row.primaryEntity}</span>
             ) : null}
           </span>
         );
@@ -64,8 +64,8 @@ export function WorkflowList({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <div className="flex shrink-0 items-center border-b border-[var(--color-border-dark)] bg-[var(--color-bg-darker)] px-3 py-2">
-        <h2 className="text-sm font-medium text-[var(--color-text-white)]">Workflows</h2>
+      <div className="flex shrink-0 items-center border-b border-line bg-surface px-3 py-2">
+        <h2 className="text-sm font-medium text-fg-strong">Workflows</h2>
       </div>
       <div className="shrink-0 p-3">
         <SearchInput value={filter} onChange={onFilterChange} placeholder="Filter workflows" />
@@ -79,11 +79,11 @@ export function WorkflowList({
             <Button type="button" variant="secondary" onClick={onRetry}>Retry</Button>
           </div>
         ) : workflows.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-dark-gray)]">
+          <p className="text-sm text-fg-muted">
             No activated on-demand workflows in this environment.
           </p>
         ) : visible.length === 0 ? (
-          <p className="text-sm text-[var(--color-text-dark-gray)]">No workflows match the filter.</p>
+          <p className="text-sm text-fg-muted">No workflows match the filter.</p>
         ) : (
           <DataTable
             columns={columns}

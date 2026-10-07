@@ -35,7 +35,7 @@ export function ConfirmDialog({
       busy={!!isPending}
       busyLabel={busyLabel}
     >
-      <p className="text-sm text-[var(--color-text-gray)]">{message}</p>
+      <p className="text-sm text-fg">{message}</p>
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={closeDialog} disabled={isPending}>
           Cancel

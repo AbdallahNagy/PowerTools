@@ -187,23 +187,23 @@ function InspectionPreview({
   return (
     <div className="flex flex-col gap-2 text-sm">
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
-        <dt className="text-[var(--color-text-dark-gray)]">Name</dt>
+        <dt className="text-fg-muted">Name</dt>
         <dd>{inspection.identity.name}</dd>
-        <dt className="text-[var(--color-text-dark-gray)]">Version</dt>
+        <dt className="text-fg-muted">Version</dt>
         <dd>
           {registeredVersion
             ? `${registeredVersion} → ${inspection.identity.version}`
             : inspection.identity.version}
         </dd>
-        <dt className="text-[var(--color-text-dark-gray)]">Public key token</dt>
+        <dt className="text-fg-muted">Public key token</dt>
         <dd>{inspection.identity.publicKeyToken}</dd>
-        <dt className="text-[var(--color-text-dark-gray)]">Target framework</dt>
+        <dt className="text-fg-muted">Target framework</dt>
         <dd>{inspection.targetFramework ?? "—"}</dd>
-        <dt className="text-[var(--color-text-dark-gray)]">SHA-256</dt>
+        <dt className="text-fg-muted">SHA-256</dt>
         <dd>{inspection.sha256.slice(0, 12)}</dd>
       </dl>
       <div>
-        <p className="text-xs text-[var(--color-text-dark-gray)]">Plug-in types</p>
+        <p className="text-xs text-fg-muted">Plug-in types</p>
         <ul className="list-disc pl-5">
           {inspection.plugins.map((plugin) => (
             <li key={plugin.typeName}>{plugin.typeName}</li>
@@ -211,7 +211,7 @@ function InspectionPreview({
         </ul>
       </div>
       <div>
-        <p className="text-xs text-[var(--color-text-dark-gray)]">Workflow activities</p>
+        <p className="text-xs text-fg-muted">Workflow activities</p>
         <ul className="list-disc pl-5">
           {inspection.workflowActivities.map((activity) => (
             <li key={activity.typeName}>{activity.typeName}</li>
@@ -224,7 +224,7 @@ function InspectionPreview({
             <li
               key={`${diagnostic.code}-${diagnostic.message}`}
               role="alert"
-              className="text-xs text-[var(--color-text-white)]"
+              className="text-xs text-fg-strong"
             >
               {diagnostic.message}
             </li>
@@ -264,8 +264,8 @@ function CapabilityRadios({
             key={option}
             className={`flex items-center gap-2 text-sm ${
               disabled
-                ? "text-[var(--color-text-dark-gray)] cursor-not-allowed"
-                : "text-[var(--color-text-gray)]"
+                ? "text-fg-muted cursor-not-allowed"
+                : "text-fg"
             }`}
           >
             <input

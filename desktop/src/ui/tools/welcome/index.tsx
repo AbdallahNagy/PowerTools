@@ -68,7 +68,7 @@ const features: {
 
 export default function WelcomeTab() {
   return (
-    <div className="h-full overflow-y-auto bg-(--color-bg-dark) text-(--color-text-white)">
+    <div className="h-full overflow-y-auto bg-canvas text-fg-strong">
       {/* Hero */}
       <div className="relative flex flex-col items-center justify-center px-6 py-16 text-center overflow-hidden">
         {/* Decorative glow */}
@@ -86,12 +86,12 @@ export default function WelcomeTab() {
             style={{
               background: "color-mix(in srgb, var(--color-accent-text) 15%, transparent)",
               border: "1px solid color-mix(in srgb, var(--color-accent-text) 40%, transparent)",
-              color: "var(--color-primary)",
+              color: "var(--color-accent-text)",
             }}
           >
             <span
               className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
-              style={{ background: "var(--color-primary)" }}
+              style={{ background: "var(--color-accent)" }}
             />
             Open-source desktop toolkit
           </span>
@@ -108,7 +108,7 @@ export default function WelcomeTab() {
             PowerTools
           </h1>
 
-          <p className="text-base sm:text-lg leading-relaxed max-w-xl" style={{ color: "var(--color-text-gray)" }}>
+          <p className="text-base sm:text-lg leading-relaxed max-w-xl" style={{ color: "var(--color-fg)" }}>
             A modern open-source desktop toolkit for everyday Dataverse work, with a friendly UI, secure local workflow,
             and tools that are easy to figure out and use.
           </p>
@@ -117,7 +117,7 @@ export default function WelcomeTab() {
             <button
               className="px-5 py-2.5 rounded-md text-sm font-medium transition-opacity hover:opacity-90 active:opacity-75"
               style={{
-                background: "var(--color-primary)",
+                background: "var(--color-accent)",
                 color: "var(--color-accent-fg)",
               }}
               onClick={() => {
@@ -133,9 +133,9 @@ export default function WelcomeTab() {
               rel="noopener noreferrer"
               className="px-5 py-2.5 rounded-md text-sm font-medium transition-colors"
               style={{
-                background: "var(--color-bg-light)",
-                color: "var(--color-text-gray)",
-                border: "1px solid rgba(255,255,255,0.08)",
+                background: "var(--color-raised)",
+                color: "var(--color-fg)",
+                border: "1px solid var(--color-line)",
               }}
               onClick={(event) => {
                 event.preventDefault();
@@ -154,11 +154,11 @@ export default function WelcomeTab() {
       {/* <div
         className="border-y"
         style={{
-          borderColor: "rgba(255,255,255,0.06)",
-          background: "var(--color-bg-darker)",
+          borderColor: "var(--color-line)",
+          background: "var(--color-surface)",
         }}
       >
-        <div className="flex justify-center divide-x divide-white/5 max-w-3xl mx-auto">
+        <div className="flex justify-center divide-x divide-line max-w-3xl mx-auto">
           {[
             // { value: "100%", label: "Local & private" },
             { value: "∞", label: "Environments" },
@@ -167,13 +167,13 @@ export default function WelcomeTab() {
             <div key={stat.label} className="flex flex-col items-center py-5 px-4 gap-1">
               <span
                 className="text-2xl font-bold"
-                style={{ color: "var(--color-primary)" }}
+                style={{ color: "var(--color-accent-text)" }}
               >
                 {stat.value}
               </span>
               <span
                 className="text-xs tracking-wide"
-                style={{ color: "var(--color-text-dark-gray)" }}
+                style={{ color: "var(--color-fg-muted)" }}
               >
                 {stat.label}
               </span>
@@ -185,10 +185,10 @@ export default function WelcomeTab() {
       {/* Features grid */}
       <div id="pt-features" className="px-6 py-14 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ color: "var(--color-text-white)" }}>
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ color: "var(--color-fg-strong)" }}>
             Built for Dataverse developers
           </h2>
-          <p className="text-sm" style={{ color: "var(--color-text-dark-gray)" }}>
+          <p className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
             A focused desktop workspace for developer flow: clear screens, discoverable actions, and less friction
             around repeatable work.
           </p>
@@ -207,8 +207,8 @@ export default function WelcomeTab() {
                       boxShadow: "0 0 24px color-mix(in srgb, var(--color-accent-text) 12%, transparent)",
                     }
                   : {
-                      background: "var(--color-bg-darker)",
-                      border: "1px solid rgba(255,255,255,0.06)",
+                      background: "var(--color-surface)",
+                      border: "1px solid var(--color-line)",
                     }
               }
               onMouseEnter={(e) => {
@@ -220,7 +220,7 @@ export default function WelcomeTab() {
                   (e.currentTarget as HTMLDivElement).style.borderColor = "color-mix(in srgb, var(--color-accent-text) 45%, transparent)";
                   (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 24px color-mix(in srgb, var(--color-accent-text) 12%, transparent)";
                 } else {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "rgba(255,255,255,0.06)";
+                  (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-line)";
                   (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
                 }
               }}
@@ -230,7 +230,7 @@ export default function WelcomeTab() {
                   className="flex items-center justify-center w-11 h-11 rounded-md shrink-0"
                   style={{
                     background: feature.highlight ? "color-mix(in srgb, var(--color-accent-text) 20%, transparent)" : "color-mix(in srgb, var(--color-accent-text) 12%, transparent)",
-                    color: "var(--color-primary)",
+                    color: "var(--color-accent-text)",
                   }}
                 >
                   {feature.icon}
@@ -240,7 +240,7 @@ export default function WelcomeTab() {
                     className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wider uppercase"
                     style={{
                       background: "color-mix(in srgb, var(--color-accent-text) 20%, transparent)",
-                      color: "var(--color-primary)",
+                      color: "var(--color-accent-text)",
                       border: "1px solid color-mix(in srgb, var(--color-accent-text) 35%, transparent)",
                     }}
                   >
@@ -249,10 +249,10 @@ export default function WelcomeTab() {
                 )}
               </div>
               <div>
-                <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-text-white)" }}>
+                <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-fg-strong)" }}>
                   {feature.title}
                 </h3>
-                <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-dark-gray)" }}>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--color-fg-muted)" }}>
                   {feature.description}
                 </p>
               </div>
@@ -264,10 +264,10 @@ export default function WelcomeTab() {
       {/* Current tools */}
       <div className="px-6 pb-14 max-w-5xl mx-auto">
         <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ color: "var(--color-text-white)" }}>
+          <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ color: "var(--color-fg-strong)" }}>
             Current tools
           </h2>
-          <p className="text-sm" style={{ color: "var(--color-text-dark-gray)" }}>
+          <p className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
             PowerTools is a toolkit, starting with the workflows developers need often.
           </p>
         </div>
@@ -278,14 +278,14 @@ export default function WelcomeTab() {
               key={tool.title}
               className="rounded-lg p-5"
               style={{
-                background: "var(--color-bg-darker)",
+                background: "var(--color-surface)",
                 border: "1px solid color-mix(in srgb, var(--color-accent-text) 22%, transparent)",
               }}
             >
-              <h3 className="text-base font-semibold mt-4 mb-2" style={{ color: "var(--color-text-white)" }}>
+              <h3 className="text-base font-semibold mt-4 mb-2" style={{ color: "var(--color-fg-strong)" }}>
                 {tool.title}
               </h3>
-              <p className="text-xs leading-relaxed" style={{ color: "var(--color-text-dark-gray)" }}>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--color-fg-muted)" }}>
                 {tool.description}
               </p>
             </div>
@@ -302,18 +302,18 @@ export default function WelcomeTab() {
         }}
       >
         <div className="text-center sm:text-left">
-          <h3 className="text-lg font-semibold mb-1" style={{ color: "var(--color-text-white)" }}>
+          <h3 className="text-lg font-semibold mb-1" style={{ color: "var(--color-fg-strong)" }}>
             Ready to start building?
           </h3>
-          <p className="text-sm" style={{ color: "var(--color-text-dark-gray)" }}>
+          <p className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
             Open a Dataverse connection, then pick a tool from the activity bar on the left.
           </p>
         </div>
         <div
           className="text-xs px-4 py-2 rounded-md font-mono shrink-0"
           style={{
-            background: "var(--color-bg-dark)",
-            color: "var(--color-primary)",
+            background: "var(--color-canvas)",
+            color: "var(--color-accent-text)",
             border: "1px solid color-mix(in srgb, var(--color-accent-text) 30%, transparent)",
           }}
         >

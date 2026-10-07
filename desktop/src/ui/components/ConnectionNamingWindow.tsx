@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { desktopBridge } from "../platform/desktopBridge";
+import { Field, Input } from "../shared/ui";
 
 const ConnectionNamingWindow = () => {
   const [connectionName, setConnectionName] = useState("");
@@ -12,28 +13,24 @@ const ConnectionNamingWindow = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#1e1e1e] text-[#cccccc] flex flex-col justify-center px-6 py-4 box-border gap-3">
+    <div className="h-screen w-screen bg-canvas text-fg flex flex-col justify-center px-6 py-4 box-border gap-3">
       <div>
-        <h3 className="font-bold text-white mb-1">Name this Connection</h3>
-        <p className="text-xs text-gray-400">
+        <h3 className="font-bold text-fg-strong mb-1">Name this Connection</h3>
+        <p className="text-xs text-fg-muted">
           Give this connection a friendly name (e.g. "Contoso Prod").
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3 w-full">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="connectionName" className="text-xs">
-            Connection Name
-          </label>
-          <input
+        <Field label="Connection Name" id="connectionName">
+          <Input
             type="text"
-            id="connectionName"
             value={connectionName}
             onChange={(e) => setConnectionName(e.target.value)}
-            className="bg-[#3c3c3c] border border-[#3c3c3c] text-[#cccccc] p-2 rounded-sm focus:outline-none focus:border-focus"
+            className="p-2 bg-raised"
             autoFocus
           />
-        </div>
+        </Field>
 
         <button
           type="submit"

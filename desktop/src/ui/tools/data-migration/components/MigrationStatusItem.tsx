@@ -35,33 +35,33 @@ export function MigrationStatusItem({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="hover:bg-white/15 px-1 rounded cursor-pointer"
+        className="hover:bg-accent-fg/15 px-1 rounded cursor-pointer"
       >
         {label}
       </button>
 
       {open && (
         <div
-          className="absolute bottom-full right-0 mb-1 w-96 max-h-64 overflow-auto bg-[#252526] text-[#cccccc] border border-black/40 rounded shadow-lg z-50"
+          className="absolute bottom-full right-0 mb-1 w-96 max-h-64 overflow-auto bg-surface text-fg border border-line rounded shadow-lg z-50"
           style={{ userSelect: "text" }}
         >
-          <div className="px-3 py-1.5 text-xs border-b border-black/40">
+          <div className="px-3 py-1.5 text-xs border-b border-line">
             {job.processed}/{job.total || "?"} processed · {job.succeeded}{" "}
             succeeded · {job.failed} failed
           </div>
           {job.errors.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-[#858585]">No errors.</div>
+            <div className="px-3 py-2 text-xs text-fg-muted">No errors.</div>
           ) : (
             job.errors.map((e, i) => (
               <div
                 key={i}
-                className="px-3 py-2 border-b border-black/20 last:border-0"
+                className="px-3 py-2 border-b border-line last:border-0"
               >
-                <p className="text-xs text-[#858585]">
+                <p className="text-xs text-fg-muted">
                   Record:{" "}
-                  <span className="text-[#cccccc] font-mono">{e.recordId}</span>
+                  <span className="text-fg font-mono">{e.recordId}</span>
                 </p>
-                <p className="text-xs text-[#f48771] mt-0.5">{e.message}</p>
+                <p className="text-xs text-danger mt-0.5">{e.message}</p>
               </div>
             ))
           )}

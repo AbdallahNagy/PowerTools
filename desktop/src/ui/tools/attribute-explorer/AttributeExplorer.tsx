@@ -19,8 +19,8 @@ function AttributeExplorerPage() {
   useToolStatus(explorer.status);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-[var(--color-bg-dark)]">
-      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--color-border-dark)] bg-[var(--color-bg-darker)] px-3 py-2">
+    <div className="flex min-h-0 flex-1 flex-col bg-canvas">
+      <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface px-3 py-2">
         <Button
           type="button"
           variant="secondary"
@@ -36,7 +36,7 @@ function AttributeExplorerPage() {
         <Panel
           defaultSize="30%"
           minSize="20%"
-          className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-darker)]"
+          className="flex min-h-0 min-w-0 flex-col bg-surface"
         >
           <TablesPane
             hasConnection={!!explorer.connectionName}
@@ -52,9 +52,9 @@ function AttributeExplorerPage() {
         </Panel>
         <Separator
           aria-label="Resize panes"
-          className="w-1 cursor-col-resize bg-[var(--color-bg-light)] hover:bg-[var(--color-primary)] active:bg-[var(--color-primary)]"
+          className="w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent"
         />
-        <Panel minSize="30%" className="flex min-h-0 min-w-0 flex-col bg-[var(--color-bg-darker)]">
+        <Panel minSize="30%" className="flex min-h-0 min-w-0 flex-col bg-surface">
           <FieldsPane
             hasConnection={!!explorer.connectionName}
             table={explorer.selectedTable}

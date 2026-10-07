@@ -55,16 +55,16 @@ function Details({
                   <Button
                     type="button"
                     variant="ghost"
-                    className="!px-0 !py-0 font-mono text-[var(--color-primary)] hover:underline"
+                    className="!px-0 !py-0 font-mono text-accent-text hover:underline"
                     onClick={() => onOpenTable(item.logicalName)}
                   >
                     {item.logicalName}
                   </Button>
                 ) : (
-                  <span className="font-mono text-[var(--color-text-gray)]">{item.logicalName}</span>
+                  <span className="font-mono text-fg">{item.logicalName}</span>
                 )}
                 {item.relationship ? (
-                  <span className="font-mono text-xs text-[var(--color-text-dark-gray)]">
+                  <span className="font-mono text-xs text-fg-muted">
                     {item.relationship}
                   </span>
                 ) : null}
@@ -77,16 +77,16 @@ function Details({
       {options ? (
         <Section title="Options">
           {options.name || options.scope ? (
-            <p className="text-[var(--color-text-gray)]">
+            <p className="text-fg">
               {options.name ? <span className="font-mono">{options.name}</span> : null}
               {options.scope ? (
-                <span className="ml-2 text-[var(--color-text-dark-gray)]">{options.scope}</span>
+                <span className="ml-2 text-fg-muted">{options.scope}</span>
               ) : null}
             </p>
           ) : null}
-          <table className="w-full text-left text-[var(--color-text-gray)]">
+          <table className="w-full text-left text-fg">
             <thead>
-              <tr className="text-xs text-[var(--color-text-dark-gray)]">
+              <tr className="text-xs text-fg-muted">
                 <th scope="col" className="w-24 py-0.5 pr-3 font-medium">Value</th>
                 <th scope="col" className="py-0.5 font-medium">Label</th>
               </tr>
@@ -120,7 +120,7 @@ function SectionRows({ section }: { section: DetailSection | undefined }) {
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-1.5">
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-[var(--color-text-dark-gray)]">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-fg-muted">
         {title}
       </h4>
       {children}
@@ -133,11 +133,11 @@ function Rows({ rows }: { rows: Array<{ label: string; value: string; muted?: st
     <dl className="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
       {rows.map((item) => (
         <div key={item.label} className="contents">
-          <dt className="text-[var(--color-text-dark-gray)]">{item.label}</dt>
-          <dd className="min-w-0 break-words text-[var(--color-text-gray)]">
+          <dt className="text-fg-muted">{item.label}</dt>
+          <dd className="min-w-0 break-words text-fg">
             {item.value}
             {item.muted ? (
-              <span className="ml-2 text-xs text-[var(--color-text-dark-gray)]">{item.muted}</span>
+              <span className="ml-2 text-xs text-fg-muted">{item.muted}</span>
             ) : null}
           </dd>
         </div>
@@ -149,8 +149,8 @@ function Rows({ rows }: { rows: Array<{ label: string; value: string; muted?: st
 function NameLine({ label, value, copyLabel }: { label: string; value: string; copyLabel: string }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="w-24 shrink-0 text-[var(--color-text-dark-gray)]">{label}</span>
-      <span className="font-mono text-[var(--color-text-gray)]">{value}</span>
+      <span className="w-24 shrink-0 text-fg-muted">{label}</span>
+      <span className="font-mono text-fg">{value}</span>
       <CopyButton value={value} label={copyLabel} />
     </div>
   );

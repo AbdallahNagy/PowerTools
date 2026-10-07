@@ -67,8 +67,8 @@ export function StartModal({
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <>
-      <dt className="text-[var(--color-text-dark-gray)]">{label}</dt>
-      <dd className="text-[var(--color-text-white)]">{value}</dd>
+      <dt className="text-fg-muted">{label}</dt>
+      <dd className="text-fg-strong">{value}</dd>
     </>
   );
 }

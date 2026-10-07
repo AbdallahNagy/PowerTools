@@ -20,14 +20,14 @@ function Tab({
         group flex items-center h-9 px-4 border-t-2 border-transparent cursor-pointer select-none
         ${
           active
-            ? "bg-(--color-bg-dark) text-white"
-            : "bg-(--color-bg-light) text-(--color-text-gray) hover:text-white"
+            ? "bg-canvas text-fg-strong"
+            : "bg-raised text-fg hover:text-fg-strong"
         }
       `}
     >
       <span className="mr-2 truncate">{title}</span>
       {connectionName ? (
-        <span className="mr-2 max-w-32 truncate text-xs text-(--color-text-dark-gray)">
+        <span className="mr-2 max-w-32 truncate text-xs text-fg-muted">
           {connectionName}
         </span>
       ) : null}
@@ -37,10 +37,10 @@ function Tab({
             e.stopPropagation();
             onClose();
           }}
-          className="invisible group-hover:visible rounded-sm p-0.5 flex items-center justify-center ml-2 cursor-pointer hover:bg-(--color-hover-bg) hover:text-white transition-colors"
+          className="invisible group-hover:visible rounded-sm p-0.5 flex items-center justify-center ml-2 cursor-pointer hover:bg-hover hover:text-fg-strong transition-colors"
         >
             <svg
-              className="w-3.5 h-3.5 text-(--color-text-dark-gray)"
+              className="w-3.5 h-3.5 text-fg-muted"
               aria-hidden="true"
               xmlns="http://www.w3.org/2000/svg"
               width="24"
