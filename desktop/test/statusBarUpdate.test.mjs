@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 import {
   formatAppVersion,
   getUpdateActionLabel,
-} from "../src/ui/components/layout/updateStatus.ts";
+} from "../src/ui/shell/layout/updateStatus.ts";
 
 test("formats the app version from the actual app version value", () => {
   expect(formatAppVersion("0.1.0-beta.0")).toBe("v0.1.0-beta.0");

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 
-import { useTabs } from "../../context/useTabs";
+import { useTabs } from "../tabs/useTabs";
 import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 import ConnectionFooter from "./ConnectionFooter";
 import { filterSidebarItems } from "./sidebarSearch";

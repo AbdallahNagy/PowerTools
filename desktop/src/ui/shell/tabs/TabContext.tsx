@@ -1,6 +1,6 @@
 import { useReducer, type ReactNode } from "react";
-import type { TabData } from "../common/types/tab-data.interface";
-import { getActiveConnectionSnapshot } from "../shared/connections/activeConnectionSnapshot";
+import type { TabData } from "./types";
+import { getActiveConnectionSnapshot } from "../../shared/connections/activeConnectionSnapshot";
 import {
   activateTab,
   addTab as addTabToState,
@@ -9,9 +9,9 @@ import {
   openToolTab,
   setTabConnection as setTabConnectionInState,
   type TabState,
-} from "../shell/tabs/tabState";
-import type { ToolDefinition } from "../tools/defineTool";
-import { TOOL_REGISTRY } from "../tools/registry";
+} from "./tabState";
+import type { ToolDefinition } from "../../tools/defineTool";
+import { TOOL_REGISTRY } from "../../tools/registry";
 import { TabProviderContext } from "./TabProviderContext";
 
 type TabAction =

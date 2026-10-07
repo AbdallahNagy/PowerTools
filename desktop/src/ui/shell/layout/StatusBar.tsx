@@ -3,7 +3,7 @@ import {
   desktopBridge,
   type UpdateStatus,
 } from "../../platform/desktopBridge";
-import { TabProviderContext } from "../../context/TabProviderContext";
+import { TabProviderContext } from "../tabs/TabProviderContext";
 import { useStatusItems } from "../../shared/status";
 import {
   formatAppVersion,

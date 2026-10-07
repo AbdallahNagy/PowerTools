@@ -1,9 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import TabBar from "../../src/ui/components/layout/TabBar";
-import { TabProvider } from "../../src/ui/context/TabContext";
-import { useTabs } from "../../src/ui/context/useTabs";
+import TabBar from "../../src/ui/shell/tabs/TabBar";
+import { TabProvider } from "../../src/ui/shell/tabs/TabContext";
+import { useTabs } from "../../src/ui/shell/tabs/useTabs";
 
 function CloseAllTabs() {
   const { closeTab, tabs } = useTabs();

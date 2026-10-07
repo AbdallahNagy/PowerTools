@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { TabProviderContext } from "../../context/TabProviderContext";
+import { TabProviderContext } from "../../shell/tabs/TabProviderContext";
 import { useToolRuntime } from "../../shell/tool-runtime/useToolRuntime";
 
 export function useTabConnection() {

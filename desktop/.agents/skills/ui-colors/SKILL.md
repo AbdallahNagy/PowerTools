@@ -133,7 +133,7 @@ Import from `src/ui/shared/ui`. Each one already uses the palette, so a tool onl
 - Icons come from `lucide-react`. Do not add inline `<svg>` icons or glyph characters such as `×`, `▸`, or `⠿`.
 - Size them 12–16 in dense UI (`size={14}` is the default choice), and set `aria-hidden="true"`. An icon-only button needs an `aria-label`; `title` alone is not enough.
 - Common choices: `X` remove or close, `Copy` duplicate, `GripVertical` drag handle, `ChevronRight`/`ChevronDown` expand, `RotateCw` refresh, `Search` search.
-- Tool icons are SVG files drawn through `ToolIcon` (`src/ui/components/layout/ToolIcon.tsx`), which uses the file as a mask filled with the current text color. Any single-color SVG works; its own colors are ignored.
+- Tool icons are SVG files drawn through `ToolIcon` (`src/ui/shell/layout/ToolIcon.tsx`), which uses the file as a mask filled with the current text color. Any single-color SVG works; its own colors are ignored.
 
 ## Typography
 

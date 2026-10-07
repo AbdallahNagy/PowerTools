@@ -1,5 +1,14 @@
 import { X } from "lucide-react";
-import type { TabProps } from "../../common/types/tab-props.interface";
+
+interface TabProps {
+  title: string;
+  connectionName?: string | null;
+  content?: React.ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+  onClose?: () => void;
+  onContextMenu?: (event: React.MouseEvent) => void;
+}
 
 function Tab({
   title,

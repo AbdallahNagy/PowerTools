@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import CommandPalette from "../../src/ui/components/layout/CommandPalette";
+import CommandPalette from "../../src/ui/shell/layout/CommandPalette";
 
 describe("command palette results", () => {
   it("keeps the tool title intact and truncates the description in the leftover space", () => {

@@ -2,12 +2,12 @@ import { useEffect, type ReactNode } from "react";
 import { act, fireEvent, screen } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import ActivityBar from "../../src/ui/components/layout/ActivityBar";
-import Layout from "../../src/ui/components/layout/Layout";
-import StatusBar from "../../src/ui/components/layout/StatusBar";
-import TabBar from "../../src/ui/components/layout/TabBar";
-import { TabProvider } from "../../src/ui/context/TabContext";
-import { useTabs } from "../../src/ui/context/useTabs";
+import ActivityBar from "../../src/ui/shell/layout/ActivityBar";
+import Layout from "../../src/ui/shell/layout/Layout";
+import StatusBar from "../../src/ui/shell/layout/StatusBar";
+import TabBar from "../../src/ui/shell/tabs/TabBar";
+import { TabProvider } from "../../src/ui/shell/tabs/TabContext";
+import { useTabs } from "../../src/ui/shell/tabs/useTabs";
 import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { ConnectionsProvider } from "../../src/ui/shared/connections";
 import { StatusBarProvider, useStatusBar } from "../../src/ui/shared/status";

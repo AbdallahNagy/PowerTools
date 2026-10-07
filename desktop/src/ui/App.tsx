@@ -1,8 +1,8 @@
-import Layout from "./components/layout/Layout";
+import Layout from "./shell/layout/Layout";
 import { HashRouter, Routes, Route } from "react-router-dom";
-import ConnectionWindow from "./components/ConnectionWindow";
-import ConnectionNamingWindow from "./components/ConnectionNamingWindow";
-import { TabProvider } from "./context/TabContext";
+import ConnectionWindow from "./shell/connection-windows/ConnectionWindow";
+import ConnectionNamingWindow from "./shell/connection-windows/ConnectionNamingWindow";
+import { TabProvider } from "./shell/tabs/TabContext";
 import { PrimaryActionProvider } from "./shared/keyboard";
 
 function App() {
