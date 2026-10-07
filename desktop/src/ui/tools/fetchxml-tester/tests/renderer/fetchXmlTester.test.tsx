@@ -10,6 +10,7 @@ import { SAMPLE_FETCH_XML } from "../../model/sampleQuery";
 import { fetchXmlTesterTool } from "../../tool";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
+import { codeEditorValue, setCodeEditorValue } from "../../../../../../test/support/codeEditor";
 
 const connection = {
   name: "Dev Org",
@@ -76,9 +77,7 @@ afterAll(() => vi.unstubAllGlobals());
 describe("FetchXML Tester", () => {
   it("keeps an empty query from calling Dataverse", async () => {
     renderTool();
-    fireEvent.change(await screen.findByRole("textbox", { name: "FetchXML" }), {
-      target: { value: "   " },
-    });
+    setCodeEditorValue(await screen.findByRole("textbox", { name: "FetchXML" }), "   ");
 
     expect(screen.getByRole("button", { name: "Execute" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -151,9 +150,7 @@ describe("FetchXML Tester", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Execute" }));
     expect(await screen.findByText("Contoso")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("textbox", { name: "FetchXML" }), {
-      target: { value: "<nope></nope>" },
-    });
+    setCodeEditorValue(screen.getByRole("textbox", { name: "FetchXML" }), "<nope></nope>");
     fireEvent.click(screen.getByRole("button", { name: "Execute" }));
 
     expect(await screen.findByText("Invalid FetchXML: Root element must be <fetch>")).toBeInTheDocument();
@@ -182,13 +179,9 @@ describe("FetchXML Tester", () => {
   it("formats comments, then saves and reloads the query", async () => {
     renderTool();
     const editor = await screen.findByRole("textbox", { name: "FetchXML" });
-    fireEvent.change(editor, {
-      target: {
-        value: "<fetch><entity name=\"account\"><!-- owner --><attribute name=\"name\" /></entity></fetch>",
-      },
-    });
+    setCodeEditorValue(editor, "<fetch><entity name=\"account\"><!-- owner --><attribute name=\"name\" /></entity></fetch>");
     fireEvent.click(screen.getByRole("button", { name: "Format" }));
-    expect(screen.getByRole("textbox", { name: "FetchXML" })).toHaveValue([
+    expect(codeEditorValue(screen.getByRole("textbox", { name: "FetchXML" }))).toBe([
       "<fetch>",
       "  <entity name=\"account\">",
       "    <!-- owner -->",
@@ -215,12 +208,10 @@ describe("FetchXML Tester", () => {
     });
     expect(screen.getByText("account")).toBeInTheDocument();
     fireEvent.click(screen.getByText("account"));
-    fireEvent.change(screen.getByRole("textbox", { name: "FetchXML" }), {
-      target: { value: "<fetch><entity name=\"contact\" /></fetch>" },
-    });
+    setCodeEditorValue(screen.getByRole("textbox", { name: "FetchXML" }), "<fetch><entity name=\"contact\" /></fetch>");
     fireEvent.click(screen.getByText("account"));
     expect(
-      (screen.getByRole("textbox", { name: "FetchXML" }) as HTMLTextAreaElement).value,
+      codeEditorValue(screen.getByRole("textbox", { name: "FetchXML" })),
     ).toContain("<!-- owner -->");
 
     fireEvent.click(screen.getByRole("button", { name: "Delete account saved query" }));

@@ -19,6 +19,7 @@ import {
 import type { RunState } from "../../model/types";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
+import { codeEditorValue, setCodeEditorValue } from "../../../../../../test/support/codeEditor";
 
 class TestResizeObserver {
   observe() {}
@@ -118,7 +119,7 @@ function statusBar() {
 }
 
 function editor() {
-  return screen.getByRole("textbox", { name: "FetchXML" }) as HTMLTextAreaElement;
+  return screen.getByRole("textbox", { name: "FetchXML" });
 }
 
 function startButton() {
@@ -160,13 +161,13 @@ describe("Bulk Workflow Execution", () => {
     expect(viewRows[1]).toHaveTextContent("My AccountsPersonal");
 
     fireEvent.click(screen.getByText("My Accounts"));
-    expect(editor().value).toBe(myAccountsFetch);
+    expect(codeEditorValue(editor())).toBe(myAccountsFetch);
     fireEvent.click(activeView);
-    expect(editor().value).toBe(activeAccountsFetch);
+    expect(codeEditorValue(editor())).toBe(activeAccountsFetch);
 
     await pickWorkflow("Recalculate contact");
     expect(await screen.findByText("No views for Contact. Paste FetchXML below.")).toBeInTheDocument();
-    expect(editor().value).toBe("");
+    expect(codeEditorValue(editor())).toBe("");
     expect(screen.getByText("Real-time workflows run inside each batch. Use a smaller batch size.")).toBeInTheDocument();
     expect(screen.getByRole("spinbutton", { name: "Batch size" })).toHaveValue(25);
   });
@@ -199,7 +200,7 @@ describe("Bulk Workflow Execution", () => {
     expect(counts).toEqual([{ workflowId: approveId, fetchXml: activeAccountsFetch }]);
     expect(startButton()).toBeEnabled();
 
-    fireEvent.change(editor(), { target: { value: `${activeAccountsFetch} ` } });
+    setCodeEditorValue(editor(), `${activeAccountsFetch} `);
     expect(startButton()).toBeDisabled();
     expect(screen.queryByText("1,284 records match")).not.toBeInTheDocument();
   });
@@ -294,7 +295,7 @@ describe("Bulk Workflow Execution", () => {
     await waitFor(() => expect(statusBar()).toHaveTextContent("Stopped: 398 started, 2 errors"));
 
     fireEvent.click(screen.getByRole("button", { name: "New run" }));
-    expect(editor().value).toBe(activeAccountsFetch);
+    expect(codeEditorValue(editor())).toBe(activeAccountsFetch);
     expect(startButton()).toBeDisabled();
     expect(screen.queryByText("1,284 records match")).not.toBeInTheDocument();
   });

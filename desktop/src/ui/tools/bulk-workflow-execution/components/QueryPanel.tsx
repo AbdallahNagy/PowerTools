@@ -1,5 +1,5 @@
 import { useId } from "react";
-import { Button, Input, Spinner, Textarea } from "../../../shared/ui";
+import { Button, CodeEditor, Input, Spinner } from "../../../shared/ui";
 import { formatCount, MAX_BATCH_SIZE, MAX_DELAY_SECONDS, MIN_BATCH_SIZE } from "../model/run";
 import { ErrorLine } from "./Notice";
 
@@ -49,12 +49,11 @@ export function QueryPanel({
         <h2 className="text-sm font-medium text-fg-strong">Query and run</h2>
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-auto p-3">
-        <Textarea
+        <CodeEditor
           aria-label="FetchXML"
-          spellCheck={false}
           value={fetchXml}
-          onChange={(event) => onFetchXmlChange(event.target.value)}
-          className="min-h-32 flex-1 resize-none bg-raised p-2 font-mono text-fg-strong"
+          onChange={onFetchXmlChange}
+          className="min-h-32 flex-1"
         />
         <div className="flex flex-wrap items-center gap-4">
           <label htmlFor={batchId} className="flex items-center gap-2 text-sm text-fg">

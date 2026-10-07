@@ -164,9 +164,9 @@ describe("Solution Components Mover", () => {
     const displayName = screen.getByRole("columnheader", { name: "Display Name" });
     const name = screen.getByRole("columnheader", { name: "Name" });
     expect(displayName).toHaveAttribute("aria-sort", "ascending");
-    expect(displayName).toHaveTextContent("↑");
+    expect(displayName.querySelector(".lucide-arrow-up")).not.toBeNull();
     expect(name).toHaveTextContent("Name");
-    expect(name).not.toHaveTextContent("↑");
+    expect(name.querySelector("svg")).toBeNull();
     expect(displayName.className).not.toMatch(/uppercase/);
     expect(screen.queryByRole("button", { name: /Friendly name/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Unique name/ })).not.toBeInTheDocument();
@@ -177,13 +177,13 @@ describe("Solution Components Mover", () => {
     expect(rows[1]).toHaveTextContent("Managed Core");
     expect(rows[2]).toHaveTextContent("Alpha Widgets");
     expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveAttribute("aria-sort", "ascending");
-    expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveTextContent("↑");
+    expect(screen.getByRole("columnheader", { name: "Installed" }).querySelector(".lucide-arrow-up")).not.toBeNull();
 
     fireEvent.click(installed);
     rows = screen.getAllByRole("row");
     expect(rows[1]).toHaveTextContent("Beta Flows");
     expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveAttribute("aria-sort", "descending");
-    expect(screen.getByRole("columnheader", { name: "Installed" })).toHaveTextContent("↓");
+    expect(screen.getByRole("columnheader", { name: "Installed" }).querySelector(".lucide-arrow-down")).not.toBeNull();
   });
 
   it("reloads solutions from the refresh button", async () => {
