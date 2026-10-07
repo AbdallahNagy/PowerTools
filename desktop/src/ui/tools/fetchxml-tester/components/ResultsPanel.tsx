@@ -27,7 +27,7 @@ export function ResultsPanel({ result }: ResultsPanelProps) {
           <DataTable
             columns={result.columns.map((column) => ({ key: column, header: column }))}
             rows={result.records}
-            getRowKey={(row) => String(result.records.indexOf(row))}
+            getRowKey={(_row, index) => String(index)}
             emptyMessage="No rows returned"
           />
         )}

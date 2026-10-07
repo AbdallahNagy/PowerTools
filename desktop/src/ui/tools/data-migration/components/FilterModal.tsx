@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Field, Modal, Textarea } from "../../../shared/ui";
+import { Button, CodeEditor, Field, Modal } from "../../../shared/ui";
 
 interface FilterModalProps {
   open: boolean;
@@ -73,12 +73,12 @@ export function FilterModal({
           }
           error={xmlError || undefined}
         >
-          <Textarea
+          <CodeEditor
+            aria-label="Filter"
             value={draft}
-            onChange={(e) => handleChange(e.target.value)}
+            onChange={handleChange}
             placeholder={`<filter>\n  <condition attribute="statecode" operator="eq" value="0" />\n</filter>`}
-            spellCheck={false}
-            className="h-32 font-mono text-xs p-3 resize-none"
+            className="h-32"
           />
         </Field>
         <p className="text-xs text-fg-muted mt-1">
@@ -92,9 +92,13 @@ export function FilterModal({
         <p className="text-xs text-fg-muted tracking-wider mb-1.5">
           Composed FetchXML
         </p>
-        <pre className="text-xs font-mono bg-canvas border border-line rounded-sm p-3 overflow-auto max-h-40 text-fg-muted whitespace-pre-wrap">
-          {composed}
-        </pre>
+        <CodeEditor
+          aria-label="Composed FetchXML"
+          value={composed}
+          readOnly
+          lineNumbers={false}
+          className="[&_.cm-editor]:max-h-40"
+        />
       </div>
 
       <div className="flex justify-between pt-1">

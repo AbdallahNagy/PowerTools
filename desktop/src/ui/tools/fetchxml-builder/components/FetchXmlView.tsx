@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "../../../shared/ui";
+import { Button, CodeEditor } from "../../../shared/ui";
 import { formatFetchXml } from "../model/fetchxmlFormat";
 
 interface FetchXmlViewProps {
@@ -32,9 +32,12 @@ export function FetchXmlView({ fetchXml }: FetchXmlViewProps) {
       </div>
 
       {fetchXml ? (
-        <pre className="text-xs text-fg bg-canvas border border-line rounded-sm p-4 overflow-auto whitespace-pre-wrap break-all flex-1 min-h-0 font-mono">
-          {pretty}
-        </pre>
+        <CodeEditor
+          aria-label="Generated FetchXML"
+          value={pretty}
+          readOnly
+          className="flex-1"
+        />
       ) : (
         <div className="flex items-center justify-center flex-1 text-fg-muted text-sm border border-dashed border-line rounded-sm">
           Run a query to see the generated FetchXML.

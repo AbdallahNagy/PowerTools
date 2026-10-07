@@ -1,3 +1,4 @@
+import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FetchResult, FieldMetadata } from "../model/types";
 import { Button, Spinner } from "../../../shared/ui";
@@ -113,7 +114,9 @@ export function ResultsGrid({
                 >
                   {displayNames[col] ?? col}
                   {sortCol === col && (
-                    <span className="ml-1">{sortDesc ? "↓" : "↑"}</span>
+                    <span className="ml-1 inline-flex align-middle" aria-hidden="true">
+                      {sortDesc ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
+                    </span>
                   )}
                 </th>
               ))}
