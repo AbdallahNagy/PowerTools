@@ -8,6 +8,7 @@ export { EmptyState } from "./EmptyState";
 export { Field } from "./Field";
 export { Input, Select, Textarea } from "./Input";
 export { CodeEditor, type CodeEditorProps } from "./CodeEditor";
+export { preloadCodeEditor } from "./loadCodeEditor";
 export { Menu, type MenuItem } from "./Menu";
 export { Modal } from "./Modal";
 export { ProgressBar } from "./ProgressBar";

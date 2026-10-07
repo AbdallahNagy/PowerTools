@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -47,5 +47,22 @@ describe("CodeEditor", () => {
       "aria-readonly",
       "true",
     );
+  });
+});
+
+describe("CodeEditor loading", () => {
+  it("shows a busy frame until the editor code loads, then the editor", async () => {
+    vi.resetModules();
+    const { CodeEditor: FreshCodeEditor } = await import("../../src/ui/shared/ui/CodeEditor");
+    render(<FreshCodeEditor aria-label="FetchXML" value="<fetch />" className="h-32" />);
+
+    const frame = screen.getByLabelText("FetchXML");
+    expect(frame).toHaveAttribute("aria-busy", "true");
+    expect(frame).toHaveClass("h-32");
+
+    await waitFor(() =>
+      expect(codeEditorValue(screen.getByRole("textbox", { name: "FetchXML" }))).toBe("<fetch />"),
+    );
+    expect(screen.queryByLabelText("FetchXML", { selector: "[aria-busy]" })).not.toBeInTheDocument();
   });
 });

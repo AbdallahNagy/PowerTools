@@ -124,7 +124,7 @@ Import from `src/ui/shared/ui`. Each one already uses the palette, so a tool onl
 | `EmptyState` | Where content will appear | Say what goes here and the next step, for example "Select a table to see its fields." |
 | `Toolbar` | The row of controls at the top of a tool or panel | Put the primary action in `end`. |
 | `DataTable` | Tabular results | Sorting and row selection. Above 100 rows only the rows in view are rendered, so thousands of rows stay fast. It scrolls itself (`max-h-full`): give its parent a height, such as `min-h-0 flex-1`. `getRowKey(row, index)` gets the row index; never use `rows.indexOf(row)`. |
-| `CodeEditor` | FetchXML and other XML | CodeMirror 6 with highlighting, undo, and auto-closing tags. `onSubmit` runs on Ctrl+Enter. `readOnly` for generated XML. Give it a height (`flex-1` or `h-32`). In tests, use `setCodeEditorValue` and `codeEditorValue` from `test/support/codeEditor.ts`; `fireEvent.change` does not work on it. |
+| `CodeEditor` | FetchXML and other XML | CodeMirror 6 with highlighting, undo, and auto-closing tags. `onSubmit` runs on Ctrl+Enter. `readOnly` for generated XML. Give it a height (`flex-1` or `h-32`). CodeMirror loads on first use, so the app starts without it; never import `CodeMirrorEditor` or `@codemirror/*` directly from app code, or it moves back into the main bundle. In tests, use `setCodeEditorValue` and `codeEditorValue` from `test/support/codeEditor.ts`; `fireEvent.change` does not work on it. |
 | `ProgressBar`, `Spinner` | Long operations | `ProgressBar` exposes `role="progressbar"`. |
 | `useToast` | Brief confirmation after an action, such as "Step registered." | `success`, `info`, `error`. Errors are announced. |
 
