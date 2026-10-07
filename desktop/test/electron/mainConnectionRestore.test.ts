@@ -93,6 +93,11 @@ vi.mock("../../src/electron/storage.js", () => ({
   saveState: vi.fn(),
 }));
 vi.mock("../../src/electron/utils.js", () => ({ isDev: () => false }));
+vi.mock("../../src/electron/theme.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/electron/theme.js")>()),
+  initializeTheme: () => "system",
+  windowBackgroundColor: () => "#14171c",
+}));
 
 describe("desktop connection restoration", () => {
   beforeEach(() => {

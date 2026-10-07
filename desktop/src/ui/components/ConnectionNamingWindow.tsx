@@ -35,7 +35,7 @@ const ConnectionNamingWindow = () => {
         <button
           type="submit"
           disabled={!connectionName.trim()}
-          className="bg-accent hover:bg-accent-hover text-accent-fg py-2 px-4 rounded-sm font-thin transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="bg-accent hover:bg-accent-hover text-accent-fg py-2 px-4 rounded-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Save
         </button>

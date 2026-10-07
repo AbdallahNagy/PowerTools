@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { handlers, menuState } = vi.hoisted(() => ({
+const { handlers, menuState, themeState } = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),
+  themeState: { shouldUseDarkColors: true, themeSource: "system", on: () => {} },
   menuState: {
     items: [] as Array<{
       label?: string;
@@ -35,6 +36,8 @@ vi.mock("electron", () => {
 
   return {
     BrowserWindow,
+    app: { getPath: () => "/nonexistent-user-data" },
+    nativeTheme: themeState,
     Menu: {
       setApplicationMenu: vi.fn(),
       getApplicationMenu: vi.fn(() => ({ items: menuState.items })),
@@ -75,6 +78,8 @@ describe("window chrome", () => {
   beforeEach(() => {
     handlers.clear();
     menuState.items = [];
+    themeState.shouldUseDarkColors = true;
+    themeState.themeSource = "system";
     vi.resetModules();
   });
 
@@ -95,6 +100,33 @@ describe("window chrome", () => {
       autoHideMenuBar: true,
       backgroundColor: "#1b1f26",
     });
+  });
+
+  it("paints the main window with the light surface in the light theme", async () => {
+    themeState.shouldUseDarkColors = false;
+    const { getMainWindowOptions } = await import("../../src/electron/windowChrome.ts");
+
+    expect(getMainWindowOptions({}).backgroundColor).toBe("#ffffff");
+  });
+
+  it("offers System, Dark, and Light under View > Theme", async () => {
+    const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
+    const onThemeChange = vi.fn();
+    const template = createApplicationMenuTemplate({ theme: "light", onThemeChange });
+    const view = template.find((item) => item.label === "View");
+    const viewItems = view?.submenu as Electron.MenuItemConstructorOptions[];
+    const theme = viewItems.find((item) => item.label === "Theme");
+    const choices = theme?.submenu as Electron.MenuItemConstructorOptions[];
+
+    expect(choices.map((item) => [item.label, item.type, item.checked])).toEqual([
+      ["System", "radio", false],
+      ["Dark", "radio", false],
+      ["Light", "radio", true],
+    ]);
+    expect(viewItems.some((item) => item.role === "toggleDevTools")).toBe(true);
+
+    (choices[1].click as () => void)();
+    expect(onThemeChange).toHaveBeenCalledWith("dark");
   });
 
   it("leaves Ctrl+W free so the shell can close the active tab", async () => {

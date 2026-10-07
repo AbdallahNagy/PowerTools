@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Button, Checkbox, DataTable, Modal, SearchInput, Spinner, ToastProvider, useToast } from "../../shared/ui";
@@ -988,16 +989,11 @@ function PickerStep({
         onClick={onToggle}
         className="flex w-full items-center gap-2 rounded-sm border border-line bg-raised px-3 py-2 text-left hover:bg-hover"
       >
-        <svg
-          className={`h-3 w-3 shrink-0 text-fg-muted ${expanded ? "rotate-90" : ""}`}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+        <ChevronRight
+          size={12}
+          className={`shrink-0 text-fg-muted ${expanded ? "rotate-90" : ""}`}
           aria-hidden="true"
-        >
-          <path d="m9 6 6 6-6 6" />
-        </svg>
+        />
         <span className="text-sm text-fg-strong">{title}</span>
         {summary ? (
           <span className="truncate text-xs text-fg-muted">{summary}</span>

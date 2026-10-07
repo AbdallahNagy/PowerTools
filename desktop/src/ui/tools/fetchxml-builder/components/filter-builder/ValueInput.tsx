@@ -1,3 +1,4 @@
+import { Search, X } from "lucide-react";
 import { useState } from "react";
 import type { FieldMetadata, FilterCondition, Operator } from "../../model/types";
 import { NO_VALUE_OPERATORS, MULTI_VALUE_OPERATORS } from "../../model/operators";
@@ -61,7 +62,7 @@ export function ValueInput({
             <span className="truncate text-fg-muted">
               {selected.length ? `${selected.length} selected` : "Select records..."}
             </span>
-            <SearchIcon />
+            <Search size={14} aria-hidden="true" />
           </button>
           {selected.length > 0 && (
             <div className="flex flex-wrap gap-1">
@@ -82,9 +83,10 @@ export function ValueInput({
                         valueLabels: nextLabels,
                       });
                     }}
+                    aria-label={`Remove ${valueLabels?.[v] ?? v}`}
                     className="hover:text-fg-strong"
                   >
-                    ×
+                    <X size={12} aria-hidden="true" />
                   </button>
                 </span>
               ))}
@@ -159,9 +161,10 @@ export function ValueInput({
                 <button
                   type="button"
                   onClick={() => onChange(selected.filter((x) => x !== v))}
+                  aria-label={`Remove ${v}`}
                   className="hover:text-fg-strong"
                 >
-                  ×
+                  <X size={12} aria-hidden="true" />
                 </button>
               </span>
             ))}
@@ -192,7 +195,7 @@ export function ValueInput({
           onClick={() => setLookupOpen(true)}
           className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-fg-muted hover:text-fg-strong rounded hover:bg-hover"
         >
-          <SearchIcon />
+          <Search size={14} aria-hidden="true" />
         </button>
         <LookupPickerModal
           open={lookupOpen}
@@ -270,20 +273,4 @@ export function ValueInput({
 
 function isRecordPickerField(field: FieldMetadata, recordTarget?: string): boolean {
   return LOOKUP_TYPES.has(field.attributeType) || (field.isPrimaryId && !!recordTarget);
-}
-
-function SearchIcon() {
-  return (
-    <svg
-      className="w-3.5 h-3.5 shrink-0"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <circle cx="11" cy="11" r="8" />
-      <path d="m21 21-4.35-4.35" />
-    </svg>
-  );
 }

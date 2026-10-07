@@ -6,11 +6,29 @@
  *   --color-canvas   -> bg-canvas, text-canvas, border-canvas
  *   --color-fg-muted -> text-fg-muted
  *
- * Dark is the default. Light values live under [data-theme="light"].
+ * Dark is the default. Light values live under [data-theme="light"]. The user
+ * picks System, Dark, or Light in View > Theme; src/ui/shell/theme/colorScheme.ts
+ * sets data-theme on <html> to match.
  * See desktop/.agents/skills/ui-colors/SKILL.md before adding a token.
  */
 
 @theme {
+  /* Type. IBM Plex is bundled (src/ui/styles/fonts.ts); the fallbacks cover first paint. */
+  --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+
+  /* Fixed scale for a dense desktop UI: 11 / 12 / 13 / 15 / 18. Body text is text-sm. */
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1rem;
+  --text-sm: 0.8125rem;
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.9375rem;
+  --text-base--line-height: 1.375rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.625rem;
+
   /* Surfaces, from back to front */
   --color-canvas: #14171c;
   --color-surface: #1b1f26;

@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 import type { TabProps } from "../../common/types/tab-props.interface";
 
 function Tab({
@@ -39,23 +40,7 @@ function Tab({
           }}
           className="invisible group-hover:visible rounded-sm p-0.5 flex items-center justify-center ml-2 cursor-pointer hover:bg-hover hover:text-fg-strong transition-colors"
         >
-            <svg
-              className="w-3.5 h-3.5 text-fg-muted"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18 17.94 6M18 18 6.06 6"
-              />
-            </svg>
+            <X size={14} className="text-fg-muted" aria-hidden="true" />
         </button>
       )}
     </div>

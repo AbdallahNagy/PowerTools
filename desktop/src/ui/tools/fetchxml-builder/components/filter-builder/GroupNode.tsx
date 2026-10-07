@@ -1,3 +1,4 @@
+import { GripVertical } from "lucide-react";
 import { Fragment, useRef } from "react";
 import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import type {
@@ -69,9 +70,9 @@ export function GroupNode({
             onMouseUp={() => {
               handleArmed.current = false;
             }}
-            className="text-fg-muted hover:text-fg-strong cursor-grab active:cursor-grabbing select-none text-sm leading-none px-0.5"
+            className="text-fg-muted hover:text-fg-strong cursor-grab active:cursor-grabbing select-none px-0.5"
           >
-            ⠿
+            <GripVertical size={14} aria-hidden="true" />
           </span>
         )}
         <button

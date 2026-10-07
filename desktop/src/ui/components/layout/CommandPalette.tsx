@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { filterSidebarItems } from "./sidebarSearch";
+import { ToolIcon } from "./ToolIcon";
 
 export interface QuickOpenTool {
   id: string;
@@ -143,11 +144,7 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
                   onOpen(tool.id);
                 }}
               >
-                <img
-                  src={tool.icon}
-                  alt=""
-                  className="h-5 w-5 brightness-0 invert opacity-80"
-                />
+                <ToolIcon src={tool.icon} />
                 <span className="min-w-0 truncate">{tool.title}</span>
                 {tool.tooltip && tool.tooltip !== tool.title ? (
                   <span className="min-w-0 flex-1 truncate text-xs text-fg-muted">

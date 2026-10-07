@@ -1,3 +1,4 @@
+import { GripVertical, Copy, X } from "lucide-react";
 import { useRef } from "react";
 import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import type {
@@ -87,9 +88,9 @@ export function ConditionNode({
           onMouseUp={() => {
             handleArmed.current = false;
           }}
-          className="text-fg-muted hover:text-fg-strong cursor-grab active:cursor-grabbing select-none text-sm leading-none px-0.5"
+          className="text-fg-muted hover:text-fg-strong cursor-grab active:cursor-grabbing select-none px-0.5"
         >
-          ⠿
+          <GripVertical size={14} aria-hidden="true" />
         </span>
 
         <FieldPicker
@@ -127,19 +128,21 @@ export function ConditionNode({
           <button
             type="button"
             title="Duplicate"
+            aria-label="Duplicate"
             onClick={() => actions.duplicate(condition.id)}
             className="text-fg-muted hover:text-fg-strong text-xs px-1 py-0.5 rounded hover:bg-hover"
           >
-            ⧉
+            <Copy size={13} aria-hidden="true" />
           </button>
           <button
             type="button"
             title="Remove"
+            aria-label="Remove"
             onClick={() => actions.remove(condition.id)}
             disabled={!canRemove}
             className="text-fg-muted hover:text-danger text-xs px-1 py-0.5 rounded hover:bg-hover disabled:opacity-30"
           >
-            ✕
+            <X size={13} aria-hidden="true" />
           </button>
         </div>
       </div>
