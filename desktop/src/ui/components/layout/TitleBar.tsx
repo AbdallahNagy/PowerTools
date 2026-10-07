@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Copy, Minus, PanelLeft, Square, X } from "lucide-react";
 
 import PowerToolsIcon from "../../assets/icons/power-tools-preview-256.png";
 import { desktopBridge } from "../../platform/desktopBridge";
@@ -62,18 +63,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
             }`}
           onClick={onToggleSidebar}
         >
-          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <rect
-              x="3"
-              y="4"
-              width="18"
-              height="16"
-              rx="2"
-              stroke="currentColor"
-              strokeWidth="2"
-            />
-            <path d="M9 4v16" stroke="currentColor" strokeWidth="2" />
-          </svg>
+          <PanelLeft size={16} aria-hidden="true" />
         </button>
       </div>
 
@@ -96,9 +86,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
             void desktopBridge.minimizeWindow();
           }}
         >
-          <svg className="h-3 w-3" viewBox="0 0 12 12" aria-hidden="true">
-            <path d="M1 6h10" stroke="currentColor" strokeWidth="1.2" />
-          </svg>
+          <Minus size={14} strokeWidth={1.5} aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -110,26 +98,9 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
           }}
         >
           {maximized ? (
-            <svg className="h-3 w-3" viewBox="0 0 12 12" aria-hidden="true">
-              <path
-                d="M3.5 4.5h6v6h-6zM2.5 7.5V2.5h5"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.2"
-              />
-            </svg>
+            <Copy size={12} strokeWidth={1.5} className="-scale-x-100" aria-hidden="true" />
           ) : (
-            <svg className="h-3 w-3" viewBox="0 0 12 12" aria-hidden="true">
-              <rect
-                x="2.5"
-                y="2.5"
-                width="7"
-                height="7"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.2"
-              />
-            </svg>
+            <Square size={12} strokeWidth={1.5} aria-hidden="true" />
           )}
         </button>
         <button
@@ -141,9 +112,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
             void desktopBridge.closeWindow();
           }}
         >
-          <svg className="h-3 w-3" viewBox="0 0 12 12" aria-hidden="true">
-            <path d="M2 2l8 8M10 2L2 10" stroke="currentColor" strokeWidth="1.2" />
-          </svg>
+          <X size={14} strokeWidth={1.5} aria-hidden="true" />
         </button>
       </div>
     </header>

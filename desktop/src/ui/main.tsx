@@ -3,11 +3,15 @@ import { createRoot } from "react-dom/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
+import "./styles/fonts.ts";
 import "./index.css";
 import App from "./App.tsx";
 import { queryClient } from "./shared/api/queryClient.ts";
 import { clearAuthCache } from "./shared/api/client.ts";
 import { getDesktopBridge } from "./platform/desktopBridge.ts";
+import { followColorScheme } from "./shell/theme/colorScheme.ts";
+
+followColorScheme();
 
 // When the active connection changes, drop cached auth and any server data
 // from the previous org so the next query fetches fresh.

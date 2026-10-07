@@ -1,3 +1,4 @@
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { MouseEvent } from "react";
 import type { TreeNode } from "../model/catalogTree";
 
@@ -48,7 +49,11 @@ export function TreeNodeRow({
             onClick={() => onToggle(node.id)}
             className="w-5 h-5 flex items-center justify-center text-fg-muted"
           >
-            {isExpanded ? "▾" : "▸"}
+            {isExpanded ? (
+              <ChevronDown size={14} aria-hidden="true" />
+            ) : (
+              <ChevronRight size={14} aria-hidden="true" />
+            )}
           </button>
         ) : (
           <span className="w-5 h-5" />

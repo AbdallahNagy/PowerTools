@@ -1,3 +1,4 @@
+import { GripVertical, Copy, X } from "lucide-react";
 import { useRef } from "react";
 import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import { useEntityRelationships } from "../../hooks/useEntityRelationships";
@@ -73,9 +74,9 @@ export function RelationshipNode({
           onMouseUp={() => {
             handleArmed.current = false;
           }}
-          className="cursor-grab select-none px-0.5 text-sm leading-none text-fg-muted hover:text-fg-strong active:cursor-grabbing"
+          className="cursor-grab select-none px-0.5 text-fg-muted hover:text-fg-strong active:cursor-grabbing"
         >
-          ⠿
+          <GripVertical size={14} aria-hidden="true" />
         </span>
         <span className="text-xs text-fg-muted">Related</span>
         <span className="max-w-72 truncate text-sm font-medium text-fg" title={relationshipLabel(node)}>
@@ -85,18 +86,20 @@ export function RelationshipNode({
           <button
             type="button"
             title="Duplicate related table filter"
+            aria-label="Duplicate related table filter"
             onClick={() => actions.duplicate(node.id)}
             className="rounded px-1 py-0.5 text-xs text-fg-muted hover:bg-hover hover:text-fg-strong"
           >
-            ⧉
+            <Copy size={13} aria-hidden="true" />
           </button>
           <button
             type="button"
             title="Remove related table filter"
+            aria-label="Remove related table filter"
             onClick={() => actions.remove(node.id)}
             className="rounded px-1 py-0.5 text-xs text-fg-muted hover:bg-hover hover:text-danger"
           >
-            ✕
+            <X size={13} aria-hidden="true" />
           </button>
         </div>
       </div>

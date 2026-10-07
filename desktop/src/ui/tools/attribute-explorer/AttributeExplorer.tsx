@@ -1,4 +1,5 @@
 import { Group, Panel, Separator } from "react-resizable-panels";
+import { RotateCw } from "lucide-react";
 import { useToolStatus } from "../../shared/status";
 import { Button, Spinner, ToastProvider } from "../../shared/ui";
 import { FieldDetailsModal } from "./components/FieldDetailsModal";
@@ -83,18 +84,6 @@ function AttributeExplorerPage() {
 
 function RefreshIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3.5 w-3.5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M20 11a8 8 0 1 0-2.3 5.7" />
-      <path d="M20 4v7h-7" />
-    </svg>
+    <RotateCw size={14} aria-hidden="true" />
   );
 }

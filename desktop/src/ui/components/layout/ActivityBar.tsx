@@ -5,6 +5,7 @@ import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 import ConnectionFooter from "./ConnectionFooter";
 import { filterSidebarItems } from "./sidebarSearch";
 import { Input } from "../../shared/ui";
+import { ToolIcon } from "./ToolIcon";
 
 const ActivityBar = () => {
   const { openTool } = useTabs();
@@ -40,11 +41,7 @@ const ActivityBar = () => {
             className="mb-0.5 flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-fg hover:bg-hover hover:text-fg-strong"
             onClick={() => openTool(tool.id)}
           >
-            <img
-              src={tool.icon}
-              alt=""
-              className="h-5 w-5 brightness-0 invert opacity-80"
-            />
+            <ToolIcon src={tool.icon} />
             <span className="truncate">{tool.title}</span>
           </button>
         ))}

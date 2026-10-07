@@ -10,6 +10,8 @@ description: "Use when making any UI modification that involves color or shared 
 - Tokens live in `src/ui/styles/theme.css`, inside Tailwind's `@theme`.
 - Each `--color-<name>` token generates utilities: `bg-<name>`, `text-<name>`, `border-<name>`, `ring-<name>`, `accent-<name>`, `fill-<name>`, and so on.
 - Tokens are named by **role**, not by value. Dark is the default theme. `[data-theme="light"]` redefines the same names, so a component that uses tokens works in both themes without changes.
+- The user picks **System**, **Dark**, or **Light** in **View > Theme**. The main process (`src/electron/theme.ts`) saves the choice in `settings.json` and sets `nativeTheme.themeSource`. The renderer follows `prefers-color-scheme` and sets `data-theme` on `<html>` (`src/ui/shell/theme/colorScheme.ts`). Window background colors in `theme.ts` mirror `surface` and `canvas`; change both places together.
+- Always check a change in both themes. Anything drawn with a fixed color, such as an image or an inverted icon, breaks in one of them.
 - Identity: cool slate neutrals with one deep teal accent. Teal is the only brand color. Blue is not part of the palette.
 
 ## Palette
@@ -125,7 +127,28 @@ Import from `src/ui/shared/ui`. Each one already uses the palette, so a tool onl
 | `ProgressBar`, `Spinner` | Long operations | `ProgressBar` exposes `role="progressbar"`. |
 | `useToast` | Brief confirmation after an action, such as "Step registered." | `success`, `info`, `error`. Errors are announced. |
 
-Icons come from `lucide-react`. Size them 14–16 in dense UI, and set `aria-hidden="true"` when text already labels the control.
+## Icons
+
+- Icons come from `lucide-react`. Do not add inline `<svg>` icons or glyph characters such as `×`, `▸`, or `⠿`.
+- Size them 12–16 in dense UI (`size={14}` is the default choice), and set `aria-hidden="true"`. An icon-only button needs an `aria-label`; `title` alone is not enough.
+- Common choices: `X` remove or close, `Copy` duplicate, `GripVertical` drag handle, `ChevronRight`/`ChevronDown` expand, `RotateCw` refresh, `Search` search.
+- Tool icons are SVG files drawn through `ToolIcon` (`src/ui/components/layout/ToolIcon.tsx`), which uses the file as a mask filled with the current text color. Any single-color SVG works; its own colors are ignored.
+
+## Typography
+
+- IBM Plex Sans for UI text, IBM Plex Mono for content: GUIDs, logical names in code-like contexts, FetchXML, JSON, and logs. Both are bundled (`src/ui/styles/fonts.ts`); do not load fonts from the network.
+- Use `font-sans` (the default) and `font-mono`. Weights: 400 body, 500 `font-medium` for labels and buttons, 600 `font-semibold` for headings, 700 `font-bold` sparingly.
+- Fixed scale, defined in `theme.css`:
+
+| Class | Size / line height | Use |
+|---|---|---|
+| `text-2xs` | 11 / 16 | Badges, dense metadata |
+| `text-xs` | 12 / 16 | Labels, hints, table headers, status bar |
+| `text-sm` | 13 / 20 | Body text, controls, table cells (the default) |
+| `text-base` | 15 / 22 | Panel headings, emphasis |
+| `text-lg` | 18 / 26 | Page and dialog titles |
+
+Larger sizes (`text-xl` and up) are only for the Welcome page.
 
 ## Legacy names (removed)
 

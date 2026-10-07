@@ -163,7 +163,7 @@ export function LookupPickerModal({
                   <td className="px-3 py-2 text-xs max-w-sm truncate" title={record.name}>
                     {record.name}
                   </td>
-                  <td className="px-3 py-2 text-xs max-w-xs truncate text-fg-muted" title={record.id}>
+                  <td className="px-3 py-2 font-mono text-xs max-w-xs truncate text-fg-muted" title={record.id}>
                     {record.id}
                   </td>
                   <td className="px-3 py-2 text-xs whitespace-nowrap text-fg-muted" title={record.createdOn ?? ""}>

@@ -9,11 +9,29 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
+      /* Mirrors canvas, fg-strong, fg, line and accent-text in src/ui/styles/theme.css. */
       :root {
-        color-scheme: dark;
+        color-scheme: dark light;
         font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        background: #14171c;
-        color: #ffffff;
+        --canvas: #14171c;
+        --fg-strong: #f3f5f8;
+        --fg: #d3d8df;
+        --line: #2e3540;
+        --accent-text: #3fbfae;
+        --shadow: rgba(0, 0, 0, 0.28);
+        background: var(--canvas);
+        color: var(--fg-strong);
+      }
+
+      @media (prefers-color-scheme: light) {
+        :root {
+          --canvas: #f6f7f9;
+          --fg-strong: #0f1216;
+          --fg: #2a303a;
+          --line: #d6dae1;
+          --accent-text: #1a6e64;
+          --shadow: rgba(15, 18, 22, 0.12);
+        }
       }
 
       * {
@@ -23,8 +41,8 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
       body {
         align-items: center;
         background:
-          linear-gradient(135deg, rgba(42, 157, 143, 0.16), transparent 42%),
-          #14171c;
+          linear-gradient(135deg, color-mix(in srgb, var(--accent-text) 16%, transparent), transparent 42%),
+          var(--canvas);
         display: flex;
         height: 100vh;
         justify-content: center;
@@ -45,7 +63,7 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
 
       .mark {
         border-radius: 8px;
-        box-shadow: 0 18px 36px rgba(0, 0, 0, 0.28);
+        box-shadow: 0 18px 36px var(--shadow);
         height: 64px;
         object-fit: cover;
         width: 64px;
@@ -59,7 +77,7 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
       }
 
       p {
-        color: #d3d8df;
+        color: var(--fg);
         font-size: 13px;
         line-height: 1.5;
         margin: 0;
@@ -74,8 +92,8 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
 
       .spinner {
         animation: spin 0.9s linear infinite;
-        border: 2px solid rgba(255, 255, 255, 0.22);
-        border-top-color: #3fbfae;
+        border: 2px solid var(--line);
+        border-top-color: var(--accent-text);
         border-radius: 999px;
         height: 18px;
         width: 18px;

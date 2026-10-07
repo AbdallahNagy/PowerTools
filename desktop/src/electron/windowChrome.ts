@@ -4,6 +4,13 @@ import {
   type IpcMain,
   type IpcMainInvokeEvent,
 } from "electron";
+import {
+  applyThemePreference,
+  createThemeMenuItems,
+  saveThemePreference,
+  windowBackgroundColor,
+  type ThemePreference,
+} from "./theme.js";
 
 export const TITLE_BAR_MENU_IDS = ["file", "edit", "view", "help"] as const;
 export type TitleBarMenuId = (typeof TITLE_BAR_MENU_IDS)[number];
@@ -55,16 +62,47 @@ export function getMainWindowOptions(
     ...options,
     frame: false,
     autoHideMenuBar: true,
-    // Matches --color-surface (theme.css) so the frameless chrome has no white flash.
-    backgroundColor: "#1b1f26",
+    // Matches --color-surface (theme.css) so the frameless chrome has no flash.
+    backgroundColor: windowBackgroundColor(),
   };
 }
 
-export function createApplicationMenuTemplate(): Electron.MenuItemConstructorOptions[] {
+export interface ThemeMenuOptions {
+  theme: ThemePreference;
+  onThemeChange: (theme: ThemePreference) => void;
+}
+
+const DEFAULT_THEME_MENU: ThemeMenuOptions = {
+  theme: "system",
+  onThemeChange: (theme) => {
+    applyThemePreference(theme);
+    saveThemePreference(theme);
+  },
+};
+
+export function createApplicationMenuTemplate(
+  themeMenu: ThemeMenuOptions = DEFAULT_THEME_MENU,
+): Electron.MenuItemConstructorOptions[] {
   return [
     { role: "fileMenu" },
     { role: "editMenu" },
-    { role: "viewMenu" },
+    {
+      label: "View",
+      submenu: [
+        { label: "Theme", submenu: createThemeMenuItems(themeMenu.theme, themeMenu.onThemeChange) },
+        { type: "separator" },
+        // The rest matches Electron's default viewMenu role.
+        { role: "reload" },
+        { role: "forceReload" },
+        { role: "toggleDevTools" },
+        { type: "separator" },
+        { role: "resetZoom" },
+        { role: "zoomIn" },
+        { role: "zoomOut" },
+        { type: "separator" },
+        { role: "togglefullscreen" },
+      ],
+    },
     {
       label: "Window",
       submenu: [
@@ -78,8 +116,10 @@ export function createApplicationMenuTemplate(): Electron.MenuItemConstructorOpt
   ];
 }
 
-export function installApplicationMenu(): void {
-  Menu.setApplicationMenu(Menu.buildFromTemplate(createApplicationMenuTemplate()));
+export function installApplicationMenu(theme: ThemePreference = "system"): void {
+  Menu.setApplicationMenu(
+    Menu.buildFromTemplate(createApplicationMenuTemplate({ ...DEFAULT_THEME_MENU, theme })),
+  );
 }
 
 function senderWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
@@ -90,8 +130,8 @@ function senderWindow(event: IpcMainInvokeEvent): BrowserWindow | null {
   return window;
 }
 
-export function registerWindowChromeIpc(ipcMain: IpcMain): void {
-  installApplicationMenu();
+export function registerWindowChromeIpc(ipcMain: IpcMain, theme: ThemePreference = "system"): void {
+  installApplicationMenu(theme);
 
   ipcMain.handle("popup-app-menu", (event, menuId: unknown, x: unknown, y: unknown) => {
     const parsedMenuId = parseTitleBarMenuId(menuId);

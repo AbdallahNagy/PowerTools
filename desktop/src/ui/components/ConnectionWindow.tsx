@@ -167,7 +167,7 @@ const ConnectionWindow = () => {
         <button
           type="submit"
           disabled={loading}
-          className="mt-4 bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-accent-fg py-2 px-4 rounded-sm font-thin transition-colors"
+          className="mt-4 bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-accent-fg py-2 px-4 rounded-sm font-medium transition-colors"
         >
           {loading ? "Authenticating…" : "Connect"}
         </button>

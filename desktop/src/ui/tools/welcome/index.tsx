@@ -1,3 +1,4 @@
+import { ArrowLeftRight, List, ShieldCheck, Sparkles } from "lucide-react";
 import type { ReactElement } from "react";
 import { desktopBridge } from "../../platform/desktopBridge";
 import { PUBLIC_TOOLS } from "../publicCatalog";
@@ -10,13 +11,7 @@ const features: {
 }[] = [
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.456-2.456L14.25 6l1.035-.259a3.375 3.375 0 0 0 2.456-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456ZM16.894 20.567 16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394-1.183.394a2.25 2.25 0 0 0-1.423 1.423Z"
-        />
-      </svg>
+      <Sparkles size={28} strokeWidth={1.5} aria-hidden="true" />
     ),
     title: "Modern UI",
     description:
@@ -24,13 +19,7 @@ const features: {
   },
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M8.25 6.75h12M8.25 12h12M8.25 17.25h12M3.75 6.75h.008v.008H3.75V6.75ZM3.75 12h.008v.008H3.75V12ZM3.75 17.25h.008v.008H3.75v-.008Z"
-        />
-      </svg>
+      <List size={28} strokeWidth={1.5} aria-hidden="true" />
     ),
     title: "Friendly UX",
     description:
@@ -38,13 +27,7 @@ const features: {
   },
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.75A11.959 11.959 0 0 1 12 2.714Z"
-        />
-      </svg>
+      <ShieldCheck size={28} strokeWidth={1.5} aria-hidden="true" />
     ),
     title: "Local and secure",
     description:
@@ -52,13 +35,7 @@ const features: {
   },
   {
     icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7" stroke="currentColor" strokeWidth={1.5}>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M17.25 6.75 21 12m0 0-3.75 5.25M21 12H3m3.75-5.25L3 12m0 0 3.75 5.25"
-        />
-      </svg>
+      <ArrowLeftRight size={28} strokeWidth={1.5} aria-hidden="true" />
     ),
     title: "Open source",
     description:

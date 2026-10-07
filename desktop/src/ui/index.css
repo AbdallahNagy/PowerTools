@@ -16,8 +16,9 @@
     min-width: 320px;
     background-color: var(--color-canvas);
     color: var(--color-fg);
-    font-family: system-ui, "Segoe UI", sans-serif;
-    line-height: 1.5;
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;

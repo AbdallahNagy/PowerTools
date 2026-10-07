@@ -34,6 +34,7 @@ import {
   getMainWindowOptions,
   registerWindowChromeIpc,
 } from "./windowChrome.js";
+import { initializeTheme, windowBackgroundColor } from "./theme.js";
 
 const { autoUpdater } = electronUpdater;
 
@@ -42,6 +43,7 @@ type PendingConnection =
   | Omit<StoredOnPremisesConnection, "name">;
 
 app.whenReady().then(async () => {
+  const theme = initializeTheme();
   const splashWindow = createStartupSplashWindow();
   let updateStatus: UpdateStatus = { state: "idle" };
   let updateController: AutoUpdateController | null = null;
@@ -81,7 +83,7 @@ app.whenReady().then(async () => {
     }
     await shell.openExternal(parsed.toString());
   });
-  registerWindowChromeIpc(ipcMain);
+  registerWindowChromeIpc(ipcMain, theme);
 
   let connectionWindow: BrowserWindow | null = null;
 
@@ -223,6 +225,7 @@ app.whenReady().then(async () => {
       height: 600,
       icon: getAppIconPath(),
       autoHideMenuBar: true,
+      backgroundColor: windowBackgroundColor("canvas"),
     });
 
     if (isDev()) {
@@ -297,6 +300,7 @@ app.whenReady().then(async () => {
       height: 300,
       icon: getAppIconPath(),
       autoHideMenuBar: true,
+      backgroundColor: windowBackgroundColor("canvas"),
       resizable: false,
     });
 

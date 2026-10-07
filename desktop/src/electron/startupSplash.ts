@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getAppIconPath } from "./pathResolver.js";
 import { buildStartupSplashHtml } from "./startupSplashHtml.js";
+import { windowBackgroundColor } from "./theme.js";
 
 function getStartupIconDataUrl() {
   const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -43,7 +44,7 @@ export function createStartupSplashWindow() {
     center: true,
     alwaysOnTop: true,
     autoHideMenuBar: true,
-    backgroundColor: "#14171c",
+    backgroundColor: windowBackgroundColor("canvas"),
     icon: getAppIconPath(),
     webPreferences: {
       sandbox: true,

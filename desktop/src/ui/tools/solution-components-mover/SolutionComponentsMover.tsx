@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { RotateCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { desktopBridge } from "../../platform/desktopBridge";
@@ -395,20 +396,7 @@ function SolutionComponentsMoverPage() {
 
 function RefreshIcon() {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4"
-      aria-hidden="true"
-    >
-      <path d="M20 12a8 8 0 1 1-2.3-5.7" />
-      <path d="M20 4v5h-5" />
-    </svg>
+    <RotateCw size={16} strokeWidth={1.8} aria-hidden="true" />
   );
 }
 
