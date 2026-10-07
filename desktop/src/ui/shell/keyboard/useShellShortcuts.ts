@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-import { useTabs } from "../../context/useTabs";
+import { useTabs } from "../tabs/useTabs";
 import { usePrimaryActionRegistry } from "../../shared/keyboard";
 import {
   cycleTabId,

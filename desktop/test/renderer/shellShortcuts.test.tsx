@@ -2,10 +2,10 @@ import { useState } from "react";
 import { fireEvent, screen } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import Layout from "../../src/ui/components/layout/Layout";
-import CommandPalette from "../../src/ui/components/layout/CommandPalette";
-import { TabProvider } from "../../src/ui/context/TabContext";
-import { useTabs } from "../../src/ui/context/useTabs";
+import Layout from "../../src/ui/shell/layout/Layout";
+import CommandPalette from "../../src/ui/shell/layout/CommandPalette";
+import { TabProvider } from "../../src/ui/shell/tabs/TabContext";
+import { useTabs } from "../../src/ui/shell/tabs/useTabs";
 import { useShellShortcuts } from "../../src/ui/shell/keyboard/useShellShortcuts";
 import {
   isActivationTarget,

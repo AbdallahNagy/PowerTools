@@ -1,7 +1,7 @@
 import { act, fireEvent, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import TitleBar from "../../src/ui/components/layout/TitleBar";
+import TitleBar from "../../src/ui/shell/layout/TitleBar";
 import { renderWithProviders } from "../support/render";
 
 describe("title bar", () => {

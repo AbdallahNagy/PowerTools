@@ -7,8 +7,8 @@ import {
   useConnections,
 } from "../../src/ui/shared/connections";
 import { StatusBarProvider } from "../../src/ui/shared/status";
-import { TabProvider } from "../../src/ui/context/TabContext";
-import { useTabs } from "../../src/ui/context/useTabs";
+import { TabProvider } from "../../src/ui/shell/tabs/TabContext";
+import { useTabs } from "../../src/ui/shell/tabs/useTabs";
 import ToolHost from "../../src/ui/shell/tool-runtime/ToolHost";
 import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { renderWithProviders } from "../support/render";

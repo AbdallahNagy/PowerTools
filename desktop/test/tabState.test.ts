@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { TabData } from "../src/ui/common/types/tab-data.interface";
+import type { TabData } from "../src/ui/shell/tabs/types";
 import {
   activateTab,
   addTab,

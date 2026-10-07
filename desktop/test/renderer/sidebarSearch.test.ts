@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   filterSidebarItems,
   matchesSidebarSearch,
-} from "../../src/ui/components/layout/sidebarSearch";
+} from "../../src/ui/shell/layout/sidebarSearch";
 
 describe("sidebar search", () => {
   const tools = [

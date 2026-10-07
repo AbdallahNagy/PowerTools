@@ -1,11 +1,11 @@
 import { memo, useState } from "react";
 import Tab from "./TabHeader";
 import TabConnectionMenu from "./TabConnectionMenu";
-import EmptyWorkspace from "./EmptyWorkspace";
-import { useTabs } from "../../context/useTabs";
-import ToolHost from "../../shell/tool-runtime/ToolHost";
+import EmptyWorkspace from "../layout/EmptyWorkspace";
+import { useTabs } from "./useTabs";
+import ToolHost from "../tool-runtime/ToolHost";
 import { TOOL_REGISTRY } from "../../tools/registry";
-import type { TabData } from "../../common/types/tab-data.interface";
+import type { TabData } from "./types";
 
 const TabContent = memo(({ tab }: { tab: TabData }) => {
   const def = TOOL_REGISTRY[tab.toolId];

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { desktopBridge } from "../platform/desktopBridge";
-import { Field, Input } from "../shared/ui";
+import { desktopBridge } from "../../platform/desktopBridge";
+import { Field, Input } from "../../shared/ui";
 
 const ConnectionNamingWindow = () => {
   const [connectionName, setConnectionName] = useState("");

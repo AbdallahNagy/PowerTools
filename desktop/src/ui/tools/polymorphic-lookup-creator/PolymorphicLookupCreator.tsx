@@ -1,42 +1,25 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { ChevronRight } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { Button, Checkbox, DataTable, Modal, SearchInput, Spinner, ToastProvider, useToast } from "../../shared/ui";
-import { useTabConnection } from "../../shared/connections";
-import { usePrimaryAction } from "../../shared/keyboard";
+import { Spinner, ToastProvider } from "../../shared/ui";
 import { useToolStatus } from "../../shared/status";
+import { usePolymorphicMetadata, useUnmanagedSolutions } from "./api/lookupApi";
+import { DeleteLookupModal, DiscardChangesModal, RemoveRelationshipsModal } from "./components/LookupModals";
+import { LookupEditorPane } from "./components/LookupEditorPane";
 import {
-  addRelationship,
-  createLookup,
-  deleteLookupColumn,
-  deleteRelationship,
-  updateRelationship,
-  usePolymorphicMetadata,
-  useUnmanagedSolutions,
-} from "./api/lookupApi";
-import { polymorphicKeys } from "./api/queryKeys";
-import { SchemaField, ToolSelect, ToolTextInput } from "./components/ToolField";
-import {
-  cascadeBehaviors,
-  cascadeFields,
-  isElasticTable,
-  menuBehaviors,
-  menuGroups,
-  presetCascade,
-} from "./model/cascade";
-import {
-  buildDrafts,
-  buildEditPlan,
-  canCreateLookup,
-  isExistingDirty,
-  lookupSignature,
-  newRelationshipDraft,
-  relationshipPayload,
-} from "./model/editPlan";
+  AttributesStep,
+  LookupStep,
+  SolutionStep,
+  TableStep,
+  type PickerStepId,
+} from "./components/PickerSteps";
 import { toLookupError } from "./model/apiError";
-import { joinSchema, matchesQuery, prefixText, splitSchema, suggestSchemaFragment } from "./model/schemaName";
-import type { CascadeBehavior, EditPlan, RelationshipDraft } from "./model/types";
+import { isElasticTable } from "./model/cascade";
+import { buildDrafts, buildEditPlan, canCreateLookup, isExistingDirty, lookupSignature } from "./model/editPlan";
+import { editorReducer, emptyEditor } from "./model/editorState";
+import { joinSchema, prefixText, splitSchema } from "./model/schemaName";
+import type { EditPlan, LookupColumn, PolymorphicEntity } from "./model/types";
+import { useLookupWrites } from "./state/useLookupWrites";
+import { useSessionConnection } from "./state/useSessionConnection";
 
 export default function PolymorphicLookupCreator() {
   return (
@@ -46,69 +29,32 @@ export default function PolymorphicLookupCreator() {
   );
 }
 
-function useSessionConnection(dirty: boolean) {
-  const { connectionName: tabConnectionName, setConnectionName } = useTabConnection();
-  const [sessionName, setSessionName] = useState<string | null>(tabConnectionName);
-  const [pendingName, setPendingName] = useState<string | null | undefined>(undefined);
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
-  const sessionRef = useRef(sessionName);
-  sessionRef.current = sessionName;
-
-  useEffect(() => {
-    if (tabConnectionName === sessionRef.current) {
-      setPendingName(undefined);
-      return;
-    }
-    if (!dirtyRef.current) {
-      setSessionName(tabConnectionName);
-      return;
-    }
-    setPendingName(tabConnectionName);
-  }, [tabConnectionName]);
-
-  return {
-    connectionName: sessionName,
-    ready: true,
-    pendingName,
-    confirmSwitch() {
-      setSessionName(pendingName ?? null);
-      setPendingName(undefined);
-    },
-    cancelSwitch() {
-      setPendingName(undefined);
-      setConnectionName(sessionRef.current);
-    },
-  };
+function findLookup(table: PolymorphicEntity | null, logicalName: string | null): LookupColumn | undefined {
+  if (!table || !logicalName) return undefined;
+  return table.lookups.find(
+    (lookup) =>
+      lookup.logicalName === logicalName ||
+      lookup.schemaName.toLowerCase() === logicalName.toLowerCase(),
+  );
 }
 
+const byDisplayName = (a: PolymorphicEntity, b: PolymorphicEntity) =>
+  a.displayName.localeCompare(b.displayName);
+
 function PolymorphicLookupPage() {
-  const { showToast } = useToast();
-  const queryClient = useQueryClient();
   const [solutionUniqueName, setSolutionUniqueName] = useState<string | null>(null);
   const [tableLogicalName, setTableLogicalName] = useState<string | null>(null);
-  const [lookupLogicalName, setLookupLogicalName] = useState<string | null>(null);
-  const [mode, setMode] = useState<"new" | "existing" | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [fragment, setFragment] = useState("");
-  const [fragmentEdited, setFragmentEdited] = useState(false);
-  const [existingPrefix, setExistingPrefix] = useState("");
-  const [drafts, setDrafts] = useState<RelationshipDraft[]>([]);
-  const [originalDrafts, setOriginalDrafts] = useState<RelationshipDraft[]>([]);
-  const [selectedReferenced, setSelectedReferenced] = useState<string | null>(null);
-  const [expandedPicker, setExpandedPicker] = useState<"solution" | "table" | "lookups" | "attributes" | null>("solution");
-  const [solutionSearch, setSolutionSearch] = useState("");
-  const [tableSearch, setTableSearch] = useState("");
-  const [lookupSearch, setLookupSearch] = useState("");
-  const [referencedSearch, setReferencedSearch] = useState("");
-  const [writePhase, setWritePhase] = useState<string | null>(null);
+  const [editor, dispatch] = useReducer(editorReducer, emptyEditor);
+  const [expandedPicker, setExpandedPicker] = useState<PickerStepId | null>("solution");
   const [notice, setNotice] = useState<string | null>(null);
   const [modal, setModal] = useState<"discard" | "remove" | "delete" | null>(null);
   const pendingDiscard = useRef<(() => void) | null>(null);
   const pendingPlan = useRef<EditPlan | null>(null);
+  /** Which lookup the editor was last loaded from, so metadata refreshes do not reload it. */
   const synced = useRef<string | null>(null);
   const seenConnection = useRef<string | null | undefined>(undefined);
 
+  const { mode, drafts, originalDrafts, displayName, fragment, lookupLogicalName } = editor;
   const dirty =
     mode === "new"
       ? displayName.trim() !== "" || fragment !== "" || drafts.length > 0
@@ -118,31 +64,44 @@ function PolymorphicLookupPage() {
   const metadataQuery = usePolymorphicMetadata(connection.connectionName, !!solutionUniqueName);
 
   const solutions = solutionsQuery.data ?? [];
-  const entities = useMemo(
-    () => metadataQuery.data?.entities ?? [],
-    [metadataQuery.data],
-  );
+  const entities = useMemo(() => metadataQuery.data?.entities ?? [], [metadataQuery.data]);
   const solution = solutions.find((item) => item.uniqueName === solutionUniqueName) ?? null;
-  const referencingTables = entities
-    .filter((entity) => entity.canBeRelatedEntityInRelationship)
-    .sort((a, b) => a.displayName.localeCompare(b.displayName));
-  const referencedTables = entities
-    .filter((entity) => entity.canBePrimaryEntityInRelationship)
-    .sort((a, b) => a.displayName.localeCompare(b.displayName));
+  const referencingTables = entities.filter((entity) => entity.canBeRelatedEntityInRelationship).sort(byDisplayName);
+  const referencedTables = entities.filter((entity) => entity.canBePrimaryEntityInRelationship).sort(byDisplayName);
   const table = referencingTables.find((entity) => entity.logicalName === tableLogicalName) ?? null;
-  const selectedLookup = table?.lookups.find(
-    (lookup) =>
-      lookup.logicalName === lookupLogicalName ||
-      lookup.schemaName.toLowerCase() === lookupLogicalName?.toLowerCase(),
-  );
+  const selectedLookup = findLookup(table, lookupLogicalName);
   const customizationPrefix = solution?.customizationPrefix ?? "";
-  const schemaPrefix = mode === "existing" ? existingPrefix : prefixText(customizationPrefix);
-  const schemaName = mode === "existing" && selectedLookup
-    ? selectedLookup.schemaName
-    : joinSchema(customizationPrefix, fragment);
-  const openLookupName = mode === "new" ? "New lookup" : selectedLookup?.displayName || (mode === "existing" ? displayName : "");
-  const selectedDraft = drafts.find((draft) => draft.referencedLogicalName === selectedReferenced) ?? null;
+  const schemaPrefix = mode === "existing" ? editor.existingPrefix : prefixText(customizationPrefix);
+  const schemaName =
+    mode === "existing" && selectedLookup ? selectedLookup.schemaName : joinSchema(customizationPrefix, fragment);
+  const openLookupName =
+    mode === "new" ? "New lookup" : selectedLookup?.displayName || (mode === "existing" ? displayName : "");
+  const selectedDraft = drafts.find((draft) => draft.referencedLogicalName === editor.selectedReferenced) ?? null;
   const editPlan = mode === "existing" ? buildEditPlan(drafts, originalDrafts) : null;
+  const ownTableError =
+    table && drafts.some((draft) => draft.referencedLogicalName === table.logicalName)
+      ? `${table.displayName} is the referencing table. Remove it from the attributes. A lookup cannot reference its own table.`
+      : null;
+
+  const writes = useLookupWrites({
+    connectionName: connection.connectionName,
+    solution,
+    table,
+    lookupAttribute: selectedLookup?.logicalName ?? lookupLogicalName,
+    editor,
+    dispatch,
+    setNotice,
+    closeModal: () => setModal(null),
+    onCreated: () => {
+      synced.current = "created";
+    },
+    onDeleted: () => {
+      resetEditor();
+      setExpandedPicker("lookups");
+    },
+  });
+  const { writePhase } = writes;
+
   const createEnabled =
     !!solution &&
     !!table &&
@@ -154,25 +113,15 @@ function PolymorphicLookupPage() {
       referencingLogicalName: table?.logicalName ?? "",
       solutionAware: table?.isSolutionAware === true,
     });
-  const ownTableError =
-    table && drafts.some((draft) => draft.referencedLogicalName === table.logicalName)
-      ? `${table.displayName} is the referencing table. Remove it from the attributes. A lookup cannot reference its own table.`
-      : null;
-  const referencesOwnTable = ownTableError != null;
-  const saveEnabled =
-    !!solution && !!table && !writePhase && !referencesOwnTable && editPlan?.plan != null;
-  const elastic = isElasticTable(table?.tableType);
+  const saveEnabled = !!solution && !!table && !writePhase && ownTableError == null && editPlan?.plan != null;
 
   const signature = useMemo(() => {
     if (mode !== "existing" || !table || !lookupLogicalName) return null;
-    const lookup = table.lookups.find(
-      (item) =>
-        item.logicalName === lookupLogicalName ||
-        item.schemaName.toLowerCase() === lookupLogicalName.toLowerCase(),
-    );
+    const lookup = findLookup(table, lookupLogicalName);
     return lookup ? lookupSignature(table, lookup) : null;
   }, [lookupLogicalName, mode, table]);
 
+  // A new connection starts the tool over.
   useEffect(() => {
     if (!connection.ready) return;
     if (seenConnection.current === connection.connectionName) return;
@@ -181,41 +130,31 @@ function PolymorphicLookupPage() {
     if (previous === undefined) return;
     setSolutionUniqueName(null);
     setTableLogicalName(null);
-    setLookupLogicalName(null);
-    setMode(null);
-    setDisplayName("");
-    setFragment("");
-    setFragmentEdited(false);
-    setExistingPrefix("");
-    setDrafts([]);
-    setOriginalDrafts([]);
-    setSelectedReferenced(null);
+    dispatch({ type: "reset" });
     setNotice(null);
     setModal(null);
     setExpandedPicker("solution");
     synced.current = null;
   }, [connection.connectionName, connection.ready]);
 
+  // Load an existing lookup's relationships into the editor once its metadata is available.
   useEffect(() => {
     if (!signature || !table || !solution) return;
     if (synced.current === signature) return;
-    const lookup = table.lookups.find(
-      (item) =>
-        item.logicalName === lookupLogicalName ||
-        item.schemaName.toLowerCase() === lookupLogicalName?.toLowerCase(),
-    );
+    const lookup = findLookup(table, lookupLogicalName);
     if (!lookup) return;
     synced.current = signature;
-    const built = buildDrafts(table, lookup, entities, solution.customizationPrefix);
     const split = splitSchema(lookup.schemaName);
-    setDrafts(built);
-    setOriginalDrafts(built);
-    setDisplayName(lookup.displayName);
-    setFragment(split.fragment);
-    setExistingPrefix(split.prefix);
-    setFragmentEdited(true);
+    dispatch({
+      type: "loaded",
+      drafts: buildDrafts(table, lookup, entities, solution.customizationPrefix),
+      displayName: lookup.displayName,
+      fragment: split.fragment,
+      prefix: split.prefix,
+    });
   }, [entities, lookupLogicalName, signature, solution, table]);
 
+  /** Runs the action now, or after the user agrees to discard unsaved changes. */
   function guard(action: () => void) {
     if (!dirty) {
       action();
@@ -226,16 +165,18 @@ function PolymorphicLookupPage() {
   }
 
   function resetEditor() {
-    setLookupLogicalName(null);
-    setMode(null);
-    setDisplayName("");
-    setFragment("");
-    setFragmentEdited(false);
-    setExistingPrefix("");
-    setDrafts([]);
-    setOriginalDrafts([]);
-    setSelectedReferenced(null);
+    dispatch({ type: "reset" });
     synced.current = null;
+  }
+
+  function requestSave() {
+    if (!editPlan?.plan) return;
+    if (editPlan.plan.deletes.length > 0) {
+      pendingPlan.current = editPlan.plan;
+      setModal("remove");
+      return;
+    }
+    void writes.save(editPlan.plan);
   }
 
   const contextLine = [solution?.friendlyName, table?.displayName, openLookupName].filter(Boolean).join(", ");
@@ -250,168 +191,10 @@ function PolymorphicLookupPage() {
   else status = contextLine || null;
   useToolStatus(status);
 
-  async function refreshMetadata() {
-    if (!connection.connectionName) return;
-    await queryClient.invalidateQueries({
-      queryKey: polymorphicKeys.metadata(connection.connectionName),
-    });
-  }
-
-  async function runCreate() {
-    if (!connection.connectionName || !solution || !table || !createEnabled) return;
-    setWritePhase("Creating lookup…");
-    setNotice(null);
-    try {
-      const createdSchema = joinSchema(customizationPrefix, fragment);
-      await createLookup(connection.connectionName, {
-        solutionUniqueName: solution.uniqueName,
-        referencingEntityLogicalName: table.logicalName,
-        displayName: displayName.trim(),
-        schemaName: createdSchema,
-        relationships: drafts.map(relationshipPayload),
-      });
-      const saved = drafts.map((draft) => ({ ...draft, saved: true, fragmentEdited: true }));
-      setDrafts(saved);
-      setOriginalDrafts(saved);
-      setExistingPrefix(prefixText(customizationPrefix));
-      setFragmentEdited(true);
-      synced.current = "created";
-      setMode("existing");
-      setLookupLogicalName(createdSchema.toLowerCase());
-      showToast("Lookup created", "success");
-      await refreshMetadata();
-    } catch (error) {
-      showToast(toLookupError(error), "error");
-    } finally {
-      setWritePhase(null);
-    }
-  }
-
-  async function runSave(plan: EditPlan) {
-    if (!connection.connectionName || !solution || !table || !lookupLogicalName) return;
-    setNotice(null);
-    let applied = 0;
-    const completedAdds: RelationshipDraft[] = [];
-    const completedDeletes = new Set<string>();
-    try {
-      for (const add of plan.adds) {
-        setWritePhase("Saving lookup… Adding relationships…");
-        await addRelationship(connection.connectionName, {
-          solutionUniqueName: solution.uniqueName,
-          referencingEntityLogicalName: table.logicalName,
-          referencingAttributeLogicalName: selectedLookup?.logicalName ?? lookupLogicalName,
-          relationship: relationshipPayload(add),
-        });
-        applied += 1;
-        completedAdds.push({ ...add, saved: true, fragmentEdited: true });
-      }
-      for (const removal of plan.deletes) {
-        setWritePhase("Saving lookup… Removing relationships…");
-        await deleteRelationship(
-          connection.connectionName,
-          removal.schemaName,
-          table.logicalName,
-        );
-        applied += 1;
-        completedDeletes.add(removal.referencedLogicalName);
-      }
-      for (const update of plan.updates) {
-        setWritePhase("Saving lookup… Updating relationships…");
-        const payload = relationshipPayload(update);
-        await updateRelationship(connection.connectionName, update.schemaName, {
-          referencingEntityLogicalName: table.logicalName,
-          isValidForAdvancedFind: payload.isValidForAdvancedFind,
-          cascade: payload.cascade,
-          associatedMenuBehavior: payload.associatedMenuBehavior,
-          associatedMenuGroup: payload.associatedMenuGroup,
-          associatedMenuOrder: payload.associatedMenuOrder,
-          associatedMenuLabel: payload.associatedMenuLabel,
-        });
-        applied += 1;
-      }
-      const saved = drafts
-        .filter((draft) => !plan.deletes.some((item) => item.referencedLogicalName === draft.referencedLogicalName))
-        .map((draft) => ({ ...draft, saved: true, fragmentEdited: true }));
-      setDrafts(saved);
-      setOriginalDrafts(saved);
-      setModal(null);
-      showToast("Lookup saved", "success");
-      await refreshMetadata();
-    } catch (error) {
-      showToast(toLookupError(error), "error");
-      if (applied > 0) {
-        setNotice("Earlier changes remain applied.");
-        setOriginalDrafts((current) => [
-          ...current.filter((draft) => !completedDeletes.has(draft.referencedLogicalName)),
-          ...completedAdds,
-        ]);
-        setDrafts((current) =>
-          current
-            .filter((draft) => !completedDeletes.has(draft.referencedLogicalName))
-            .map((draft) => {
-              const added = completedAdds.find(
-                (item) => item.referencedLogicalName === draft.referencedLogicalName,
-              );
-              return added ?? draft;
-            }),
-        );
-      }
-      setModal(null);
-    } finally {
-      setWritePhase(null);
-    }
-  }
-
-  async function runDelete() {
-    if (!connection.connectionName || !table || !lookupLogicalName) return;
-    setWritePhase("Deleting lookup…");
-    setNotice(null);
-    try {
-      await deleteLookupColumn(
-        connection.connectionName,
-        table.logicalName,
-        selectedLookup?.logicalName ?? lookupLogicalName,
-      );
-      showToast("Lookup deleted", "success");
-      resetEditor();
-      setExpandedPicker("lookups");
-      setModal(null);
-      await refreshMetadata();
-    } catch (error) {
-      showToast(toLookupError(error), "error");
-      setModal(null);
-    } finally {
-      setWritePhase(null);
-    }
-  }
-
-  function updateDraft(logicalName: string, patch: Partial<RelationshipDraft>) {
-    setDrafts((current) =>
-      current.map((draft) => {
-        if (draft.referencedLogicalName !== logicalName) return draft;
-        const next = { ...draft, ...patch };
-        if (!next.saved && patch.fragment !== undefined) {
-          next.schemaName = joinSchema(customizationPrefix, next.fragment);
-        }
-        return next;
-      }),
-    );
-  }
-
-  const filteredSolutions = solutions.filter((item) =>
-    matchesQuery(solutionSearch, [item.friendlyName, item.customizationPrefix, item.uniqueName]),
-  );
-  const filteredTables = referencingTables.filter((item) =>
-    matchesQuery(tableSearch, [item.displayName, item.schemaName, item.logicalName]),
-  );
-  const filteredLookups = (table?.lookups ?? []).filter((item) =>
-    matchesQuery(lookupSearch, [item.displayName, item.schemaName, item.logicalName, ...item.targets]),
-  );
-  const filteredReferenced = referencedTables.filter((item) =>
-    matchesQuery(referencedSearch, [item.displayName, item.schemaName, item.logicalName]),
-  );
-
-  const discardOpen = connection.pendingName !== undefined || modal === "discard";
+  const referencedName = (logicalName: string) =>
+    referencedTables.find((item) => item.logicalName === logicalName)?.displayName ?? logicalName;
+  const toggle = (step: PickerStepId, collapseTo: PickerStepId | null = null) => () =>
+    setExpandedPicker((current) => (current === step ? collapseTo : step));
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-canvas text-fg-strong">
@@ -426,314 +209,102 @@ function PolymorphicLookupPage() {
       ) : (
         <Group orientation="horizontal" className="flex min-h-0 flex-1">
           <Panel defaultSize="50%" minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden bg-surface p-3">
-            <PickerStep
-              title="Unmanaged solution"
-              summary={solution ? `${solution.friendlyName} (${prefixText(solution.customizationPrefix)})` : null}
+            <SolutionStep
               expanded={expandedPicker === "solution"}
-              onToggle={() =>
-                setExpandedPicker((current) =>
-                  current === "solution" ? (table ? null : "solution") : "solution",
-                )
+              // Stays open until a table is chosen, so there is always a next step to show.
+              onToggle={toggle("solution", table ? null : "solution")}
+              solutions={solutions}
+              solution={solution}
+              query={{
+                loading: solutionsQuery.isLoading,
+                error: solutionsQuery.isError ? toLookupError(solutionsQuery.error) : null,
+                onRetry: () => void solutionsQuery.refetch(),
+              }}
+              onSelect={(row) =>
+                guard(() => {
+                  setSolutionUniqueName(row.uniqueName);
+                  setTableLogicalName(null);
+                  setExpandedPicker("table");
+                  resetEditor();
+                })
               }
-            >
-            <ListSection
-              title="Unmanaged solution"
-              showHeading={false}
-              search={solutionSearch}
-              onSearch={setSolutionSearch}
-              placeholder="Search solutions"
-              loading={solutionsQuery.isLoading}
-              error={solutionsQuery.isError ? toLookupError(solutionsQuery.error) : null}
-              onRetry={() => void solutionsQuery.refetch()}
-            >
-              <DataTable
-                columns={[
-                  { key: "friendlyName", header: "Display name" },
-                  { key: "customizationPrefix", header: "Prefix" },
-                ]}
-                rows={filteredSolutions}
-                getRowKey={(row) => row.uniqueName}
-                selectedKey={solutionUniqueName}
-                emptyMessage={solutions.length === 0 ? "No unmanaged solutions" : "No matching rows"}
-                onRowClick={(row) =>
+            />
+
+            {solution ? (
+              <TableStep
+                expanded={expandedPicker === "table"}
+                onToggle={toggle("table")}
+                tables={referencingTables}
+                table={table}
+                query={{
+                  loading: metadataQuery.isLoading,
+                  error: metadataQuery.isError ? toLookupError(metadataQuery.error) : null,
+                  onRetry: () => void metadataQuery.refetch(),
+                }}
+                onSelect={(row) =>
                   guard(() => {
-                    setSolutionUniqueName(row.uniqueName);
-                    setTableLogicalName(null);
-                    setExpandedPicker("table");
+                    setTableLogicalName(row.logicalName);
+                    setExpandedPicker("lookups");
                     resetEditor();
                   })
                 }
               />
-              {solution ? (
-                <p className="text-xs text-fg-muted">
-                  Prefix {prefixText(solution.customizationPrefix)}
-                </p>
-              ) : null}
-            </ListSection>
-            </PickerStep>
-
-            {solution ? (
-              <PickerStep
-                title="Referencing table"
-                summary={table?.displayName ?? null}
-                expanded={expandedPicker === "table"}
-                onToggle={() =>
-                  setExpandedPicker((current) => (current === "table" ? null : "table"))
-                }
-              >
-              <ListSection
-                title="Referencing table"
-                showHeading={false}
-                search={tableSearch}
-                onSearch={setTableSearch}
-                placeholder="Search referencing tables"
-                loading={metadataQuery.isLoading}
-                error={metadataQuery.isError ? toLookupError(metadataQuery.error) : null}
-                onRetry={() => void metadataQuery.refetch()}
-              >
-                <DataTable
-                  columns={[
-                    { key: "displayName", header: "Display name" },
-                    { key: "schemaName", header: "Schema name" },
-                  ]}
-                  rows={filteredTables}
-                  getRowKey={(row) => row.logicalName}
-                  selectedKey={tableLogicalName}
-                  emptyMessage={
-                    referencingTables.length === 0
-                      ? "No tables can be the referencing side"
-                      : "No matching rows"
-                  }
-                  onRowClick={(row) =>
-                    guard(() => {
-                      setTableLogicalName(row.logicalName);
-                      setExpandedPicker("lookups");
-                      resetEditor();
-                    })
-                  }
-                />
-                {elastic ? (
-                  <p className="text-xs text-fg-muted">
-                    This referencing table is elastic.
-                  </p>
-                ) : null}
-                {table?.isSolutionAware ? (
-                  <p className="text-xs text-fg-muted">
-                    Polymorphic lookups are not supported on a solution-aware table.
-                  </p>
-                ) : null}
-              </ListSection>
-              </PickerStep>
             ) : null}
 
             {table ? (
-              <PickerStep
-                title="Lookups"
-                summary={
-                  mode === "new"
-                    ? "New lookup"
-                    : selectedLookup
-                      ? `${selectedLookup.displayName} · ${selectedLookup.schemaName}`
-                      : null
-                }
+              <LookupStep
                 expanded={expandedPicker === "lookups"}
-                onToggle={() =>
-                  setExpandedPicker((current) =>
-                    current === "lookups" ? (mode ? "attributes" : null) : "lookups",
-                  )
+                onToggle={toggle("lookups", mode ? "attributes" : null)}
+                table={table}
+                entities={entities}
+                mode={mode}
+                selectedLookup={selectedLookup}
+                query={{
+                  loading: metadataQuery.isFetching && !metadataQuery.isLoading,
+                  error: null,
+                  onRetry: () => void metadataQuery.refetch(),
+                }}
+                busy={!!writePhase}
+                onNew={() =>
+                  guard(() => {
+                    dispatch({ type: "startNew" });
+                    setNotice(null);
+                    setExpandedPicker("attributes");
+                    synced.current = "new";
+                  })
                 }
-              >
-              <ListSection
-                title="Lookups"
-                showHeading={false}
-                search={lookupSearch}
-                onSearch={setLookupSearch}
-                placeholder="Search lookups"
-                loading={metadataQuery.isFetching && !metadataQuery.isLoading}
-                error={null}
-                onRetry={() => void metadataQuery.refetch()}
-              >
-                <div className="flex gap-2">
-                  <Button
-                    variant="secondary"
-                    disabled={!!writePhase}
-                    onClick={() => guard(() => {
-                      setLookupLogicalName(null);
-                      setMode("new");
-                      setDisplayName("");
-                      setFragment("");
-                      setFragmentEdited(false);
-                      setExistingPrefix("");
-                      setDrafts([]);
-                      setOriginalDrafts([]);
-                      setSelectedReferenced(null);
-                      setNotice(null);
-                      setExpandedPicker("attributes");
-                      synced.current = "new";
-                    })}
-                  >
-                    New lookup
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={!selectedLookup || !!writePhase}
-                    onClick={() => setModal("delete")}
-                  >
-                    Delete
-                  </Button>
-                </div>
-                <DataTable
-                  columns={[
-                    { key: "displayName", header: "Display name" },
-                    { key: "schemaName", header: "Schema name" },
-                    {
-                      key: "attributes",
-                      header: "Attributes",
-                      render: (row) => targetLabels(entities, row.targets),
-                    },
-                  ]}
-                  rows={filteredLookups}
-                  getRowKey={(row) => row.logicalName}
-                  selectedKey={mode === "existing" ? selectedLookup?.logicalName ?? null : null}
-                  emptyMessage={
-                    (table.lookups.length === 0) ? "No lookups on this table" : "No matching rows"
-                  }
-                  onRowClick={(row) =>
-                    guard(() => {
-                      synced.current = null;
-                      setMode("existing");
-                      setLookupLogicalName(row.logicalName);
-                      setSelectedReferenced(null);
-                      setNotice(null);
-                      setExpandedPicker("attributes");
-                    })
-                  }
-                />
-              </ListSection>
-              </PickerStep>
+                onDelete={() => setModal("delete")}
+                onOpen={(row) =>
+                  guard(() => {
+                    synced.current = null;
+                    dispatch({ type: "openExisting", logicalName: row.logicalName });
+                    setNotice(null);
+                    setExpandedPicker("attributes");
+                  })
+                }
+              />
             ) : null}
 
             {mode ? (
-              <PickerStep
-                title="Attributes"
-                summary={
-                  selectedDraft
-                    ? referencedTables.find((item) => item.logicalName === selectedDraft.referencedLogicalName)
-                        ?.displayName ?? selectedDraft.referencedLogicalName
-                    : null
-                }
+              <AttributesStep
                 expanded={expandedPicker === "attributes"}
-                onToggle={() =>
-                  setExpandedPicker((current) => (current === "attributes" ? null : "attributes"))
-                }
-              >
-                <div className="flex min-h-0 flex-1 flex-col gap-2">
-                  <ToolTextInput
-                    id="lookup-display-name"
-                    label="Display name"
-                    value={displayName}
-                    readOnly={mode === "existing"}
-                    onChange={
-                      mode === "new"
-                        ? (value) => {
-                            setDisplayName(value);
-                            if (!fragmentEdited) setFragment(suggestSchemaFragment(value));
-                          }
-                        : undefined
-                    }
-                  />
-                  <SchemaField
-                    id="lookup-schema-name"
-                    label="Schema name"
-                    prefix={schemaPrefix}
-                    fragment={
-                      mode === "existing" && selectedLookup
-                        ? splitSchema(selectedLookup.schemaName).fragment
-                        : fragment
-                    }
-                    readOnly={mode === "existing"}
-                    onChange={
-                      mode === "new"
-                        ? (value) => {
-                            setFragmentEdited(true);
-                            setFragment(value);
-                          }
-                        : undefined
-                    }
-                  />
-                  <SearchInput
-                    value={referencedSearch}
-                    onChange={setReferencedSearch}
-                    placeholder="Search attributes"
-                  />
-                  {drafts.length < 2 ? (
-                    <p className="text-xs text-fg-muted">
-                      Select at least two attributes.
-                    </p>
-                  ) : null}
-                  {ownTableError ? (
-                    <p role="alert" className="text-xs text-fg-strong">
-                      {ownTableError}
-                    </p>
-                  ) : null}
-                  <DataTable
-                    columns={[
-                      {
-                        key: "selected",
-                        header: "",
-                        width: "2.5rem",
-                        render: (row) => (
-                          <label className="inline-flex" onClick={(event) => event.stopPropagation()}>
-                            <Checkbox
-                              id={`referenced-${row.logicalName}`}
-                              checked={drafts.some((draft) => draft.referencedLogicalName === row.logicalName)}
-                              disabled={!!writePhase}
-                              onChange={(checked) => {
-                                if (!checked) {
-                                  const remaining = drafts.filter(
-                                    (draft) => draft.referencedLogicalName !== row.logicalName,
-                                  );
-                                  setDrafts(remaining);
-                                  setSelectedReferenced((current) =>
-                                    current === row.logicalName
-                                      ? remaining[0]?.referencedLogicalName ?? null
-                                      : current,
-                                  );
-                                  return;
-                                }
-                                setDrafts((current) =>
-                                  current.some((draft) => draft.referencedLogicalName === row.logicalName)
-                                    ? current
-                                    : [...current, newRelationshipDraft(row, customizationPrefix)],
-                                );
-                                setSelectedReferenced(row.logicalName);
-                              }}
-                            />
-                            <span className="sr-only">{row.displayName}</span>
-                          </label>
-                        ),
-                      },
-                      { key: "displayName", header: "Display name" },
-                      { key: "schemaName", header: "Schema name" },
-                    ]}
-                    rows={filteredReferenced}
-                    getRowKey={(row) => row.logicalName}
-                    selectedKey={selectedReferenced}
-                    emptyMessage={
-                      referencedTables.length === 0
-                        ? "No tables can be the referenced side"
-                        : "No matching rows"
-                    }
-                    onRowClick={(row) => {
-                      const exists = drafts.some((draft) => draft.referencedLogicalName === row.logicalName);
-                      if (!exists) {
-                        setDrafts((current) => [...current, newRelationshipDraft(row, customizationPrefix)]);
-                      }
-                      setSelectedReferenced(row.logicalName);
-                    }}
-                  />
-                </div>
-              </PickerStep>
+                onToggle={toggle("attributes")}
+                mode={mode}
+                displayName={displayName}
+                schemaPrefix={schemaPrefix}
+                fragment={fragment}
+                drafts={drafts}
+                selectedReferenced={editor.selectedReferenced}
+                referencedTables={referencedTables}
+                selectedLookup={selectedLookup}
+                ownTableError={ownTableError}
+                busy={!!writePhase}
+                onDisplayNameChange={(value) => dispatch({ type: "setDisplayName", value })}
+                onFragmentChange={(value) => dispatch({ type: "setFragment", value })}
+                onCheck={(row) => dispatch({ type: "selectReferenced", table: row, customizationPrefix })}
+                onUncheck={(logicalName) => dispatch({ type: "uncheckReferenced", logicalName })}
+                onSelect={(row) => dispatch({ type: "selectReferenced", table: row, customizationPrefix })}
+              />
             ) : null}
           </Panel>
           <Separator
@@ -741,418 +312,79 @@ function PolymorphicLookupPage() {
             className="w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent"
           />
           <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col gap-3 overflow-auto bg-surface p-3">
-            {mode == null ? (
-              <p className="text-sm text-fg">Select a lookup or create one.</p>
-            ) : (
-              <>
-            {ownTableError ? (
-              <p role="alert" className="text-xs text-fg-strong">
-                {ownTableError}
-              </p>
-            ) : null}
-            {selectedDraft ? (
-              <>
-                <RelationshipFields
-                  draft={selectedDraft}
-                  disabled={!!writePhase}
-                  onChange={(patch) => updateDraft(selectedDraft.referencedLogicalName, patch)}
-                />
-                {elastic ? (
-                  <p className="text-xs text-fg-muted">
-                    This referencing table is elastic.
-                  </p>
-                ) : null}
-                <LookupActions
-                  mode={mode}
-                  createEnabled={createEnabled}
-                  saveEnabled={saveEnabled}
-                  writePhase={writePhase}
-                  showSpinner={!!writePhase && modal == null}
-                  onCreate={() => void runCreate()}
-                  onSave={() => {
-                    if (!editPlan?.plan) return;
-                    if (editPlan.plan.deletes.length > 0) {
-                      pendingPlan.current = editPlan.plan;
-                      setModal("remove");
-                      return;
-                    }
-                    void runSave(editPlan.plan);
-                  }}
-                  onCancel={() =>
-                    guard(() => {
-                      resetEditor();
-                      setExpandedPicker("lookups");
-                    })
-                  }
-                />
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-fg">Select an attribute.</p>
-                <LookupActions
-                  mode={mode}
-                  createEnabled={createEnabled}
-                  saveEnabled={saveEnabled}
-                  writePhase={writePhase}
-                  showSpinner={!!writePhase && modal == null}
-                  onCreate={() => void runCreate()}
-                  onSave={() => {
-                    if (!editPlan?.plan) return;
-                    if (editPlan.plan.deletes.length > 0) {
-                      pendingPlan.current = editPlan.plan;
-                      setModal("remove");
-                      return;
-                    }
-                    void runSave(editPlan.plan);
-                  }}
-                  onCancel={() =>
-                    guard(() => {
-                      resetEditor();
-                      setExpandedPicker("lookups");
-                    })
-                  }
-                />
-              </>
-            )}
-              </>
-            )}
+            <LookupEditorPane
+              mode={mode}
+              selectedDraft={selectedDraft}
+              ownTableError={ownTableError}
+              elastic={isElasticTable(table?.tableType)}
+              createEnabled={createEnabled}
+              saveEnabled={saveEnabled}
+              writePhase={writePhase}
+              showSpinner={!!writePhase && modal == null}
+              onDraftChange={(patch) => {
+                if (!selectedDraft) return;
+                dispatch({
+                  type: "updateDraft",
+                  logicalName: selectedDraft.referencedLogicalName,
+                  patch,
+                  customizationPrefix,
+                });
+              }}
+              onCreate={() => {
+                if (createEnabled) void writes.create();
+              }}
+              onSave={requestSave}
+              onCancel={() =>
+                guard(() => {
+                  resetEditor();
+                  setExpandedPicker("lookups");
+                })
+              }
+            />
           </Panel>
         </Group>
       )}
 
-      <Modal
-        open={discardOpen}
-        title="Discard unsaved changes?"
-        onClose={() => {
+      <DiscardChangesModal
+        open={connection.pendingName !== undefined || modal === "discard"}
+        onCancel={() => {
           if (connection.pendingName !== undefined) connection.cancelSwitch();
           else setModal(null);
         }}
-      >
-        <p className="text-sm text-fg">Discard unsaved lookup changes?</p>
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              if (connection.pendingName !== undefined) connection.cancelSwitch();
-              else setModal(null);
-            }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={() => {
-              if (connection.pendingName !== undefined) {
-                connection.confirmSwitch();
-                return;
-              }
-              const action = pendingDiscard.current;
-              pendingDiscard.current = null;
-              setModal(null);
-              action?.();
-            }}
-          >
-            Discard
-          </Button>
-        </div>
-      </Modal>
+        onDiscard={() => {
+          if (connection.pendingName !== undefined) {
+            connection.confirmSwitch();
+            return;
+          }
+          const action = pendingDiscard.current;
+          pendingDiscard.current = null;
+          setModal(null);
+          action?.();
+        }}
+      />
 
-      <Modal
+      <RemoveRelationshipsModal
         open={modal === "remove"}
-        title="Remove relationships?"
+        tableNames={(pendingPlan.current?.deletes ?? []).map((draft) => ({
+          key: draft.referencedLogicalName,
+          label: referencedName(draft.referencedLogicalName),
+        }))}
         busy={!!writePhase}
-        busyLabel="Saving lookup…"
-        onClose={() => {
-          if (!writePhase) setModal(null);
+        onCancel={() => setModal(null)}
+        onSave={() => {
+          if (pendingPlan.current) void writes.save(pendingPlan.current);
         }}
-      >
-        <p className="text-sm text-fg">These referenced tables will be removed:</p>
-        <ul className="list-disc pl-5 text-sm text-fg-strong">
-          {(pendingPlan.current?.deletes ?? []).map((draft) => (
-            <li key={draft.referencedLogicalName}>
-              {referencedTables.find((item) => item.logicalName === draft.referencedLogicalName)?.displayName ??
-                draft.referencedLogicalName}
-            </li>
-          ))}
-        </ul>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" disabled={!!writePhase} onClick={() => setModal(null)}>
-            Cancel
-          </Button>
-          <Button
-            disabled={!!writePhase}
-            onClick={() => {
-              if (pendingPlan.current) void runSave(pendingPlan.current);
-            }}
-          >
-            Save
-          </Button>
-        </div>
-      </Modal>
+      />
 
-      <Modal
+      <DeleteLookupModal
         open={modal === "delete"}
-        title="Delete lookup"
-        busy={writePhase === "Deleting lookup…"}
-        busyLabel="Deleting lookup…"
-        onClose={() => {
-          if (!writePhase) setModal(null);
-        }}
-      >
-        <p className="text-sm text-fg">
-          Delete {selectedLookup?.displayName ?? displayName} ({selectedLookup?.schemaName ?? schemaName})?
-        </p>
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" disabled={!!writePhase} onClick={() => setModal(null)}>
-            Cancel
-          </Button>
-          <Button disabled={!!writePhase} onClick={() => void runDelete()}>
-            Delete
-          </Button>
-        </div>
-      </Modal>
-    </div>
-  );
-}
-
-function targetLabels(
-  entities: Array<{ logicalName: string; displayName: string }>,
-  targets: string[],
-): string {
-  return targets
-    .map((target) => entities.find((entity) => entity.logicalName === target)?.displayName ?? target)
-    .join(", ");
-}
-
-function LookupActions({
-  mode,
-  createEnabled,
-  saveEnabled,
-  writePhase,
-  showSpinner,
-  onCreate,
-  onSave,
-  onCancel,
-}: {
-  mode: "new" | "existing";
-  createEnabled: boolean;
-  saveEnabled: boolean;
-  writePhase: string | null;
-  showSpinner: boolean;
-  onCreate: () => void;
-  onSave: () => void;
-  onCancel: () => void;
-}) {
-  usePrimaryAction({
-    label: mode === "new" ? "Create lookup" : "Save",
-    enabled: mode === "new" ? createEnabled : saveEnabled,
-    run: mode === "new" ? onCreate : onSave,
-  });
-
-  return (
-    <div className="flex gap-2">
-      {mode === "new" ? (
-        <Button disabled={!createEnabled} onClick={onCreate}>
-          Create lookup
-        </Button>
-      ) : (
-        <Button disabled={!saveEnabled} onClick={onSave}>
-          Save
-        </Button>
-      )}
-      <Button variant="secondary" disabled={!!writePhase} onClick={onCancel}>
-        Cancel
-      </Button>
-      {showSpinner ? <Spinner /> : null}
-    </div>
-  );
-}
-
-function PickerStep({
-  title,
-  summary,
-  expanded,
-  onToggle,
-  children,
-}: {
-  title: string;
-  summary: string | null;
-  expanded: boolean;
-  onToggle: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className={expanded ? "flex min-h-0 flex-1 flex-col gap-2" : "shrink-0"}>
-      <button
-        type="button"
-        aria-expanded={expanded}
-        aria-label={summary ? `${title}, ${summary}` : title}
-        onClick={onToggle}
-        className="flex w-full items-center gap-2 rounded-sm border border-line bg-raised px-3 py-2 text-left hover:bg-hover"
-      >
-        <ChevronRight
-          size={12}
-          className={`shrink-0 text-fg-muted ${expanded ? "rotate-90" : ""}`}
-          aria-hidden="true"
-        />
-        <span className="text-sm text-fg-strong">{title}</span>
-        {summary ? (
-          <span className="truncate text-xs text-fg-muted">{summary}</span>
-        ) : null}
-      </button>
-      {expanded ? <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-auto">{children}</div> : null}
-    </div>
-  );
-}
-
-function ListSection({
-  title,
-  showHeading = true,
-  search,
-  onSearch,
-  placeholder,
-  loading,
-  error,
-  onRetry,
-  children,
-}: {
-  title: string;
-  showHeading?: boolean;
-  search: string;
-  onSearch: (value: string) => void;
-  placeholder: string;
-  loading: boolean;
-  error: string | null;
-  onRetry: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <div className={showHeading ? "flex min-h-0 flex-1 flex-col gap-2" : "flex min-h-0 flex-1 flex-col gap-2"}>
-      {showHeading ? <h2 className="text-sm text-fg-strong">{title}</h2> : null}
-      <SearchInput value={search} onChange={onSearch} placeholder={placeholder} />
-      {loading ? (
-        <div className="flex items-center gap-2 text-sm text-fg">
-          <Spinner />
-        </div>
-      ) : null}
-      {error ? (
-        <div className="flex items-center gap-2 text-sm text-fg">
-          <span>{error}</span>
-          <Button variant="secondary" onClick={onRetry}>
-            Retry
-          </Button>
-        </div>
-      ) : loading ? null : (
-        children
-      )}
-    </div>
-  );
-}
-
-function RelationshipFields({
-  draft,
-  disabled,
-  onChange,
-}: {
-  draft: RelationshipDraft;
-  disabled: boolean;
-  onChange: (patch: Partial<RelationshipDraft>) => void;
-}) {
-  const split = splitSchema(draft.schemaName);
-  return (
-    <div className="flex flex-col gap-3 border-t border-line pt-3">
-      <SchemaField
-        id="relationship-schema-name"
-        label="Relationship schema name"
-        prefix={split.prefix}
-        fragment={draft.saved ? split.fragment : draft.fragment}
-        readOnly={draft.saved || disabled}
-        onChange={
-          draft.saved
-            ? undefined
-            : (value) => onChange({ fragment: value, fragmentEdited: true })
-        }
+        displayName={selectedLookup?.displayName ?? displayName}
+        schemaName={selectedLookup?.schemaName ?? schemaName}
+        busy={!!writePhase}
+        deleting={writePhase === "Deleting lookup…"}
+        onCancel={() => setModal(null)}
+        onDelete={() => void writes.remove()}
       />
-      <label className="flex items-center gap-2 text-sm text-fg">
-        <Checkbox
-          id="advanced-find"
-          checked={draft.isValidForAdvancedFind}
-          disabled={disabled}
-          onChange={(checked) => onChange({ isValidForAdvancedFind: checked })}
-        />
-        Advanced Find
-      </label>
-      <ToolSelect
-        id="menu-behavior"
-        label="Associated menu"
-        value={draft.menuBehavior}
-        options={menuBehaviors}
-        disabled={disabled}
-        onChange={(value) => onChange({ menuBehavior: value as RelationshipDraft["menuBehavior"] })}
-      />
-      <ToolSelect
-        id="menu-group"
-        label="Display zone"
-        value={draft.menuGroup}
-        options={menuGroups}
-        disabled={disabled}
-        onChange={(value) => onChange({ menuGroup: value as RelationshipDraft["menuGroup"] })}
-      />
-      <ToolTextInput
-        id="menu-order"
-        label="Display order"
-        value={String(draft.menuOrder)}
-        readOnly={disabled}
-        onChange={(value) => {
-          const parsed = Number.parseInt(value, 10);
-          if (Number.isNaN(parsed)) return;
-          onChange({ menuOrder: Math.min(99999, Math.max(10000, parsed)) });
-        }}
-      />
-      <ToolTextInput
-        id="menu-label"
-        label="Custom label"
-        value={draft.menuLabel}
-        readOnly={disabled}
-        onChange={(value) => onChange({ menuLabel: value })}
-      />
-      <ToolSelect
-        id="cascade-behavior"
-        label="Cascade behavior"
-        value={draft.cascadeBehavior}
-        options={cascadeBehaviors}
-        disabled={disabled}
-        onChange={(value) => {
-          const behavior = value as CascadeBehavior;
-          onChange(
-            behavior === "Custom"
-              ? { cascadeBehavior: behavior }
-              : { cascadeBehavior: behavior, cascade: presetCascade(behavior) },
-          );
-        }}
-      />
-      {draft.cascadeBehavior === "Custom" ? (
-        <div className="grid grid-cols-2 gap-2">
-          {cascadeFields.map((field) => (
-            <ToolSelect
-              key={field.key}
-              id={`cascade-${field.key}`}
-              label={field.label}
-              value={draft.cascade[field.key]}
-              disabled={disabled}
-              options={field.options}
-              onChange={(value) =>
-                onChange({
-                  cascadeBehavior: "Custom",
-                  cascade: {
-                    ...draft.cascade,
-                    [field.key]: value as RelationshipDraft["cascade"]["assign"],
-                  },
-                })
-              }
-            />
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }

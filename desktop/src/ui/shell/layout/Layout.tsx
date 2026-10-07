@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
-import { useTabs } from "../../context/useTabs";
-import { useShellShortcuts } from "../../shell/keyboard/useShellShortcuts";
+import { useTabs } from "../tabs/useTabs";
+import { useShellShortcuts } from "../keyboard/useShellShortcuts";
 import { ConnectionsProvider } from "../../shared/connections";
 import { StatusBarProvider } from "../../shared/status";
 import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 import ActivityBar from "./ActivityBar";
 import CommandPalette from "./CommandPalette";
-import TabBar from "./TabBar";
+import TabBar from "../tabs/TabBar";
 import StatusBar from "./StatusBar";
 import TitleBar from "./TitleBar";
 

@@ -1,4 +1,4 @@
-import type { TabData } from "../../common/types/tab-data.interface";
+import type { TabData } from "./types";
 import type { ToolDefinition } from "../../tools/defineTool";
 
 export interface TabState {

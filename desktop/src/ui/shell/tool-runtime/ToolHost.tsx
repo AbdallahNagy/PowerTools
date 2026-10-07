@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { TabData } from "../../common/types/tab-data.interface";
+import type { TabData } from "../tabs/types";
 import type { ToolDefinition } from "../../tools/defineTool";
 import { PrimaryActionScope } from "../../shared/keyboard";
 import { ToolErrorBoundary } from "./ToolErrorBoundary";

@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-import type { TabData } from "../common/types/tab-data.interface";
+import type { TabData } from "./types";
 
 export interface TabContextValue {
   tabs: TabData[];

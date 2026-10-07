@@ -1,8 +1,8 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import TabBar from "../../src/ui/components/layout/TabBar";
-import { TabProvider } from "../../src/ui/context/TabContext";
+import TabBar from "../../src/ui/shell/tabs/TabBar";
+import { TabProvider } from "../../src/ui/shell/tabs/TabContext";
 import ToolHost from "../../src/ui/shell/tool-runtime/ToolHost";
 import { useToolRuntime } from "../../src/ui/shell/tool-runtime/useToolRuntime";
 import { defineTool } from "../../src/ui/tools/defineTool";

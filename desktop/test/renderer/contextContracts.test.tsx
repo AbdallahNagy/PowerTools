@@ -7,8 +7,8 @@ import {
   useStatusBar,
   useStatusItems,
 } from "../../src/ui/shared/status";
-import { TabProvider } from "../../src/ui/context/TabContext";
-import { useTabs } from "../../src/ui/context/useTabs";
+import { TabProvider } from "../../src/ui/shell/tabs/TabContext";
+import { useTabs } from "../../src/ui/shell/tabs/useTabs";
 
 function ToastControls() {
   const { showToast } = useToast();
