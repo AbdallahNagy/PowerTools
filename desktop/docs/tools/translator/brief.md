@@ -218,6 +218,110 @@ Location: `api/PowerTools/PowerTools.API/Tools/Translator/`, attached to `Datave
 - Large tables produce many `UpdateAttributeRequest` calls. Keep batches small, because metadata operations serialize on the server and time out easily.
 - `SetLocLabels` replaces the whole label list, so always read before writing.
 
+### UX
+
+Scope is the user's first-PR cut: an in-app grid for tables, columns, local and global choices (including global Yes/No sets), Yes/No columns, relationships with a custom menu label, system views, and charts. The user views and edits labels per language and applies them with a targeted publish. Excel export and import, the solution filter, forms, dashboards, and SiteMap are not in this design.
+
+#### Opening the tool
+
+- **Sidebar entry.** Title `Translator`. Tooltip: "Edit table, column, choice, view, and chart labels in every installed language". It uses its own single-color SVG through `ToolIcon` (a `Languages`-style glyph drawn for Power Tools, not the plugin icon).
+- **Public listing** (`publicCatalog.ts`): title `Translator`. Description: "Edit the display names and descriptions of tables, columns, choices, views, and charts side by side in every language installed in an environment."
+- **Title-bar menu.** None. The tool is opened only from the sidebar and the command palette.
+- **Multiple tabs.** `allowMultipleInstances: true`. Each tab keeps its own scope selection, component tab, language choice, filter, sort, and unsaved edits, and follows the selected environment. Two tabs can edit different tables of the same environment.
+
+#### Layout
+
+A horizontal split built from `Group`, `Panel`, and `Separator` (`react-resizable-panels`), as in `Layout.tsx`.
+
+- Left panel, **scope list**: default `260px`, `minSize` `200px`, `maxSize` `40%`.
+- `Separator` with `aria-label="Resize panes"`, classes `w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent`.
+- Right panel, **label grid**: `minSize` `50%`.
+
+A `Toolbar` runs across the top of the whole tab, above the split:
+
+- Start: `Select` labeled "Show" with `Names and descriptions` (default), `Names only`, `Descriptions only`. "Names" covers display name, plural name, option label, True label, False label, view name, chart name, and relationship menu label.
+- Start: `Button` (secondary, `sm`) "Languages…" with the count, for example `Languages (4 of 6)`. It opens the language `Modal` below.
+- End: `Button` (ghost, `sm`) "Discard changes", disabled with no edits.
+- End: `Button` (primary) "Apply changes" with the count, for example `Apply 12 changes`, disabled with no edits or while any edited cell is invalid.
+- End: `Button` (ghost, icon `RotateCw`, `aria-label="Reload labels"`) with a `Tooltip`. It reloads languages, the table list, and the current grid. With unsaved edits it first asks in a `Modal`: "Reloading discards 12 unsaved changes." with **Discard and reload** (danger) and **Cancel**.
+
+#### Scope list (left)
+
+- First row, fixed above the search: **Global choices**, with the number of global choice sets in muted text. It is selectable like a table row.
+- `SearchInput`, placeholder "Search tables by display or logical name". Autofocused when the tab opens with a connection.
+- One row per table: display name in `text-fg`, logical name below in `font-mono text-2xs text-fg-muted`. Selected row `bg-accent-soft text-fg-strong`; hover `hover:bg-hover`. Arrow keys move the selection while the list has focus.
+- A table or Global choices row that holds unsaved edits shows a `Badge` (`tone="accent"`) with the count, for example `3 edited`, so edits made elsewhere stay visible.
+- Header above the list: "Tables" and the count, `812` or `24 of 812` while filtering.
+
+#### Label grid (right)
+
+- **Nothing selected:** `EmptyState`, "Select a table or Global choices to see its labels."
+- **Header:** the table display name (`text-base font-semibold text-fg-strong`) and logical name (mono, muted), or "Global choices".
+- **Component tabs** (`Tabs`, only for a table): `Table`, `Columns`, `Choices`, `Yes/No`, `Relationships`, `Views`, `Charts`. Each tab label shows an edit count in a `Badge` when that tab holds unsaved edits. The selected tab is kept when the user moves to another table. Global choices has no tabs.
+- **Grid filter:** `SearchInput`, placeholder "Filter by name or any label". It matches the component's display name, logical name, and every visible language value. It is kept across component tabs and cleared when the scope changes.
+- **Grid:** one `DataTable` per tab. Headers are title case as written here. Every column is sortable by clicking its header: first click ascending (↑), same header again descending (↓). Sorting uses the loaded values, not drafts, so rows do not jump while the user types. Default sort is `Component` ascending, then `Label` in the order listed below. The grid sits in a `min-h-0 flex-1` parent and scrolls on both axes inside the pane; the page itself never scrolls horizontally. Language columns have a fixed width (about `220px`).
+
+  | Tab | Identifying columns | `Label` values |
+  | --- | --- | --- |
+  | Table | `Component` (the table) | Display Name, Plural Name, Description |
+  | Columns | `Component` (column display name, logical name below in mono muted) | Display Name, Description |
+  | Choices | `Component` (the choice column), `Value` | Option Label, Option Description |
+  | Yes/No | `Component` (the Yes/No column) | True Label, False Label |
+  | Relationships | `Component` (schema name), `Type` (`1:N` or `N:N`) | Menu Label |
+  | Views | `Component` (view name in the base language) | Name, Description |
+  | Charts | `Component` (chart name in the base language) | Name, Description |
+  | Global choices | `Component` (choice set, logical name below), `Value` (empty for set-level rows) | Display Name, Description, Option Label, Option Description; global Yes/No sets add True Label, False Label |
+
+  After these come one column per shown language, base language first, then by language name. Header: `English (1033)`; the base language header adds a `Badge` `Base`. The "Show" select hides or shows rows by `Label` kind.
+
+- **Editing a cell.** Each language cell renders an `Input` (compact, `className` only for layout) bound to the tab's draft store keyed by row key plus LCID, so drafts survive virtualization, sorting, filtering, tab switches, and scope switches. Long values are shown truncated with the full text in `title`.
+  - An edited cell gets `bg-accent-soft`. Restoring the original text removes the draft.
+  - Clearing a base-language Display Name, Plural Name, Name, or Option Label marks the cell invalid: `border-danger`, `aria-invalid`, and a `Tooltip` "The base language label is required." Apply stays disabled while any cell is invalid. Clearing a non-base value is allowed and means "remove this translation"; the Dataverse review section decides whether that write is possible, and if not, the cell is invalid with its message.
+  - A component the Dataverse review marks as not editable (for example not customizable) renders its cells as plain `text-fg-muted` text with a `Tooltip` stating why. The row stays visible.
+  - Empty translations render an empty `Input` with placeholder `—` in `text-fg-muted`.
+- **Grid states:**
+  - Loading: centered `Spinner` with "Loading column labels…" (the tab's noun).
+  - Empty tab: `EmptyState`, for example "This table has no Yes/No columns." For Relationships: "No relationships on this table use a custom menu label."
+  - No filter match: `DataTable` `emptyMessage` `No labels match "{query}".`
+  - Error: `Alert` (`tone="danger"`) with the message and a **Retry** `Button`, plus an error toast. Other tabs and drafts are unaffected.
+
+#### Languages modal
+
+`Modal` titled "Languages". One `Checkbox` per provisioned language, `English (1033)` format. The base language is checked and disabled with the note "The base language is always shown." Quick actions as ghost `Button`s: **All languages**, **Base language only**. Default when the tab opens: all provisioned languages. Hiding a language that holds drafts keeps the drafts and they are still applied; the toolbar count still includes them. **Done** (primary) closes it.
+
+#### Apply flow
+
+1. **Apply changes** opens a `Modal` titled "Apply label changes". It lists counts by scope: one line per table or Global choices, for example `account: 7 labels`, `Global choices: 2 labels`, and the total. Text: "Only the tables and global choices listed here are published." Buttons: **Apply and publish** (primary), **Cancel**.
+2. While running the modal is `busy` and cannot close. It shows a `ProgressBar` with "Updating labels: 8 of 12", then "Publishing 3 components…".
+3. **All succeed:** the modal closes, drafts clear, the grid shows the new values, and a success toast says "Updated 12 labels and published 3 components."
+4. **Some fail:** the modal stays open and shows an `Alert` (`tone="warn"`) "10 of 12 labels updated. 2 failed." and a `DataTable` with columns `Component`, `Label`, `Language`, `Error`. Successful drafts clear; failed drafts stay in the grid with `bg-danger-soft` and a `Tooltip` holding the error. Publish still runs for the components that changed. **Close** returns to the grid.
+5. **Publish fails:** `Alert` (`tone="danger"`) "Labels were saved but publishing failed: {message}" with **Retry publish** (primary) and **Close**. Saved values are kept; drafts are cleared for them.
+
+**Discard changes** asks in a `Modal`: "Discard 12 unsaved label changes?" with **Discard** (danger) and **Cancel**.
+
+#### Connection and status
+
+- **No connection:** `EmptyState` across the tab, "Right-click this tab and choose Change connection."
+- **Connection change:** reset scope, tabs, filters, language choice, and drafts. If drafts existed, show an info toast "Discarded 12 unsaved label changes from the previous environment."
+- **First load:** a centered `Spinner` with "Loading languages and tables…" in the left pane; the right pane shows its empty state. On failure, an `Alert` (`tone="danger"`) with **Retry** in the left pane, plus an error toast.
+- **Status bar** (`useToolStatus`): "No environment selected", "Loading languages and tables…", "812 tables, 6 languages", "Loading column labels for account…", "account: 143 columns", "12 unsaved changes", "Updating labels: 8 of 12", "Publishing…", "Could not load …".
+
+#### Shared controls
+
+`Toolbar`, `Button`, `Select`, `Input`, `SearchInput`, `Tabs`, `DataTable`, `Checkbox`, `Modal`, `Badge`, `Alert`, `EmptyState`, `Tooltip`, `ProgressBar`, `Spinner`, `useToast`, plus the `react-resizable-panels` split. Icons from `lucide-react` (`RotateCw`). Colors only from the token classes in `ui-colors`; no new tokens are needed.
+
+#### Do not build
+
+- Excel export or import, a workbook preview, or a batch-size setting (later phase, own workbook layout).
+- The solution filter (later phase).
+- Forms, dashboards, and SiteMap labels.
+- Publish All. Publishing is only for the changed tables and global choices.
+- Machine translation, translation suggestions, copy-from-language, or fill-down.
+- A "missing translations only" filter, language provisioning, or changing the base language.
+- Editing anything other than labels (names, required level, option values, adding or removing options).
+- Comparing environments.
+- Easy Translator's WinForms layout: the entity checklist with Export and Import buttons, the language radio group, the log pane, and its icons and wording.
+
 ### Open questions
 
 Answered by the user before Dataverse review and UX:
