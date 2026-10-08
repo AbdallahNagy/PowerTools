@@ -431,6 +431,133 @@ A `Toolbar` runs across the top of the whole tab, above the split:
 - Comparing environments.
 - Easy Translator's WinForms layout: the entity checklist with Export and Import buttons, the language radio group, the log pane, and its icons and wording.
 
+### Implementation notes and test evidence
+
+Scope follows the user's first-PR decision: an in-app grid for tables, columns, local choices, Yes/No columns, relationships with a custom menu label, system views, charts, and global choices (including global Yes/No sets), applied with a targeted publish. There is no Excel export or import, no solution filter, no forms, dashboards, or SiteMap, no batch-size setting, and no Publish All. Easy Translator was used only as a behavioral reference. No code, layout, wording, or icons were copied, and no new dependency was added.
+
+**Sidecar: `api/PowerTools/PowerTools.API/Tools/Translator/`**
+- `TranslatorEndpoints.cs` maps the `/api/translator` group behind `DataverseContextFilter`. It is registered with `app.MapTranslatorEndpoints()` in `Program.cs`, together with `ITranslatorJobStore`, `ITranslatorDelay`, and the `TranslatorJobRunner` hosted service.
+  - `GET /languages` returns `{ baseLcid, languages: [{ lcid, name }] }`. It reads `organization.languagecode` and `RetrieveProvisionedLanguagesRequest`, unions and de-duplicates them, and gets names from `languagelocale`. If that read fails, the name falls back to `LCID <n>`. `CultureInfo` is not used, because the project sets `InvariantGlobalization`.
+  - `POST /labels/query` returns `{ rows: LabelRow[] }`. Body: `{ tables, kinds, lcids, properties }`.
+  - `POST /labels/apply` validates the rows and queues a job. It returns `{ jobId }`.
+  - `GET /jobs/{jobId}` returns `{ status, phase, processed, total, succeeded, failed, skipped, results, publish, log }`.
+  - `POST /publish` takes `{ tables, optionSets }`. It was added for the UX's **Retry publish** button, and it publishes only the targets it is given.
+- `TranslatorClient.cs` holds the `ITranslatorClient` seam, the Dataverse implementation over `DataverseClientFactory`, and pure request builders.
+- `TranslatorMapper.cs` turns metadata into rows and applies the exclusion and editability rules.
+- `TranslatorService.cs` covers languages, the query, apply validation, and publish.
+- `TranslatorApply.cs` plans and runs the writes.
+- `TranslatorJob.cs` holds the job, the in-memory store, and the runner.
+- `TranslatorFaults.cs` and `TranslatorDtos.cs` hold the fault mapping and the contracts.
+
+**Query behavior, including the Dataverse review corrections**
+- Tables, columns, choices, Yes/No columns, and relationships are read with `RetrieveMetadataChangesRequest`.
+  - The query uses a `LogicalName` `In` condition, in chunks of 100 tables.
+  - It sends minimal property lists for tables, attributes, and relationships.
+  - `LabelQueryExpression.FilterLanguages` is set to the requested LCIDs.
+- Global choices are read with `RetrieveAllOptionSetsRequest`.
+- Views are read with a paged `savedquery` query: `returnedtypecode` `In` the tables and `isprivate = false`. Charts are read with a paged `savedqueryvisualization` query on `primaryentitytypecode`. Names and descriptions come from `RetrieveLocLabelsRequest`, batched through `ExecuteMultipleRequest` with `ReturnResponses = true`. The `name` column from `RetrieveMultiple` is not used. Each view shows its type (for example "Public view").
+- The column exclusions are applied as a heuristic, not reported as errors:
+  - columns with `AttributeOf` set
+  - the types BigInt, CalendarRules, EntityName, ManagedProperty, and Uniqueidentifier
+  - Virtual columns, except multi-select choices
+  - columns whose labels are all empty
+  - rollup `_state` and `_date` helpers when the base column exists
+- Choices cover Picklist, State, Status, and multi-select columns. A column is local or global according to `OptionSet.IsGlobal`.
+- Relationships are included only when their menu behavior is `UseLabel`. A 1:N shows on its referenced table, and an N:N shows once per side (`side` 1 or 2).
+- Editability:
+  - When `IsCustomizable.Value` is false (tables, columns, relationships, global choices, and the `iscustomizable` flag on views and charts), the row is shown read-only with the reason.
+  - When `IsRenameable.Value` is false, the whole row is read-only, as the review requires until the description case is verified.
+  - This follows the UX ("the row stays visible") rather than the review's "hide" suggestion, so every component in the table is still visible.
+- The grid shows published labels. The UI does not claim that it includes unpublished edits.
+
+**Apply behavior**
+- Validation on the server happens before Dataverse is called:
+  - A malformed key returns 400.
+  - An LCID that is not provisioned fails that label.
+  - Any empty value fails that label. An empty base-language name gets "The base language label is required." An empty translation is refused: because the effect of an empty label under `MergeLabels` is unverified, clearing a translation is not offered in v1.
+  - The batch size defaults to 10 and is clamped to 10..50.
+- Every write starts from a fresh read with `RetrieveAsIfPublished = true`, changes only labels, and sets `MergeLabels = true`.
+  - Each table gets one `RetrieveEntityRequest`: `Entity` for table labels, and `Attributes` and/or `Relationships` for the rest.
+  - Tables use `UpdateEntityRequest`. Columns use `UpdateAttributeRequest`, keeping the derived metadata type. Relationships use `UpdateRelationshipRequest`, editing `AssociatedMenuConfiguration` or `Entity1`/`Entity2AssociatedMenuConfiguration`.
+  - State options use **`UpdateStateValueRequest`**.
+  - Status, Picklist, multi-select, and Yes/No options use `UpdateOptionValueRequest` with entity and attribute. Each option is one request that carries both its label and its description, which fixes the plugin's de-duplication bug.
+  - Global choices: set names use `RetrieveOptionSetRequest(RetrieveAsIfPublished)` followed by `UpdateOptionSetRequest`. Options use `UpdateOptionValueRequest` with `OptionSetName` (for Yes/No sets, 0 = false and 1 = true).
+  - Views and charts read the current labels with `RetrieveLocLabels(IncludeUnpublished = true)`, then send `SetLocLabelsRequest` with the full merged list.
+- Writes go through `ExecuteMultipleRequest` with `ContinueOnError = true` and `ReturnResponses = false`. Faults are mapped back to their rows by `RequestIndex`.
+  - A "does not exist" fault, or a component missing from the fresh read, is reported as **skipped**. Privilege faults get a clear per-row message.
+  - Customization-lock faults (matched by wording, since the code is unverified) are retried up to 3 times with backoff, for single items, whole batches, and publish.
+  - A timed-out batch is re-sent once in halves.
+  - No second 429 retry loop was added: `ServiceClient` already retries those.
+- Publish uses `PublishXmlRequest` with only the touched tables and global choices:
+  - the owning table of each label
+  - both tables of a relationship
+  - the table of each view or chart
+  - the name of each global option set
+- Publish runs even when some rows failed, and a publish failure is reported separately. Apply jobs run one at a time in a single background runner, so two tabs on the same environment do not compete for the customization lock.
+
+**Desktop: `desktop/src/ui/tools/translator/`**
+- The tool lives in `tool.ts`: id `translator`, title `Translator`, the tooltip from the UX, `allowMultipleInstances: true`, and its own `translator-icon.svg`.
+- The UI is built from `Translator.tsx`, `state/useTranslator.ts`, `api/translatorApi.ts` and `api/queryKeys.ts`, the `model/` files (`labels`, `drafts`, `grid`, `types`, `apiError`), and the `components/` files (`ScopeList`, `LabelGrid`, `LabelCell`, `LanguagesModal`, `ApplyModal`, `ConfirmModal`).
+- It is registered in `registry.tsx` and `publicCatalog.ts` (after Solution Components Mover, in registry order) with the UX's public-listing sentence. `test/toolRegistry.test.ts` was updated for the new order.
+- The table list reuses `GET /api/metadata/entities`. All calls go through `shared/api/client.ts` with `meta.connectionName`.
+- Implemented UX behavior:
+  - Toolbar: the "Show" select, "Languages (n of m)", "Discard changes", "Apply n changes", and a reload icon that asks before discarding drafts.
+  - Resizable split: 260px scope list with a minimum of 200px and a maximum of 40%; grid with a minimum of 50%.
+  - Scope list: a Global choices row with its count, autofocused search, arrow-key selection, and "n edited" badges.
+  - Component tabs carry edit-count badges. The filter is kept across tabs and cleared when the scope changes.
+  - Every column sorts on loaded values. The default order is Component, then Value, then Label.
+  - There is one fixed-width column per language, base language first with a `Base` badge.
+  - The draft store is keyed by row key and LCID, so drafts survive tab, scope, filter, and sort changes and hiding a language. Edited cells use `bg-accent-soft`. Invalid cells get `border-danger`, `aria-invalid`, and a tooltip, and they disable Apply. Failed cells use `bg-danger-soft` with the error in a tooltip. Read-only rows show muted text with the reason.
+  - Languages modal: the base language is locked; quick actions are All languages and Base language only.
+  - Apply modal:
+    - It confirms the change count per scope and blocks closing while it runs, showing progress.
+    - On success, it shows a toast and patches the saved values into the cached grid.
+    - On partial failure, it shows a warning and a `Component / Label / Language / Error` table, and failed drafts stay in the grid.
+    - If publish fails, it shows an alert with **Retry publish**.
+  - Status-bar texts follow the UX. When the connection changes, everything resets, with an info toast if drafts were discarded.
+- One shared change: `desktop/src/ui/shared/ui/Tooltip.tsx` gained an optional `disabled` prop. It keeps the element tree the same, so a cell's input keeps focus when the cell becomes invalid while the user types.
+
+**Tests (fake Dataverse surfaces only; no credentials or live environment)**
+- Sidecar: `api/PowerTools/PowerTools.API.Translator.Tests/` (added to `PowerTools.sln`) has 25 xUnit tests over a recording `FakeTranslatorClient`. They cover:
+  - languages: union, ordering, and the fallback name
+  - query validation, chunks of 100 with a `LogicalName In` condition, and `FilterLanguages`
+  - the read-only reasons and every column exclusion rule, including the rollup `_state`/`_date` rule
+  - local choices: Picklist, State, Status, and multi-select, but not global choices
+  - Yes/No columns, relationships with `UseLabel` only (1:N and N:N sides), and global choices and Yes/No sets
+  - views: `RetrieveLocLabels`, the private-view exclusion, and the view type
+  - apply validation and batch clamping
+  - `MergeLabels` and label merging on fresh metadata, with one attribute read per table
+  - `UpdateStateValue` for State, and one combined label-plus-description request per option
+  - global choice writes and their publish XML, and relationship publish targets on both tables
+  - the read-merge-write `SetLocLabels` array, fault mapping by request index (privilege fault and skipped component), and the customization-lock retry
+  - resending a timed-out batch in halves, publish failure reporting, and Retry publish
+- Desktop: node tests in `tests/node/` (`labels`, `drafts`, `grid`) and an MSW renderer test in `tests/renderer/translator.test.tsx` (10 tests). The renderer tests cover:
+  - no connection, the first load, column headers, the query body, and the status bar
+  - draft tracking and badges, and blocking an empty base name
+  - drafts across tabs, and read-only rows
+  - the filter, the Show select, and the languages modal
+  - a successful apply with its toast and saved value
+  - a partial failure, a publish failure, and Retry publish
+  - the discard and reload confirmations, global choices, and the grid error with Retry
+
+**Commands run, all passing**
+- From `desktop/`:
+  - `npm test`: 81 files, 442 tests passed.
+  - `npm run lint`: clean.
+  - `npm run build`: succeeded.
+  - `xvfb-run -a npm run check`: typecheck, lint with `--max-warnings 0`, 442 tests, the renderer build, and the Playwright smoke test (1 passed).
+- From `api/PowerTools/`:
+  - `dotnet build PowerTools.sln`: 0 warnings, 0 errors.
+  - `dotnet test PowerTools.sln`: all projects passed, including Translator (25).
+
+**Limits of this verification**
+- The container has no .NET 9 runtime. It could not be downloaded here, because `builds.dotnet.microsoft.com` was blocked by the egress policy. The sidecar was built with the .NET 10 SDK from the Microsoft apt feed, and the `net9.0` tests ran with `DOTNET_ROLL_FORWARD=Major`. CI runs on .NET 9.
+- Nothing ran against a live or on-premises environment. These points stay unverified, as the Dataverse review notes:
+  - whether the Data8 on-premises client serializes the metadata messages
+  - the exact customization-lock error code (it is matched by wording)
+  - whether the `languagelocale` table exists on on-premises
+- The privilege pre-check that the review recommends (`WhoAmI` plus `RetrieveUserPrivileges`) is not implemented, because the privilege names are unverified. Privilege faults are mapped per row instead.
+
 ### Open questions
 
 Answered by the user before Dataverse review and UX:

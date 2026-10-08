@@ -59,6 +59,12 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
       "Copy solution components from selected solutions into unmanaged solutions in the same environment.",
   },
   {
+    id: "translator",
+    title: "Translator",
+    description:
+      "Edit the display names and descriptions of tables, columns, choices, views, and charts side by side in every language installed in an environment.",
+  },
+  {
     id: "workflow-activities-viewer",
     title: "Workflow Activities Viewer",
     description:

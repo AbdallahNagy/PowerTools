@@ -6,13 +6,15 @@ interface TooltipProps {
   /** One focusable element, such as an icon Button. */
   children: ReactElement;
   side?: "top" | "right" | "bottom" | "left";
+  /** Keeps the tooltip closed without changing the element tree, so a focused child keeps focus. */
+  disabled?: boolean;
 }
 
 /** Short hint on hover and keyboard focus. Not a replacement for a visible label. */
-export function Tooltip({ content, children, side = "top" }: TooltipProps) {
+export function Tooltip({ content, children, side = "top", disabled = false }: TooltipProps) {
   return (
     <TooltipPrimitive.Provider delayDuration={400}>
-      <TooltipPrimitive.Root>
+      <TooltipPrimitive.Root open={disabled ? false : undefined}>
         <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>
           <TooltipPrimitive.Content
