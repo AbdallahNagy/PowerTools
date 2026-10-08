@@ -218,6 +218,115 @@ Location: `api/PowerTools/PowerTools.API/Tools/Translator/`, attached to `Datave
 - Large tables produce many `UpdateAttributeRequest` calls. Keep batches small, because metadata operations serialize on the server and time out easily.
 - `SetLocLabels` replaces the whole label list, so always read before writing.
 
+### Dataverse review
+
+Evidence used: Microsoft's SDK message contracts for the requests named below (`Microsoft.Xrm.Sdk.Messages` and `Microsoft.Crm.Sdk.Messages`), the Dataverse metadata and service-protection documentation as I know it, and this repo's sidecar code (`Services/DataverseClientFactory.cs`, `PowerTools.API.csproj`, and the `Retry-After` handling in `Tools/SolutionComponentsMover` and `Tools/WorkflowActivities`). I did not run anything against a live environment. Items marked **unverified** need a check on a dev environment before the developer depends on them. Scope follows the user's answer: tables, columns, local and global choices, Yes/No, relationships, views and charts in an in-app grid. Forms, dashboards and SiteMap are out of scope, so this review does not confirm or reject the plugin's `usersettings` approach.
+
+**Corrections to messages**
+- **State (`statecode`) labels use `UpdateStateValueRequest`, not `UpdateOptionValueRequest`.** The contract is `UpdateStateValueRequest { EntityLogicalName, AttributeLogicalName, Value, Label, Description, MergeLabels }`. Microsoft documents `UpdateOptionValue` for Picklist, Status, multi-select and Boolean, and a separate message for state options. The plugin sends `UpdateOptionValue` for State. Treat that as wrong per the contract.
+- **Status (`statuscode`), local Picklist, local multi-select and local Yes/No** use `UpdateOptionValueRequest` with `EntityLogicalName` + `AttributeLogicalName` + `Value`. Multi-select works the same way as Picklist, so the plugin's "Unable to determine type" gap is a plugin bug, not a platform limit.
+- **Global choices and global Yes/No sets** use `UpdateOptionValueRequest` with `OptionSetName` + `Value` and no entity or attribute. The 0 = false, 1 = true mapping is correct.
+- **Detect global versus local from `OptionSet.IsGlobal`** on the column metadata, not from `OptionSetName` being null. `OptionSetName` on the request is an input, and the plugin's de-duplication on it is a plugin bug. Send one request per option that carries both `Label` and `Description` when both changed.
+- **Tables, columns, relationships:** `UpdateEntityRequest`, `UpdateAttributeRequest` and `UpdateRelationshipRequest` all have `MergeLabels`. With `MergeLabels = true`, languages you leave out of a `Label` are kept. Keep it on every call.
+- **Read-before-write must use the unpublished layer.** `RetrieveEntityRequest`, `RetrieveAttributeRequest`, `RetrieveRelationshipRequest` and `RetrieveOptionSetRequest` all take `RetrieveAsIfPublished = true`. Use it on the fresh read in the apply job. Without it, the job writes back published values over another maker's unpublished edits to the same component.
+- **Full object versus a minimal object.** The mapping says to send back freshly retrieved metadata. That is Microsoft's documented pattern, and it is the safe default. Keep the derived type (for example `PicklistAttributeMetadata`), and change only `DisplayName`, `DisplayCollectionName` and `Description`. The plugin sends a minimal `EntityMetadata` for tables. That works in practice, but whether null properties always mean "unchanged" is **unverified** for every metadata type, so do not rely on it.
+- **For one table with many changed columns, use a single `RetrieveEntityRequest(EntityFilters.Attributes, RetrieveAsIfPublished = true)`.** Do not send one `RetrieveAttributeRequest` per column. Use `EntityFilters.Relationships` only when relationships changed.
+- **Views and charts:** `RetrieveLocLabelsRequest` has `IncludeUnpublished`. Set it to true for the read-before-write. `SetLocLabelsRequest { EntityMoniker, AttributeName, Labels }` is the right message for `savedquery` and `savedqueryvisualization` `name` and `description`. Whether `SetLocLabels` drops languages that are left out of `Labels` is **unverified** (the plugin assumes it does). Reading and merging first is correct either way, so keep it.
+- **Plain `RetrieveMultiple` on `savedquery.name` returns the caller's UI language only.** That is why `RetrieveLocLabels` is needed. Do not show the `name` column from `RetrieveMultiple` as the base-language label.
+
+**Corrections to metadata reads**
+- **Use `LabelQueryExpression` on `RetrieveMetadataChangesRequest`.** Set `FilterLanguages` to the selected LCIDs. Without it, every provisioned language is returned. That is correct but heavier.
+- `RetrieveMetadataChanges` returns **published** metadata only, with no `RetrieveAsIfPublished`. The grid therefore shows published labels. This is acceptable, but the apply job must re-read with `RetrieveAsIfPublished = true` (above). The UI should not imply that the grid includes unpublished edits.
+- Filter tables with a `LogicalName` `In` condition (`MetadataConditionOperator.In`) rather than OR-ing `MetadataId` conditions. Chunks of 100 are a plugin choice, not a documented limit. Keep 100 as a cautious default.
+- Property lists needed: tables need `LogicalName`, `SchemaName`, `DisplayName`, `DisplayCollectionName`, `Description`, `IsRenameable`, `IsCustomizable`, `IsManaged`. Columns need `LogicalName`, `AttributeType`, `AttributeTypeName`, `AttributeOf`, `DisplayName`, `Description`, `IsRenameable`, `IsCustomizable`, `IsManaged`, `OptionSet`. Relationships need `SchemaName`, `AssociatedMenuConfiguration` (1:N) or `Entity1AssociatedMenuConfiguration`/`Entity2AssociatedMenuConfiguration` (N:N), `Entity1LogicalName`/`Entity2LogicalName` or `ReferencedEntity`/`ReferencingEntity`, and `IsCustomizable`. `OptionSet` returns `Options`, `TrueOption`/`FalseOption` or `StateOptionMetadata` as the column type requires.
+- **Editability rules, beyond the plugin's:**
+  - `IsRenameable` (a `BooleanManagedProperty`, so read `.Value`) controls `DisplayName` and `DisplayCollectionName`.
+  - `IsCustomizable.Value` controls whether the component can be updated at all.
+  - The plugin skips a whole table when `IsRenameable` is false, and it never checks `IsCustomizable`. Recommended: hide components where `IsCustomizable.Value` is false, and make name cells read-only where `IsRenameable.Value` is false. Whether `Description` stays editable when only `IsRenameable` is false is **unverified**. Until it is checked, make the whole row read-only in that case.
+  - Global choices: check `IsCustomizable` on the option set.
+  - Views: query the `iscustomizable` managed property on `savedquery` and `savedqueryvisualization`, and make non-customizable rows read-only.
+- The column exclusion list (types, `AttributeOf`, the Virtual exception for multi-select, the rollup `_state` and `_date` helpers) is a reasonable heuristic. It is not a Microsoft rule. Keep it as a filter, and do not report excluded columns as errors.
+- **Views query:** filter `savedquery` by `returnedtypecode` with an `In` on the selected logical names. Use `PagingInfo`/paging cookie even though counts are usually small, and do not use the plugin's per-table query. Exclude private views (`isprivate = true`). Whether some `querytype` values (for example internal or offline views) should also be hidden is **unverified**. Show them, and label the type. Charts filter `savedqueryvisualization` by `primaryentitytypecode`.
+- **Batch the per-view reads.** `RetrieveLocLabels` once per view is N+1. It can be sent inside `ExecuteMultipleRequest` with `ReturnResponses = true`, which saves round trips.
+
+**Languages endpoint**
+- `organization.languagecode` plus `RetrieveProvisionedLanguagesRequest` is correct. The response normally includes the base language. Union and de-duplicate anyway.
+- **Correction to the mapping:** `PowerTools.API.csproj` sets `<InvariantGlobalization>true</InvariantGlobalization>`. Under that setting `new CultureInfo(lcid)` throws `CultureNotFoundException`, so `CultureInfo(lcid).EnglishName` will not work.
+  - Instead, read the `languagelocale` table (`localeid`, `name`, `language`, `code`) filtered to the provisioned LCIDs.
+  - Fall back to `LCID <n>` when no name is found.
+  - Do not turn off invariant globalization for this.
+  - Whether `languagelocale` exists on on-premises is **unverified**. The fallback covers that case.
+- Validate on the server that every LCID in a write is provisioned. Reject the row before Dataverse sees it.
+
+**Batching, transactions and throttling**
+- `ExecuteMultipleRequest` is not a transaction. With `ContinueOnError = true` and `ReturnResponses = false`, `Responses` holds only the faulted items, keyed by `RequestIndex`. The mapping has that right. The documented maximum is 1000 requests per batch, and `ExecuteMultiple` cannot be nested.
+- Metadata writes are slow and take a customization lock, so a batch of 200 `UpdateAttribute` calls can run past the client timeout.
+  - Keep the default of 10.
+  - Cap metadata-update batches at about 50, below the proposed 200. 50 is a judgment, not a documented limit.
+  - `UpdateOptionValue` and `SetLocLabels` are lighter, but use the same cap for simplicity.
+- Service protection (online only):
+  - `ServiceClient` already retries 429 and service-protection faults and honors `Retry-After` (its `MaxRetryCount` and `RetryPauseTime` settings).
+  - Do not add a second retry loop around it. Reuse the repo's existing `ReadRetryAfter` handling only to report a fault that is still there after the built-in retries, or to resume the job.
+  - Label updates with `MergeLabels = true` and `SetLocLabels` with a full merged array are idempotent, so a retry is safe.
+- **Customization lock (online and on-premises).** Dataverse runs one customization operation at a time per org. A metadata update during another publish or a solution import fails with a "another operation is running / try again later" style fault (**the exact error code is unverified**).
+  - Treat that fault as retryable with backoff.
+  - **Serialize apply jobs per environment in the sidecar.** `allowMultipleInstances: true` means two tabs on the same environment would otherwise fight over the lock.
+- On-premises: there are no service-protection limits by default. `ExecuteMultiple` batch size and concurrency are server settings (defaults 1000 and 2).
+
+**Publish**
+- `PublishXmlRequest` with only the affected components is correct. Format: `<importexportxml><entities><entity>account</entity>…</entities><optionsets><optionset>new_color</optionset>…</optionsets></importexportxml>`.
+- Which tables to include:
+  - Tables and columns, local choices, Yes/No and status/state: the table that owns them.
+  - Global choices: the option set name.
+  - 1:N relationships: both the referenced and the referencing table.
+  - N:N relationships: both tables.
+  - Views and charts: their table (`savedquery` and `savedqueryvisualization` publish with the entity).
+- **Side effect to show in the UI:** publishing a table publishes **all** of its pending unpublished customizations, including other makers' form or view edits, not only these labels.
+- Publish only targets with at least one successful write. Run publish even when some rows failed.
+- If publish fails, the labels are saved but unpublished. Report that as a separate state, and offer "publish again". Publishing again is safe.
+- A publish already running elsewhere causes the lock fault above. Retry it.
+
+**Privileges and connection**
+- The work runs under the signed-in user's delegated token (`ExternalTokenManagement`). No impersonation and no `CallerId` are needed or wanted.
+- A role is not the requirement. The user needs Write privileges on the metadata types touched, plus Publish Customizations. System Customizer and System Administrator have all of them.
+  - Recommended check: `WhoAmI`, then `RetrieveUserPrivilegesRequest`, mapped to names through the `privilege` table. Disable Apply with a clear message when privileges are missing, and show the grid read-only.
+  - Exact privilege names to check are **unverified** and should be confirmed against the `privilege` table. Likely candidates: `prvWriteEntity`, `prvWriteAttribute`, `prvWriteOptionSet`, `prvWriteRelationship`, `prvWriteQuery` (`savedquery`), the `savedqueryvisualization` write privilege, and `prvPublishCustomizations`.
+  - Still map a privilege fault on any single request to a clear per-row message, because privileges can change during a job.
+- Reading needs only Read on the metadata types, which almost every role has.
+
+**Online versus on-premises**
+- Online uses `ServiceClient`. On-premises uses the vendored Data8 `OnPremiseClient` (SOAP, `IOrganizationServiceAsync2`).
+- All the messages above exist in the v9 on-premises SDK. That the Data8 client serializes metadata request types (`UpdateEntity`, `UpdateAttribute` with derived metadata types, `UpdateRelationship`, `RetrieveMetadataChanges` with `EntityQueryExpression`) is **unverified**. The repo's existing tools mostly send data messages. Add one on-premises smoke test per message family before claiming on-premises support. If any family fails there, disable that kind on on-premises rather than the whole tool.
+- `OnPremiseClient` has no built-in 429 retry. On-premises normally has no 429s, so only the customization-lock retry matters there.
+- Language packs on-premises are installed per server. `RetrieveProvisionedLanguages` reflects what is provisioned in the org, which is the right source.
+
+**Solution and managed limits**
+- Label edits on managed components are allowed when the component is customizable or renameable (above). They go into the unmanaged active layer and override the managed labels for those languages. A later managed upgrade does not remove that override. Removing the active layer reverts it.
+- The writes are not added to any specific solution, so they land in the default solution. `UpdateEntityRequest`, `UpdateAttributeRequest`, `UpdateRelationshipRequest`, `UpdateOptionValueRequest` and `UpdateStateValueRequest` all accept `SolutionUniqueName`. That is a natural later addition alongside the solution filter. `SetLocLabelsRequest` has no such parameter. Out of scope for the first pull request.
+- Labels for a language that is later deprovisioned stay in metadata but are not shown. Nothing to handle in v1.
+
+**Validation and failure modes**
+- An empty base-language `DisplayName`, `DisplayCollectionName` or option `Label` is rejected by Dataverse. Block it in the grid and on the server.
+- Clearing a non-base translation by sending an empty string with `MergeLabels = true` has **unverified** behavior: the label may be ignored, removed, or stored as empty. Until that is tested, do not offer "clear translation" in v1, or test it and document the result in the implementation notes.
+- If a component was deleted or renamed between query and apply, the fresh read fails with "does not exist". Report that row as skipped and continue.
+- Partial success is normal. The job result must list succeeded, failed and skipped rows separately, with the target named, and publish whatever succeeded.
+- A timeout on an `ExecuteMultiple` leaves an unknown subset applied. Because the writes are idempotent, the job can re-send that batch once with a smaller size before reporting failure.
+
+**Plugin claims that are wrong**
+- It sends `UpdateOptionValue` for State options. Use `UpdateStateValue`.
+- Its de-duplication of local choices uses `OptionSetName`, so the label and the description of the same option go out as two requests (already noted by research, and confirmed as a bug).
+- It does not match multi-select choices on import. The platform supports them through `UpdateOptionValue`.
+- It does not check `IsCustomizable`, and it treats `IsRenameable` as table-wide.
+- `PublishAllXml` is unnecessary. Targeted `PublishXml` is supported.
+- Its `solutioncomponent` query has no paging (research noted this; the solution filter is later work).
+
+**Plugin claims that remain unverified**
+- That `SetLocLabels` drops languages left out of `Labels`. The read-merge-write approach makes this moot.
+- That a minimal `EntityMetadata` or `AttributeMetadata` leaves unset properties unchanged.
+- How an empty string behaves under `MergeLabels`.
+- That `formxml` labels are returned only in the caller's UI language. This is out of scope and was not reviewed.
+- The batch range of 10 to 1000 the plugin allows. The 1000 maximum is the documented `ExecuteMultiple` ceiling, but it is not safe for metadata writes.
+
 ### UX
 
 Scope is the user's first-PR cut: an in-app grid for tables, columns, local and global choices (including global Yes/No sets), Yes/No columns, relationships with a custom menu label, system views, and charts. The user views and edits labels per language and applies them with a targeted publish. Excel export and import, the solution filter, forms, dashboards, and SiteMap are not in this design.
