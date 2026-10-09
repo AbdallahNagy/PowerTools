@@ -2,7 +2,6 @@ import { useContext, useEffect, useState } from "react";
 import { desktopBridge } from "../../platform/desktopBridge";
 import { TabProviderContext } from "../tabs/TabProviderContext";
 import { useStatusItems } from "../../shared/status";
-import { UpdateButton } from "./UpdateButton";
 import { formatAppVersion } from "./updateStatus";
 
 const StatusBar = () => {
@@ -25,7 +24,6 @@ const StatusBar = () => {
             {item.content}
           </div>
         ))}
-        <UpdateButton placement="status-bar" />
         <span>{formatAppVersion(appVersion)}</span>
       </div>
     </div>

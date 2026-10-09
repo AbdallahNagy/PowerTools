@@ -78,7 +78,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
       </div>
 
       <div className="app-no-drag ml-auto flex items-stretch">
-        <UpdateButton placement="title-bar" />
+        <UpdateButton />
         <button
           type="button"
           aria-label="Minimize"

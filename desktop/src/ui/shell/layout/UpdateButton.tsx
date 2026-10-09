@@ -11,13 +11,11 @@ const ICONS: Partial<Record<UpdateStatus["state"], LucideIcon>> = {
   error: CircleAlert,
 };
 
-interface UpdateButtonProps {
-  /** "title-bar" is the prominent pill; "status-bar" sits on the teal bar. */
-  placement: "title-bar" | "status-bar";
-}
-
-/** Opens the update dialog. Renders nothing when there is no update to act on. */
-export function UpdateButton({ placement }: UpdateButtonProps) {
+/**
+ * The title-bar pill that opens the update dialog. Renders nothing when there
+ * is no update to act on.
+ */
+export function UpdateButton() {
   const update = useUpdate();
   if (!update) {
     return null;
@@ -41,20 +39,15 @@ export function UpdateButton({ placement }: UpdateButtonProps) {
       title={hint}
       onClick={openDialog}
       className={cn(
-        "app-no-drag flex items-center gap-1.5 rounded-sm font-medium",
-        placement === "title-bar"
-          ? cn(
-              "my-1 mr-2 px-2.5",
-              failed
-                ? "bg-danger-soft text-danger hover:bg-danger/25"
-                : "bg-accent text-accent-fg hover:bg-accent-hover",
-            )
-          : "px-1 hover:bg-accent-fg/15",
+        "app-no-drag my-1 mr-2 flex items-center gap-1.5 rounded-sm px-2.5 font-medium",
+        failed
+          ? "bg-danger-soft text-danger hover:bg-danger/25"
+          : "bg-accent text-accent-fg hover:bg-accent-hover",
       )}
     >
       {Icon ? (
         <Icon
-          size={placement === "title-bar" ? 14 : 12}
+          size={14}
           className={status.state === "downloading" ? "animate-spin" : undefined}
           aria-hidden="true"
         />

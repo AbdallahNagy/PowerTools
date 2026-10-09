@@ -51,6 +51,8 @@ describe("update prompt", () => {
       name: "Power Tools v0.2.0 is available. Click to see what's new and update.",
     });
     expect(titleBarButton).toHaveTextContent("Update to v0.2.0");
+    // The title bar is the only place with an update button.
+    expect(screen.getAllByRole("button", { name: /update/i })).toEqual([titleBarButton]);
 
     fireEvent.click(titleBarButton);
     const reopened = await screen.findByRole("dialog", { name: "Power Tools v0.2.0 is available" });
