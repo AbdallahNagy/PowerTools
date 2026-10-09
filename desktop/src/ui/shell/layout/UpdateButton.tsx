@@ -39,7 +39,7 @@ export function UpdateButton() {
       title={hint}
       onClick={openDialog}
       className={cn(
-        "app-no-drag my-1 mr-2 flex items-center gap-1.5 rounded-sm px-2.5 font-medium",
+        "app-no-drag my-1 mr-4 flex items-center gap-1.5 rounded-sm px-2.5 font-medium",
         failed
           ? "bg-danger-soft text-danger hover:bg-danger/25"
           : "bg-accent text-accent-fg hover:bg-accent-hover",
