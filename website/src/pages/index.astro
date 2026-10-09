@@ -31,22 +31,61 @@ const features = [
   }
 ] as const;
 
+const faqs = [
+  {
+    question: "What is PowerTools?",
+    answer:
+      "PowerTools is a free, open-source Windows desktop app with built-in tools for Microsoft Dataverse, Dynamics 365 Customer Engagement, and Power Platform developers. It covers FetchXML, plug-in registration, data migration, metadata, translations, and solution work in one workspace."
+  },
+  {
+    question: "Is PowerTools an alternative to XrmToolBox?",
+    answer:
+      "Yes. PowerTools rebuilds popular XrmToolBox plugin workflows, such as FetchXML Builder, Plugin Registration, Translator, and Solution Components Mover, as built-in tools with a modern interface. XrmToolBox has a much larger plugin catalog, and many developers use both."
+  },
+  {
+    question: "Is PowerTools free?",
+    answer:
+      "Yes. PowerTools is free and open source under the MIT license. The source code is on GitHub."
+  },
+  {
+    question: "Does PowerTools work with Dynamics 365 on-premises?",
+    answer:
+      "Yes. PowerTools connects to Dataverse and Dynamics 365 online with Microsoft sign-in, and to on-premises deployments with Active Directory or IFD."
+  },
+  {
+    question: "Is my Dataverse data sent anywhere?",
+    answer:
+      "No. PowerTools runs on your machine and connects directly to your environments. The website does not host or process your Dataverse data."
+  }
+];
+
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: { "@type": "Answer", text: faq.answer }
+  }))
+};
+
 const localPath = (path: string) =>
   `${basePath}${path === "/" ? "/" : path}`;
 ---
 
 <BaseLayout
-  title="PowerTools for Dataverse Developers"
-  description="A modern open-source desktop toolkit for everyday Dataverse work."
+  title="PowerTools: Free Dynamics 365 and Dataverse Developer Tools"
+  description="PowerTools is a free, open-source Windows toolkit for Dynamics 365, Dataverse, and Power Platform developers. FetchXML Builder, Plugin Registration, data migration, and more. A modern XrmToolBox alternative."
+  structuredData={[faqStructuredData]}
 >
   <section class="hero">
     <div class="hero-copy">
       <p class="eyebrow">Open-source desktop toolkit</p>
-      <h1><span class="gradient-text">PowerTools</span> for Dataverse Developers</h1>
+      <h1><span class="gradient-text">PowerTools</span> for Dataverse and Dynamics 365 Developers</h1>
       <p class="lead">
-        A modern open-source desktop toolkit for everyday Dataverse work, with
-        a friendly UI, secure local workflow, and tools that are easy to figure
-        out and use.
+        A modern open-source desktop toolkit for everyday Dataverse, Dynamics
+        365, and Power Platform work, with a friendly UI, secure local
+        workflow, and tools that are easy to figure out and use.
       </p>
       <div class="hero-actions">
         <a class="button primary" href={localPath("/download")}>Download for Windows</a>
@@ -104,7 +143,7 @@ const localPath = (path: string) =>
     <div class="section-header">
       <div>
         <p class="eyebrow">Current tools</p>
-        <h2>A toolkit for the workflows developers need often.</h2>
+        <h2>Dynamics 365 and Dataverse tools developers need often.</h2>
       </div>
       <p>
         PowerTools is a desktop workspace for Dataverse developer tools. Each
@@ -133,6 +172,26 @@ const localPath = (path: string) =>
         your Dataverse environments. The website introduces the tool; it does
         not host or process your Dataverse data.
       </p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">FAQ</p>
+        <h2>Questions developers ask.</h2>
+      </div>
+    </div>
+
+    <div class="tool-grid">
+      {
+        faqs.map((faq) => (
+          <article class="feature-card">
+            <h3>{faq.question}</h3>
+            <p>{faq.answer}</p>
+          </article>
+        ))
+      }
     </div>
   </section>
 

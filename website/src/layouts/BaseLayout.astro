@@ -8,18 +8,65 @@ import "../styles/global.css";
 import Icon from "../components/Icon.astro";
 import appIcon from "../assets/images/power-tools-icon.png";
 import appMark from "../assets/images/power-tools-icon.svg";
+import socialImage from "../assets/images/app-data-migration-light.png";
 
 interface Props {
   title: string;
   description: string;
   currentPath?: string;
+  /** Extra schema.org objects for this page, emitted as JSON-LD. */
+  structuredData?: Record<string, unknown>[];
 }
 
 const {
   title,
   description,
-  currentPath = Astro.url.pathname
+  currentPath = Astro.url.pathname,
+  structuredData = []
 } = Astro.props;
+
+const site = Astro.site ?? new URL("https://powertools.abdallahnagy.com");
+const absoluteUrl = (path: string) => new URL(path, site).href;
+const canonicalUrl = absoluteUrl(Astro.url.pathname);
+const socialImageUrl = absoluteUrl(socialImage.src);
+const siteName = "PowerTools";
+const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+
+// Site-wide schema.org data. Search engines use it for rich results and to
+// tie the website, the GitHub repository, and the app together.
+const siteStructuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: siteName,
+    alternateName: ["Power Tools", "PowerTools for Dataverse"],
+    url: absoluteUrl("/")
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: siteName,
+    alternateName: "Power Tools for Dataverse and Dynamics 365",
+    description:
+      "Free, open-source Windows desktop toolkit for Dataverse, Dynamics 365, and Power Platform developers. A modern alternative to XrmToolBox.",
+    url: absoluteUrl("/"),
+    downloadUrl: `${githubUrl}/releases/latest/download/PowerTools-Setup.exe`,
+    applicationCategory: "DeveloperApplication",
+    operatingSystem: "Windows",
+    license: `${githubUrl}/blob/main/LICENSE`,
+    isAccessibleForFree: true,
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    image: socialImageUrl,
+    screenshot: socialImageUrl,
+    sameAs: [githubUrl],
+    author: {
+      "@type": "Person",
+      name: "Abdallah Nagy",
+      url: "https://abdallahnagy.com"
+    }
+  }
+];
+const jsonLd = [...siteStructuredData, ...structuredData];
 
 const baseUrl = import.meta.env.BASE_URL;
 const basePath = baseUrl.replace(/\/$/, "");
@@ -61,12 +108,29 @@ const isActive = (href: string) => {
         }
       } catch {}
     </script>
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="sitemap" href={absoluteUrl("/sitemap.xml")} />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Abdallah Nagy" />
+    <meta property="og:site_name" content={siteName} />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content={appIcon.src} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:width" content={String(socialImage.width)} />
+    <meta property="og:image:height" content={String(socialImage.height)} />
+    <meta property="og:image:alt" content="PowerTools Data Migration tool comparing two Dataverse environments" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content={appIcon.src} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
+    {
+      jsonLd.map((data) => (
+        <script type="application/ld+json" set:html={JSON.stringify(data)} />
+      ))
+    }
     <link rel="icon" type="image/svg+xml" href={appMark.src} />
     <link rel="icon" type="image/png" href={appIcon.src} />
     <link rel="apple-touch-icon" href={appIcon.src} />
@@ -117,10 +181,11 @@ const isActive = (href: string) => {
     <footer class="site-footer">
       <div>
         <strong>PowerTools</strong>
-        <span>Open-source desktop tooling for Dataverse developers.</span>
+        <span>Free, open-source desktop tools for Dataverse and Dynamics 365 developers.</span>
       </div>
       <div class="footer-links">
-        <a href="https://github.com/AbdallahNagy/PowerTools">GitHub</a>
+        <a href={localPath("/download")}>Download</a>
+        <a href={githubUrl}>GitHub</a>
         <a href="mailto:abdallah@abdallahnagy.com">Email</a>
       </div>
     </footer>
