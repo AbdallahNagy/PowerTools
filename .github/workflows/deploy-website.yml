@@ -42,7 +42,6 @@ jobs:
       - name: Build
         working-directory: website
         env:
-          GITHUB_PAGES: "true"
           ASTRO_TELEMETRY_DISABLED: "1"
         run: pnpm run build
 
