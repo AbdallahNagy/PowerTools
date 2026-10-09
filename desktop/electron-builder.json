@@ -6,7 +6,8 @@
         {
             "provider": "github",
             "owner": "AbdallahNagy",
-            "repo": "PowerTools"
+            "repo": "PowerTools",
+            "releaseType": "release"
         }
     ],
     "extraResources": [

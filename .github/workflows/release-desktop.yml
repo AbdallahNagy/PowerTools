@@ -1,0 +1,60 @@
+name: Release Desktop
+
+# Builds the Windows installer and publishes it as a GitHub release for the
+# version in desktop/package.json. The release body comes from
+# desktop/docs/releases/v<version>.md, which the in-app update dialog shows.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-desktop
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: desktop
+        shell: pwsh
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Read version and release notes
+        id: meta
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $notes = Join-Path $PWD "docs/releases/v$version.md"
+          if (-not (Test-Path $notes)) { throw "Missing release notes: docs/releases/v$version.md" }
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "notes=$notes" >> $env:GITHUB_OUTPUT
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run publish:api:win
+          npm run transpile:electron
+          npm run build
+          npx electron-builder --win --x64 --publish always "-c.releaseInfo.releaseNotesFile=${{ steps.meta.outputs.notes }}"
