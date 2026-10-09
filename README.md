@@ -1,6 +1,6 @@
 # Power Tools
 
-A modern open-source desktop toolkit for everyday Dataverse work, with a friendly UI, secure local workflow, and tools that are easy to figure out and use.
+A modern open-source desktop toolkit for everyday Dataverse, Dynamics 365, and Power Platform work, with a friendly UI, secure local workflow, and tools that are easy to figure out and use. A free, modern XrmToolBox alternative for Windows.
 
 [![Website](https://img.shields.io/badge/website-powertools.abdallahnagy.com-1f6feb)](https://powertools.abdallahnagy.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea043)](LICENSE)
