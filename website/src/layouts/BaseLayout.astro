@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import appIcon from "../assets/images/power-tools-icon.png";
+import appMark from "../assets/images/power-tools-icon.svg";
 
 interface Props {
   title: string;
@@ -49,6 +50,7 @@ const isActive = (href: string) => {
     <meta property="og:image" content={appIcon.src} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={appIcon.src} />
+    <link rel="icon" type="image/svg+xml" href={appMark.src} />
     <link rel="icon" type="image/png" href={appIcon.src} />
     <link rel="apple-touch-icon" href={appIcon.src} />
     <title>{title}</title>
@@ -56,7 +58,7 @@ const isActive = (href: string) => {
   <body>
     <header class="site-header">
       <a class="brand" href={localPath("/")} aria-label="PowerTools home">
-        <img class="brand-mark" src={appIcon.src} alt="" width="34" height="34" />
+        <img class="brand-mark" src={appMark.src} alt="" width="34" height="34" />
         <span>PowerTools</span>
       </a>
       <button

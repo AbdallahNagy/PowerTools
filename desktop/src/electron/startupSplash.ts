@@ -17,7 +17,7 @@ function getStartupIconDataUrl() {
       "ui",
       "assets",
       "icons",
-      "power-tools-preview-256.png"
+      "power-tools-icon-256.png"
     ),
   ];
 
