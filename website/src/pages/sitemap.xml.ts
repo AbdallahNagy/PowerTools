@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 
 // Every public page, in the trailing-slash form GitHub Pages serves and the
 // canonical links use. Add new pages here so search engines find them.
-const pages = ["/", "/xrmtoolbox-alternative/", "/download/", "/contact/"];
+const pages = ["/", "/download/", "/contact/"];
 
 export const GET: APIRoute = ({ site }) => {
   const urls = pages
