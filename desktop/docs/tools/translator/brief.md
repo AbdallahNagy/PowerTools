@@ -565,3 +565,24 @@ Answered by the user before Dataverse review and UX:
 - **License (GPL-3.0 source):** build Translator as a clean-room reimplementation. Use Easy Translator only as a behavioral reference. Copy no code, UI layout, icons, or wording.
 - **Scope of the first pull request:** the in-app grid only. It covers tables, columns, local and global choices, Yes/No, relationships, views, and charts. The user views and edits labels per language in a grid and applies them with a targeted publish. Excel export and import and the solution filter are later work. Forms, dashboards, and SiteMap are out of scope.
 - **Excel format (later phase):** use our own workbook layout. Do not match Easy Translator's layout.
+
+Added by the user after the first draft pull request (2026-10-09):
+
+- **Choose a source (now in scope):** the user can limit the tool to one solution instead of loading all metadata. The scope list gets a **Source** picker at the top: "All tables" (the default) or one solution. Visible solutions are listed, managed and unmanaged, excluding `Default` and `Active`.
+  - A table is listed when the table itself (component type 1) or any of its subcomponents is in the solution. Subcomponents are columns (2), relationships (10), views (26) and charts (59).
+  - If the table was added with all subcomponents (`rootcomponentbehavior = 0`), every label for that table is shown.
+  - Otherwise, only the subcomponents that are in the solution are shown, plus the table's own labels when the table row itself is in the solution.
+  - Global choices are limited to those in the solution (component type 9).
+  - Page `solutioncomponent` and do not stop at 5,000 rows.
+- **Add changes to a solution (optional, now in scope):** this applies when the source is "All tables". In the Apply confirmation the user can tick **Add changed components to a solution**, then either:
+  - pick an existing unmanaged solution (not `Default` or `Active`), or
+  - create a new one with display name, unique name, publisher (a non-read-only publisher) and version (default `1.0.0.0`).
+  - Only the changed components are added, with `AddSolutionComponentRequest`:
+    - a table (1) with `DoNotIncludeSubcomponents = true` when the table's own labels changed
+    - a column (2) for column labels, local choices and Yes/No columns
+    - a global choice (9)
+    - a relationship (10)
+    - a view (26)
+    - a chart (59)
+  - When the source is a solution, the option is hidden because the changed components already belong to it.
+  - A failure while adding to the solution is reported separately and does not undo the label updates.
