@@ -33,23 +33,99 @@ const features = [
 
 const localPath = (path: string) =>
   `${basePath}${path === "/" ? "/" : path}`;
+
+const title = "PowerTools: Free Dataverse & Dynamics 365 Developer Toolkit";
+const description =
+  "Free, open-source Windows toolkit for Dataverse, Dynamics 365 and Power Platform developers: data migration, FetchXML, plug-in registration and more.";
+
+const faqs = [
+  {
+    question: "What is PowerTools?",
+    answer:
+      "PowerTools is a free, open-source Windows desktop app for Dataverse and Dynamics 365 developers. Data migration, FetchXML queries, plug-in registration, translations and metadata work live in one workspace, and each tool opens in its own tab."
+  },
+  {
+    question: "Is PowerTools an alternative to XrmToolBox?",
+    answer:
+      "PowerTools covers many of the same everyday Dataverse tasks, such as building FetchXML queries, registering plug-ins, and moving data between environments, in one modern app with a consistent interface. You can use it on its own or alongside XrmToolBox."
+  },
+  {
+    question: "Is PowerTools free?",
+    answer:
+      "Yes. PowerTools is free and open source under the MIT license. The source code is on GitHub."
+  },
+  {
+    question: "Does PowerTools work with Dynamics 365 on-premises?",
+    answer:
+      "Yes. PowerTools connects to Dataverse and Dynamics 365 online, and to on-premises deployments that use Active Directory or IFD authentication."
+  },
+  {
+    question: "Where does my Dataverse data go?",
+    answer:
+      "Nowhere else. PowerTools runs on your machine and connects directly to your environments. No server in between stores or processes your data."
+  },
+  {
+    question: "Which operating systems does PowerTools support?",
+    answer: "The published installer is for Windows. Installed copies check for new releases automatically."
+  }
+];
+
+const siteUrl = new URL(localPath("/"), Astro.site).href;
+const structuredData = [
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "PowerTools",
+    alternateName: ["Power Tools", "PowerTools for Dataverse"],
+    url: siteUrl
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "PowerTools",
+    alternateName: ["Power Tools", "PowerTools for Dataverse"],
+    description,
+    url: siteUrl,
+    downloadUrl: `${githubUrl}/releases/latest/download/PowerTools-Setup.exe`,
+    image: new URL(localPath("/og-image.png"), Astro.site).href,
+    applicationCategory: "DeveloperApplication",
+    applicationSubCategory: "Dataverse and Dynamics 365 developer tools",
+    operatingSystem: "Windows",
+    isAccessibleForFree: true,
+    license: "https://opensource.org/licenses/MIT",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    featureList: PUBLIC_TOOLS.map((tool) => tool.title),
+    sameAs: [githubUrl],
+    author: {
+      "@type": "Person",
+      name: "Abdallah Nagy",
+      url: "https://github.com/AbdallahNagy"
+    }
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqs.map((faq) => ({
+      "@type": "Question",
+      name: faq.question,
+      acceptedAnswer: { "@type": "Answer", text: faq.answer }
+    }))
+  }
+];
 ---
 
-<BaseLayout
-  title="PowerTools for Dataverse Developers"
-  description="A modern open-source desktop toolkit for everyday Dataverse work."
->
+<BaseLayout title={title} description={description} structuredData={structuredData}>
   <section class="hero">
     <div class="hero-copy">
       <p class="eyebrow">Open-source desktop toolkit</p>
       <h1><span class="gradient-text">PowerTools</span> for Dataverse Developers</h1>
       <p class="lead">
-        A modern open-source desktop toolkit for everyday Dataverse work, with
-        a friendly UI, secure local workflow, and tools that are easy to figure
-        out and use.
+        A free, open-source desktop toolkit for everyday Dataverse, Dynamics
+        365 and Power Platform work, with a friendly UI, secure local
+        workflow, and tools that are easy to figure out and use.
       </p>
       <div class="hero-actions">
-        <a class="button primary" href={localPath("/download")}>Download for Windows</a>
+        <a class="button primary" href={localPath("/download/")}>Download for Windows</a>
         <a class="button secondary" href={githubUrl}>View on GitHub</a>
       </div>
     </div>
@@ -137,6 +213,26 @@ const localPath = (path: string) =>
   </section>
 
   <section class="section">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">FAQ</p>
+        <h2>Questions developers ask.</h2>
+      </div>
+    </div>
+
+    <div class="faq-list">
+      {
+        faqs.map((faq) => (
+          <details class="faq-item">
+            <summary>{faq.question}</summary>
+            <p>{faq.answer}</p>
+          </details>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="section">
     <div>
       <p class="eyebrow">Open source</p>
       <h2>Built in the open for developers.</h2>
@@ -145,9 +241,9 @@ const localPath = (path: string) =>
         report issues, suggest improvements, and contribute.
       </p>
       <div class="action-row">
-        <a class="button primary" href={localPath("/download")}>Download for Windows</a>
+        <a class="button primary" href={localPath("/download/")}>Download for Windows</a>
         <a class="button secondary" href={githubUrl}>View on GitHub</a>
-        <a class="button secondary" href={localPath("/contact")}>Contact the author</a>
+        <a class="button secondary" href={localPath("/contact/")}>Contact the author</a>
       </div>
     </div>
   </section>

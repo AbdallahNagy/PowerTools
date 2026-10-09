@@ -13,13 +13,21 @@ interface Props {
   title: string;
   description: string;
   currentPath?: string;
+  /** schema.org objects rendered as JSON-LD for search engines. */
+  structuredData?: Record<string, unknown>[];
 }
 
 const {
   title,
   description,
-  currentPath = Astro.url.pathname
+  currentPath = Astro.url.pathname,
+  structuredData = []
 } = Astro.props;
+
+// Absolute URLs: search engines and link previews ignore relative ones.
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).href;
+const socialImageUrl = new URL(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/og-image.png`, Astro.site).href;
+const sitemapUrl = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/sitemap-index.xml`;
 
 const baseUrl = import.meta.env.BASE_URL;
 const basePath = baseUrl.replace(/\/$/, "");
@@ -32,7 +40,7 @@ const activePath =
 
 const navItems = [
   { href: "/", label: "Home" },
-  { href: "/contact", label: "Contact" }
+  { href: "/contact/", label: "Contact" }
 ];
 
 const isActive = (href: string) => {
@@ -61,16 +69,31 @@ const isActive = (href: string) => {
         }
       } catch {}
     </script>
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="sitemap" href={sitemapUrl} />
+    <meta property="og:site_name" content="PowerTools" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
-    <meta property="og:image" content={appIcon.src} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={socialImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="PowerTools, the open-source desktop toolkit for Dataverse and Dynamics 365 developers" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content={appIcon.src} />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={socialImageUrl} />
     <link rel="icon" type="image/svg+xml" href={appMark.src} />
     <link rel="icon" type="image/png" href={appIcon.src} />
     <link rel="apple-touch-icon" href={appIcon.src} />
     <title>{title}</title>
+    {
+      structuredData.map((data) => (
+        <script is:inline type="application/ld+json" set:html={JSON.stringify(data)} />
+      ))
+    }
   </head>
   <body>
     <header class="site-header">
@@ -108,7 +131,7 @@ const isActive = (href: string) => {
             ))
           }
         </nav>
-        <a class="header-action" href={localPath("/download")}>Download</a>
+        <a class="header-action" href={localPath("/download/")}>Download</a>
       </div>
     </header>
     <main>
@@ -117,7 +140,7 @@ const isActive = (href: string) => {
     <footer class="site-footer">
       <div>
         <strong>PowerTools</strong>
-        <span>Open-source desktop tooling for Dataverse developers.</span>
+        <span>Free, open-source desktop tooling for Dataverse, Dynamics 365 and Power Platform developers.</span>
       </div>
       <div class="footer-links">
         <a href="https://github.com/AbdallahNagy/PowerTools">GitHub</a>
