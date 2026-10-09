@@ -11,6 +11,7 @@ using PowerTools.API.Tools.PluginRegistration;
 using PowerTools.API.Tools.PluginRegistration.Gateway;
 using PowerTools.API.Tools.PolymorphicLookup;
 using PowerTools.API.Tools.SolutionComponentsMover;
+using PowerTools.API.Tools.Translator;
 using PowerTools.API.Tools.WorkflowActivities;
 using PowerTools.API.Tools.PluginRegistration.Inspection;
 using PowerTools.API.Tools.PluginRegistration.Services;
@@ -47,6 +48,9 @@ builder.Services.AddHostedService<SolutionCopyJobRunner>();
 builder.Services.AddSingleton<IBulkWorkflowJobStore, InMemoryBulkWorkflowJobStore>();
 builder.Services.AddSingleton<IBulkWorkflowDelay, BulkWorkflowDelay>();
 builder.Services.AddHostedService<BulkWorkflowJobRunner>();
+builder.Services.AddSingleton<ITranslatorJobStore, InMemoryTranslatorJobStore>();
+builder.Services.AddSingleton<ITranslatorDelay, TranslatorDelay>();
+builder.Services.AddHostedService<TranslatorJobRunner>();
 builder.Services.AddScoped<IPluginRegistrationGateway, DataversePluginRegistrationGateway>();
 builder.Services.AddScoped<CapabilitiesService>();
 builder.Services.AddScoped<CatalogService>();
@@ -105,6 +109,7 @@ app.MapPolymorphicLookupEndpoints();
 app.MapWorkflowActivitiesEndpoints();
 app.MapSolutionComponentsMoverEndpoints();
 app.MapBulkWorkflowExecutionEndpoints();
+app.MapTranslatorEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would

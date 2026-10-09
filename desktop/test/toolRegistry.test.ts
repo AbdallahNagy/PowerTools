@@ -17,6 +17,7 @@ import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
 import { solutionComponentsMoverTool } from "../src/ui/tools/solution-components-mover/tool";
+import { translatorTool } from "../src/ui/tools/translator/tool";
 import { workflowActivitiesTool } from "../src/ui/tools/workflow-activities-viewer/tool";
 
 function TestTool() {
@@ -85,6 +86,7 @@ describe("tool registry", () => {
       "plugin-registration",
       "polymorphic-lookup-creator",
       "solution-components-mover",
+      "translator",
       "workflow-activities-viewer",
     ]);
     expect(ACTIVITY_BAR_TOOLS.map((tool) => tool.id)).toEqual([
@@ -96,6 +98,7 @@ describe("tool registry", () => {
       "plugin-registration",
       "polymorphic-lookup-creator",
       "solution-components-mover",
+      "translator",
       "workflow-activities-viewer",
     ]);
     expect(TOOL_REGISTRY.welcome.allowMultipleInstances).toBe(false);
@@ -106,6 +109,9 @@ describe("tool registry", () => {
       "See which activated processes reference a custom workflow activity",
     );
     expect(TOOL_REGISTRY["workflow-activities-viewer"].showInActivityBar).toBe(true);
+    expect(TOOL_REGISTRY.translator).toBe(translatorTool);
+    expect(TOOL_REGISTRY.translator.allowMultipleInstances).toBe(true);
+    expect(TOOL_REGISTRY.translator.showInActivityBar).toBe(true);
     expect(TOOL_REGISTRY["attribute-explorer"]).toBe(attributeExplorerTool);
     expect(TOOL_REGISTRY["attribute-explorer"].allowMultipleInstances).toBe(true);
     expect(TOOL_REGISTRY["attribute-explorer"].title).toBe("Attribute Explorer");

@@ -6,6 +6,7 @@ import { fetchXmlTesterTool } from "./fetchxml-tester/tool";
 import { pluginRegistrationTool } from "./plugin-registration/tool";
 import { polymorphicLookupTool } from "./polymorphic-lookup-creator/tool";
 import { solutionComponentsMoverTool } from "./solution-components-mover/tool";
+import { translatorTool } from "./translator/tool";
 import { workflowActivitiesTool } from "./workflow-activities-viewer/tool";
 import { createToolRegistry } from "./defineTool";
 import { welcomeTool } from "./welcome/tool";
@@ -20,6 +21,7 @@ export const BUILT_IN_TOOLS = [
   pluginRegistrationTool,
   polymorphicLookupTool,
   solutionComponentsMoverTool,
+  translatorTool,
   workflowActivitiesTool,
 ] as const;
 

@@ -12,6 +12,6 @@ export function getPreloadPath() {
 
 export function getAppIconPath() {
     return isDev()
-        ? path.join(app.getAppPath(), 'src/ui/assets/icons/power-tools-preview-256.png')
-        : path.join(process.resourcesPath, 'power-tools-preview-256.png')
+        ? path.join(app.getAppPath(), 'src/ui/assets/icons/power-tools-icon-256.png')
+        : path.join(process.resourcesPath, 'power-tools-icon-256.png')
 }
