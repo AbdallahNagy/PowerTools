@@ -371,6 +371,20 @@ export function useTranslator() {
             (old) => (old ? { rows: patchRows(old.rows, saved) } : old),
           );
         }
+
+        // A new solution, or components added to one, makes the cached solution list and
+        // solution-scoped tables and labels stale. Refetch them so the source picker finds it.
+        if (job.solution && (job.solution.created || job.solution.added > 0)) {
+          void queryClient.invalidateQueries({ queryKey: translatorKeys.solutions(connection) });
+          void queryClient.invalidateQueries({
+            predicate: ({ queryKey }) =>
+              queryKey[0] === "translator" &&
+              queryKey[1] === connection &&
+              (queryKey[2] === "tables" || queryKey[2] === "labels") &&
+              typeof queryKey[3] === "string" &&
+              queryKey[3] !== "",
+          });
+        }
       }
 
       const published = job.publish.status === "succeeded" || job.publish.status === "notNeeded";

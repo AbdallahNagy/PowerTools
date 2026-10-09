@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Alert, Button, Checkbox, DataTable, Field, Input, Modal, ProgressBar, Select } from "../../../shared/ui";
 import { summarizeByScope, type Draft, type Drafts } from "../model/drafts";
 import { languageHeader, plural } from "../model/labels";
@@ -135,9 +135,14 @@ function ConfirmBody({
 }
 
 function SolutionTargetFields({ option }: { option: SolutionOption }) {
-  const { target, onChange, errors } = option;
+  const { target, onChange } = option;
   const set = (patch: Partial<SolutionTargetDraft>) => onChange({ ...target, ...patch });
   const modeName = useId();
+  // Show a field's error only after the user has edited or left it.
+  const [touched, setTouched] = useState<ReadonlySet<NewSolutionField>>(() => new Set());
+  const touch = (...fields: NewSolutionField[]) =>
+    setTouched((current) => (fields.every((field) => current.has(field)) ? current : new Set([...current, ...fields])));
+  const errors = visibleErrors(option.errors, touched);
 
   return (
     <fieldset className="flex flex-col gap-3 rounded-sm border border-line p-3">
@@ -176,6 +181,7 @@ function SolutionTargetFields({ option }: { option: SolutionOption }) {
               <Field label="Display name" error={errors.friendlyName}>
                 <Input
                   value={target.friendlyName}
+                  onBlur={() => touch("friendlyName")}
                   onChange={(event) =>
                     set({
                       friendlyName: event.target.value,
@@ -188,7 +194,11 @@ function SolutionTargetFields({ option }: { option: SolutionOption }) {
                 <Input
                   className="font-mono"
                   value={target.uniqueName}
-                  onChange={(event) => set({ uniqueName: event.target.value, uniqueNameEdited: true })}
+                  onBlur={() => touch("uniqueName")}
+                  onChange={(event) => {
+                    touch("uniqueName");
+                    set({ uniqueName: event.target.value, uniqueNameEdited: true });
+                  }}
                 />
               </Field>
               <Field
@@ -203,7 +213,11 @@ function SolutionTargetFields({ option }: { option: SolutionOption }) {
                 <Select
                   value={target.publisherId}
                   disabled={option.publishersLoading || option.publishers.length === 0}
-                  onChange={(event) => set({ publisherId: event.target.value })}
+                  onBlur={() => touch("publisherId")}
+                  onChange={(event) => {
+                    touch("publisherId");
+                    set({ publisherId: event.target.value });
+                  }}
                 >
                   <option value="">{option.publishersLoading ? "Loading publishers…" : "Choose a publisher"}</option>
                   {option.publishers.map((publisher) => (
@@ -214,7 +228,11 @@ function SolutionTargetFields({ option }: { option: SolutionOption }) {
                 </Select>
               </Field>
               <Field label="Version" error={errors.version}>
-                <Input value={target.version} onChange={(event) => set({ version: event.target.value })} />
+                <Input
+                  value={target.version}
+                  onBlur={() => touch("version")}
+                  onChange={(event) => set({ version: event.target.value })}
+                />
               </Field>
             </div>
           )}
@@ -228,18 +246,23 @@ function SolutionTargetFields({ option }: { option: SolutionOption }) {
 }
 
 function ExistingSolutionField({ option }: { option: SolutionOption }) {
-  const { target, onChange, errors } = option;
+  const { target, onChange } = option;
+  const [touched, setTouched] = useState(false);
   const empty = !option.solutionsLoading && !option.solutionsError && option.solutions.length === 0;
   return (
     <Field
       label="Unmanaged solution"
-      error={option.solutionsError ?? errors.existing}
+      error={option.solutionsError ?? (touched ? option.errors.existing : undefined)}
       hint={empty ? "This environment has no unmanaged solution. Create a new one instead." : undefined}
     >
       <Select
         value={target.existing}
         disabled={option.solutionsLoading || option.solutions.length === 0}
-        onChange={(event) => onChange({ ...target, existing: event.target.value })}
+        onBlur={() => setTouched(true)}
+        onChange={(event) => {
+          setTouched(true);
+          onChange({ ...target, existing: event.target.value });
+        }}
       >
         <option value="">{option.solutionsLoading ? "Loading solutions…" : "Choose a solution"}</option>
         {option.solutions.map((solution) => (
@@ -336,4 +359,19 @@ function ResultBody({
       </div>
     </>
   );
+}
+
+type NewSolutionField = "friendlyName" | "uniqueName" | "publisherId" | "version";
+
+function visibleErrors(
+  errors: SolutionOption["errors"],
+  touched: ReadonlySet<NewSolutionField>,
+): SolutionOption["errors"] {
+  const visible: SolutionOption["errors"] = {};
+  if (touched.has("friendlyName")) visible.friendlyName = errors.friendlyName;
+  // The unique name is filled from the display name, so leaving the display name counts too.
+  if (touched.has("uniqueName") || touched.has("friendlyName")) visible.uniqueName = errors.uniqueName;
+  if (touched.has("publisherId")) visible.publisherId = errors.publisherId;
+  if (touched.has("version")) visible.version = errors.version;
+  return visible;
 }

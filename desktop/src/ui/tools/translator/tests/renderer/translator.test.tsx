@@ -412,6 +412,13 @@ describe("Translator", () => {
 
   it("adds the changed components to an existing unmanaged solution", async () => {
     const sent: ApplyRequest[] = [];
+    let solutionRequests = 0;
+    httpServer.use(
+      http.get(`${API}/translator/solutions`, () => {
+        solutionRequests += 1;
+        return HttpResponse.json({ solutions: solutionsFixture });
+      }),
+    );
     const key = accountTableRows[0]!.key;
     httpServer.use(...applyHandlers(
       completedJob({
@@ -440,16 +447,22 @@ describe("Translator", () => {
     fireEvent.click(within(dialog).getByRole("checkbox", { name: "Add changed components to a solution" }));
     const apply = within(dialog).getByRole("button", { name: "Apply and publish" });
     expect(apply).toBeDisabled();
-    expect(within(dialog).getByText("Choose a solution.")).toBeInTheDocument();
+    // Required errors wait until the user has touched the field.
+    expect(within(dialog).queryByText("Choose a solution.")).not.toBeInTheDocument();
 
     const picker = within(dialog).getByRole("combobox", { name: "Unmanaged solution" });
+    fireEvent.blur(picker);
+    expect(within(dialog).getByText("Choose a solution.")).toBeInTheDocument();
     expect(within(picker).queryByRole("option", { name: "Vendor Pack" })).not.toBeInTheDocument();
     fireEvent.change(picker, { target: { value: "ContosoCore" } });
     expect(apply).toBeEnabled();
+    const solutionsBeforeApply = solutionRequests;
     fireEvent.click(apply);
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(sent).toEqual([{ rows: [{ key, labels: { 1036: "Compte client" } }], solution: { uniqueName: "ContosoCore" } }]);
+    // Components were added, so the cached solution list is refetched for the source picker.
+    await waitFor(() => expect(solutionRequests).toBeGreaterThan(solutionsBeforeApply));
     expect(document.querySelector("[data-toast-type='success']")).toHaveTextContent(
       "Updated 1 label and published 1 component. Added 1 component to Contoso Core.",
     );
@@ -484,6 +497,9 @@ describe("Translator", () => {
     const dialog = await screen.findByRole("dialog", { name: "Apply label changes" });
     fireEvent.click(within(dialog).getByRole("checkbox", { name: "Add changed components to a solution" }));
     fireEvent.click(within(dialog).getByRole("radio", { name: "New solution" }));
+    expect(within(dialog).queryByText("Enter a display name.")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Enter a unique name.")).not.toBeInTheDocument();
+    expect(within(dialog).queryByText("Choose a publisher.")).not.toBeInTheDocument();
     fireEvent.change(within(dialog).getByRole("textbox", { name: "Display name" }), { target: { value: "Labels FR" } });
     expect(within(dialog).getByRole("textbox", { name: "Unique name" })).toHaveValue("LabelsFR");
     expect(within(dialog).getByRole("textbox", { name: "Version" })).toHaveValue("1.0.0.0");
