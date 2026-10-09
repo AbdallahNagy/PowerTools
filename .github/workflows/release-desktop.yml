@@ -5,6 +5,11 @@ name: Release Desktop
 # desktop/docs/releases/v<version>.md, which the in-app update dialog shows.
 on:
   workflow_dispatch:
+    inputs:
+      notes_only:
+        description: Only update the release notes of an existing release
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -48,13 +53,21 @@ jobs:
           "notes=$notes" >> $env:GITHUB_OUTPUT
 
       - name: Install dependencies
+        if: ${{ !inputs.notes_only }}
         run: npm ci
 
       - name: Build and publish
+        if: ${{ !inputs.notes_only }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           npm run publish:api:win
           npm run transpile:electron
           npm run build
-          npx electron-builder --win --x64 --publish always "-c.releaseInfo.releaseNotesFile=${{ steps.meta.outputs.notes }}"
+          npx electron-builder --win --x64 --publish always
+
+      # electron-builder does not reliably set the release body, so set it here.
+      - name: Set release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release edit "v${{ steps.meta.outputs.version }}" --notes-file "${{ steps.meta.outputs.notes }}"
