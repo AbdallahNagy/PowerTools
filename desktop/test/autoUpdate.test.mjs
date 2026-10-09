@@ -13,6 +13,7 @@ test("electron builder publishes update metadata to GitHub releases", () => {
       provider: "github",
       owner: "AbdallahNagy",
       repo: "PowerTools",
+      releaseType: "release",
     },
   ]);
 });
