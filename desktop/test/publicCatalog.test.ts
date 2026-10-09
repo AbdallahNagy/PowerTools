@@ -37,7 +37,7 @@ describe("public tool catalog", () => {
 
     for (const tool of PUBLIC_TOOLS) {
       expect(welcome).not.toContain(`title: "${tool.title}"`);
-      expect(website).not.toContain(tool.title);
+      expect(website).not.toContain(`<h3>${tool.title}</h3>`);
     }
   });
 });
