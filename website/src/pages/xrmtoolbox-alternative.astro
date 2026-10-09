@@ -1,0 +1,193 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { PUBLIC_TOOLS } from "../../../desktop/src/ui/tools/publicCatalog";
+
+const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+const baseUrl = import.meta.env.BASE_URL;
+const basePath = baseUrl.replace(/\/$/, "");
+const localPath = (path: string) =>
+  `${basePath}${path === "/" ? "/" : path}`;
+
+// The XrmToolBox plugin each built-in tool covers. Tools without an entry are
+// still listed, with a dash in the plugin column.
+const xrmToolBoxCounterparts: Record<string, string> = {
+  "attribute-explorer": "Metadata Browser",
+  "bulk-workflow-execution": "Bulk Workflow Execution",
+  "data-migration": "Data Transporter",
+  "fetchxml-builder": "FetchXML Builder",
+  "fetchxml-tester": "FetchXml Tester",
+  "plugin-registration": "Plugin Registration",
+  "polymorphic-lookup-creator": "Polymorphic Lookup Creator",
+  "solution-components-mover": "Solution Components Mover",
+  translator: "Easy Translator",
+  "workflow-activities-viewer": "Workflow Activities Viewer"
+};
+
+const differences = [
+  {
+    title: "Built-in tools, one workspace",
+    description:
+      "Every tool ships with the app and opens in its own tab. There are no plugins to find, install, or keep updated."
+  },
+  {
+    title: "Modern interface",
+    description:
+      "An Electron and React interface with light and dark themes, built for the way developers work today."
+  },
+  {
+    title: "Local and direct",
+    description:
+      "The app talks to Dataverse through a local API bound to 127.0.0.1. Your data stays on your machine."
+  },
+  {
+    title: "Free and open source",
+    description:
+      "MIT licensed. Read the code, report issues, and contribute on GitHub."
+  }
+];
+
+const faqs = [
+  {
+    question: "Is PowerTools a replacement for XrmToolBox?",
+    answer:
+      "PowerTools covers a focused set of the XrmToolBox workflows Dataverse developers use most, with a modern interface. XrmToolBox has hundreds of community plugins, so many developers keep both installed."
+  },
+  {
+    question: "Can I use my XrmToolBox plugins in PowerTools?",
+    answer:
+      "No. PowerTools does not load XrmToolBox plugins. Its tools are built into the app and reimplemented for the PowerTools interface and local API."
+  },
+  {
+    question: "Which environments does PowerTools connect to?",
+    answer:
+      "Dataverse and Dynamics 365 online, with Microsoft sign-in, and Dynamics 365 on-premises, with Active Directory or IFD."
+  },
+  {
+    question: "Is PowerTools affiliated with XrmToolBox?",
+    answer:
+      "No. PowerTools is an independent open-source project. XrmToolBox and its plugins are separate projects by their own authors."
+  }
+];
+
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: { "@type": "Answer", text: faq.answer }
+  }))
+};
+---
+
+<BaseLayout
+  title="PowerTools: A Modern XrmToolBox Alternative for Dataverse"
+  description="Looking for an XrmToolBox alternative? PowerTools is a free, open-source Windows app with built-in Dynamics 365 and Dataverse tools: FetchXML Builder, Plugin Registration, Translator, and more."
+  structuredData={[faqStructuredData]}
+>
+  <section class="page-hero">
+    <p class="eyebrow">XrmToolBox alternative</p>
+    <h1>A modern <span class="gradient-text">XrmToolBox</span> alternative</h1>
+    <p class="lead">
+      PowerTools brings the Dynamics 365 and Dataverse tools you reach for in
+      XrmToolBox into one modern, open-source desktop app. Free for Windows,
+      with no plugins to manage.
+    </p>
+    <div class="hero-actions centered-actions">
+      <a class="button primary" href={localPath("/download")}>Download for Windows</a>
+      <a class="button secondary" href={githubUrl}>View on GitHub</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">Tool by tool</p>
+        <h2>The XrmToolBox workflows you know, built in.</h2>
+      </div>
+      <p>
+        Each PowerTools tool below covers the job of a familiar XrmToolBox
+        plugin. Every tool is in the app today.
+      </p>
+    </div>
+
+    <div class="table-scroll">
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th scope="col">PowerTools tool</th>
+            <th scope="col">Similar XrmToolBox plugin</th>
+            <th scope="col">What it does</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            PUBLIC_TOOLS.map((tool) => (
+              <tr>
+                <th scope="row">{tool.title}</th>
+                <td>{xrmToolBoxCounterparts[tool.id] ?? "–"}</td>
+                <td>{tool.description}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">What is different</p>
+        <h2>Why developers try PowerTools.</h2>
+      </div>
+    </div>
+
+    <div class="feature-grid">
+      {
+        differences.map((item) => (
+          <article class="feature-card">
+            <h3>{item.title}</h3>
+            <p>{item.description}</p>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-header">
+      <div>
+        <p class="eyebrow">FAQ</p>
+        <h2>PowerTools and XrmToolBox.</h2>
+      </div>
+    </div>
+
+    <div class="tool-grid">
+      {
+        faqs.map((faq) => (
+          <article class="feature-card">
+            <h3>{faq.question}</h3>
+            <p>{faq.answer}</p>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="security-band">
+      <p class="eyebrow">Try it</p>
+      <h2>Free Dynamics 365 and Dataverse tools for Windows.</h2>
+      <p class="lead">
+        Install PowerTools, connect to your environment, and open the tool you
+        need. Missing a plugin you rely on?
+        <a href={`${githubUrl}/issues`}>Open an issue</a> and say which one.
+      </p>
+      <div class="action-row">
+        <a class="button primary" href={localPath("/download")}>Download for Windows</a>
+        <a class="button secondary" href={localPath("/")}>See all features</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

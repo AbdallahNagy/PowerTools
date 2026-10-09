@@ -1,6 +1,6 @@
 # Power Tools
 
-A modern open-source desktop toolkit for everyday Dataverse work, with a friendly UI, secure local workflow, and tools that are easy to figure out and use.
+A modern open-source desktop toolkit for everyday Dataverse, Dynamics 365, and Power Platform work, with a friendly UI, secure local workflow, and tools that are easy to figure out and use. A free, modern [XrmToolBox alternative](https://powertools.abdallahnagy.com/xrmtoolbox-alternative/) for Windows.
 
 [![Website](https://img.shields.io/badge/website-powertools.abdallahnagy.com-1f6feb)](https://powertools.abdallahnagy.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea043)](LICENSE)
@@ -20,6 +20,8 @@ Power Tools is a Windows desktop app for Dataverse and Dynamics 365 developers. 
 | [Plugin Registration](desktop/src/ui/tools/plugin-registration/) | Browse and manage plug-in assemblies, types, steps, and images. |
 | [Polymorphic Lookup Creator](desktop/src/ui/tools/polymorphic-lookup-creator/) | Create, update, and delete polymorphic lookups. |
 | [Workflow Activities Viewer](desktop/src/ui/tools/workflow-activities-viewer/) | See which activated processes reference a custom workflow activity. |
+
+Coming from XrmToolBox? These tools cover the jobs of plugins such as FetchXML Builder, Plugin Registration, Easy Translator, Solution Components Mover, and Bulk Workflow Execution. See the [tool-by-tool comparison](https://powertools.abdallahnagy.com/xrmtoolbox-alternative/).
 
 Each tool opens in its own tab. The activity-bar tools can stay open in more than one tab at a time, and each tab keeps its own state.
 
