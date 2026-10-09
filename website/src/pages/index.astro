@@ -1,11 +1,36 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import heroImage from "../assets/images/hero-image.png";
+import Icon from "../components/Icon.astro";
+import appDark from "../assets/images/app-data-migration-dark.png";
+import appLight from "../assets/images/app-data-migration-light.png";
 import { PUBLIC_TOOLS } from "../../../desktop/src/ui/tools/publicCatalog";
 
 const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
 const baseUrl = import.meta.env.BASE_URL;
 const basePath = baseUrl.replace(/\/$/, "");
+const features = [
+  {
+    icon: "sparkles",
+    title: "Modern UI",
+    description: "A cleaner interface for Dataverse work, designed for daily use."
+  },
+  {
+    icon: "list",
+    title: "Friendly UX",
+    description: "Tools are easier to figure out without digging through old dialogs."
+  },
+  {
+    icon: "shield-check",
+    title: "Local and secure",
+    description: "The app runs on your machine and connects directly to Dataverse."
+  },
+  {
+    icon: "arrow-left-right",
+    title: "Open source",
+    description: "Inspect the code, suggest improvements, and contribute on GitHub."
+  }
+] as const;
+
 const localPath = (path: string) =>
   `${basePath}${path === "/" ? "/" : path}`;
 ---
@@ -15,9 +40,9 @@ const localPath = (path: string) =>
   description="A modern open-source desktop toolkit for everyday Dataverse work."
 >
   <section class="hero">
-    <div>
+    <div class="hero-copy">
       <p class="eyebrow">Open-source desktop toolkit</p>
-      <h1>PowerTools for Dataverse Developers</h1>
+      <h1><span class="gradient-text">PowerTools</span> for Dataverse Developers</h1>
       <p class="lead">
         A modern open-source desktop toolkit for everyday Dataverse work, with
         a friendly UI, secure local workflow, and tools that are easy to figure
@@ -29,16 +54,17 @@ const localPath = (path: string) =>
       </div>
     </div>
 
-    <aside class="product-panel" aria-label="PowerTools preview">
-      <div class="panel-top">
-        <span class="panel-dot"></span>
-        <span class="panel-dot"></span>
-        <span class="panel-dot"></span>
-      </div>
-      <div class="panel-body app-mock">
-        <img src={heroImage.src} alt="PowerTools app mockup" />
-      </div>
-    </aside>
+    <figure class="product-panel">
+      <picture>
+        <source srcset={appLight.src} media="(prefers-color-scheme: light)" />
+        <img
+          src={appDark.src}
+          width={appDark.width}
+          height={appDark.height}
+          alt="PowerTools Data Migration tool comparing fields between a dev and a test environment"
+        />
+      </picture>
+    </figure>
   </section>
 
   <section class="section">
@@ -54,22 +80,17 @@ const localPath = (path: string) =>
     </div>
 
     <div class="feature-grid">
-      <article class="feature-card">
-        <h3>Modern UI</h3>
-        <p>A cleaner interface for Dataverse work, designed for daily use.</p>
-      </article>
-      <article class="feature-card">
-        <h3>Friendly UX</h3>
-        <p>Tools are easier to figure out without digging through old dialogs.</p>
-      </article>
-      <article class="feature-card">
-        <h3>Local and secure</h3>
-        <p>The app runs on your machine and connects directly to Dataverse.</p>
-      </article>
-      <article class="feature-card">
-        <h3>Open source</h3>
-        <p>Inspect the code, suggest improvements, and contribute on GitHub.</p>
-      </article>
+      {
+        features.map((feature) => (
+          <article class="feature-card">
+            <span class="feature-icon">
+              <Icon name={feature.icon} />
+            </span>
+            <h3>{feature.title}</h3>
+            <p>{feature.description}</p>
+          </article>
+        ))
+      }
     </div>
   </section>
 
@@ -88,8 +109,8 @@ const localPath = (path: string) =>
     <div class="tool-grid">
       {
         PUBLIC_TOOLS.map((tool) => (
-          <article class="feature-card">
-            <h3 class="tool">{tool.title}</h3>
+          <article class="feature-card tool-card">
+            <h3>{tool.title}</h3>
             <p>{tool.description}</p>
           </article>
         ))
@@ -123,8 +144,5 @@ const localPath = (path: string) =>
         <a class="button secondary" href={localPath("/contact")}>Contact the author</a>
       </div>
     </div>
-    <!-- <div class="code-card" aria-label="GitHub repository">
-      <span>git clone</span> https://github.com/AbdallahNagy/PowerTools.git
-    </div> -->
   </section>
 </BaseLayout>

@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import Icon from "../components/Icon.astro";
 
 const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
 const windowsDownloadUrl = `${githubUrl}/releases/latest/download/PowerTools-Setup.exe`;
@@ -11,7 +12,7 @@ const windowsDownloadUrl = `${githubUrl}/releases/latest/download/PowerTools-Set
 >
   <section class="page-hero">
     <p class="eyebrow">Download</p>
-    <h1>Download <br /> Power Tools</h1>
+    <h1>Download <br /> <span class="gradient-text">PowerTools</span></h1>
     <p class="lead">Get the latest Windows build of the open-source Dataverse developer toolkit.</p>
     <div class="hero-actions centered-actions">
       <a class="button primary" href={windowsDownloadUrl}>Download for Windows</a>
@@ -45,21 +46,7 @@ const windowsDownloadUrl = `${githubUrl}/releases/latest/download/PowerTools-Set
 
       <article class="download-card security-card">
         <span class="security-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 3.75 5.25 6v5.25c0 4.2 2.7 7.95 6.75 9 4.05-1.05 6.75-4.8 6.75-9V6L12 3.75Z"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linejoin="round"
-            />
-            <path
-              d="m9.75 12.15 1.55 1.55 3.2-3.4"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <Icon name="shield-check" />
         </span>
         <span class="meta-label">Security reminder</span>
         <h3>Your data stays local</h3>
