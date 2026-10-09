@@ -14,11 +14,14 @@ Power Tools is a Windows desktop app for Dataverse and Dynamics 365 developers. 
 | Tool | What you can do |
 | --- | --- |
 | [Attribute Explorer](desktop/src/ui/tools/attribute-explorer/) | Browse every table in an environment and inspect its fields, types, and lookups. |
+| [Bulk Workflow Execution](desktop/src/ui/tools/bulk-workflow-execution/) | Run an on-demand workflow against every record a view or FetchXML query returns, in batches you can pace and stop. |
 | [Data Migration](desktop/src/ui/tools/data-migration/) | Move data between Dataverse environments with a guided workflow. |
 | [FetchXML Builder](desktop/src/ui/tools/fetchxml-builder/) | Build, run, and refine FetchXML queries. |
 | [FetchXML Tester](desktop/src/ui/tools/fetchxml-tester/) | Run FetchXML as written and keep a query library. |
 | [Plugin Registration](desktop/src/ui/tools/plugin-registration/) | Browse and manage plug-in assemblies, types, steps, and images. |
 | [Polymorphic Lookup Creator](desktop/src/ui/tools/polymorphic-lookup-creator/) | Create, update, and delete polymorphic lookups. |
+| [Solution Components Mover](desktop/src/ui/tools/solution-components-mover/) | Copy solution components from selected solutions into unmanaged solutions in the same environment. |
+| [Translator](desktop/src/ui/tools/translator/) | Edit display names and descriptions of tables, columns, choices, views, and charts in every installed language. |
 | [Workflow Activities Viewer](desktop/src/ui/tools/workflow-activities-viewer/) | See which activated processes reference a custom workflow activity. |
 
 Each tool opens in its own tab. The activity-bar tools can stay open in more than one tab at a time, and each tab keeps its own state.
