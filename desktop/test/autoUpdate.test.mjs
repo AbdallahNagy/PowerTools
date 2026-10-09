@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 
 import { readFileSync } from "node:fs";
 
-import { configureAutoUpdates, shouldCheckForUpdates } from "../dist-electron/autoUpdate.js";
+import { configureAutoUpdates, normalizeReleaseNotes, shouldCheckForUpdates } from "../dist-electron/autoUpdate.js";
 
 const builderConfig = JSON.parse(readFileSync(new URL("../electron-builder.json", import.meta.url), "utf8"));
 const packageConfig = JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8"));
@@ -100,4 +100,69 @@ test("manual update actions are no-ops outside packaged production builds", asyn
   expect(checkCount).toBe(0);
   expect(downloadCount).toBe(0);
   expect(installCount).toBe(0);
+});
+
+test("release notes are normalized to one string", () => {
+  expect(normalizeReleaseNotes("<p>Fixes</p>")).toBe("<p>Fixes</p>");
+  expect(normalizeReleaseNotes("  ")).toBe(undefined);
+  expect(normalizeReleaseNotes(null)).toBe(undefined);
+  expect(
+    normalizeReleaseNotes([
+      { version: "0.3.0", note: "<p>New</p>" },
+      { version: "0.2.0", note: null },
+    ]),
+  ).toBe("<h3>0.3.0</h3><p>New</p>");
+});
+
+test("release details stay on the status through download and install", () => {
+  const events = new Map();
+  const statuses = [];
+  const updater = {
+    autoDownload: true,
+    on: (eventName, callback) => events.set(eventName, callback),
+    checkForUpdates: () => Promise.resolve(),
+    downloadUpdate: () => Promise.resolve(),
+    quitAndInstall: () => {},
+  };
+
+  configureAutoUpdates({
+    isPackaged: true,
+    isDevelopment: false,
+    updater,
+    sendStatus: (status) => statuses.push(status),
+  });
+
+  events.get("update-available")({
+    version: "0.2.0",
+    releaseName: "Spring release",
+    releaseDate: "2026-10-01T00:00:00.000Z",
+    releaseNotes: "<ul><li>Faster</li></ul>",
+  });
+  events.get("download-progress")({ percent: 40 });
+  events.get("update-downloaded")({ version: "0.2.0" });
+
+  expect(statuses.slice(-3)).toEqual([
+    {
+      state: "available",
+      version: "0.2.0",
+      releaseName: "Spring release",
+      releaseDate: "2026-10-01T00:00:00.000Z",
+      releaseNotes: "<ul><li>Faster</li></ul>",
+    },
+    {
+      state: "downloading",
+      percent: 40,
+      version: "0.2.0",
+      releaseName: "Spring release",
+      releaseDate: "2026-10-01T00:00:00.000Z",
+      releaseNotes: "<ul><li>Faster</li></ul>",
+    },
+    {
+      state: "downloaded",
+      version: "0.2.0",
+      releaseName: "Spring release",
+      releaseDate: "2026-10-01T00:00:00.000Z",
+      releaseNotes: "<ul><li>Faster</li></ul>",
+    },
+  ]);
 });

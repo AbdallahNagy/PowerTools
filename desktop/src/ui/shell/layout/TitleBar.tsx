@@ -3,6 +3,7 @@ import { Copy, Minus, PanelLeft, Square, X } from "lucide-react";
 
 import PowerToolsIcon from "../../assets/icons/power-tools-icon.svg";
 import { desktopBridge } from "../../platform/desktopBridge";
+import { UpdateButton } from "./UpdateButton";
 import { TITLE_BAR_MENU_LABELS, TITLE_BAR_MENUS, type TitleBarMenuId } from "./titleBarMenus";
 
 interface TitleBarProps {
@@ -77,6 +78,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
       </div>
 
       <div className="app-no-drag ml-auto flex items-stretch">
+        <UpdateButton placement="title-bar" />
         <button
           type="button"
           aria-label="Minimize"
