@@ -115,7 +115,7 @@ For desktop changes, run `npm run check` from `desktop/` before opening a pull r
 
 ## Contact
 
-Abdallah Nagy — [abdallahnagy773@gmail.com](mailto:abdallahnagy773@gmail.com)
+Abdallah Nagy — [abdallah@abdallahnagy.com](mailto:abdallah@abdallahnagy.com)
 
 - [GitHub issues](https://github.com/AbdallahNagy/PowerTools/issues)
 - [Contact page](https://powertools.abdallahnagy.com/contact)
