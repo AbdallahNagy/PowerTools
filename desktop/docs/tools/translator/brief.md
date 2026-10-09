@@ -633,10 +633,10 @@ This covers the two items the user added under `### Open questions` after the fi
   The fake client gained simple record queries and `CreateAsync`.
 - Desktop: new node test `tests/node/solutionTarget.test.ts` (6) and 5 new renderer tests. They cover the Source picker and its `solutionId` queries, the hidden option under a solution source, confirming a source change, adding to an existing solution, creating a new solution with a failed add, and the picker staying usable when tables fail. The renderer fixtures now serve `/api/translator/tables`, `/solutions` and `/publishers`.
 - Run from `desktop/`:
-  - `npm test`: 82 files, 453 tests passed.
+  - `npm test`: 82 files and 453 tests passed. After merging the user's icon and security-policy commits, 83 files and 455 tests passed, and typecheck, lint and build passed again.
   - `npm run lint`: clean.
   - `npm run build`: succeeded.
-  - `xvfb-run -a npm run check`: typecheck, lint with `--max-warnings 0`, all 453 tests, and the renderer build passed. The last step, the Playwright smoke test, timed out after 120 seconds while waiting for the Electron main window. It fails the same way on the unmodified previous commit, also with `DOTNET_ROLL_FORWARD=Major`. Started on its own, the sidecar prints `LISTENING`. So this is a container limit, not this change. The smoke test does not open the Translator.
+  - `xvfb-run -a npm run check`: typecheck, lint with `--max-warnings 0`, all tests, and the renderer build passed. The last step, the Playwright smoke test, timed out after 120 seconds while waiting for the Electron main window. It fails the same way on the unmodified previous commit, also with `DOTNET_ROLL_FORWARD=Major`. Started on its own, the sidecar prints `LISTENING`. So this is a container limit, not this change. The smoke test does not open the Translator.
 - Run from `api/PowerTools/`:
   - `dotnet build PowerTools.sln`: 0 warnings, 0 errors.
   - `dotnet test PowerTools.sln` with `DOTNET_ROLL_FORWARD=Major` (.NET 10 SDK; no .NET 9 runtime in this container): every project passed, including Translator (46).
