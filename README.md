@@ -2,10 +2,10 @@
 
 A modern open-source desktop toolkit for everyday Dataverse work, with a friendly UI, secure local workflow, and tools that are easy to figure out and use.
 
-[![Website](https://img.shields.io/badge/website-abdallahnagy.github.io-1f6feb)](https://abdallahnagy.github.io/PowerTools/)
+[![Website](https://img.shields.io/badge/website-powertools.abdallahnagy.com-1f6feb)](https://powertools.abdallahnagy.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea043)](LICENSE)
 
-**[Download for Windows](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe)** · **[Website](https://abdallahnagy.github.io/PowerTools/)** · **[Issues](https://github.com/AbdallahNagy/PowerTools/issues)**
+**[Download for Windows](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe)** · **[Website](https://powertools.abdallahnagy.com/)** · **[Issues](https://github.com/AbdallahNagy/PowerTools/issues)**
 
 Power Tools is a Windows desktop app for Dataverse and Dynamics 365 developers. Migration, FetchXML, plug-in registration, and related metadata work live in one workspace. The app runs on your machine and connects directly to your environments.
 
@@ -27,7 +27,7 @@ Each tool opens in its own tab. The activity-bar tools can stay open in more tha
 
 The published installer is for Windows.
 
-1. Download [PowerTools-Setup.exe](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe), or start from the [download page](https://abdallahnagy.github.io/PowerTools/download).
+1. Download [PowerTools-Setup.exe](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe), or start from the [download page](https://powertools.abdallahnagy.com/download).
 2. Run the installer on your machine.
 3. Open Power Tools and add a connection.
 4. The installed app checks for later releases.
@@ -41,7 +41,7 @@ Switch or remove connections from the status bar.
 
 ## Your data stays local
 
-Power Tools runs on your machine and connects directly to Dataverse. Your Dataverse data stays on your machine. The [website](https://abdallahnagy.github.io/PowerTools/) introduces the app. It does not host or process your Dataverse data.
+Power Tools runs on your machine and connects directly to Dataverse. Your Dataverse data stays on your machine. The [website](https://powertools.abdallahnagy.com/) introduces the app. It does not host or process your Dataverse data.
 
 The interface calls Dataverse through a local ASP.NET Core API bound to `127.0.0.1`. The desktop app starts that API and stops it when the app exits.
 
@@ -118,4 +118,4 @@ For desktop changes, run `npm run check` from `desktop/` before opening a pull r
 Abdallah Nagy — [abdallahnagy773@gmail.com](mailto:abdallahnagy773@gmail.com)
 
 - [GitHub issues](https://github.com/AbdallahNagy/PowerTools/issues)
-- [Contact page](https://abdallahnagy.github.io/PowerTools/contact)
+- [Contact page](https://powertools.abdallahnagy.com/contact)
