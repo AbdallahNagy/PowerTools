@@ -5,6 +5,7 @@ import "@fontsource/ibm-plex-sans/600.css";
 import "@fontsource/ibm-plex-sans/700.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "../styles/global.css";
+import Icon from "../components/Icon.astro";
 import appIcon from "../assets/images/power-tools-icon.png";
 import appMark from "../assets/images/power-tools-icon.svg";
 
@@ -49,9 +50,17 @@ const isActive = (href: string) => {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
-    <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#14171c" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#f6f7f9" media="(prefers-color-scheme: light)" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f6f7f9" />
+    <script is:inline>
+      // Light is the default. Apply a saved dark choice before first paint.
+      try {
+        if (localStorage.getItem("powertools-theme") === "dark") {
+          document.documentElement.dataset.theme = "dark";
+          document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#14171c");
+        }
+      } catch {}
+    </script>
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
@@ -69,6 +78,15 @@ const isActive = (href: string) => {
         <img class="brand-mark" src={appMark.src} alt="" width="34" height="34" />
         <span>PowerTools</span>
       </a>
+      <button
+        class="theme-toggle"
+        type="button"
+        aria-label="Use dark theme"
+        aria-pressed="false"
+      >
+        <Icon name="moon" class="theme-light-only" />
+        <Icon name="sun" class="theme-dark-only" />
+      </button>
       <button
         class="menu-toggle"
         type="button"
@@ -107,6 +125,32 @@ const isActive = (href: string) => {
       </div>
     </footer>
     <script>
+      const root = document.documentElement;
+      const themeButton = document.querySelector<HTMLButtonElement>(".theme-toggle");
+      const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
+
+      const syncThemeButton = () => {
+        const isDark = root.dataset.theme === "dark";
+        themeButton?.setAttribute("aria-pressed", String(isDark));
+        themeButton?.setAttribute("aria-label", isDark ? "Use light theme" : "Use dark theme");
+        themeColor?.setAttribute("content", isDark ? "#14171c" : "#f6f7f9");
+      };
+
+      syncThemeButton();
+
+      themeButton?.addEventListener("click", () => {
+        const isDark = root.dataset.theme !== "dark";
+        if (isDark) {
+          root.dataset.theme = "dark";
+        } else {
+          delete root.dataset.theme;
+        }
+        try {
+          localStorage.setItem("powertools-theme", isDark ? "dark" : "light");
+        } catch {}
+        syncThemeButton();
+      });
+
       const menuButton = document.querySelector<HTMLButtonElement>(".menu-toggle");
       const siteMenu = document.querySelector<HTMLElement>(".site-menu");
 

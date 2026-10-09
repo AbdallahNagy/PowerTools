@@ -55,15 +55,21 @@ const localPath = (path: string) =>
     </div>
 
     <figure class="product-panel">
-      <picture>
-        <source srcset={appLight.src} media="(prefers-color-scheme: light)" />
-        <img
-          src={appDark.src}
-          width={appDark.width}
-          height={appDark.height}
-          alt="PowerTools Data Migration tool comparing fields between a dev and a test environment"
-        />
-      </picture>
+      <img
+        class="theme-light-only"
+        src={appLight.src}
+        width={appLight.width}
+        height={appLight.height}
+        alt="PowerTools Data Migration tool comparing fields between a dev and a test environment"
+      />
+      <img
+        class="theme-dark-only"
+        src={appDark.src}
+        width={appDark.width}
+        height={appDark.height}
+        loading="lazy"
+        alt="PowerTools Data Migration tool comparing fields between a dev and a test environment"
+      />
     </figure>
   </section>
 

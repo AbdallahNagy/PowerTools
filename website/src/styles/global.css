@@ -3,35 +3,35 @@
  *
  * Mirrors the desktop app tokens in desktop/src/ui/styles/theme.css:
  * cool slate neutrals with one deep teal accent. Token names match the app
- * roles (canvas, surface, raised, line, fg, accent...). Dark is the default,
- * like the app; light values apply when the visitor's system prefers light.
+ * roles (canvas, surface, raised, line, fg, accent...). Light is the default;
+ * the header toggle sets data-theme="dark" on <html> and remembers the choice.
  * When the app palette changes, update both files together.
  */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 
   /* Surfaces, from back to front */
-  --canvas: #14171c;
-  --surface: #1b1f26;
-  --raised: #232832;
-  --hover: #2a303a;
+  --canvas: #f6f7f9;
+  --surface: #ffffff;
+  --raised: #eef0f3;
+  --hover: #e4e7ec;
 
   /* Lines */
-  --line: #2e3540;
-  --line-strong: #3d4654;
+  --line: #d6dae1;
+  --line-strong: #c1c7d0;
 
   /* Text */
-  --fg-strong: #f3f5f8;
-  --fg: #d3d8df;
-  --fg-muted: #8b94a3;
+  --fg-strong: #0f1216;
+  --fg: #2a303a;
+  --fg-muted: #5f6877;
 
   /* Accent: fill for buttons, text for links and highlights */
-  --accent: #1f8075;
+  --accent: #1f7f74;
   --accent-hover: #1a6d64;
   --accent-fg: #ffffff;
-  --accent-text: #3fbfae;
+  --accent-text: #1a6e64;
 
-  --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  --shadow: 0 24px 60px rgba(15, 18, 22, 0.14);
 
   --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
@@ -45,29 +45,33 @@
   font-family: var(--font-sans);
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color-scheme: light;
+:root[data-theme="dark"] {
+  color-scheme: dark;
 
-    --canvas: #f6f7f9;
-    --surface: #ffffff;
-    --raised: #eef0f3;
-    --hover: #e4e7ec;
+  --canvas: #14171c;
+  --surface: #1b1f26;
+  --raised: #232832;
+  --hover: #2a303a;
 
-    --line: #d6dae1;
-    --line-strong: #c1c7d0;
+  --line: #2e3540;
+  --line-strong: #3d4654;
 
-    --fg-strong: #0f1216;
-    --fg: #2a303a;
-    --fg-muted: #5f6877;
+  --fg-strong: #f3f5f8;
+  --fg: #d3d8df;
+  --fg-muted: #8b94a3;
 
-    --accent: #1f7f74;
-    --accent-hover: #1a6d64;
-    --accent-fg: #ffffff;
-    --accent-text: #1a6e64;
+  --accent: #1f8075;
+  --accent-hover: #1a6d64;
+  --accent-fg: #ffffff;
+  --accent-text: #3fbfae;
 
-    --shadow: 0 24px 60px rgba(15, 18, 22, 0.14);
-  }
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+/* Show the screenshot that matches the active theme */
+:root:not([data-theme="dark"]) .theme-dark-only,
+:root[data-theme="dark"] .theme-light-only {
+  display: none !important;
 }
 
 * {
@@ -115,7 +119,7 @@ a {
 
 .site-header {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 24px;
   min-height: 76px;
@@ -142,10 +146,38 @@ a {
 }
 
 .site-menu {
+  grid-column: 2;
+  grid-row: 1;
   display: grid;
   grid-template-columns: 1fr auto;
   align-items: center;
   gap: 24px;
+}
+
+.theme-toggle {
+  grid-column: 3;
+  grid-row: 1;
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0;
+  color: var(--fg);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.theme-toggle:hover {
+  color: var(--fg-strong);
+  background: var(--hover);
+}
+
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
 }
 
 .menu-toggle {
@@ -655,18 +687,25 @@ h3 {
 
 @media (max-width: 860px) {
   .site-header {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
     gap: 12px;
     min-height: auto;
     padding: 16px 0;
   }
 
+  .theme-toggle {
+    grid-column: 2;
+  }
+
   .menu-toggle {
+    grid-column: 3;
+    grid-row: 1;
     display: inline-flex;
   }
 
   .site-menu {
     grid-column: 1 / -1;
+    grid-row: 2;
     display: none;
     grid-template-columns: 1fr;
     gap: 10px;
