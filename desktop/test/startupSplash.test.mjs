@@ -8,6 +8,7 @@ test("startup splash html presents the loading state without external assets", (
   expect(html).toMatch(/Power Tools/);
   expect(html).toMatch(/Starting local services/);
   expect(html).toMatch(/class="spinner"/);
+  expect(html).toMatch(/http-equiv="Content-Security-Policy" content="default-src 'none'/);
   expect(html).toMatch(/<div class="mark">PT<\/div>/);
   expect(html).not.toMatch(/https?:\/\//);
 });

@@ -12,12 +12,13 @@
     "extraResources": [
         "dist-electron/preload.bundle.cjs",
         {
-            "from": "src/ui/assets/icons/power-tools-preview-256.png",
-            "to": "power-tools-preview-256.png"
+            "from": "src/ui/assets/icons/power-tools-icon-256.png",
+            "to": "power-tools-icon-256.png"
         }
     ],
     "mac": {
         "target": "dmg",
+        "icon": "./power-tools.icns",
         "extraResources": [
             {
                 "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/osx-arm64/publish",
@@ -28,6 +29,7 @@
     "linux": {
         "target": "AppImage",
         "category": "Utility",
+        "icon": "./power-tools.png",
         "extraResources": [
             {
                 "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/linux-x64/publish",

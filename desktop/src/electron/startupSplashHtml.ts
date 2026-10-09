@@ -7,6 +7,7 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <style>
       /* Mirrors canvas, fg-strong, fg, line and accent-text in src/ui/styles/theme.css. */
@@ -61,11 +62,24 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
         width: 100%;
       }
 
+      /* The icon artwork carries its own rounded tile and transparent margin. */
       .mark {
-        border-radius: 8px;
-        box-shadow: 0 18px 36px var(--shadow);
+        filter: drop-shadow(0 12px 18px var(--shadow));
+        height: 72px;
+        width: 72px;
+      }
+
+      /* Text fallback mirrors the icon's teal tile when the PNG cannot be read. */
+      div.mark {
+        align-items: center;
+        background: linear-gradient(135deg, #34b6a3, #1f8075 50%, #0f4a43);
+        border-radius: 16px;
+        color: #ffffff;
+        display: flex;
+        font-size: 24px;
+        font-weight: 700;
         height: 64px;
-        object-fit: cover;
+        justify-content: center;
         width: 64px;
       }
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Minus, PanelLeft, Square, X } from "lucide-react";
 
-import PowerToolsIcon from "../../assets/icons/power-tools-preview-256.png";
+import PowerToolsIcon from "../../assets/icons/power-tools-icon.svg";
 import { desktopBridge } from "../../platform/desktopBridge";
 import { TITLE_BAR_MENU_LABELS, TITLE_BAR_MENUS, type TitleBarMenuId } from "./titleBarMenus";
 
