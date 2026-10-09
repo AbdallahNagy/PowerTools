@@ -20,6 +20,10 @@ public sealed class FakeTranslatorClient : ITranslatorClient
     public List<Entity> Views { get; } = [];
     public List<Entity> Charts { get; } = [];
     public Dictionary<(Guid, string), Label> LocLabels { get; } = [];
+    /// <summary>Rows for other tables (solution, publisher, solutioncomponent), filtered by simple conditions.</summary>
+    public Dictionary<string, List<Entity>> Records { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public List<Entity> Created { get; } = [];
+    public Exception? CreateError { get; set; }
 
     public List<RetrieveMetadataChangesRequest> MetadataRequests { get; } = [];
     public List<QueryExpression> Queries { get; } = [];
@@ -56,7 +60,9 @@ public sealed class FakeTranslatorClient : ITranslatorClient
         CancellationToken cancellationToken)
     {
         MetadataRequests.Add(request);
-        var names = (string[])request.Query.Criteria.Conditions[0].Value;
+        var condition = request.Query.Criteria?.Conditions.FirstOrDefault(item => item.PropertyName == "LogicalName");
+        if (condition is null) return Task.FromResult<IReadOnlyList<EntityMetadata>>(Tables.Values.ToList());
+        var names = (string[])condition.Value;
         return Task.FromResult<IReadOnlyList<EntityMetadata>>(
             names.Where(Tables.ContainsKey).Select(name => Tables[name]).ToList());
     }
@@ -67,7 +73,10 @@ public sealed class FakeTranslatorClient : ITranslatorClient
     public Task<IReadOnlyList<Entity>> RetrieveAllPagesAsync(QueryExpression query, CancellationToken cancellationToken)
     {
         Queries.Add(query);
-        return Task.FromResult<IReadOnlyList<Entity>>(query.EntityName == "savedquery" ? Views : Charts);
+        if (query.EntityName == "savedquery") return Task.FromResult<IReadOnlyList<Entity>>(Views);
+        if (query.EntityName == "savedqueryvisualization") return Task.FromResult<IReadOnlyList<Entity>>(Charts);
+        var rows = Records.TryGetValue(query.EntityName, out var list) ? list : [];
+        return Task.FromResult<IReadOnlyList<Entity>>(rows.Where(row => query.Criteria.Conditions.All(item => Matches(row, item))).ToList());
     }
 
     public Task<IReadOnlyList<LocLabelResult>> RetrieveLocLabelsAsync(
@@ -125,6 +134,34 @@ public sealed class FakeTranslatorClient : ITranslatorClient
         if (PublishErrors.TryDequeue(out var error)) throw error;
         return Task.CompletedTask;
     }
+
+    public Task<Guid> CreateAsync(Entity entity, CancellationToken cancellationToken)
+    {
+        Created.Add(entity);
+        if (CreateError is not null) throw CreateError;
+        return Task.FromResult(Guid.NewGuid());
+    }
+
+    private static bool Matches(Entity row, ConditionExpression condition)
+    {
+        var value = Normalize(row.Attributes.TryGetValue(condition.AttributeName, out var raw) ? raw : null);
+        var values = condition.Values.Select(Normalize).ToList();
+        var found = values.Any(item => Equals(item, value));
+        return condition.Operator switch
+        {
+            ConditionOperator.Equal or ConditionOperator.In => found,
+            ConditionOperator.NotEqual or ConditionOperator.NotIn => !found,
+            _ => true,
+        };
+    }
+
+    private static object? Normalize(object? value) => value switch
+    {
+        OptionSetValue option => option.Value,
+        EntityReference reference => reference.Id,
+        string text => text.ToLowerInvariant(),
+        _ => value,
+    };
 
     public static FaultException<OrganizationServiceFault> Fault(int code, string message)
     {

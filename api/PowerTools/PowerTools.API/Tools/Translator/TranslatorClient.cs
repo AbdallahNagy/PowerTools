@@ -58,6 +58,9 @@ public interface ITranslatorClient
         CancellationToken cancellationToken);
 
     Task PublishAsync(string parameterXml, CancellationToken cancellationToken);
+
+    /// <summary>Creates one record and returns its id. Used only to create a solution.</summary>
+    Task<Guid> CreateAsync(Entity entity, CancellationToken cancellationToken);
 }
 
 public static class TranslatorRequests
@@ -70,19 +73,19 @@ public static class TranslatorRequests
 
     public static readonly string[] TableProperties =
     [
-        "LogicalName", "SchemaName", "DisplayName", "DisplayCollectionName", "Description",
+        "MetadataId", "LogicalName", "SchemaName", "DisplayName", "DisplayCollectionName", "Description",
         "IsRenameable", "IsCustomizable", "IsManaged",
     ];
 
     public static readonly string[] AttributeProperties =
     [
-        "LogicalName", "AttributeType", "AttributeTypeName", "AttributeOf", "DisplayName", "Description",
+        "MetadataId", "LogicalName", "AttributeType", "AttributeTypeName", "AttributeOf", "DisplayName", "Description",
         "IsRenameable", "IsCustomizable", "IsManaged", "OptionSet",
     ];
 
     public static readonly string[] RelationshipProperties =
     [
-        "SchemaName", "AssociatedMenuConfiguration", "Entity1AssociatedMenuConfiguration",
+        "MetadataId", "SchemaName", "AssociatedMenuConfiguration", "Entity1AssociatedMenuConfiguration",
         "Entity2AssociatedMenuConfiguration", "Entity1LogicalName", "Entity2LogicalName",
         "ReferencedEntity", "ReferencingEntity", "IsCustomizable",
     ];
@@ -351,4 +354,7 @@ public sealed class DataverseTranslatorClient(IOrganizationServiceAsync2 service
     {
         await service.ExecuteAsync(new PublishXmlRequest { ParameterXml = parameterXml }, cancellationToken);
     }
+
+    public Task<Guid> CreateAsync(Entity entity, CancellationToken cancellationToken) =>
+        service.CreateAsync(entity, cancellationToken);
 }

@@ -558,6 +558,89 @@ Scope follows the user's first-PR decision: an in-app grid for tables, columns, 
   - whether the `languagelocale` table exists on on-premises
 - The privilege pre-check that the review recommends (`WhoAmI` plus `RetrieveUserPrivileges`) is not implemented, because the privilege names are unverified. Privilege faults are mapped per row instead.
 
+**Addendum (2026-10-09): solution source, add to solution, and the first-load hang**
+
+This covers the two items the user added under `### Open questions` after the first draft pull request. Everything else behaves as before.
+
+*Sidecar (`api/PowerTools/PowerTools.API/Tools/Translator/`)*
+- New file `TranslatorSolutions.cs` holds the component-type constants, the `SolutionScope` model, the solution, publisher and `solutioncomponent` queries, and the new-solution field rules. `TranslatorService.Solutions.cs` holds the new service methods. The service is now a `partial` class. No other tool's code or route is used.
+- New routes in the `/api/translator` group, behind `DataverseContextFilter`:
+  - `GET /tables?solutionId=` returns `{ tables: [{ logicalName, displayName }] }`. It replaces the renderer's use of `/api/metadata/entities` (see the loading findings below).
+  - `GET /solutions` returns visible solutions, managed and unmanaged, without `Default` and `Active`. Each has its id, unique name, display name, version, managed flag, and publisher name.
+  - `GET /publishers` returns publishers where `isreadonly = false`.
+- `POST /labels/query` takes an optional `solutionId`. The `solutioncomponent` query is paged with a paging cookie, so it has no 5,000-row cap. It reads types 1, 2, 9, 10, 26 and 59.
+  - A table added with all subcomponents (`rootcomponentbehavior = 0`, or no value on older solutions) shows every label.
+  - Otherwise, the table's own labels appear only when the table row is in the solution. Columns, local choices, Yes/No, relationships, views and charts appear only when their component is in the solution. Choices and Yes/No follow their column (type 2).
+  - Global choices are limited to type 9.
+  - `MetadataId` was added to the table, column and relationship property lists for this matching.
+- The table list for a solution includes:
+  - tables in the solution
+  - tables that own a solution column (found with `RetrieveMetadataChanges` and a `MetadataId In` attribute filter, 250 ids per call)
+  - the referenced table of a 1:N relationship, and both tables of an N:N relationship
+  - the table of each view or chart in the solution
+- `POST /labels/apply` takes an optional `solution`. It is either `{ uniqueName }` for an existing solution, or `{ new: { friendlyName, uniqueName, publisherId, version } }`. It is checked before any label is written, and a problem returns 400:
+  - An existing solution must exist, be visible and unmanaged, and must not be `Default` or `Active`.
+  - A new solution needs a display name, and a unique name that uses only letters, numbers and underscores and does not start with a number. It needs a 2 to 4 part version (default `1.0.0.0`), a publisher that exists and is not read-only, and a unique name that is not already used.
+- The apply job now has a solution phase after publish. The job returns `solution: { status, uniqueName, friendlyName, created, added, failed, message, failures[] }`. The status is `notRequested`, `pending`, `running`, `succeeded`, `partial`, `failed` or `notNeeded`.
+  - Only components with at least one successful label write are added, with `AddSolutionComponentRequest` and `AddRequiredComponents = false`:
+    - a table (1), with `DoNotIncludeSubcomponents = true`, when its own labels changed
+    - a column (2) for column labels, local choices and Yes/No
+    - a global choice (9)
+    - a relationship (10)
+    - a view (26)
+    - a chart (59)
+  - Components are de-duplicated. Ids come from the fresh `RetrieveAsIfPublished` reads the job already makes, so there are no extra reads.
+  - A new solution is created (`solution` record with `publisherid`) only when there is something to add.
+  - Adds go through `ExecuteMultiple` with `ContinueOnError` and the same customization-lock retry as the label writes. Faults are mapped per component. Privilege faults get their own message about Solution permissions.
+  - A failure to create the solution or add a component is reported in `solution` and the log. It never undoes label updates or changes the publish result.
+
+*Desktop (`desktop/src/ui/tools/translator/`)*
+- The scope list has a **Source** select at the top: "All tables" (the default), then each solution by display name, with "(managed)" after managed ones.
+  - The select stays usable while tables load or fail.
+  - If solutions cannot load, an inline error with **Retry** shows below it, plus an error toast.
+  - Changing the source resets the selected table and filters. If there are unsaved edits, it first asks "Changing the source discards N unsaved changes." (**Discard and change** / **Cancel**).
+  - Table, label and global-choice queries are keyed by source and send `solutionId`.
+- The Apply confirmation shows **Add changed components to a solution** only when the source is "All tables".
+  - **Existing solution** lists only unmanaged solutions other than `Default` and `Active`.
+  - **New solution** has Display name, Unique name (filled from the display name until edited), Publisher (loaded only when this mode is chosen; read-only publishers are not listed) and Version (`1.0.0.0`).
+  - Field errors disable **Apply and publish**. Empty lists explain why nothing can be chosen.
+- While the job runs, the progress text shows "Adding components to {solution}…" during the solution phase.
+  - On full success, the toast adds "Added N components to {solution}."
+  - On a failed or partial add, the modal stays open with a separate alert and a `Solution component / Error` table. Label drafts are still cleared for the labels that were saved.
+- New model `model/solutionTarget.ts` holds the field rules, the unique-name helper, the request mapping and `solutionNeedsAttention`. `TableInfo` is now the tool's own `{ logicalName, displayName }`.
+
+*"Loading languages and tables…" never finishing: findings and fixes*
+- I could not reproduce this without a real environment, so the cause is not confirmed. These are the things in the code that could keep the first load pending, and what I changed:
+  1. **The table list used the shared `GET /api/metadata/entities`.** It runs `RetrieveAllEntitiesRequest(EntityFilters.Entity)` with no language filter, so a large org returns every table's full entity metadata with every label in every provisioned language. It also takes no `CancellationToken`. The Translator spinner waits on this call, and it is the most likely slow step in a large multilingual org. **Fix:** the Translator now uses its own `GET /api/translator/tables`. It is a `RetrieveMetadataChangesRequest` that reads only `MetadataId`, `LogicalName`, `DisplayName`, `IsIntersect` and `IsPrivate`, with `LabelQuery.FilterLanguages` set to the base language, and it is cancellable. The shared endpoint is unchanged for the other tools.
+  2. **No client timeout and no cancellation.** The renderer's axios calls had no `timeout`, and the queries did not pass React Query's `AbortSignal`. A request that never answered (a stalled `ServiceClient` call, or token acquisition in the main process) kept `isFetching` true forever. In that state the UI shows neither the error nor **Retry**, and Reload did not abort the stuck request. **Fix:** every Translator query passes its `signal`, so Reload, a connection change or closing the tab aborts the request, and ASP.NET cancels the sidecar's Dataverse call through `RequestAborted`. Reads time out after 120 seconds, and label queries after 300 seconds. A timeout becomes "The environment did not answer within N seconds. Retry, or check the connection." with **Retry**.
+  3. **Retry refetched both queries.** It now refetches only the query that failed or has no data.
+  4. Not changed, noted only: the Global choices count still runs `RetrieveAllOptionSets` alongside the first load, but it does not hold the spinner. Token acquisition in `getConnectionForRenderer` (Electron main) may open an interactive sign-in. If that never completes, the request now times out instead of spinning.
+- Still unverified, as before: whether the Data8 on-premises client serializes `RetrieveMetadataChanges` with attribute and relationship `MetadataId` filters, and `AddSolutionComponent`. It is also unverified whether Dataverse adds a table as a shell automatically when only one of its columns is added. The table list and the scope filtering were tested only against the fake.
+
+*Tests and commands (2026-10-09)*
+- Sidecar: new `TranslatorSolutionTests.cs` (21 cases). It covers:
+  - the light table query
+  - solution tables reached through a column, a relationship and a view
+  - paging and component types for `solutioncomponent`
+  - the solution and publisher filters
+  - scope filtering for tables without subcomponents, tables reached only through a column, tables with all subcomponents, and views and global choices
+  - validation of existing and new targets
+  - `AddSolutionComponent` requests with de-duplication and `DoNotIncludeSubcomponents`
+  - creating a new solution
+  - add and create failures that keep the label updates
+  - `notNeeded` and `notRequested`
+
+  The fake client gained simple record queries and `CreateAsync`.
+- Desktop: new node test `tests/node/solutionTarget.test.ts` (6) and 5 new renderer tests. They cover the Source picker and its `solutionId` queries, the hidden option under a solution source, confirming a source change, adding to an existing solution, creating a new solution with a failed add, and the picker staying usable when tables fail. The renderer fixtures now serve `/api/translator/tables`, `/solutions` and `/publishers`.
+- Run from `desktop/`:
+  - `npm test`: 82 files, 453 tests passed.
+  - `npm run lint`: clean.
+  - `npm run build`: succeeded.
+  - `xvfb-run -a npm run check`: typecheck, lint with `--max-warnings 0`, all 453 tests, and the renderer build passed. The last step, the Playwright smoke test, timed out after 120 seconds while waiting for the Electron main window. It fails the same way on the unmodified previous commit, also with `DOTNET_ROLL_FORWARD=Major`. Started on its own, the sidecar prints `LISTENING`. So this is a container limit, not this change. The smoke test does not open the Translator.
+- Run from `api/PowerTools/`:
+  - `dotnet build PowerTools.sln`: 0 warnings, 0 errors.
+  - `dotnet test PowerTools.sln` with `DOTNET_ROLL_FORWARD=Major` (.NET 10 SDK; no .NET 9 runtime in this container): every project passed, including Translator (46).
+
 ### Open questions
 
 Answered by the user before Dataverse review and UX:

@@ -33,6 +33,10 @@ public static class TranslatorFaults
         "You do not have permission to change this label. Changing labels needs Write on the component's metadata " +
         "and Publish Customizations, which System Customizer and System Administrator have.";
 
+    public const string SolutionPrivilegeMessage =
+        "You do not have permission to change this solution. Adding components needs Write and Append To on " +
+        "Solution, and Create to make a new solution, which System Customizer and System Administrator have.";
+
     public static TranslatorProblem Invalid(string message) =>
         new(StatusCodes.Status400BadRequest, InvalidRequestCode, message);
 

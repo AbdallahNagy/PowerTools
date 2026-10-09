@@ -12,6 +12,8 @@ public sealed class WriteUnit(OrganizationRequest request, IReadOnlyList<ApplyRo
     public IReadOnlyList<ApplyRowDto> Rows { get; } = rows;
     public List<string> PublishTables { get; } = [];
     public List<string> PublishOptionSets { get; } = [];
+    /// <summary>Components to add to the target solution when this write succeeds.</summary>
+    public List<SolutionComponentRef> Components { get; } = [];
 }
 
 /// <summary>Rows that could not become a request, with the reason.</summary>
@@ -49,19 +51,139 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
         if (targets.Count == 0)
         {
             job.FinishPublish(PublishStatuses.NotNeeded, null);
+        }
+        else
+        {
+            try
+            {
+                await PublishWithRetryAsync(client, delay, targets, cancellationToken);
+                job.FinishPublish(PublishStatuses.Succeeded, null);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                job.FinishPublish(PublishStatuses.Failed, TranslatorFaults.RowMessage(ex));
+            }
+        }
+
+        // Solution membership does not depend on publishing, and a failure here never undoes a label write.
+        if (job.Prepared.Solution is { } solution)
+            await AddToSolutionAsync(job, solution, published, cancellationToken);
+        job.Complete();
+    }
+
+    /// <summary>
+    /// Adds the components whose labels were written to the target solution, creating it first when asked.
+    /// Faults are reported per component and never undo the label updates.
+    /// </summary>
+    private async Task AddToSolutionAsync(
+        TranslatorJob job,
+        SolutionTarget solution,
+        IReadOnlyList<WriteUnit> written,
+        CancellationToken cancellationToken)
+    {
+        job.StartSolution();
+        var all = written.SelectMany(unit => unit.Components).ToList();
+        var failures = all
+            .Where(component => component.Id is null || component.Id == Guid.Empty)
+            .DistinctBy(component => (component.Type, component.Name))
+            .Select(component => new SolutionFailureDto
+            {
+                ComponentType = component.Type,
+                Component = component.Name,
+                Message = "Dataverse did not return this component's id, so it could not be added.",
+            })
+            .ToList();
+        var components = all
+            .Where(component => component.Id is { } id && id != Guid.Empty)
+            .GroupBy(component => (component.Type, component.Id))
+            // A table needs DoNotIncludeSubcomponents; keep that flag if any write asked for it.
+            .Select(group => group.OrderByDescending(component => component.DoNotIncludeSubcomponents).First())
+            .ToList();
+
+        if (components.Count == 0 && failures.Count == 0)
+        {
+            job.FinishSolution(SolutionStatuses.NotNeeded, 0, [], "No labels were updated, so nothing was added to the solution.");
             return;
         }
 
-        try
+        if (solution.New is { } plan && components.Count > 0)
         {
-            await PublishWithRetryAsync(client, delay, targets, cancellationToken);
-            job.FinishPublish(PublishStatuses.Succeeded, null);
+            try
+            {
+                await client.CreateAsync(TranslatorSolutionQueries.NewSolution(plan), cancellationToken);
+                job.SolutionCreated();
+                job.Log("info", $"Created solution {plan.UniqueName}.");
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                var message = SolutionMessage(ex);
+                job.FinishSolution(SolutionStatuses.Failed, 0, failures, $"The solution could not be created: {message}");
+                return;
+            }
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+
+        var added = 0;
+        foreach (var chunk in components.Chunk(job.Prepared.BatchSize))
         {
-            job.FinishPublish(PublishStatuses.Failed, TranslatorFaults.RowMessage(ex));
+            var pending = chunk.ToList();
+            for (var attempt = 0; pending.Count > 0; attempt++)
+            {
+                IReadOnlyDictionary<int, Exception> faults;
+                try
+                {
+                    faults = await client.ExecuteBatchAsync(
+                        pending.Select(component => (OrganizationRequest)TranslatorSolutionQueries.AddComponent(solution.UniqueName, component)).ToList(),
+                        cancellationToken);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException || TranslatorFaults.IsTimeout(ex, cancellationToken))
+                {
+                    if (TranslatorFaults.IsCustomizationLock(ex) && attempt < TranslatorLimits.MaxLockRetries)
+                    {
+                        job.Log("warn", "Another customization is running in this environment. Waiting before retrying.");
+                        await delay.WaitAsync(LockDelay(attempt), cancellationToken);
+                        continue;
+                    }
+
+                    var message = TranslatorFaults.IsTimeout(ex, cancellationToken)
+                        ? "The request timed out. Some components may have been added."
+                        : SolutionMessage(ex);
+                    failures.AddRange(pending.Select(component => Failure(component, message)));
+                    break;
+                }
+
+                var retry = new List<SolutionComponentRef>();
+                for (var index = 0; index < pending.Count; index++)
+                {
+                    if (!faults.TryGetValue(index, out var fault)) added++;
+                    else if (TranslatorFaults.IsCustomizationLock(fault) && attempt < TranslatorLimits.MaxLockRetries) retry.Add(pending[index]);
+                    else failures.Add(Failure(pending[index], SolutionMessage(fault)));
+                }
+
+                pending = retry;
+                if (pending.Count > 0)
+                {
+                    job.Log("warn", "Another customization is running in this environment. Waiting before retrying.");
+                    await delay.WaitAsync(LockDelay(attempt), cancellationToken);
+                }
+            }
         }
+
+        var status = failures.Count == 0
+            ? SolutionStatuses.Succeeded
+            : added == 0 ? SolutionStatuses.Failed : SolutionStatuses.Partial;
+        job.FinishSolution(status, added, failures, failures.Count == 0 ? null : failures[0].Message);
+
+        static SolutionFailureDto Failure(SolutionComponentRef component, string message) =>
+            new() { ComponentType = component.Type, Component = component.Name, Message = message };
     }
+
+    private static string SolutionMessage(Exception exception) =>
+        TranslatorFaults.IsPrivilegeDenied(exception)
+            ? $"{TranslatorFaults.SolutionPrivilegeMessage} {DataverseErrorText(exception)}"
+            : DataverseErrorText(exception);
+
+    private static string DataverseErrorText(Exception exception) =>
+        PowerTools.API.Services.DataverseErrorFormatter.Format(exception);
 
     /// <summary>Sends one batch. Returns the units that were written.</summary>
     private async Task<List<WriteUnit>> ExecuteAsync(
@@ -240,7 +362,9 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
                 entity.DisplayName = Merge(entity.DisplayName, tableRows, LabelProperties.DisplayName);
                 entity.DisplayCollectionName = Merge(entity.DisplayCollectionName, tableRows, LabelProperties.DisplayCollectionName);
                 entity.Description = Merge(entity.Description, tableRows, LabelProperties.Description);
-                units.Add(Unit(new UpdateEntityRequest { Entity = entity, MergeLabels = true }, tableRows, table));
+                var unit = Unit(new UpdateEntityRequest { Entity = entity, MergeLabels = true }, tableRows, table);
+                unit.Components.Add(new SolutionComponentRef(SolutionComponentTypes.Entity, entity.MetadataId, table, DoNotIncludeSubcomponents: true));
+                units.Add(unit);
             }
         }
 
@@ -272,10 +396,12 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
 
             attribute.DisplayName = Merge(attribute.DisplayName, columnRows, LabelProperties.DisplayName);
             attribute.Description = Merge(attribute.Description, columnRows, LabelProperties.Description);
-            units.Add(Unit(
+            var columnUnit = Unit(
                 new UpdateAttributeRequest { EntityName = table, Attribute = attribute, MergeLabels = true },
                 columnRows,
-                table));
+                table);
+            columnUnit.Components.Add(ColumnComponent(table, attribute));
+            units.Add(columnUnit);
         }
 
         foreach (var option in attributeRows.Where(row => row.Key.Kind is LabelKinds.Choice or LabelKinds.Boolean)
@@ -307,6 +433,8 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
                     relationshipItems,
                     oneToManyMetadata.ReferencedEntity,
                     oneToManyMetadata.ReferencingEntity);
+                unit.Components.Add(new SolutionComponentRef(
+                    SolutionComponentTypes.Relationship, oneToManyMetadata.MetadataId, oneToManyMetadata.SchemaName ?? relationship.Key));
                 units.Add(unit);
             }
             else if (manyToMany.TryGetValue(relationship.Key, out var manyToManyMetadata))
@@ -325,11 +453,14 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
                     menu.Label = Merge(menu.Label, second, LabelProperties.Label);
                 }
 
-                units.Add(Unit(
+                var unit = Unit(
                     new UpdateRelationshipRequest { Relationship = manyToManyMetadata, MergeLabels = true },
                     relationshipItems,
                     manyToManyMetadata.Entity1LogicalName,
-                    manyToManyMetadata.Entity2LogicalName));
+                    manyToManyMetadata.Entity2LogicalName);
+                unit.Components.Add(new SolutionComponentRef(
+                    SolutionComponentTypes.Relationship, manyToManyMetadata.MetadataId, manyToManyMetadata.SchemaName ?? relationship.Key));
+                units.Add(unit);
             }
             else
             {
@@ -403,8 +534,14 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
                 Description = description,
                 MergeLabels = true,
             };
-        return Unit(request, rows, table);
+        var optionUnit = Unit(request, rows, table);
+        // Local choices and Yes/No options belong to their column.
+        optionUnit.Components.Add(ColumnComponent(table, attribute));
+        return optionUnit;
     }
+
+    private static SolutionComponentRef ColumnComponent(string table, AttributeMetadata attribute) =>
+        new(SolutionComponentTypes.Attribute, attribute.MetadataId, $"{table}.{attribute.LogicalName}");
 
     private async Task PlanOptionSetAsync(
         string name,
@@ -427,6 +564,7 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
             optionSet.Description = Merge(optionSet.Description, setRows, LabelProperties.Description);
             var unit = Unit(new UpdateOptionSetRequest { OptionSet = optionSet, MergeLabels = true }, setRows);
             unit.PublishOptionSets.Add(optionSet.Name ?? name);
+            unit.Components.Add(new SolutionComponentRef(SolutionComponentTypes.OptionSet, optionSet.MetadataId, optionSet.Name ?? name));
             units.Add(unit);
         }
 
@@ -456,6 +594,7 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
                 },
                 optionRows);
             unit.PublishOptionSets.Add(optionSet.Name ?? name);
+            unit.Components.Add(new SolutionComponentRef(SolutionComponentTypes.OptionSet, optionSet.MetadataId, optionSet.Name ?? name));
             units.Add(unit);
         }
     }
@@ -508,7 +647,13 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
                 AttributeName = targets[i].AttributeName,
                 Labels = merged,
             };
-            units.Add(Unit(request, groupRows, groupRows[0].Key.Table!.Trim().ToLowerInvariant()));
+            var recordUnit = Unit(request, groupRows, groupRows[0].Key.Table!.Trim().ToLowerInvariant());
+            var isView = groups[i].Key.Kind == LabelKinds.View;
+            recordUnit.Components.Add(new SolutionComponentRef(
+                isView ? SolutionComponentTypes.SavedQuery : SolutionComponentTypes.SavedQueryVisualization,
+                targets[i].RecordId,
+                $"{(isView ? "View" : "Chart")} {targets[i].RecordId}"));
+            units.Add(recordUnit);
         }
     }
 

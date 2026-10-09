@@ -1,4 +1,11 @@
-import type { ApplyJob, LabelRow, LanguagesResponse, TableInfo } from "../model/types";
+import type {
+  ApplyJob,
+  LabelRow,
+  LanguagesResponse,
+  PublisherInfo,
+  SolutionInfo,
+  TableInfo,
+} from "../model/types";
 
 export const languagesFixture: LanguagesResponse = {
   baseLcid: 1033,
@@ -10,20 +17,31 @@ export const languagesFixture: LanguagesResponse = {
 };
 
 export const tablesFixture: TableInfo[] = [
+  { logicalName: "account", displayName: "Account" },
+  { logicalName: "contact", displayName: "Contact" },
+];
+
+export const solutionsFixture: SolutionInfo[] = [
   {
-    logicalName: "account",
-    displayName: "Account",
-    primaryIdAttribute: "accountid",
-    primaryNameAttribute: "name",
-    isCustom: false,
+    solutionId: "11111111-1111-1111-1111-111111111111",
+    uniqueName: "ContosoCore",
+    friendlyName: "Contoso Core",
+    version: "1.0.0.0",
+    isManaged: false,
+    publisherName: "Contoso",
   },
   {
-    logicalName: "contact",
-    displayName: "Contact",
-    primaryIdAttribute: "contactid",
-    primaryNameAttribute: "fullname",
-    isCustom: false,
+    solutionId: "22222222-2222-2222-2222-222222222222",
+    uniqueName: "VendorPack",
+    friendlyName: "Vendor Pack",
+    version: "2.1.0.0",
+    isManaged: true,
+    publisherName: "Vendor",
   },
+];
+
+export const publishersFixture: PublisherInfo[] = [
+  { publisherId: "f0000000-0000-0000-0000-000000000001", uniqueName: "contoso", friendlyName: "Contoso", prefix: "cr1" },
 ];
 
 function row(partial: Partial<LabelRow> & Pick<LabelRow, "key" | "component">): LabelRow {

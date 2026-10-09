@@ -111,6 +111,12 @@ function TranslatorPage() {
               selected={translator.scope}
               onSelect={translator.selectScope}
               editsByScope={translator.draftsByScope}
+              source={translator.source}
+              solutions={translator.solutions}
+              solutionsLoading={translator.solutionsLoading}
+              solutionsError={translator.solutionsError}
+              onRetrySolutions={translator.retrySolutions}
+              onSourceChange={translator.requestSource}
             />
           </Panel>
           <Separator
@@ -171,10 +177,33 @@ function TranslatorPage() {
         onConfirm={() => void translator.reload()}
         onCancel={() => translator.setConfirm(null)}
       />
+      <ConfirmModal
+        open={translator.confirm === "source"}
+        title="Change source"
+        message={`Changing the source discards ${plural(edits, "unsaved change")}.`}
+        confirmLabel="Discard and change"
+        onConfirm={translator.confirmSource}
+        onCancel={() => translator.setConfirm(null)}
+      />
       <ApplyModal
         state={translator.apply}
         drafts={translator.drafts}
         languages={translator.languages}
+        solutionOption={
+          translator.solutionOptionAvailable
+            ? {
+                target: translator.solutionTarget,
+                onChange: translator.setSolutionTarget,
+                errors: translator.solutionErrors,
+                solutions: translator.unmanagedSolutions,
+                solutionsLoading: translator.solutionsLoading,
+                solutionsError: translator.solutionsError,
+                publishers: translator.publishers,
+                publishersLoading: translator.publishersLoading,
+                publishersError: translator.publishersError,
+              }
+            : null
+        }
         onConfirm={() => void translator.confirmApply()}
         onClose={translator.closeApply}
         onRetryPublish={() => void translator.retryPublish()}

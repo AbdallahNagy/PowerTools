@@ -4,7 +4,7 @@ using Microsoft.Xrm.Sdk.Metadata;
 namespace PowerTools.API.Tools.Translator;
 
 /// <summary>Languages, label queries, apply preparation, and publish for one request.</summary>
-public sealed class TranslatorService(ITranslatorClient client, ITranslatorDelay? delay = null)
+public sealed partial class TranslatorService(ITranslatorClient client, ITranslatorDelay? delay = null)
 {
     private readonly ITranslatorDelay _delay = delay ?? new TranslatorDelay();
 
@@ -81,18 +81,27 @@ public sealed class TranslatorService(ITranslatorClient client, ITranslatorDelay
                 return TranslatorResult<LabelQueryResponse>.Fail(
                     TranslatorFaults.Invalid("None of the requested languages are provisioned."));
 
+            var scope = body.SolutionId is { } solutionId ? await LoadScopeAsync(solutionId, cancellationToken) : null;
             var rows = new List<LabelRowDto>();
-            await AddMetadataRowsAsync(rows, tables, kinds, lcids, languages.BaseLcid, cancellationToken);
+            await AddMetadataRowsAsync(rows, tables, kinds, lcids, languages.BaseLcid, scope, cancellationToken);
             if (kinds.Contains(LabelKinds.GlobalChoice))
             {
                 var optionSets = await client.RetrieveAllOptionSetsAsync(cancellationToken);
-                rows.AddRange(TranslatorMapper.GlobalChoiceRows(optionSets, lcids, languages.BaseLcid));
+                var inScope = scope is null
+                    ? optionSets
+                    : optionSets.Where(optionSet => SolutionScope.Contains(scope.OptionSets, optionSet.MetadataId));
+                rows.AddRange(TranslatorMapper.GlobalChoiceRows(inScope, lcids, languages.BaseLcid));
             }
 
-            if (kinds.Contains(LabelKinds.View))
-                rows.AddRange(await RecordRowsAsync(LabelKinds.View, tables, lcids, languages.BaseLcid, cancellationToken));
-            if (kinds.Contains(LabelKinds.Chart))
-                rows.AddRange(await RecordRowsAsync(LabelKinds.Chart, tables, lcids, languages.BaseLcid, cancellationToken));
+            if (kinds.Contains(LabelKinds.View) || kinds.Contains(LabelKinds.Chart))
+            {
+                // A table added with all subcomponents shows every view and chart, so its id is needed.
+                var fullTables = scope is null ? null : await FullTablesAsync(scope, tables, lcids, cancellationToken);
+                if (kinds.Contains(LabelKinds.View))
+                    rows.AddRange(await RecordRowsAsync(LabelKinds.View, tables, lcids, languages.BaseLcid, scope, fullTables, cancellationToken));
+                if (kinds.Contains(LabelKinds.Chart))
+                    rows.AddRange(await RecordRowsAsync(LabelKinds.Chart, tables, lcids, languages.BaseLcid, scope, fullTables, cancellationToken));
+            }
 
             var filtered = properties switch
             {
@@ -114,6 +123,7 @@ public sealed class TranslatorService(ITranslatorClient client, ITranslatorDelay
         IReadOnlyCollection<string> kinds,
         IReadOnlyList<int> lcids,
         int baseLcid,
+        SolutionScope? scope,
         CancellationToken cancellationToken)
     {
         var wantsTable = kinds.Contains(LabelKinds.Table);
@@ -129,11 +139,27 @@ public sealed class TranslatorService(ITranslatorClient client, ITranslatorDelay
             var metadata = await client.RetrieveMetadataAsync(request, cancellationToken);
             foreach (var table in metadata.OrderBy(table => chunk.IndexOf(table.LogicalName)))
             {
-                if (wantsTable) rows.AddRange(TranslatorMapper.TableRows(table, lcids, baseLcid));
-                if (kinds.Contains(LabelKinds.Column)) rows.AddRange(TranslatorMapper.ColumnRows(table, lcids, baseLcid));
-                if (kinds.Contains(LabelKinds.Choice)) rows.AddRange(TranslatorMapper.ChoiceRows(table, lcids, baseLcid));
-                if (kinds.Contains(LabelKinds.Boolean)) rows.AddRange(TranslatorMapper.BooleanRows(table, lcids, baseLcid));
-                if (wantsRelationships) rows.AddRange(TranslatorMapper.RelationshipRows(table, lcids));
+                // With a solution source: everything when the table was added with all subcomponents,
+                // otherwise only the table's own labels (when the table row is in the solution) and
+                // the columns and relationships that are in the solution.
+                var all = scope is null || scope.IncludesAll(table.MetadataId);
+                var columns = all ? null : InScopeColumns(table, scope!);
+                var relationships = all ? null : InScopeRelationships(table, scope!);
+                bool ColumnInScope(LabelRowDto row) => columns is null || columns.Contains(row.Key.Column ?? "");
+
+                if (wantsTable && (all || scope!.IncludesTable(table.MetadataId)))
+                    rows.AddRange(TranslatorMapper.TableRows(table, lcids, baseLcid));
+                if (kinds.Contains(LabelKinds.Column))
+                    rows.AddRange(TranslatorMapper.ColumnRows(table, lcids, baseLcid).Where(ColumnInScope));
+                if (kinds.Contains(LabelKinds.Choice))
+                    rows.AddRange(TranslatorMapper.ChoiceRows(table, lcids, baseLcid).Where(ColumnInScope));
+                if (kinds.Contains(LabelKinds.Boolean))
+                    rows.AddRange(TranslatorMapper.BooleanRows(table, lcids, baseLcid).Where(ColumnInScope));
+                if (wantsRelationships)
+                {
+                    rows.AddRange(TranslatorMapper.RelationshipRows(table, lcids)
+                        .Where(row => relationships is null || relationships.Contains(row.Key.Relationship ?? "")));
+                }
             }
         }
     }
@@ -143,6 +169,8 @@ public sealed class TranslatorService(ITranslatorClient client, ITranslatorDelay
         IReadOnlyCollection<string> tables,
         IReadOnlyCollection<int> lcids,
         int baseLcid,
+        SolutionScope? scope,
+        IReadOnlySet<string>? fullTables,
         CancellationToken cancellationToken)
     {
         var view = kind == LabelKinds.View;
@@ -151,6 +179,14 @@ public sealed class TranslatorService(ITranslatorClient client, ITranslatorDelay
         var records = await client.RetrieveAllPagesAsync(
             view ? TranslatorRequests.Views(tables) : TranslatorRequests.Charts(tables),
             cancellationToken);
+        if (scope is not null)
+        {
+            var ids = view ? scope.Views : scope.Charts;
+            records = records
+                .Where(record => ids.Contains(record.Id) || fullTables?.Contains(TableOf(record, tableAttribute)) == true)
+                .ToList();
+        }
+
         if (records.Count == 0) return [];
 
         var targets = records
@@ -199,6 +235,14 @@ public sealed class TranslatorService(ITranslatorClient client, ITranslatorDelay
                 return TranslatorResult<PreparedApply>.Fail(TranslatorFaults.Invalid("Each row needs at least one label."));
         }
 
+        SolutionTarget? solution = null;
+        if (body.Solution is not null)
+        {
+            var target = await ResolveSolutionTargetAsync(body.Solution, cancellationToken);
+            if (target.Problem is not null) return TranslatorResult<PreparedApply>.Fail(target.Problem);
+            solution = target.Value;
+        }
+
         LanguagesResponse languages;
         try
         {
@@ -226,7 +270,7 @@ public sealed class TranslatorService(ITranslatorClient client, ITranslatorDelay
         }
 
         var batchSize = Math.Clamp(body.BatchSize ?? TranslatorLimits.DefaultBatchSize, TranslatorLimits.MinBatchSize, TranslatorLimits.MaxBatchSize);
-        return TranslatorResult<PreparedApply>.Ok(new PreparedApply(valid, rejected, batchSize));
+        return TranslatorResult<PreparedApply>.Ok(new PreparedApply(valid, rejected, batchSize, solution));
     }
 
     public async Task<TranslatorResult<PublishResponse>> PublishAsync(PublishBody body, CancellationToken cancellationToken)
@@ -247,7 +291,11 @@ public sealed class TranslatorService(ITranslatorClient client, ITranslatorDelay
     }
 }
 
-public sealed record PreparedApply(IReadOnlyList<ApplyRowDto> Rows, IReadOnlyList<ApplyResultDto> Rejected, int BatchSize);
+public sealed record PreparedApply(
+    IReadOnlyList<ApplyRowDto> Rows,
+    IReadOnlyList<ApplyResultDto> Rejected,
+    int BatchSize,
+    SolutionTarget? Solution = null);
 
 public static class TranslatorLimits
 {

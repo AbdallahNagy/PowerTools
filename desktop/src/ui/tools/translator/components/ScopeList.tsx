@@ -1,8 +1,10 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
-import { Alert, Badge, Button, SearchInput, Spinner, cn } from "../../../shared/ui";
+import { Alert, Badge, Button, Field, SearchInput, Select, Spinner, cn } from "../../../shared/ui";
 import { filterTables } from "../model/grid";
 import { GLOBAL_SCOPE } from "../model/labels";
-import type { TableInfo } from "../model/types";
+import type { SolutionInfo, TableInfo } from "../model/types";
+
+const ALL_TABLES = "";
 
 interface ScopeListProps {
   hasConnection: boolean;
@@ -16,6 +18,59 @@ interface ScopeListProps {
   selected: string | null;
   onSelect: (scope: string) => void;
   editsByScope: ReadonlyMap<string, number>;
+  source: string | null;
+  solutions: readonly SolutionInfo[];
+  solutionsLoading: boolean;
+  solutionsError: string | null;
+  onRetrySolutions: () => void;
+  onSourceChange: (solutionId: string | null) => void;
+}
+
+function SourcePicker({
+  source,
+  solutions,
+  loading,
+  errorText,
+  onRetry,
+  onChange,
+}: {
+  source: string | null;
+  solutions: readonly SolutionInfo[];
+  loading: boolean;
+  errorText: string | null;
+  onRetry: () => void;
+  onChange: (solutionId: string | null) => void;
+}) {
+  return (
+    <div className="flex shrink-0 flex-col gap-1 border-b border-line p-3">
+      <Field label="Source">
+        <Select
+          value={source ?? ALL_TABLES}
+          onChange={(event) => onChange(event.target.value === ALL_TABLES ? null : event.target.value)}
+        >
+          <option value={ALL_TABLES}>All tables</option>
+          {loading ? (
+            <option value="#loading" disabled>
+              Loading solutions…
+            </option>
+          ) : null}
+          {solutions.map((solution) => (
+            <option key={solution.solutionId} value={solution.solutionId}>
+              {solution.isManaged ? `${solution.friendlyName} (managed)` : solution.friendlyName}
+            </option>
+          ))}
+        </Select>
+      </Field>
+      {errorText ? (
+        <p className="flex items-center justify-between gap-2 text-xs text-danger">
+          <span className="min-w-0 break-words">Could not load solutions: {errorText}</span>
+          <Button variant="ghost" size="sm" aria-label="Retry loading solutions" onClick={onRetry}>
+            Retry
+          </Button>
+        </p>
+      ) : null}
+    </div>
+  );
 }
 
 function EditBadge({ count }: { count: number | undefined }) {
@@ -35,6 +90,12 @@ export function ScopeList({
   selected,
   onSelect,
   editsByScope,
+  source,
+  solutions,
+  solutionsLoading,
+  solutionsError,
+  onRetrySolutions,
+  onSourceChange,
 }: ScopeListProps) {
   const searchRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
@@ -61,28 +122,45 @@ export function ScopeList({
 
   if (!hasConnection) return null;
 
+  const picker = (
+    <SourcePicker
+      source={source}
+      solutions={solutions}
+      loading={solutionsLoading}
+      errorText={solutionsError}
+      onRetry={onRetrySolutions}
+      onChange={onSourceChange}
+    />
+  );
+
   if (loading) {
     return (
-      <div role="status" className="flex flex-1 items-center justify-center gap-2 p-6">
-        <Spinner />
-        <span className="text-fg">Loading languages and tables…</span>
+      <div className="flex min-h-0 flex-1 flex-col">
+        {picker}
+        <div role="status" className="flex flex-1 items-center justify-center gap-2 p-6">
+          <Spinner />
+          <span className="text-fg">Loading languages and tables…</span>
+        </div>
       </div>
     );
   }
 
   if (errorText) {
     return (
-      <div className="p-3">
-        <Alert
-          tone="danger"
-          action={
-            <Button variant="secondary" size="sm" onClick={onRetry}>
-              Retry
-            </Button>
-          }
-        >
-          {errorText}
-        </Alert>
+      <div className="flex min-h-0 flex-1 flex-col">
+        {picker}
+        <div className="p-3">
+          <Alert
+            tone="danger"
+            action={
+              <Button variant="secondary" size="sm" onClick={onRetry}>
+                Retry
+              </Button>
+            }
+          >
+            {errorText}
+          </Alert>
+        </div>
       </div>
     );
   }
@@ -90,6 +168,7 @@ export function ScopeList({
   const globalSelected = selected === GLOBAL_SCOPE;
   return (
     <div className="flex min-h-0 flex-1 flex-col">
+      {picker}
       <div className="flex shrink-0 flex-col gap-2 border-b border-line p-3">
         <button
           type="button"
@@ -126,7 +205,11 @@ export function ScopeList({
       <div className="min-h-0 flex-1 overflow-auto">
         {visible.length === 0 ? (
           <p className="p-3 text-fg-muted">
-            {tables.length === 0 ? "No tables found." : `No tables match "${query.trim()}".`}
+            {tables.length === 0
+              ? source
+                ? "No tables in this solution."
+                : "No tables found."
+              : `No tables match "${query.trim()}".`}
           </p>
         ) : (
           <ul ref={listRef} aria-label="Tables" onKeyDown={onKeyDown}>

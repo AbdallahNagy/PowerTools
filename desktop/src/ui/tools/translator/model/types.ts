@@ -1,5 +1,3 @@
-import type { EntityInfo } from "../../../shared/contracts/dataverse";
-
 export type LabelKind =
   | "table"
   | "column"
@@ -56,13 +54,47 @@ export interface LanguagesResponse {
   languages: Language[];
 }
 
-export type TableInfo = EntityInfo;
+/** One table in the scope list, from GET /api/translator/tables. */
+export interface TableInfo {
+  logicalName: string;
+  displayName: string;
+}
+
+export interface TablesResponse {
+  tables: TableInfo[];
+}
+
+export interface SolutionInfo {
+  solutionId: string;
+  uniqueName: string;
+  friendlyName: string;
+  version: string | null;
+  isManaged: boolean;
+  publisherName: string | null;
+}
+
+export interface SolutionsResponse {
+  solutions: SolutionInfo[];
+}
+
+export interface PublisherInfo {
+  publisherId: string;
+  uniqueName: string;
+  friendlyName: string;
+  prefix: string | null;
+}
+
+export interface PublishersResponse {
+  publishers: PublisherInfo[];
+}
 
 export interface LabelQueryRequest {
   tables: string[];
   kinds: LabelKind[];
   lcids: number[];
   properties: "names" | "descriptions" | "both";
+  /** Limit rows to one solution's components. Left out for all tables. */
+  solutionId?: string;
 }
 
 export interface LabelQueryResponse {
@@ -74,8 +106,19 @@ export interface ApplyRow {
   labels: Record<number, string>;
 }
 
+export interface NewSolution {
+  friendlyName: string;
+  uniqueName: string;
+  publisherId: string;
+  version: string;
+}
+
+/** Exactly one of uniqueName (existing solution) or new. */
+export type ApplySolution = { uniqueName: string } | { new: NewSolution };
+
 export interface ApplyRequest {
   rows: ApplyRow[];
+  solution?: ApplySolution;
 }
 
 export interface ApplyStarted {
@@ -102,9 +145,35 @@ export interface PublishResult {
   message: string | null;
 }
 
+export type SolutionStatus =
+  | "notRequested"
+  | "pending"
+  | "running"
+  | "succeeded"
+  | "partial"
+  | "failed"
+  | "notNeeded";
+
+export interface SolutionFailure {
+  componentType: number;
+  component: string;
+  message: string;
+}
+
+export interface SolutionResult {
+  status: SolutionStatus;
+  uniqueName: string | null;
+  friendlyName: string | null;
+  created: boolean;
+  added: number;
+  failed: number;
+  message: string | null;
+  failures: SolutionFailure[];
+}
+
 export interface ApplyJob {
   status: "queued" | "running" | "completed" | "failed";
-  phase: "updating" | "publishing" | "done";
+  phase: "updating" | "publishing" | "solution" | "done";
   processed: number;
   total: number;
   succeeded: number;
@@ -112,6 +181,8 @@ export interface ApplyJob {
   skipped: number;
   results: ApplyResult[];
   publish: PublishResult;
+  /** Missing from jobs started before the solution option existed. */
+  solution?: SolutionResult;
   log: { level: string; message: string }[];
 }
 

@@ -14,6 +14,15 @@ public static class TranslatorEndpoints
         group.MapGet("/languages", async (HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
             ToHttp(await Service(ctx, factory).GetLanguagesAsync(ct)));
 
+        group.MapGet("/tables", async (Guid? solutionId, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
+            ToHttp(await Service(ctx, factory).GetTablesAsync(solutionId, ct)));
+
+        group.MapGet("/solutions", async (HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
+            ToHttp(await Service(ctx, factory).GetSolutionsAsync(ct)));
+
+        group.MapGet("/publishers", async (HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
+            ToHttp(await Service(ctx, factory).GetPublishersAsync(ct)));
+
         group.MapPost("/labels/query", async (
             LabelQueryBody body,
             HttpContext ctx,

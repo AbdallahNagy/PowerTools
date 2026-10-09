@@ -12,6 +12,8 @@ import {
   completedJob,
   globalRows,
   languagesFixture,
+  publishersFixture,
+  solutionsFixture,
   tablesFixture,
 } from "../fixtures";
 import type { ApplyJob, ApplyRequest, LabelQueryRequest, LabelRow, PublishTargets } from "../../model/types";
@@ -76,11 +78,17 @@ const rowsByKind: Record<string, LabelRow[]> = {
 };
 
 const queries: LabelQueryRequest[] = [];
+const tableRequests: (string | null)[] = [];
 
 function baseHandlers() {
   return [
     http.get(`${API}/translator/languages`, () => HttpResponse.json(languagesFixture)),
-    http.get(`${API}/metadata/entities`, () => HttpResponse.json(tablesFixture)),
+    http.get(`${API}/translator/tables`, ({ request }) => {
+      tableRequests.push(new URL(request.url).searchParams.get("solutionId"));
+      return HttpResponse.json({ tables: tablesFixture });
+    }),
+    http.get(`${API}/translator/solutions`, () => HttpResponse.json({ solutions: solutionsFixture })),
+    http.get(`${API}/translator/publishers`, () => HttpResponse.json({ publishers: publishersFixture })),
     http.post(`${API}/translator/labels/query`, async ({ request }) => {
       const body = (await request.json()) as LabelQueryRequest;
       queries.push(body);
@@ -112,6 +120,7 @@ async function openAccount() {
 describe("Translator", () => {
   beforeEach(() => {
     queries.length = 0;
+    tableRequests.length = 0;
     httpServer.use(...baseHandlers());
   });
 
@@ -348,5 +357,170 @@ describe("Translator", () => {
     fail = false;
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(await screen.findByRole("textbox", { name: "Account Display Name French (1036)" })).toBeInTheDocument();
+  });
+  it("limits tables and labels to the chosen solution and hides the add-to-solution option", async () => {
+    httpServer.use(http.get(`${API}/translator/tables`, ({ request }) => {
+      const solutionId = new URL(request.url).searchParams.get("solutionId");
+      tableRequests.push(solutionId);
+      return HttpResponse.json({ tables: solutionId ? [tablesFixture[0]] : tablesFixture });
+    }));
+    renderTool();
+    await screen.findByRole("button", { name: /^Contact\s*contact/ });
+
+    const source = screen.getByRole("combobox", { name: "Source" });
+    await waitFor(() => expect(within(source).getByRole("option", { name: "Vendor Pack (managed)" })).toBeInTheDocument());
+    expect(within(source).getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "All tables",
+      "Contoso Core",
+      "Vendor Pack (managed)",
+    ]);
+
+    fireEvent.change(source, { target: { value: solutionsFixture[0]!.solutionId } });
+    await waitFor(() => expect(screen.queryByRole("button", { name: /^Contact\s*contact/ })).not.toBeInTheDocument());
+    expect(tableRequests).toContain(solutionsFixture[0]!.solutionId);
+
+    fireEvent.click(await screen.findByRole("button", { name: /^Account\s*account/ }));
+    const french = await screen.findByRole("textbox", { name: "Account Display Name French (1036)" });
+    expect(queries[queries.length - 1]).toMatchObject({ tables: ["account"], solutionId: solutionsFixture[0]!.solutionId });
+    expect(queries.some((query) => query.kinds[0] === "globalChoice" && query.solutionId === solutionsFixture[0]!.solutionId)).toBe(true);
+
+    fireEvent.change(french, { target: { value: "Compte client" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply 1 change" }));
+    const dialog = await screen.findByRole("dialog", { name: "Apply label changes" });
+    expect(within(dialog).queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("asks before changing the source over unsaved edits", async () => {
+    const french = await openAccount();
+    fireEvent.change(french, { target: { value: "Compte client" } });
+    const source = screen.getByRole("combobox", { name: "Source" });
+    await waitFor(() => expect(within(source).getAllByRole("option")).toHaveLength(3));
+
+    fireEvent.change(source, { target: { value: solutionsFixture[0]!.solutionId } });
+    const confirm = await screen.findByRole("dialog", { name: "Change source" });
+    expect(within(confirm).getByText("Changing the source discards 1 unsaved change.")).toBeInTheDocument();
+    fireEvent.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Apply 1 change" })).toBeEnabled();
+    expect(source).toHaveValue("");
+
+    fireEvent.change(source, { target: { value: solutionsFixture[0]!.solutionId } });
+    fireEvent.click(within(await screen.findByRole("dialog", { name: "Change source" })).getByRole("button", { name: "Discard and change" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Apply changes" })).toBeDisabled());
+    expect(screen.getByText("Select a table or Global choices to see its labels.")).toBeInTheDocument();
+  });
+
+  it("adds the changed components to an existing unmanaged solution", async () => {
+    const sent: ApplyRequest[] = [];
+    const key = accountTableRows[0]!.key;
+    httpServer.use(...applyHandlers(
+      completedJob({
+        processed: 1,
+        total: 1,
+        succeeded: 1,
+        results: [{ key, lcids: [1036], outcome: "succeeded", message: null }],
+        solution: {
+          status: "succeeded",
+          uniqueName: "ContosoCore",
+          friendlyName: "Contoso Core",
+          created: false,
+          added: 1,
+          failed: 0,
+          message: null,
+          failures: [],
+        },
+      }),
+      sent,
+    ));
+    const french = await openAccount();
+    fireEvent.change(french, { target: { value: "Compte client" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Apply 1 change" }));
+    const dialog = await screen.findByRole("dialog", { name: "Apply label changes" });
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Add changed components to a solution" }));
+    const apply = within(dialog).getByRole("button", { name: "Apply and publish" });
+    expect(apply).toBeDisabled();
+    expect(within(dialog).getByText("Choose a solution.")).toBeInTheDocument();
+
+    const picker = within(dialog).getByRole("combobox", { name: "Unmanaged solution" });
+    expect(within(picker).queryByRole("option", { name: "Vendor Pack" })).not.toBeInTheDocument();
+    fireEvent.change(picker, { target: { value: "ContosoCore" } });
+    expect(apply).toBeEnabled();
+    fireEvent.click(apply);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(sent).toEqual([{ rows: [{ key, labels: { 1036: "Compte client" } }], solution: { uniqueName: "ContosoCore" } }]);
+    expect(document.querySelector("[data-toast-type='success']")).toHaveTextContent(
+      "Updated 1 label and published 1 component. Added 1 component to Contoso Core.",
+    );
+  });
+
+  it("creates a new solution from the apply confirmation and reports a failed add separately", async () => {
+    const sent: ApplyRequest[] = [];
+    const key = accountTableRows[0]!.key;
+    httpServer.use(...applyHandlers(
+      completedJob({
+        processed: 1,
+        total: 1,
+        succeeded: 1,
+        results: [{ key, lcids: [1036], outcome: "succeeded", message: null }],
+        solution: {
+          status: "failed",
+          uniqueName: "LabelsFR",
+          friendlyName: "Labels FR",
+          created: true,
+          added: 0,
+          failed: 1,
+          message: "Principal user is missing prvAppendToSolution.",
+          failures: [{ componentType: 1, component: "account", message: "Principal user is missing prvAppendToSolution." }],
+        },
+      }),
+      sent,
+    ));
+    const french = await openAccount();
+    fireEvent.change(french, { target: { value: "Compte client" } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Apply 1 change" }));
+    const dialog = await screen.findByRole("dialog", { name: "Apply label changes" });
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Add changed components to a solution" }));
+    fireEvent.click(within(dialog).getByRole("radio", { name: "New solution" }));
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "Display name" }), { target: { value: "Labels FR" } });
+    expect(within(dialog).getByRole("textbox", { name: "Unique name" })).toHaveValue("LabelsFR");
+    expect(within(dialog).getByRole("textbox", { name: "Version" })).toHaveValue("1.0.0.0");
+    const apply = within(dialog).getByRole("button", { name: "Apply and publish" });
+    expect(apply).toBeDisabled();
+
+    const publisher = within(dialog).getByRole("combobox", { name: "Publisher" });
+    await waitFor(() => expect(within(publisher).getByRole("option", { name: "Contoso (cr1)" })).toBeInTheDocument());
+    fireEvent.change(publisher, { target: { value: publishersFixture[0]!.publisherId } });
+    fireEvent.click(apply);
+
+    expect(await within(dialog).findByText(
+      "Labels were saved but adding components to Labels FR failed: Principal user is missing prvAppendToSolution.",
+    )).toBeInTheDocument();
+    expect(within(dialog).getByRole("columnheader", { name: "Solution component" })).toBeInTheDocument();
+    expect(sent[0]!.solution).toEqual({
+      new: {
+        friendlyName: "Labels FR",
+        uniqueName: "LabelsFR",
+        publisherId: publishersFixture[0]!.publisherId,
+        version: "1.0.0.0",
+      },
+    });
+    const close = within(dialog).getAllByRole("button", { name: "Close" }).find((button) => button.textContent === "Close");
+    fireEvent.click(close!);
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("textbox", { name: "Account Display Name French (1036)" })).toHaveValue("Compte client");
+    expect(screen.getByRole("button", { name: "Apply changes" })).toBeDisabled();
+  });
+
+  it("keeps the source picker usable when tables fail to load", async () => {
+    httpServer.use(http.get(`${API}/translator/tables`, () =>
+      HttpResponse.json({ code: "dataverse_error", message: "Metadata read failed." }, { status: 400 })));
+    renderTool();
+
+    expect(await screen.findByText("Metadata read failed.")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Source" })).toBeEnabled();
+    expect(screen.getByLabelText("tool statuses")).toHaveTextContent("Could not load languages and tables");
   });
 });

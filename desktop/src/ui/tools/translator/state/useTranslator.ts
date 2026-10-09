@@ -2,7 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTabConnection } from "../../../shared/connections";
 import { useToast } from "../../../shared/ui";
-import { fetchApplyJob, publishAgain, startApply, useLabels, useLanguages, useTables } from "../api/translatorApi";
+import {
+  fetchApplyJob,
+  publishAgain,
+  startApply,
+  useLabels,
+  useLanguages,
+  usePublishers,
+  useSolutions,
+  useTables,
+} from "../api/translatorApi";
 import { translatorKeys } from "../api/queryKeys";
 import { toTranslatorError } from "../model/apiError";
 import {
@@ -32,6 +41,14 @@ import {
   tabDefinition,
   type ComponentTab,
 } from "../model/labels";
+import {
+  EMPTY_SOLUTION_TARGET,
+  solutionNeedsAttention,
+  solutionTargetErrors,
+  targetSolutions,
+  toApplySolution,
+  type SolutionTargetDraft,
+} from "../model/solutionTarget";
 import type { ApplyJob, LabelQueryResponse, LabelRow, PublishResult } from "../model/types";
 
 const POLL_MS = 250;
@@ -48,7 +65,7 @@ export type ApplyState =
       publishing: boolean;
     };
 
-export type ConfirmKind = "discard" | "reload" | null;
+export type ConfirmKind = "discard" | "reload" | "source" | null;
 
 /** Scope, tabs, filters, drafts, and the apply flow for one Translator tab. */
 export function useTranslator() {
@@ -57,6 +74,10 @@ export function useTranslator() {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
+  /** null is All tables; otherwise a solution id. */
+  const [source, setSource] = useState<string | null>(null);
+  const [pendingSource, setPendingSource] = useState<string | null>(null);
+  const [solutionTarget, setSolutionTarget] = useState<SolutionTargetDraft>(EMPTY_SOLUTION_TARGET);
   const [scope, setScope] = useState<string | null>(null);
   const [tab, setTab] = useState<ComponentTab>("table");
   const [tableQuery, setTableQuery] = useState("");
@@ -76,6 +97,9 @@ export function useTranslator() {
   if (stateConnection !== connection) {
     setStateConnection(connection);
     if (drafts.size > 0) setDiscarded(drafts.size);
+    setSource(null);
+    setPendingSource(null);
+    setSolutionTarget(EMPTY_SOLUTION_TARGET);
     setScope(null);
     setTab("table");
     setTableQuery("");
@@ -102,7 +126,14 @@ export function useTranslator() {
   draftsRef.current = drafts;
 
   const languagesQuery = useLanguages(connection);
-  const tablesQuery = useTables(connection);
+  const tablesQuery = useTables(connection, source);
+  const solutionsQuery = useSolutions(connection);
+  const solutions = useMemo(() => solutionsQuery.data?.solutions ?? [], [solutionsQuery.data]);
+  const unmanagedSolutions = useMemo(() => targetSolutions(solutions), [solutions]);
+  const publishersQuery = usePublishers(
+    connection,
+    apply.phase === "confirm" && solutionTarget.enabled && solutionTarget.mode === "new",
+  );
   const baseLcid = languagesQuery.data?.baseLcid ?? 0;
   const languages = useMemo(
     () => orderLanguages(languagesQuery.data?.languages ?? [], baseLcid),
@@ -117,11 +148,11 @@ export function useTranslator() {
     [baseLcid, hiddenLcids, languages],
   );
   const visibleLcids = useMemo(() => visibleLanguages.map((language) => language.lcid), [visibleLanguages]);
-  const tables = useMemo(() => tablesQuery.data ?? [], [tablesQuery.data]);
+  const tables = useMemo(() => tablesQuery.data?.tables ?? [], [tablesQuery.data]);
 
   const activeTab: ComponentTab = scope === GLOBAL_SCOPE ? "global" : tab;
-  const labelsQuery = useLabels(connection, scope, activeTab, allLcids);
-  const globalQuery = useLabels(connection, GLOBAL_SCOPE, "global", allLcids);
+  const labelsQuery = useLabels(connection, source, scope, activeTab, allLcids);
+  const globalQuery = useLabels(connection, source, GLOBAL_SCOPE, "global", allLcids);
   const rows = useMemo(() => labelsQuery.data?.rows ?? [], [labelsQuery.data]);
   const visibleRows = useMemo(
     () => sortRows(filterByQuery(filterByShow(rows, show), gridQuery, visibleLcids), sort),
@@ -144,6 +175,9 @@ export function useTranslator() {
   useEffect(() => {
     if (labelsQuery.isError) showToast(toTranslatorError(labelsQuery.error), "error");
   }, [labelsQuery.error, labelsQuery.isError, showToast]);
+  useEffect(() => {
+    if (solutionsQuery.isError) showToast(toTranslatorError(solutionsQuery.error), "error");
+  }, [solutionsQuery.error, solutionsQuery.isError, showToast]);
 
   const firstLoading =
     !!connection &&
@@ -176,6 +210,7 @@ export function useTranslator() {
     if (!connection) return "No environment selected";
     if (apply.phase === "running") {
       if (apply.job?.phase === "publishing") return "Publishing…";
+      if (apply.job?.phase === "solution") return "Adding components to the solution…";
       const total = apply.job?.total ?? apply.sent.length;
       return `Updating labels: ${apply.job?.processed ?? 0} of ${total}`;
     }
@@ -209,6 +244,32 @@ export function useTranslator() {
     scopeTitle,
     tables.length,
   ]);
+
+  const changeSource = useCallback((next: string | null) => {
+    setSource(next);
+    setPendingSource(null);
+    setScope(null);
+    setTableQuery("");
+    setGridQuery("");
+    setDrafts(NO_DRAFTS);
+    setConfirm(null);
+    setSolutionTarget(EMPTY_SOLUTION_TARGET);
+  }, []);
+
+  /** A different source lists different tables, so unsaved edits are discarded after asking. */
+  const requestSource = useCallback(
+    (next: string | null) => {
+      if (next === source) return;
+      if (draftsRef.current.size > 0) {
+        setPendingSource(next);
+        setConfirm("source");
+        return;
+      }
+      changeSource(next);
+    },
+    [changeSource, source],
+  );
+  const confirmSource = useCallback(() => changeSource(pendingSource), [changeSource, pendingSource]);
 
   const selectScope = useCallback(
     (next: string) => {
@@ -259,7 +320,16 @@ export function useTranslator() {
 
   // ── Apply ────────────────────────────────────────────────────────────────
 
-  const openApply = useCallback(() => setApply({ phase: "confirm", error: null }), []);
+  const openApply = useCallback(() => {
+    setSolutionTarget(EMPTY_SOLUTION_TARGET);
+    setApply({ phase: "confirm", error: null });
+  }, []);
+  // The option is offered only for All tables: with a solution source the components already belong to it.
+  const solutionOptionAvailable = source === null;
+  const solutionErrors = useMemo(
+    () => (solutionOptionAvailable ? solutionTargetErrors(solutionTarget) : {}),
+    [solutionOptionAvailable, solutionTarget],
+  );
   const closeApply = useCallback(() => {
     setApply((current) => (current.phase === "running" ? current : { phase: "closed" }));
   }, []);
@@ -270,14 +340,18 @@ export function useTranslator() {
     if (sent.length === 0) return;
     setApply({ phase: "running", jobId: null, sent, job: null });
     try {
-      const started = await startApply(connection, { rows: toApplyRows(draftsRef.current) });
+      const solution = solutionOptionAvailable ? toApplySolution(solutionTarget) : undefined;
+      const started = await startApply(connection, {
+        rows: toApplyRows(draftsRef.current),
+        ...(solution ? { solution } : {}),
+      });
       setApply((current) => (current.phase === "running" ? { ...current, jobId: started.jobId } : current));
     } catch (error) {
       const message = toTranslatorError(error);
       showToast(message, "error");
       setApply({ phase: "confirm", error: message });
     }
-  }, [connection, showToast]);
+  }, [connection, showToast, solutionOptionAvailable, solutionTarget]);
 
   const finish = useCallback(
     (job: ApplyJob, sent: Draft[]) => {
@@ -293,20 +367,29 @@ export function useTranslator() {
         for (const [key, saved] of byQuery) {
           const [savedScope, savedTab] = key.split("\u0000") as [string, ComponentTab];
           queryClient.setQueryData<LabelQueryResponse>(
-            translatorKeys.labels(connection, savedScope, savedTab, allLcids),
+            translatorKeys.labels(connection, source ?? "", savedScope, savedTab, allLcids),
             (old) => (old ? { rows: patchRows(old.rows, saved) } : old),
           );
         }
       }
 
       const published = job.publish.status === "succeeded" || job.publish.status === "notNeeded";
-      if (outcome.failed.length === 0 && job.status === "completed" && published) {
+      const added =
+        job.solution?.status === "succeeded"
+          ? ` Added ${plural(job.solution.added, "component")} to ${job.solution.friendlyName ?? job.solution.uniqueName}.`
+          : "";
+      if (
+        outcome.failed.length === 0 &&
+        job.status === "completed" &&
+        published &&
+        !solutionNeedsAttention(job.solution)
+      ) {
         setApply({ phase: "closed" });
         showToast(
           `Updated ${plural(outcome.succeeded.length, "label")} and published ${plural(
             job.publish.targets.tables.length + job.publish.targets.optionSets.length,
             "component",
-          )}.`,
+          )}.${added}`,
           "success",
         );
         return;
@@ -314,7 +397,7 @@ export function useTranslator() {
 
       setApply({ phase: "result", job, failed: outcome.failed, publish: job.publish, publishing: false });
     },
-    [allLcids, connection, queryClient, showToast],
+    [allLcids, connection, queryClient, showToast, source],
   );
 
   const runningJobId = apply.phase === "running" ? apply.jobId : null;
@@ -356,7 +439,7 @@ export function useTranslator() {
     setApply((current) => (current.phase === "result" ? { ...current, publishing: true } : current));
     try {
       const response = await publishAgain(connection, targets);
-      if (failedCount === 0) {
+      if (failedCount === 0 && !solutionNeedsAttention(apply.job.solution)) {
         setApply({ phase: "closed" });
         showToast(`Published ${plural(response.count, "component")}.`, "success");
         return;
@@ -385,14 +468,30 @@ export function useTranslator() {
     visibleLanguages,
     baseLcid,
     tables,
+    source,
+    requestSource,
+    confirmSource,
+    solutions,
+    solutionsLoading: solutionsQuery.isFetching && !solutionsQuery.data,
+    solutionsError: solutionsQuery.isError && !solutionsQuery.data ? toTranslatorError(solutionsQuery.error) : null,
+    retrySolutions: () => void solutionsQuery.refetch(),
+    unmanagedSolutions,
+    solutionOptionAvailable,
+    solutionTarget,
+    setSolutionTarget,
+    solutionErrors,
+    publishers: publishersQuery.data?.publishers ?? [],
+    publishersLoading: publishersQuery.isFetching && !publishersQuery.data,
+    publishersError:
+      publishersQuery.isError && !publishersQuery.data ? toTranslatorError(publishersQuery.error) : null,
     tableQuery,
     setTableQuery,
     globalCount,
     firstLoading,
     firstError,
     retryFirstLoad: () => {
-      void languagesQuery.refetch();
-      void tablesQuery.refetch();
+      if (languagesQuery.isError || !languagesQuery.data) void languagesQuery.refetch();
+      if (tablesQuery.isError || !tablesQuery.data) void tablesQuery.refetch();
     },
     scope,
     selectScope,

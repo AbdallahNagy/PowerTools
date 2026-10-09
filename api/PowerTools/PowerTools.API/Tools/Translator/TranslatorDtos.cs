@@ -83,6 +83,8 @@ public sealed class LabelQueryBody
     public int[]? Lcids { get; set; }
     /// <summary>names, descriptions, or both (default).</summary>
     public string? Properties { get; set; }
+    /// <summary>Limit rows to the components of one solution. Null means all tables.</summary>
+    public Guid? SolutionId { get; set; }
 }
 
 public sealed record LabelQueryResponse(IReadOnlyList<LabelRowDto> Rows);
@@ -98,6 +100,23 @@ public sealed class ApplyBody
 {
     public List<ApplyRowDto>? Rows { get; set; }
     public int? BatchSize { get; set; }
+    /// <summary>Optional: add the changed components to an existing unmanaged solution or a new one.</summary>
+    public ApplySolutionDto? Solution { get; set; }
+}
+
+/// <summary>Set exactly one of <see cref="UniqueName"/> (existing solution) or <see cref="New"/>.</summary>
+public sealed class ApplySolutionDto
+{
+    public string? UniqueName { get; set; }
+    public NewSolutionDto? New { get; set; }
+}
+
+public sealed class NewSolutionDto
+{
+    public string? FriendlyName { get; set; }
+    public string? UniqueName { get; set; }
+    public Guid? PublisherId { get; set; }
+    public string? Version { get; set; }
 }
 
 public sealed record ApplyStartedResponse(Guid JobId);
@@ -157,7 +176,42 @@ public sealed class TranslatorJobDto
     public int Skipped { get; set; }
     public List<ApplyResultDto> Results { get; set; } = [];
     public PublishResultDto Publish { get; set; } = new();
+    public SolutionResultDto Solution { get; set; } = new();
     public List<JobLogDto> Log { get; set; } = [];
+}
+
+public static class SolutionStatuses
+{
+    /// <summary>The user did not ask to add components to a solution.</summary>
+    public const string NotRequested = "notRequested";
+    public const string Pending = "pending";
+    public const string Running = "running";
+    public const string Succeeded = "succeeded";
+    /// <summary>Some components were added and some failed.</summary>
+    public const string Partial = "partial";
+    public const string Failed = "failed";
+    /// <summary>No label write succeeded, so there was nothing to add.</summary>
+    public const string NotNeeded = "notNeeded";
+}
+
+public sealed class SolutionFailureDto
+{
+    public int ComponentType { get; set; }
+    public string Component { get; set; } = "";
+    public string Message { get; set; } = "";
+}
+
+public sealed class SolutionResultDto
+{
+    public string Status { get; set; } = SolutionStatuses.NotRequested;
+    public string? UniqueName { get; set; }
+    public string? FriendlyName { get; set; }
+    /// <summary>True when the job created the solution.</summary>
+    public bool Created { get; set; }
+    public int Added { get; set; }
+    public int Failed { get; set; }
+    public string? Message { get; set; }
+    public List<SolutionFailureDto> Failures { get; set; } = [];
 }
 
 public sealed class PublishBody
@@ -167,3 +221,21 @@ public sealed class PublishBody
 }
 
 public sealed record PublishResponse(string Status, int Count, string? Message);
+
+public sealed record TableSummaryDto(string LogicalName, string DisplayName);
+
+public sealed record TablesResponse(IReadOnlyList<TableSummaryDto> Tables);
+
+public sealed record SolutionDto(
+    Guid SolutionId,
+    string UniqueName,
+    string FriendlyName,
+    string? Version,
+    bool IsManaged,
+    string? PublisherName);
+
+public sealed record SolutionsResponse(IReadOnlyList<SolutionDto> Solutions);
+
+public sealed record PublisherDto(Guid PublisherId, string UniqueName, string FriendlyName, string? Prefix);
+
+public sealed record PublishersResponse(IReadOnlyList<PublisherDto> Publishers);

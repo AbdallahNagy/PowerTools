@@ -13,6 +13,15 @@ public sealed class TranslatorJob
         Prepared = prepared;
         Connection = connection;
         _state.Total = prepared.Rows.Sum(row => row.Labels.Count) + prepared.Rejected.Sum(result => result.Lcids.Length);
+        if (prepared.Solution is { } solution)
+        {
+            _state.Solution = new SolutionResultDto
+            {
+                Status = SolutionStatuses.Pending,
+                UniqueName = solution.UniqueName,
+                FriendlyName = solution.FriendlyName,
+            };
+        }
     }
 
     public Guid Id { get; } = Guid.NewGuid();
@@ -82,9 +91,44 @@ public sealed class TranslatorJob
         {
             _state.Publish.Status = status;
             _state.Publish.Message = message;
+            if (message is not null) _state.Log.Add(new JobLogDto("error", $"Publish failed: {message}"));
+        }
+    }
+
+    public void StartSolution()
+    {
+        lock (_gate)
+        {
+            _state.Phase = "solution";
+            _state.Solution.Status = SolutionStatuses.Running;
+        }
+    }
+
+    public void SolutionCreated()
+    {
+        lock (_gate) _state.Solution.Created = true;
+    }
+
+    public void FinishSolution(string status, int added, IReadOnlyList<SolutionFailureDto> failures, string? message)
+    {
+        lock (_gate)
+        {
+            _state.Solution.Status = status;
+            _state.Solution.Added = added;
+            _state.Solution.Failed = failures.Count;
+            _state.Solution.Failures = failures.ToList();
+            _state.Solution.Message = message;
+            if (message is not null && status is SolutionStatuses.Failed or SolutionStatuses.Partial)
+                _state.Log.Add(new JobLogDto("error", $"Adding components to the solution failed: {message}"));
+        }
+    }
+
+    public void Complete()
+    {
+        lock (_gate)
+        {
             _state.Phase = "done";
             _state.Status = "completed";
-            if (message is not null) _state.Log.Add(new JobLogDto("error", $"Publish failed: {message}"));
         }
     }
 
@@ -126,6 +170,17 @@ public sealed class TranslatorJob
                         Tables = _state.Publish.Targets.Tables.ToList(),
                         OptionSets = _state.Publish.Targets.OptionSets.ToList(),
                     },
+                },
+                Solution = new SolutionResultDto
+                {
+                    Status = _state.Solution.Status,
+                    UniqueName = _state.Solution.UniqueName,
+                    FriendlyName = _state.Solution.FriendlyName,
+                    Created = _state.Solution.Created,
+                    Added = _state.Solution.Added,
+                    Failed = _state.Solution.Failed,
+                    Message = _state.Solution.Message,
+                    Failures = _state.Solution.Failures.ToList(),
                 },
                 Log = _state.Log.ToList(),
             };
