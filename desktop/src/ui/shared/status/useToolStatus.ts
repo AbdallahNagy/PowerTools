@@ -1,11 +1,12 @@
 import { useEffect, useMemo, type ReactNode } from "react";
 import { useToolRuntime } from "../../shell/tool-runtime/useToolRuntime";
+import { toolStatusId } from "./toolStatusId";
 import { useStatusActions } from "./useStatusActions";
 
 export function useToolStatus(content: ReactNode) {
   const { instanceId } = useToolRuntime();
   const { setStatus, clearStatus } = useStatusActions();
-  const statusId = useMemo(() => `tool:${instanceId}`, [instanceId]);
+  const statusId = useMemo(() => toolStatusId(instanceId), [instanceId]);
 
   useEffect(() => {
     if (content == null) {

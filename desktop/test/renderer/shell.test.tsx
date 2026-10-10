@@ -7,10 +7,21 @@ import Layout from "../../src/ui/shell/layout/Layout";
 import StatusBar from "../../src/ui/shell/layout/StatusBar";
 import TabBar from "../../src/ui/shell/tabs/TabBar";
 import { TabProvider } from "../../src/ui/shell/tabs/TabContext";
+import {
+  TabProviderContext,
+  type TabContextValue,
+} from "../../src/ui/shell/tabs/TabProviderContext";
+import type { TabData } from "../../src/ui/shell/tabs/types";
+import ToolHost from "../../src/ui/shell/tool-runtime/ToolHost";
+import { defineTool } from "../../src/ui/tools/defineTool";
 import { useTabs } from "../../src/ui/shell/tabs/useTabs";
 import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { ConnectionsProvider } from "../../src/ui/shared/connections";
-import { StatusBarProvider, useStatusBar } from "../../src/ui/shared/status";
+import {
+  StatusBarProvider,
+  useStatusBar,
+  useToolStatus,
+} from "../../src/ui/shared/status";
 import { renderWithProviders } from "../support/render";
 
 class TestResizeObserver {
@@ -46,6 +57,62 @@ function StatusPublisher({ id, children }: { id: string; children: ReactNode }) 
   }, [children, clearStatus, id, setStatus]);
 
   return null;
+}
+
+function TranslatorStatusTool() {
+  useToolStatus("contoso_shipment: 12 columns");
+  return null;
+}
+
+function AttributeExplorerStatusTool() {
+  useToolStatus("10 tables");
+  return null;
+}
+
+const translatorStatusTool = defineTool({
+  id: "translator-status",
+  title: "Translator",
+  icon: "status.svg",
+  showInActivityBar: false,
+  component: TranslatorStatusTool,
+});
+
+const attributeExplorerStatusTool = defineTool({
+  id: "attribute-explorer-status",
+  title: "Attribute Explorer",
+  icon: "status.svg",
+  showInActivityBar: false,
+  component: AttributeExplorerStatusTool,
+});
+
+const statusTabs: TabData[] = [
+  { id: "translator-1", toolId: "translator-status", title: "Translator" },
+  { id: "attribute-explorer-1", toolId: "attribute-explorer-status", title: "Attribute Explorer" },
+];
+
+function statusTabContext(activeTabId: string): TabContextValue {
+  return {
+    tabs: statusTabs,
+    activeTabId,
+    openTool: vi.fn(),
+    addTab: vi.fn(),
+    closeTab: vi.fn(),
+    setActiveTab: vi.fn(),
+    setTabConnection: vi.fn(),
+  };
+}
+
+function TabbedStatusShell({ activeTabId }: { activeTabId: string }) {
+  return (
+    <TabProviderContext.Provider value={statusTabContext(activeTabId)}>
+      <StatusBarProvider>
+        <ToolHost tab={statusTabs[0]} definition={translatorStatusTool} />
+        <ToolHost tab={statusTabs[1]} definition={attributeExplorerStatusTool} />
+        <StatusPublisher id="global">Global status</StatusPublisher>
+        <StatusBar />
+      </StatusBarProvider>
+    </TabProviderContext.Provider>
+  );
 }
 
 beforeAll(() => vi.stubGlobal("ResizeObserver", TestResizeObserver));
@@ -274,6 +341,27 @@ describe("renderer shell", () => {
       "Updated first status",
     );
     expect(screen.queryByRole("status", { name: "second publisher status" })).not.toBeInTheDocument();
+  });
+
+  it("shows only the active tab's tool status while background tabs stay mounted", async () => {
+    const { rerender } = renderWithProviders(
+      <TabbedStatusShell activeTabId="translator-1" />,
+    );
+
+    expect(await screen.findByText("contoso_shipment: 12 columns")).toBeInTheDocument();
+    expect(screen.queryByText("10 tables")).not.toBeInTheDocument();
+    expect(screen.getByText("Global status")).toBeInTheDocument();
+
+    rerender(<TabbedStatusShell activeTabId="attribute-explorer-1" />);
+
+    expect(screen.getByText("10 tables")).toBeInTheDocument();
+    expect(screen.queryByText("contoso_shipment: 12 columns")).not.toBeInTheDocument();
+    expect(screen.getByText("Global status")).toBeInTheDocument();
+
+    rerender(<TabbedStatusShell activeTabId="translator-1" />);
+
+    expect(screen.getByText("contoso_shipment: 12 columns")).toBeInTheDocument();
+    expect(screen.queryByText("10 tables")).not.toBeInTheDocument();
   });
 
   it("pins the connection switcher to the sidebar footer", async () => {
