@@ -8,3 +8,4 @@
 - Keep changes small, independently testable, and releasable.
 - Do not mix unrelated API, desktop, and website changes.
 - Preserve existing user changes and secrets.
+- Name branches `<type>/<short-description>` (for example `feature/plugin-trace-viewer` or `fix/update-button-overlap`), never random or session-generated names. See `.claude/skills/git-branch-naming/SKILL.md`.
