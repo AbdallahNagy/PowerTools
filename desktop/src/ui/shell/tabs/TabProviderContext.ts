@@ -14,6 +14,9 @@ export interface TabContextValue {
   /** Add a pre-built tab (used for static tabs like Welcome). */
   addTab: (tab: TabData) => void;
   closeTab: (tabId: string) => void;
+  /** Close every tab except `tabId` and activate it. */
+  closeOtherTabs: (tabId: string) => void;
+  closeAllTabs: () => void;
   setActiveTab: (tabId: string) => void;
   /**
    * Bind one tab to a connection. Does not change the active connection.

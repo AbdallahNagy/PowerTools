@@ -1,6 +1,6 @@
-import { memo, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import Tab from "./TabHeader";
-import TabConnectionMenu from "./TabConnectionMenu";
+import TabContextMenu from "./TabContextMenu";
 import EmptyWorkspace from "../layout/EmptyWorkspace";
 import { useTabs } from "./useTabs";
 import ToolHost from "../tool-runtime/ToolHost";
@@ -14,7 +14,16 @@ const TabContent = memo(({ tab }: { tab: TabData }) => {
 TabContent.displayName = "TabContent";
 
 function TabBar() {
-  const { tabs, activeTabId, setActiveTab, closeTab, setTabConnection } = useTabs();
+  const {
+    tabs,
+    activeTabId,
+    setActiveTab,
+    closeTab,
+    closeOtherTabs,
+    closeAllTabs,
+    setTabConnection,
+  } = useTabs();
+  const stripRef = useRef<HTMLDivElement>(null);
   const [menu, setMenu] = useState<{
     tabId: string;
     x: number;
@@ -22,9 +31,32 @@ function TabBar() {
   } | null>(null);
   const menuTab = tabs.find((tab) => tab.id === menu?.tabId);
 
+  useEffect(() => {
+    const strip = stripRef.current;
+    if (!strip) return;
+    // A wheel over the tab strip scrolls it sideways, as in VS Code.
+    const scrollSideways = (event: WheelEvent) => {
+      if (event.deltaY === 0 || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      if (strip.scrollWidth <= strip.clientWidth) return;
+      event.preventDefault();
+      strip.scrollLeft += event.deltaY;
+    };
+    strip.addEventListener("wheel", scrollSideways, { passive: false });
+    return () => strip.removeEventListener("wheel", scrollSideways);
+  }, []);
+
+  useEffect(() => {
+    stripRef.current
+      ?.querySelector<HTMLElement>('[data-active="true"]')
+      ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [activeTabId, tabs.length]);
+
   return (
     <>
-      <div className="flex bg-surface">
+      <div
+        ref={stripRef}
+        className="tab-strip flex min-w-0 shrink-0 overflow-x-auto overflow-y-hidden bg-surface"
+      >
         {tabs.map((tab) => (
           <Tab
             key={tab.id}
@@ -33,27 +65,28 @@ function TabBar() {
             active={tab.id === activeTabId}
             onClick={() => setActiveTab(tab.id)}
             onClose={() => closeTab(tab.id)}
-            onContextMenu={
-              tab.toolId === "welcome"
-                ? undefined
-                : (event) => {
-                    event.preventDefault();
-                    setMenu({ tabId: tab.id, x: event.clientX, y: event.clientY });
-                  }
-            }
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setMenu({ tabId: tab.id, x: event.clientX, y: event.clientY });
+            }}
           />
         ))}
       </div>
-      {menu && menuTab && menuTab.toolId !== "welcome" ? (
-        <TabConnectionMenu
+      {menu && menuTab ? (
+        <TabContextMenu
           x={menu.x}
           y={menu.y}
           connectionName={menuTab.connectionName ?? null}
+          canChangeConnection={menuTab.toolId !== "welcome"}
+          canCloseOthers={tabs.length > 1}
           onSelect={(connectionName) => setTabConnection(menu.tabId, connectionName)}
+          onCloseTab={() => closeTab(menu.tabId)}
+          onCloseOthers={() => closeOtherTabs(menu.tabId)}
+          onCloseAll={closeAllTabs}
           onClose={() => setMenu(null)}
         />
       ) : null}
-      <div className="flex-1 flex flex-col overflow-hidden bg-canvas">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-canvas">
         {tabs.length === 0 ? (
           <EmptyWorkspace />
         ) : (

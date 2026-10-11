@@ -97,6 +97,8 @@ function statusTabContext(activeTabId: string): TabContextValue {
     openTool: vi.fn(),
     addTab: vi.fn(),
     closeTab: vi.fn(),
+    closeOtherTabs: vi.fn(),
+    closeAllTabs: vi.fn(),
     setActiveTab: vi.fn(),
     setTabConnection: vi.fn(),
   };
@@ -186,6 +188,66 @@ describe("renderer shell", () => {
     expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe(
       "fetchxml-builder-301",
     );
+  });
+
+  it("closes one, other, and all tabs from the tab context menu", async () => {
+    const now = vi.spyOn(Date, "now");
+
+    renderWithProviders(
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+          <TabBar />
+          <TabState />
+        </TabProvider>
+      </ConnectionsProvider>,
+    );
+
+    const fetchXmlBuilder = await screen.findByRole("button", {
+      name: "Build, run, and refine FetchXML queries",
+    });
+    now.mockReturnValue(311);
+    fireEvent.click(fetchXmlBuilder);
+    now.mockReturnValue(312);
+    fireEvent.click(fetchXmlBuilder);
+    now.mockReturnValue(313);
+    fireEvent.click(fetchXmlBuilder);
+    const titles = () => screen.getByRole("status", { name: "open tab titles" }).textContent;
+    expect(titles()).toBe(
+      "Welcome | FetchXML Builder | FetchXML Builder 2 | FetchXML Builder 3",
+    );
+
+    fireEvent.contextMenu(screen.getByLabelText("FetchXML Builder 3"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Close" }));
+    expect(titles()).toBe("Welcome | FetchXML Builder | FetchXML Builder 2");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    fireEvent.contextMenu(screen.getByLabelText("FetchXML Builder"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Close others" }));
+    expect(titles()).toBe("FetchXML Builder");
+    expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe(
+      "fetchxml-builder-311",
+    );
+
+    fireEvent.contextMenu(screen.getByLabelText("FetchXML Builder"));
+    expect(screen.getByRole("menuitem", { name: "Close others" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Close all" }));
+    expect(titles()).toBe("");
+  });
+
+  it("offers close actions but not a connection change on the Welcome tab", async () => {
+    renderWithProviders(
+      <ConnectionsProvider>
+        <TabProvider>
+          <TabBar />
+        </TabProvider>
+      </ConnectionsProvider>,
+    );
+
+    fireEvent.contextMenu(screen.getByLabelText("Welcome"));
+    expect(screen.queryByRole("menuitem", { name: "Change connection" })).not.toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Close" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Close all" })).toBeInTheDocument();
   });
 
   it("keeps instance IDs unique when two tools open in the same millisecond", async () => {

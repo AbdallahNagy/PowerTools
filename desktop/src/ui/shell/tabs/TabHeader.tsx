@@ -24,10 +24,11 @@ function Tab({
     <div
       aria-label={label}
       title={label}
+      data-active={active}
       onClick={onClick}
       onContextMenu={onContextMenu}
       className={`
-        group flex items-center h-9 px-4 border-t-2 border-transparent cursor-pointer select-none
+        group flex shrink-0 items-center h-9 max-w-64 px-4 border-t-2 border-transparent cursor-pointer select-none
         ${
           active
             ? "bg-canvas text-fg-strong"
