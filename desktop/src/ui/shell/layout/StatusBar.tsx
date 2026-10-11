@@ -1,7 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { desktopBridge } from "../../platform/desktopBridge";
 import { TabProviderContext } from "../tabs/TabProviderContext";
-import { useStatusItems } from "../../shared/status";
+import { isStatusVisibleForTab, useStatusItems } from "../../shared/status";
 import { formatAppVersion } from "./updateStatus";
 
 const StatusBar = () => {
@@ -9,7 +9,11 @@ const StatusBar = () => {
   const tabs = useContext(TabProviderContext);
   const activeTab = tabs?.tabs.find((tab) => tab.id === tabs.activeTabId);
   const connectionName = activeTab?.connectionName || null;
-  const items = useStatusItems();
+  const allItems = useStatusItems();
+  // Background tabs stay mounted, so only the active tab's tool status shows.
+  const items = tabs
+    ? allItems.filter((item) => isStatusVisibleForTab(item.id, tabs.activeTabId))
+    : allItems;
 
   useEffect(() => {
     desktopBridge.getAppVersion().then(setAppVersion);
