@@ -553,6 +553,87 @@ Tokens only: `bg-canvas` for the tab, `bg-surface` for panels, `bg-raised` for d
 - New controls in `desktop/src/ui/shared/ui`, including a shared diff control.
 - XrmToolBox host chrome, the plugin icon, and the plugin's labels and dialog text.
 
+### Implementation notes and test evidence
+
+**Files added**
+
+- Sidecar, `api/PowerTools/PowerTools.API/Tools/SolutionLayers/`:
+  - `ComponentLayerNames.cs`: our own map from the documented `componenttype` numbers (1, 2, 9, 10, 20, 26, 29, 59, 60, 61, 91, 92, 300) to the `msdyn_solutioncomponentname` filter value. Model-driven apps are not hardcoded as 80; their number is read from the `solutioncomponentdefinition` row whose `primaryentityname` is `appmodule`, and the type is left out of the picker when that row is missing. Any other number falls back to `solutioncomponentdefinition.name`. Type 418 (dataflow) is not mapped, because the UX picker does not list it.
+  - `SolutionLayersQueries.cs`, `SolutionLayersService.cs`, `SolutionLayersClient.cs` (client interface plus a per-connection five-minute cache), `SolutionLayersFaults.cs`, `SolutionLayersDtos.cs`, `SolutionLayersEndpoints.cs`.
+  - `Program.cs`: `app.MapSolutionLayersEndpoints();` and the cache singleton.
+  - Tests: new project `api/PowerTools/PowerTools.API.SolutionLayers.Tests/` (added to `PowerTools.sln`) with a fake client. No Dataverse connection is used.
+- Desktop, `desktop/src/ui/tools/solution-layers-explorer/`: `tool.ts`, a new stacked-layers icon, `SolutionLayersExplorer.tsx`, `api/` (query keys, react-query hooks with `meta.connectionName`), `model/` (`componentJson.ts`, `view.ts`, `apiError.ts`, `types.ts`), `components/` (`ComponentPicker`, `LayerList`, `LayerDetails`, `LayerCompare`, `LayerDiff` with its lazy loader, `MergeDiffView`, `RemoveActiveDialog`, `BulkRemoveDialog`), and `tests/` (fixtures, node tests, MSW renderer tests).
+- One entry each in `registry.tsx` and `publicCatalog.ts`, after Solution Components Mover. `test/toolRegistry.test.ts` now expects the new id in that order.
+- Dependency: `@codemirror/merge@^6.12.2` (MIT, approved in Open questions).
+
+**Endpoints** (group `/api/solution-layers`, `DataverseContextFilter`, organization service from `DataverseClientFactory`, one connection)
+
+- `GET /component-types` returns `{ componentTypes: [{ componentType, name, layerName, label, supported }] }`. If `solutioncomponentdefinition` cannot be read, it returns the documented types only and does not fail.
+- `GET /components?componentType=&search=&entity=` returns `{ components: [{ componentId, componentType, name, logicalName, parentEntity }], truncated }`:
+  - Normal tables use `TopCount` 51. The response shows 50 and sets `truncated`.
+  - LIKE wildcards in the search text are escaped.
+  - Forms filter on `objecttypecode`, views on `returnedtypecode`, charts on `primaryentitytypecode`.
+  - Roles use `parentroleid` null. Processes use `type` = 1.
+  - Tables, relationships and global choices come from metadata messages and are filtered in memory. Tables and relationships are read once per connection, through `RetrieveMetadataChangesRequest` with only the properties the picker shows.
+  - Columns need `entity`. They return each attribute's `MetadataId` and skip `AttributeOf` columns.
+  - `logicalName` and `parentEntity` are additions to the researcher's contract, because the UX table shows Logical Name and Table. `truncated` is also an addition, used for the cap message.
+- `GET /layers?componentType=&componentId=` reads `msdyn_componentlayer` as follows:
+  - Two conditions. `msdyn_componentid` is passed as a `D`-format string.
+  - `ColumnSet(true)`, no paging, no order and no `NoLock`, as the Dataverse review asks.
+  - Rows whose id does not match, compared case-insensitively, are dropped.
+  - Sort: Active first (`msdyn_solutionname` compared case-insensitively to `Active`), then `msdyn_order` descending.
+  - `canRemoveActive` = an Active layer exists and more than one layer exists. The three JSON columns are returned raw. `overwriteTime` is a UTC ISO string. `solutionVersion` is nullable and blank for Active.
+- `POST /remove-active` with `{ componentType, componentId }`:
+  1. Re-reads the layers. It refuses with 409 `NoActiveLayer` or `OnlyActiveLayer` before calling Dataverse.
+  2. Sends one untyped `OrganizationRequest("RemoveActiveCustomizations")`, with `SolutionComponentName` exactly as the Active row returned it and `ComponentId` as a `Guid`.
+  3. Re-reads the layers and returns them.
+  - A timeout is not retried. The layers are re-read: success if the Active row is gone, otherwise 504.
+  - Faults, with the Dataverse message passed through: `0x80040220` returns 403. `0x8004F076` and `0x8004F077` return 409. `0x8004F059`, `0x8004F053`, `0x8004F075` and anything else return 422. Service protection returns 429, with Retry-After appended to the message. `0x80041102` and `0x80094005` return 501 `layers_not_supported`.
+- The renderer sends the removal with `noAuthRetry: true`, so a 401 never replays it.
+
+**Behavior taken from the brief**
+
+- UX steps 1 to 6 are built as written:
+  - three draggable dividers, using the panel ids and sizes from the UX section;
+  - Web resource is the default type;
+  - the Table select is required for Column and optional (All tables) for Form and View;
+  - search runs 300 ms after typing stops;
+  - checkbox column with Select all, and header-click sorting;
+  - the 50-match cap line;
+  - the non-sortable layer table with the Active badge;
+  - Details with Changes / All properties / Children in read-only `CodeEditor`s; non-JSON text is shown raw;
+  - Compare with Left and Right defaults, Only differences, the property table with Different / Only left / Only right badges, the same-layer info and malformed-JSON warn alerts;
+  - the side-by-side diff with base64-decoded web resource `content` and the "Decoded from base64." note;
+  - the single removal `Modal`, busy while it runs, with error alerts;
+  - bulk removal run one component at a time, with Stop, per-row Removed / Skipped / Failed results and Done;
+  - the status strings and toasts from States.
+- The diff uses `@codemirror/merge`. It is loaded lazily from inside the tool folder (`components/loadLayerDiff.ts`), with a same-sized frame and `Spinner` until it loads. Highlights use the `danger-soft` and `ok-soft` tokens. `vite build` emits it as its own `MergeDiffView` chunk, and CodeMirror stays out of the main bundle.
+- When the environment changes, the page is re-keyed, which clears the search, checks, selection, layers and compare state. A bulk run already in progress is held above that key. It keeps using the connection it started on, and its dialog description names that environment.
+- Everything is clean-room. No MscrmTools source, layout, icon or wording was used.
+
+**Commands and results**
+
+- `dotnet build api/PowerTools/PowerTools.sln`: succeeded, 0 warnings, 0 errors. The sandbox has only the .NET 10 SDK (Ubuntu package; dot.net is blocked by the egress proxy). It builds the `net9.0` projects.
+- `dotnet test api/PowerTools/PowerTools.sln` with `DOTNET_ROLL_FORWARD=Major`, because only the .NET 10 runtime is installed: all 8 test projects pass, 287 tests in total. The new `PowerTools.API.SolutionLayers.Tests` has 29 tests: mapping, query shape, sorting, guard, faults, timeout, type list and search.
+- `npm test` (desktop): 86 files, 491 tests pass. The new tool adds 13 node tests and 14 renderer tests.
+- `npm run lint`: clean.
+- `npm run build`: succeeds. Vite's warning that a chunk is larger than 500 kB was already there before this change. The main chunk grows by about 26 kB.
+- `npm run check`:
+  - typecheck, `lint --max-warnings 0`, tests and `build:renderer` all pass;
+  - `test:smoke:run` fails here. Without a display Electron cannot start. Under `xvfb-run` the test times out after 120 s;
+  - the same smoke test also times out on the unchanged base commit in this sandbox, so this is an environment limit, not this change.
+
+**Not verified (no live org)**
+
+- Each item marked unverified in the Dataverse review is handled defensively, not confirmed:
+  - the `Active` literal;
+  - the direction of `msdyn_order`;
+  - the `msdyn_solutionversion` column;
+  - the name strings for types other than Entity, Attribute, SystemForm, SavedQuery and WebResource;
+  - the `RemoveActiveCustomizations` parameter names;
+  - on-premises availability.
+- The `solutioncomponentdefinition` column names are also unverified. So is the `appmoduleid` component id for model-driven apps.
+
 ### Open questions
 
 - Resolved: the source plugin is GPL-3.0. The user accepted a clean-room build. No plugin source, UI, icons or wording is copied; Dataverse behavior is reimplemented from this brief and Microsoft documentation.

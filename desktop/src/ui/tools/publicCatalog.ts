@@ -59,6 +59,12 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
       "Copy solution components from selected solutions into unmanaged solutions in the same environment.",
   },
   {
+    id: "solution-layers-explorer",
+    title: "Solution Layers Explorer",
+    description:
+      "See every solution layer of a Dataverse component, compare any two layers side by side, and remove the unmanaged Active layer.",
+  },
+  {
     id: "translator",
     title: "Translator",
     description:
