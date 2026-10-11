@@ -100,13 +100,6 @@ export function prettyText(raw: string | null | undefined): string {
   return raw;
 }
 
-/** One property value as text for the diff. Strings holding JSON are pretty-printed. */
-export function formatValue(value: unknown): string {
-  if (value === undefined || value === null) return "";
-  if (typeof value === "string") return prettyText(value);
-  return JSON.stringify(value, null, 2);
-}
-
 /** Decodes base64 to UTF-8 text without a byte order mark. Null when the text is not base64. */
 export function decodeBase64Text(value: string): string | null {
   const compact = value.replace(/\s+/g, "");
@@ -123,18 +116,4 @@ export function decodeBase64Text(value: string): string | null {
 
 export function isWebResourceContent(componentType: number, key: string): boolean {
   return componentType === WEB_RESOURCE_TYPE && key.toLowerCase() === "content";
-}
-
-export interface DiffValue {
-  text: string;
-  decoded: boolean;
-}
-
-/** The text shown for one side of a property diff. Web resource content is decoded first. */
-export function diffValue(componentType: number, key: string, value: unknown): DiffValue {
-  if (isWebResourceContent(componentType, key) && typeof value === "string") {
-    const decoded = decodeBase64Text(value);
-    if (decoded !== null) return { text: prettyText(decoded), decoded: true };
-  }
-  return { text: formatValue(value), decoded: false };
 }

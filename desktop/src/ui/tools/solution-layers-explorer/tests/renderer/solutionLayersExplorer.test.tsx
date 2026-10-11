@@ -211,12 +211,34 @@ describe("Solution Layers Explorer", () => {
     expect(screen.getByRole("button", { name: "Remove Active layer" })).toBeEnabled();
     expect(screen.getByRole("separator", { name: "Resize layer details" })).toBeInTheDocument();
 
+    // Properties view: one row per property, long values summarized, full value below.
+    expect(await screen.findByText("Select a property to see its full value.")).toBeInTheDocument();
+    const propertyTable = screen.getByRole("columnheader", { name: "Value" }).closest("table")!;
+    expect(within(propertyTable).getByText("content")).toBeInTheDocument();
+    expect(within(propertyTable).getByText("Decoded Text · 22 characters")).toBeInTheDocument();
+    fireEvent.click(within(propertyTable).getByText("content"));
+    const contentValue = await screen.findByRole("textbox", { name: "content value" });
+    expect(codeEditorValue(contentValue)).toBe("console.log('active');");
+    expect(screen.getByText(/decoded from base64/)).toBeInTheDocument();
+
+    // JSON view: the raw data.
+    fireEvent.click(screen.getByRole("button", { name: "JSON" }));
+    expect(screen.getByRole("button", { name: "JSON" })).toHaveAttribute("aria-pressed", "true");
     const changes = await screen.findByRole("textbox", { name: "Changes" });
     expect(codeEditorValue(changes)).toContain('"Key": "content"');
+    fireEvent.click(screen.getByRole("button", { name: "Properties" }));
 
     fireEvent.mouseDown(screen.getByRole("tab", { name: "All properties" }));
+    const allTable = screen.getByRole("columnheader", { name: "Value" }).closest("table")!;
+    expect(within(allTable).getByText("Main script")).toBeInTheDocument();
+    fireEvent.change(screen.getByPlaceholderText("Filter properties"), { target: { value: "display" } });
+    expect(within(allTable).queryByText("name")).not.toBeInTheDocument();
+    expect(within(allTable).getByText("displayname")).toBeInTheDocument();
+
     fireEvent.click(screen.getByText("ContosoCore"));
     expect(screen.getByText("Layer 1 · ContosoCore")).toBeInTheDocument();
+    expect(await screen.findByText("These properties could not be read as a list, so they are shown as written."))
+      .toBeInTheDocument();
     const all = await screen.findByRole("textbox", { name: "All properties" });
     expect(codeEditorValue(all)).toBe("{not json");
 
@@ -238,6 +260,8 @@ describe("Solution Layers Explorer", () => {
     expect(within(table).getByText("displayname")).toBeInTheDocument();
     expect(within(table).getByText("Different")).toBeInTheDocument();
     expect(within(table).getByText("Only left")).toBeInTheDocument();
+    // Short values show inline; web resource content never does.
+    expect(within(table).getByText("Patched")).toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Only differences"));
     expect(within(table).queryByText("displayname")).not.toBeInTheDocument();

@@ -1,16 +1,19 @@
-import { CodeEditor, EmptyState, Tabs } from "../../../shared/ui";
+import { useState } from "react";
+import { Button, CodeEditor, EmptyState, Tabs } from "../../../shared/ui";
 import { prettyText } from "../model/componentJson";
 import type { Layer } from "../model/types";
+import { PropertyView, type PropertyViewMode } from "./PropertyView";
 
 export type ContentTab = "changes" | "all" | "children";
 
 interface LayerDetailsProps {
+  componentType: number;
   layer: Layer;
   tab: ContentTab;
   onTabChange: (tab: ContentTab) => void;
 }
 
-function Content({ value, label, empty }: { value: string | null; label: string; empty: string }) {
+function JsonContent({ value, label, empty }: { value: string | null; label: string; empty: string }) {
   const text = prettyText(value);
   if (text.trim() === "") return <EmptyState title={empty} />;
   return (
@@ -20,12 +23,36 @@ function Content({ value, label, empty }: { value: string | null; label: string;
   );
 }
 
-export function LayerDetails({ layer, tab, onTabChange }: LayerDetailsProps) {
+const MODES: Array<{ value: PropertyViewMode; label: string }> = [
+  { value: "properties", label: "Properties" },
+  { value: "json", label: "JSON" },
+];
+
+export function LayerDetails({ componentType, layer, tab, onTabChange }: LayerDetailsProps) {
+  const [mode, setMode] = useState<PropertyViewMode>("properties");
+
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 p-3">
-      <p className="text-sm text-fg-strong">
-        Layer {layer.order} · {layer.solutionName}
-      </p>
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm text-fg-strong">
+          Layer {layer.order} · {layer.solutionName}
+        </p>
+        {tab === "children" ? null : (
+          <div role="group" aria-label="Show as" className="flex gap-1">
+            {MODES.map((option) => (
+              <Button
+                key={option.value}
+                size="sm"
+                variant={mode === option.value ? "secondary" : "ghost"}
+                aria-pressed={mode === option.value}
+                onClick={() => setMode(option.value)}
+              >
+                {option.label}
+              </Button>
+            ))}
+          </div>
+        )}
+      </div>
       <Tabs
         aria-label="Layer content"
         value={tab}
@@ -35,20 +62,34 @@ export function LayerDetails({ layer, tab, onTabChange }: LayerDetailsProps) {
           {
             value: "changes",
             label: "Changes",
-            content: <Content value={layer.changes} label="Changes" empty="This layer records no changes." />,
+            content: (
+              <PropertyView
+                componentType={componentType}
+                raw={layer.changes}
+                label="Changes"
+                empty="This layer records no changes."
+                mode={mode}
+              />
+            ),
           },
           {
             value: "all",
             label: "All properties",
             content: (
-              <Content value={layer.componentJson} label="All properties" empty="This layer has no properties." />
+              <PropertyView
+                componentType={componentType}
+                raw={layer.componentJson}
+                label="All properties"
+                empty="This layer has no properties."
+                mode={mode}
+              />
             ),
           },
           {
             value: "children",
             label: "Children",
             content: (
-              <Content value={layer.children} label="Children" empty="This layer has no child components." />
+              <JsonContent value={layer.children} label="Children" empty="This layer has no child components." />
             ),
           },
         ]}
