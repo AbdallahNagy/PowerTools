@@ -27,8 +27,8 @@ import {
 import {
   COLUMN_TYPE,
   FORM_TYPE,
+  TABLE_TYPE,
   VIEW_TYPE,
-  WEB_RESOURCE_TYPE,
   type ComponentRow,
   type RemovalEntry,
 } from "./model/types";
@@ -239,7 +239,7 @@ function ExplorerPage({ connectionName, bulkStatus, bulkFinished, onBulkRemove }
   const typesQuery = useComponentTypes(connectionName);
   const types = useMemo(() => typesQuery.data?.componentTypes ?? [], [typesQuery.data]);
   const componentType = typeChoice
-    ?? types.find((type) => type.componentType === WEB_RESOURCE_TYPE)?.componentType
+    ?? types.find((type) => type.componentType === TABLE_TYPE)?.componentType
     ?? types[0]?.componentType
     ?? null;
   const tableMode = tableModeFor(componentType);

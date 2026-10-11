@@ -14,6 +14,7 @@ import {
   scriptLayersFixture,
   styleId,
   styleLayersFixture,
+  tablesFixture,
   webResourcesFixture,
 } from "../fixtures";
 import type { DesktopBridgeOverrides } from "../../../../../../test/support/desktopBridge";
@@ -150,27 +151,27 @@ describe("Solution Layers Explorer", () => {
     expect(calls).toBe(0);
   });
 
-  it("defaults to web resources, sorts by name, and searches after a pause", async () => {
+  it("defaults to tables, sorts by name, and searches after a pause", async () => {
     const searches: Array<string | null> = [];
     httpServer.use(http.get(`${base}/components`, ({ request }) => {
       const params = new URL(request.url).searchParams;
-      expect(params.get("componentType")).toBe("61");
+      expect(params.get("componentType")).toBe("1");
       searches.push(params.get("search"));
-      return HttpResponse.json(webResourcesFixture);
+      return HttpResponse.json(tablesFixture);
     }));
     renderTool();
 
-    expect(await screen.findByText("Main script")).toBeInTheDocument();
-    expect(screen.getByLabelText("Component type")).toHaveValue("61");
+    expect(await screen.findByText("Account")).toBeInTheDocument();
+    expect(screen.getByLabelText("Component type")).toHaveValue("1");
     const names = screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[1]!.textContent);
-    expect(names).toEqual(["Main script", "Site styles"]);
+    expect(names).toEqual(["Account", "Contact"]);
 
     fireEvent.click(screen.getByRole("button", { name: /^Name/ }));
     const reversed = screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[1]!.textContent);
-    expect(reversed).toEqual(["Site styles", "Main script"]);
+    expect(reversed).toEqual(["Contact", "Account"]);
 
-    fireEvent.change(screen.getByPlaceholderText("Search by name"), { target: { value: "main" } });
-    await waitFor(() => expect(searches).toContain("main"));
+    fireEvent.change(screen.getByPlaceholderText("Search by name"), { target: { value: "acc" } });
+    await waitFor(() => expect(searches).toContain("acc"));
     expect(screen.queryByText("Showing the first 50 matches. Refine the search to narrow the list.")).not.toBeInTheDocument();
   });
 

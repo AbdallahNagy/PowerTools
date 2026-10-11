@@ -400,7 +400,7 @@ Every pane shows one `EmptyState`: **Select an environment** with the descriptio
 
 ##### 2. Component picker (left)
 
-A `Toolbar` with a `Field` labeled **Component type** holding a `Select`. Options are the supported component types, by display label (Table, Column, Choice, Relationship, Security role, Form, View, Chart, Web resource, Process, Model-driven app, Plug-in assembly, Plug-in step, Canvas app). Default: **Web resource**. Types the environment does not support are left out.
+A `Toolbar` with a `Field` labeled **Component type** holding a `Select`. Options are the supported component types, by display label (Table, Column, Choice, Relationship, Security role, Form, View, Chart, Web resource, Process, Model-driven app, Plug-in assembly, Plug-in step, Canvas app). Default: **Table** (changed from Web resource at the user's request). Types the environment does not support are left out.
 
 - When the type is **Column**, a second `Field` labeled **Table** holding a `Select` of tables appears under it, required. The search is disabled until a table is chosen.
 - When the type is **Form** or **View**, the same **Table** select appears and is optional, with first option **All tables**.
@@ -595,7 +595,7 @@ Tokens only: `bg-canvas` for the tab, `bg-surface` for panels, `bg-raised` for d
 
 - UX steps 1 to 6 are built as written:
   - three draggable dividers, using the panel ids and sizes from the UX section;
-  - Web resource is the default type;
+  - Table is the default type (originally Web resource; changed at the user's request);
   - the Table select is required for Column and optional (All tables) for Form and View;
   - search runs 300 ms after typing stops;
   - checkbox column with Select all, and header-click sorting;

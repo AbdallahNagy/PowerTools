@@ -38,6 +38,26 @@ export const webResourcesFixture: ComponentsResponse = {
   truncated: false,
 };
 
+export const tablesFixture: ComponentsResponse = {
+  components: [
+    {
+      componentId: "bbbbbbbb-0000-0000-0000-000000000002",
+      componentType: 1,
+      name: "Contact",
+      logicalName: "contact",
+      parentEntity: null,
+    },
+    {
+      componentId: "bbbbbbbb-0000-0000-0000-000000000001",
+      componentType: 1,
+      name: "Account",
+      logicalName: "account",
+      parentEntity: null,
+    },
+  ],
+  truncated: false,
+};
+
 /** UTF-8 base64 with a byte order mark, as Dataverse stores web resource content. */
 export function base64(text: string): string {
   const bytes = new TextEncoder().encode(`${String.fromCharCode(0xfeff)}${text}`);

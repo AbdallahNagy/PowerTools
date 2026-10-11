@@ -1,3 +1,4 @@
+export const TABLE_TYPE = 1;
 export const WEB_RESOURCE_TYPE = 61;
 export const COLUMN_TYPE = 2;
 export const FORM_TYPE = 60;
