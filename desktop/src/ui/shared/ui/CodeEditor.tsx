@@ -11,6 +11,8 @@ export interface CodeEditorProps {
   placeholder?: string;
   "aria-label"?: string;
   lineNumbers?: boolean;
+  /** Adds collapse and expand arrows for indented blocks, such as formatted JSON or XML. */
+  folding?: boolean;
   className?: string;
 }
 

@@ -65,4 +65,14 @@ describe("CodeEditor loading", () => {
     );
     expect(screen.queryByLabelText("FetchXML", { selector: "[aria-busy]" })).not.toBeInTheDocument();
   });
+
+  it("shows collapse arrows only when folding is on", async () => {
+    const value = "{\n  \"a\": 1\n}";
+    const { container, rerender } = render(<CodeEditor aria-label="JSON" value={value} readOnly />);
+    await screen.findByRole("textbox", { name: "JSON" });
+    expect(container.querySelector(".cm-foldGutter")).toBeNull();
+
+    rerender(<CodeEditor aria-label="JSON" value={value} readOnly folding />);
+    await waitFor(() => expect(container.querySelector(".cm-foldGutter")).not.toBeNull());
+  });
 });

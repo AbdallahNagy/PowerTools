@@ -15,7 +15,7 @@ function Content({ value, label, empty }: { value: string | null; label: string;
   if (text.trim() === "") return <EmptyState title={empty} />;
   return (
     <div className="flex h-full min-h-0 flex-col pt-2">
-      <CodeEditor value={text} readOnly lineNumbers aria-label={label} className="flex-1" />
+      <CodeEditor value={text} readOnly lineNumbers folding aria-label={label} className="flex-1" />
     </div>
   );
 }

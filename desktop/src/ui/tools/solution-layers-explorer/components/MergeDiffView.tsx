@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { MergeView } from "@codemirror/merge";
 import { EditorState } from "@codemirror/state";
 import { EditorView, lineNumbers } from "@codemirror/view";
+import { indentFolding } from "../../../shared/ui/codeFolding";
 import type { LayerDiffProps } from "./loadLayerDiff";
 
 // Colors come from theme tokens: removed lines on the left, added lines on the right.
@@ -27,6 +28,14 @@ const diffTheme = EditorView.theme({
   "&.cm-merge-b .cm-changedText": { background: "var(--color-ok-soft)" },
   "&.cm-merge-a .cm-changedLineGutter, .cm-deletedLineGutter": { background: "var(--color-danger)" },
   "&.cm-merge-b .cm-changedLineGutter": { background: "var(--color-ok)" },
+  ".cm-collapsedLines": {
+    color: "var(--color-fg-muted)",
+    background: "var(--color-hover)",
+    borderTop: "1px solid var(--color-line)",
+    borderBottom: "1px solid var(--color-line)",
+    cursor: "pointer",
+  },
+  ".cm-collapsedLines:hover": { color: "var(--color-fg-strong)" },
 });
 
 function side(doc: string, label: string) {
@@ -37,6 +46,7 @@ function side(doc: string, label: string) {
       EditorView.editable.of(false),
       EditorView.contentAttributes.of({ "aria-label": label, "aria-readonly": "true" }),
       lineNumbers(),
+      indentFolding(),
       diffTheme,
     ],
   };
@@ -56,6 +66,8 @@ export default function MergeDiffView({ left, right, leftLabel, rightLabel }: La
       parent: hostRef.current!,
       gutter: true,
       highlightChanges: true,
+      // Long unchanged stretches collapse to a "N unchanged lines" bar; click it to expand.
+      collapseUnchanged: { margin: 3, minSize: 8 },
     });
     return () => view.destroy();
   }, [left, right, leftLabel, rightLabel]);

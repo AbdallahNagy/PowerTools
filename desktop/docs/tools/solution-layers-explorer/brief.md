@@ -634,6 +634,11 @@ Tokens only: `bg-canvas` for the tab, `bg-surface` for panels, `bg-raised` for d
   - on-premises availability.
 - The `solutioncomponentdefinition` column names are also unverified. So is the `appmoduleid` component id for model-driven apps.
 
+
+#### Follow-up: collapse and expand
+
+At the user's request, the Details editors and both sides of the Compare diff can collapse and expand indented blocks. The arrows are in the gutter, and the keys are Ctrl+Shift+[ and Ctrl+Shift+]. Folding works by indentation (`shared/ui/codeFolding.ts`), so it covers formatted JSON, XML and decoded scripts, and needs no new dependency. `CodeEditor` gains an opt-in `folding` prop, so other tools are unchanged. In the diff, unchanged stretches of 8 or more lines also collapse into a clickable "unchanged lines" bar (`collapseUnchanged` from `@codemirror/merge`). The folding code loads in its own chunk, and the main bundle is unchanged. Tests: `codeFolding.test.ts` (node) and a `CodeEditor` renderer test. `npm test` (495), lint, typecheck and build pass.
+
 ### Open questions
 
 - Resolved: the source plugin is GPL-3.0. The user accepted a clean-room build. No plugin source, UI, icons or wording is copied; Dataverse behavior is reimplemented from this brief and Microsoft documentation.
