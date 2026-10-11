@@ -264,6 +264,97 @@ Power Tools files to read before building:
 - `/home/user/PowerTools/api/PowerTools/PowerTools.API/Program.cs`
 - `/home/user/PowerTools/desktop/src/ui/shared/contracts/dataverse.ts`
 
+### Dataverse review
+
+**Evidence used.** Microsoft's generated table reference for `msdyn_componentlayer` and `solutioncomponent`, the Dataverse web service error code list, the maker article "Solution layers" (section "Remove an unmanaged layer"), the ALM articles "Block unmanaged customizations" and "Removing dependencies", and the developer articles on `ExecuteMultiple` and service protection limits. All were read from the MicrosoftDocs `powerapps-docs` and `power-platform` GitHub sources, because learn.microsoft.com does not resolve from this sandbox. No live org, `$metadata` document, or SDK assembly was available. Claims marked "unverified" need a check against a live org during development. Where the plugin and the Microsoft reference disagree, the reference wins.
+
+**Corrections to messages and metadata**
+
+- `msdyn_componentlayer` is confirmed: TableType `Virtual`, OwnershipType `OrganizationOwned`, primary id `msdyn_componentlayerid`, primary name `msdyn_name`, entity set `msdyn_componentlayers`. The Web API equivalent of the query is `GET msdyn_componentlayers?$filter=msdyn_componentid eq '<id>' and msdyn_solutioncomponentname eq '<name>'`. The sidecar keeps using the SDK.
+- **Correction: `msdyn_componentid` is a String column (max length 100), not a Guid.** The plugin passes a `Guid` value. Pass the id as a string in `Guid.ToString("D")` form. Do not depend on the server's casing either: compare ids case-insensitively when matching the returned rows. Whether lowercase and uppercase filter values both match is unverified.
+- `msdyn_solutioncomponentname`, `msdyn_solutionname` and `msdyn_publishername` are String (100). `msdyn_changes` and `msdyn_componentjson` are String (max 1,073,741,823), so one row can be very large. `msdyn_children` is String (100) in the reference. That limit looks too small for a list of children, so treat the column as optional and possibly truncated or empty.
+- `msdyn_order` is an Integer with range 0 to 500. `msdyn_overwritetime` (schema name `msdyn_endtime`) is a DateTime with `UserLocal` behavior. Return it as UTC ISO from the sidecar, and let the client format it.
+- **Unverified: `msdyn_solutionversion`.** The researcher lists it, but the Microsoft reference does not list it among the table's columns. A `ColumnSet` that names a column the table lacks makes the whole query fault (`0x80041103` QueryBuilderNoAttribute). Either request `new ColumnSet(true)` (acceptable here, because one component returns only a handful of rows), or confirm the column once with `RetrieveEntityRequest(EntityFilters.Attributes)` before naming it. Make `solutionVersion` nullable in the DTO.
+- The documented messages on the table are `Create`, `Update`, `Delete`, `Retrieve`, `RetrieveMultiple`, `Upsert` and `RetrieveEntityChanges`. Despite that list, the tool must only read. Never write to this table. Layer removal goes only through `RemoveActiveCustomizations`.
+- `RemoveActiveCustomizations` is confirmed as a platform operation by its error codes (below) and by the maker UI "Remove active customizations" command. Its message contract was not available here, so these remain unverified: the exact parameter names (`SolutionComponentName` as String, `ComponentId` as Guid) and whether a typed `RemoveActiveCustomizationsRequest` exists in `Microsoft.CrmSdk.CoreAssemblies` 9.0.2.59, the version the sidecar references. Use an untyped `OrganizationRequest("RemoveActiveCustomizations")`; it works whether or not a typed class exists. Before writing the endpoint, the developer checks the action and its parameter names in the org's Web API `$metadata`. Pass `ComponentId` as a `Guid` parameter (not the layer's string column) and `SolutionComponentName` exactly as the layer row returned it.
+- The removal is a metadata operation, not a record operation. Do not run it inside `ExecuteTransaction` or `ExecuteMultiple`. Send exactly one request per component.
+
+**Component type to `msdyn_solutioncomponentname`**
+
+- The `solutioncomponent.componenttype` reference confirms these type numbers: 1 Entity, 2 Attribute, 9 Option Set, 10 Entity Relationship, 20 Role, 24 Form, 26 Saved Query, 29 Workflow, 59 Saved Query Visualization, 60 System Form, 61 Web Resource, 62 Site Map, 91 Plugin Assembly, 92 SDK Message Processing Step, 93 SDK Message Processing Step Image, 300 Canvas App, 380 Environment Variable Definition.
+- **Unverified: 80 (AppModule) and 418 (dataflow).** Neither number is in the documented static `componenttype` choice. 80 is widely used for model-driven apps, but resolve both at run time through `solutioncomponentdefinition`. Do not trust a hardcoded number for them. The 418 to `msdyn_dataflow` exception is a plugin claim with no Microsoft source.
+- **Correction:** newer table-backed component types use the component table's object type code as their `componenttype` number. Those numbers are 10000 and above and differ between environments. Do not hardcode them. Key the static map by type number only for the classic types listed above. For anything else, read `solutioncomponentdefinition` (`solutioncomponenttype`, `name`) per connection and cache it per connection. `solutioncomponentdefinition` is not in Microsoft's public table reference, so it is an internal table. Treat its column names as unverified, and if the query faults, fall back to the static list only.
+- The rule "filter by the type's name string, not its number" is a plugin claim that Microsoft does not document. It matches the String type of the column. Mark it unverified for every type outside Entity, Attribute, SystemForm, SavedQuery and WebResource until checked on a live org.
+- Component ids by type: Entity, Attribute, OptionSet and EntityRelationship use the metadata `MetadataId`, not a record id. Role uses the root role. Business-unit copies of a role have `parentroleid` set, and the root has `parentroleid` null, so the brief's filter is right. Also return `roleid` and confirm against `parentrootroleid`. SystemForm filters by `objecttypecode` (a logical name string). SavedQuery filters by `returnedtypecode` (a logical name string).
+
+**Paging, ordering and batching**
+
+- Do not set `PageInfo`, `TopCount` or `Orders` on the `msdyn_componentlayer` query. Paging and server-side ordering on this virtual table's provider are undocumented. One component has a small number of layers, so read them all and sort in memory.
+- **Correction to the sort.** The rule "sort by `msdyn_order` descending so Active sits on top" is unverified. Neither Microsoft nor the plugin defines the direction of `msdyn_order`. The maker UI shows the most recent layer at the top, which is "typically" the Active layer. Sort the Active row first, then the remaining rows by `msdyn_order` descending, and confirm the direction on a live org. If it is reversed, flip the secondary sort only.
+- `NoLock` has no effect on a virtual table. Leave it out.
+- The component search queries (`systemform`, `savedquery`, `webresource`, `workflow`, `role`, `appmodule`, `pluginassembly`, `sdkmessageprocessingstep`, `solutioncomponent`) are normal tables. Use `TopCount` = 50 for the picker. Any query that must return everything uses `PageInfo` with the paging cookie, up to 5,000 rows per page, following the `PolymorphicLookupService` pattern.
+- `RetrieveAllEntitiesRequest(EntityFilters.Entity)` is heavy. Prefer `RetrieveMetadataChangesRequest` with a property filter of `MetadataId`, `LogicalName` and `DisplayName`, and cache the result per connection.
+- The researcher's `ExecuteMultiple` notes apply only to a solution-wide mode, which v1 does not have. If one is added later: at most 1,000 requests per batch, no nesting, it is not a transaction, the old limit of 2 concurrent `ExecuteMultiple` calls is gone (service protection limits govern instead), and every `response.Fault` must be checked.
+- Service protection limits (requests and execution time per user per 5 minutes) apply to every call. A single-component tool will not reach them, but map faults `0x80072322`, `0x80072321` and `0x80072326` (service protection: request count, execution time, concurrency) to 429 with the `Retry-After` value if one is returned.
+
+**Privileges and connection requirements**
+
+- One connection, no target. Confirmed.
+- **Unverified:** which privileges read `msdyn_componentlayer` and run `RemoveActiveCustomizations`. Microsoft's reference lists no privilege names for either, and the maker docs do not name a role. Expect System Customizer or System Administrator, but do not hard-check roles. Do not call `WhoAmI` to gate the UI. Let the call fail and map the standard privilege fault (`0x80040220`, PrivilegeDenied) to 403. The plugin's claim that removal "faults without System Customizer or System Administrator" is unverified.
+- Impersonation (`CallerId`) is not needed and should not be offered. Removal runs as the connected user, which is what the audit trail should show.
+- The admin setting "Block unmanaged customizations" does **not** block removal. Microsoft lists "Remove an unmanaged layer" among the operations still allowed. So do not disable removal on such environments.
+
+**Online versus on-premises**
+
+- The sidecar supports both online (`ServiceClient`) and on-premises (`OnPremiseClient`) connections.
+- **Unverified: on-premises.** Whether `msdyn_componentlayer` and `RemoveActiveCustomizations` exist on Dataverse on-premises (9.1) is not documented in the sources read. The table is a virtual table delivered with the online solution-layers feature. On the first layers call, treat the faults `0x80041102` (QueryBuilderNoEntity) and `0x80094005` (EntityNotFound) as "not available on this environment". Treat an unknown-message fault from `RemoveActiveCustomizations` the same way; its code was not found in the documented list. Return a distinct problem code, `layers_not_supported` with status 501, so the UI can show one clear message instead of a generic error.
+- Online only: service protection throttling as above. Auth differences are already handled by `DataverseClientFactory`. This tool adds nothing.
+
+**Solution and managed limits**
+
+- Microsoft confirms: when the unmanaged layer is the only layer (the component is unmanaged at its base), it cannot be removed with remove active customizations. The component must be deleted instead. The researcher's ">1 layer and an Active layer" guard is correct and must stay server-side.
+- Unmanaged solutions all share one Active layer. Removing it discards changes from every unmanaged solution, not just one. The rows do not say which unmanaged solution made a change.
+- The Active layer row is identified by `msdyn_solutionname == "Active"`. That is a plugin claim. The maker UI labels the row "Unmanaged layer" in the Solution column, so the stored literal is unverified. Compare case-insensitively, and confirm the literal on a live org.
+- Microsoft warns that removal "can't be reversed or undone" and that "all data associated with the unmanaged customization can be lost". For example, removing an Active layer that created a column on a managed table can drop that column and its data. The confirmation must say this.
+- Managed components whose managed properties forbid customization cannot have an Active layer, so they are never removable. No special handling is needed beyond the guard.
+- **Unverified: whether a publish is needed after removal** for forms, views, site maps or apps. Neither Microsoft source says. After removal, re-query the layers. If the Active row is gone, report success. Do not call `PublishXml` or `PublishAllXml` in v1. The UI may say that a publish might be needed to see the change in apps.
+
+**Failure modes**
+
+Map these documented `RemoveActiveCustomizations` faults by `OrganizationServiceFault.ErrorCode`. Pass Dataverse's message text through, and do not build the message from the code.
+
+| Code | Name | Meaning | Suggested HTTP |
+| --- | --- | --- | --- |
+| `0x8004F059` | RemoveActiveCustomizationsNotSupported | Not supported for this component type | 422 |
+| `0x8004F053` | RemoveActiveCustomizationsNotSupportOnAttributeType | Not supported for this attribute type | 422 |
+| `0x8004F075` | RemoveActiveCustomizationsFailedForEntity | A table property differs between the Active layer and the managed layer, and the values must match | 422 |
+| `0x8004F076` | RACForEntityFailedNotActiveLayer | The targeted layer is not the Active layer | 409 |
+| `0x8004F077` | RACCannotAcquireCustomizationLock | Another metadata operation, such as a solution import or publish, holds the customization lock. Try again later | 409, retryable |
+| `0x80040220` | PrivilegeDenied | Caller lacks the privilege | 403 |
+
+- `0x8004F095` and `0x8004F094` (BulkRACAllErrors and BulkRACPartialErrors) show that a server-side bulk variant exists, with partial success. Its message name is undocumented. Do not use it in v1.
+- The fault code for "only layer, cannot remove" was not found. The server-side guard prevents that call, so map any other fault to 422.
+- Removal can run long on large tables. The client timeout must cover it. Check `ServiceClient`'s configured timeout, and do not retry automatically on timeout, because the operation may have completed. Re-query the layers instead and report what is there.
+- Layer reads: a type name the server does not recognize, or a component with no layers, returns zero rows rather than a fault. Return an empty layer list, not an error. Some type names may fault instead (unverified). Map those to 422 with the message.
+- Large `msdyn_componentjson` values (big forms, web resources) can make the response several MB. Do not log the payload.
+
+**Plugin claims that are wrong**
+
+- `msdyn_componentid` is filtered with a `Guid` value. The column is a String.
+- The plugin relies on server row order. `msdyn_order` direction is not guaranteed, so sort explicitly as described above.
+- The plugin does not check `ExecuteMultiple` `response.Fault`, and does not page `solutioncomponent` past 5,000 rows. The researcher already flagged both. Confirmed as defects against the documented contracts.
+- One failed removal aborts the plugin's whole loop, with no per-item result. For v1 that does not matter, since it removes one component at a time. Any later bulk mode must report results per component.
+
+**Plugin claims that remain unverified**
+
+- That `msdyn_solutioncomponentname` is the type's enum name for every type, the 418 to `msdyn_dataflow` exception, and that `solutioncomponentdefinition.name` equals the layer name for newer types.
+- That the `msdyn_solutionversion` column exists.
+- That the Active layer's `msdyn_solutionname` is exactly `"Active"`.
+- The shape `{ "Attributes": [ { "Key", "Value" } ] }` of `msdyn_componentjson`, and that web resource `content` in it is base64. The client parser must tolerate other shapes and show the raw text.
+- The `RemoveActiveCustomizations` parameter names and types, and the privileges it requires.
+- Whether a publish is needed after removal.
+- Availability on on-premises.
+
 ### UX
 
 Written from `### What it does` only: list a component's layers, inspect one layer (Changes, All properties, Children), compare two layers, and remove the Active layer singly or in bulk after a confirmation. Solution-wide browsing, Excel export, and cross-tool links are out of v1.
