@@ -1,7 +1,7 @@
 import { Alert, Badge, Button, DataTable, Modal, ProgressBar } from "../../../shared/ui";
 import { formatDate } from "../model/dates";
 import type { DeletedRecord, RestoreEntry, RestoreStatus, Source } from "../model/types";
-import { displayName, restoreSummary } from "../model/view";
+import { displayName, restoreSummary, summaryText } from "../model/view";
 
 export type RestorePhase = "confirm" | "running" | "done";
 
@@ -14,6 +14,7 @@ const resultBadge: Record<RestoreStatus, { tone: "ok" | "danger" | "neutral"; la
   restored: { tone: "ok", label: "Restored" },
   failed: { tone: "danger", label: "Failed" },
   skipped: { tone: "neutral", label: "Skipped" },
+  alreadyRestored: { tone: "ok", label: "Already restored" },
 };
 
 const resultColumns = [
@@ -109,8 +110,7 @@ export function RestoreDialog({
             ) : (
               <>
                 <p className="flex-1 text-sm text-fg">
-                  {summary.restored} restored, {summary.failed} failed
-                  {summary.skipped > 0 ? `, ${summary.skipped} skipped` : ""}
+                  {summaryText(summary)}
                 </p>
                 <Button variant="primary" onClick={onDone}>
                   Done

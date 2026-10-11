@@ -100,6 +100,25 @@ public static class RecycleBinQueries
                 Attribute(primaryId),
                 Filter(Condition(primaryId, "eq", id.ToString("D"))))));
 
+    /// <summary>Which of the given record ids are in the recycle bin.</summary>
+    public static FetchExpression BinContainsAny(string table, string primaryId, IReadOnlyCollection<Guid> ids) =>
+        Fetch(new XElement("fetch",
+            new XAttribute("datasource", "bin"),
+            Entity(table,
+                Attribute(primaryId),
+                Filter(new XElement("condition",
+                    new XAttribute("attribute", primaryId),
+                    new XAttribute("operator", "in"),
+                    ids.Select(id => new XElement("value", id.ToString("D"))))))));
+
+    /// <summary>Whether a record with this id exists in the table (not the recycle bin).</summary>
+    public static QueryExpression LiveRecord(string table, string primaryId, Guid id)
+    {
+        var query = new QueryExpression(table) { TopCount = 1, ColumnSet = new ColumnSet(primaryId) };
+        query.Criteria.AddCondition(primaryId, ConditionOperator.Equal, id);
+        return query;
+    }
+
     /// <summary>
     /// Delete audit entries for one table, newest first. Dates carry an explicit Z so the bounds are UTC
     /// whatever the calling user's Dataverse time zone. The table is matched by logical name.

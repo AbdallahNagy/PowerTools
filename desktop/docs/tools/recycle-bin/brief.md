@@ -489,7 +489,10 @@ From `desktop/src/ui/shared/ui`: `Toolbar`, `Field`, `Select`, `Input` (`type="d
   - Audit: `objecttypecode` by logical name, UTC bounds sent with a `Z`, `<order>` on `createdon` desc then `auditid` desc, and one `ExecuteMultiple` (`ContinueOnError`) of `RetrieveAuditDetails` per page.
   - Audit rows show `callinguserid` when it differs from `userid`.
 - `GET /api/recycle-bin/records/{table}/{id}?source=&auditId=` returns typed field values: the bin row with `<all-attributes/>`, or the audit `OldValue`. It returns 404 `NotInRecycleBin` when the record has left the bin.
+- `POST /api/recycle-bin/bin-check` (`{ table, recordIds }`, at most 100 ids) returns the ids still in the recycle bin. It uses a `datasource='bin'` fetch with a primary-id `in` condition and is online only. The client calls it between bin restore chunks.
 - `POST /api/recycle-bin/restore` takes at most 100 items. One record's failure never stops the rest.
+  - Items carry an optional `retry` flag. For a retry, the sidecar first looks the record up in its live table. If the record is there, the result is `alreadyRestored` and nothing is sent.
+  - A duplicate fault (`DuplicateExceptionRestoreRecycleBin` or `DuplicateRecord`) is reported as `alreadyRestored`, not `failed`, when the item is a retry or when the same call had already been retried after a service-protection fault. A duplicate on a first attempt stays `failed`.
   - Bin: `Restore` with a target that holds only the id, one call per record.
   - Audit: keeps only attributes where `IsValidForCreate` is true, maps `createdon` to `overriddencreatedon` when the table has it, holds back an inactive `statecode`/`statuscode` and sets them with a follow-up `Update`.
     - `incident`, `opportunity`, `quote`, `salesorder` and `invoice` are restored as active, with a warning.
@@ -497,7 +500,7 @@ From `desktop/src/ui/shared/ui`: `Toolbar`, `Field`, `Select`, `Input` (`type="d
     - A record that is still in a ready bin is `skipped` with `InRecycleBin`.
   - Faults are matched on the number first and the fault name second. Both documented codes for `DuplicateExceptionRestoreRecycleBin` are accepted.
   - Service-protection faults wait for `Retry-After` and retry, up to 4 attempts, instead of failing the record.
-- Tests: `api/PowerTools/PowerTools.API.RecycleBin.Tests/` (added to `PowerTools.sln`), 36 xUnit tests against a fake `IRecycleBinClient`.
+- Tests: `api/PowerTools/PowerTools.API.RecycleBin.Tests/` (added to `PowerTools.sln`), 42 xUnit tests against a fake `IRecycleBinClient`.
 
 **Desktop: `desktop/src/ui/tools/recycle-bin/`**
 
@@ -505,10 +508,14 @@ From `desktop/src/ui/shared/ui`: `Toolbar`, `Field`, `Select`, `Input` (`type="d
 - `api/` holds react-query hooks. The list uses `useInfiniteQuery` to drive **Load more**. Field labels and choice labels come from the existing `/api/metadata/entities/{table}/attributes`. Restore uses `noAuthRetry`.
 - `model/` holds the types, fault messages, source choice, date bounds (local calendar days sent as UTC, including the whole To day), field formatting, restore batching and sorting.
 - `components/` holds `FilterBar`, `SourceLine`, `DeletedRecordsTable`, `RecordDetails` and `RestoreDialog`. The layout, empty states, error states, status text and toasts follow `### UX`.
+- **Source switch:** when the chosen table is ready in the bin and also audited, the source line shows a "Recycle bin" / "Audit log" toggle (pressed buttons). It defaults to "Recycle bin" and goes back to it whenever the table changes. "Audit log" shows the From, To and Deleted by filters and uses the audit list and restore path. Switching after a search shows "Filters changed. Find again to update the list."
+- **Bin restore re-check:** after each bin chunk, the client asks `/bin-check` about the records still waiting. Those no longer in the bin are marked **Already restored**, with the detail "It is no longer in the recycle bin. It came back with a record restored earlier in this run.", and are not sent. If the check fails, the run continues as planned.
+- **Retries:** a row whose last result in this tab was **Failed** is sent with `retry: true`. **Already restored** is a result badge (tone `ok`) in the list and the dialog. Done unchecks it like a restored row. The dialog summary and the status add "{n} already restored" when there are any.
+- On Done, older deletions of the same record that were left out of the run are unchecked too, so retrying a failed row cannot bring back an older deletion.
 
 **Where the build differs from the audit-only UX text, because of the scope answer or the Dataverse review**
 
-- The source is chosen per table, with no source switch: the recycle bin when the table is ready in it, otherwise the audit log. The source line under the toolbar names the source and its retention.
+- The source defaults per table: the recycle bin when the table is ready in it, otherwise the audit log. Per the user's answer, a table that has both gets a switch. The source line under the toolbar names the source and its retention.
 - For the bin source, the From, To and Deleted by filters are hidden, per the Dataverse review: no bin deletion columns are documented.
 - The bin-source details note and restore warning drop the "only audited fields" wording.
 - The tooltip and public description name both sources:
@@ -522,18 +529,17 @@ From `desktop/src/ui/shared/ui`: `Toolbar`, `Field`, `Select`, `Input` (`type="d
 
 **Not built, or left for a live check**
 
-- Nothing re-queries the bin after each chunk. If a record already came back with an earlier restore, the server reports it as "no longer in the recycle bin".
-- A duplicate fault on a retry is not detected as "already restored".
 - There is no opt-in to restore with the caller as owner when the original owner cannot be set.
 - Everything the Dataverse review marks as unverified still needs a check against a live online org and an on-premises org: bin paging, cookies and `<order>`, bin and `Restore` privileges, cascade behavior, and the on-premises `objecttypecode` by logical name.
 
 **Commands run**
 
-- `desktop/`: `npm test` passed (89 files, 515 tests). `npm run lint` passed. `npm run build` passed (only the existing chunk-size warning).
-- `desktop/`: `npm run check` passed: typecheck, lint with 0 warnings, 515 tests, renderer build, and the Playwright smoke test.
+- `desktop/`: `npm test` passed (89 files, 520 tests). `npm run lint` passed. `npm run build` passed (only the existing chunk-size warning).
+- `desktop/`: `npm run check` passed: typecheck, lint with 0 warnings, 520 tests, renderer build, and the Playwright smoke test.
+  - On the second round, one `npm run check` run failed one test in `test/renderer/shell.test.tsx`, a file this change does not touch. The file passed four times on its own, and the full `npm run check` passed when rerun, so the failure looks timing-related.
   - The smoke step needs a display and the sidecar's .NET runtime, so it ran as `DOTNET_ROLL_FORWARD=Major xvfb-run -a npm run check`.
   - Without them it fails with "Missing X server" or a sidecar timeout.
-- `api/PowerTools/`: `dotnet build` succeeded with no warnings in the new files. `dotnet test PowerTools.sln` passed every project, including `PowerTools.API.RecycleBin.Tests` with 36 tests.
+- `api/PowerTools/`: `dotnet build` succeeded with no warnings in the new files. `dotnet test PowerTools.sln` passed every project, including `PowerTools.API.RecycleBin.Tests` with 42 tests.
   - The .NET 9 SDK could not be downloaded here (dot.net is blocked by the egress policy), so these ran on the Ubuntu .NET 10 SDK with `DOTNET_ROLL_FORWARD=Major`.
 - No live Dataverse environment was used. Every test runs against fakes: MSW handlers for the renderer, and a fake `IRecycleBinClient` for the sidecar.
 
@@ -544,3 +550,6 @@ From `desktop/src/ui/shared/ui`: `Toolbar`, `Field`, `Select`, `Input` (`type="d
   - **Answer (user, 2026-10-11): recycle bin first, with audit fallback.** v1 includes the native Dataverse recycle bin as the default source when `/status` reports it enabled (online only), and the audit log as the fallback. Apply the bin-source UX delta described in this question (source line under the filter toolbar; no "only audited fields" wording for bin records) and the `### Dataverse review` rules for both sources.
 
 - **Audit log for tables that are in the recycle bin?** A table that is ready in the recycle bin always uses the bin, so records deleted *before* the bin was turned on, which are only in the audit log, cannot be found for that table. Decide: keep it as built (no source switch, as the UX asked), or add a switch on the source line to search the audit log for a bin-enabled table.
+
+  - **Answer (user, 2026-10-11): add a source switch.** When a table is ready in the recycle bin and also audited, the source line under the toolbar gets a toggle between "Recycle bin" and "Audit log". The default is "Recycle bin". In "Audit log" mode, the From, To and Deleted by filters and the audit restore path apply as before. An audit restore of a record that is still in the bin is still skipped.
+  - **Answer (user, 2026-10-11): re-query the bin after each restore batch.** After each bin restore chunk, re-check the bin for the selected records that remain. Any that are no longer in the bin, and were not restored by this run, are marked "Already restored" and skipped. A duplicate fault on a retry is shown as "Already restored" instead of a failure, as the Dataverse review asks.

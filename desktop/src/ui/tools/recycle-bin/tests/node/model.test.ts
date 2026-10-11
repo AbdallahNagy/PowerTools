@@ -5,13 +5,15 @@ import { fieldRows, filterFields } from "../../model/fields";
 import {
   chunk,
   latestDeletions,
+  leftTheBin,
   orderForRestore,
   repeatedRecordCount,
   RESTORE_CHUNK_SIZE,
+  toRestoreItem,
 } from "../../model/restoreBatches";
-import { sourceFor, sourceLine } from "../../model/sourceChoice";
+import { availableSources, sourceFor, sourceLine } from "../../model/sourceChoice";
 import type { RestoreResult } from "../../model/types";
-import { nextSort, sortRecords } from "../../model/view";
+import { nextSort, sortRecords, summaryText } from "../../model/view";
 import {
   alphaValues,
   projectAlpha,
@@ -49,6 +51,17 @@ describe("source choice", () => {
     expect(sourceFor(null)).toBeNull();
   });
 
+  it("lets a table in the recycle bin that is also audited switch to the audit log", () => {
+    expect(availableSources(account)).toEqual(["bin", "audit"]);
+    expect(availableSources(project)).toEqual(["audit"]);
+    expect(sourceFor(account, "audit")).toBe("audit");
+    expect(sourceFor({ ...account, auditEnabled: false }, "audit")).toBe("bin");
+    expect(sourceFor(project, "bin")).toBe("audit");
+    expect(sourceLine("audit", account, statusFixture).notes).toContain(
+      "Records that are still in the recycle bin are skipped when restoring.",
+    );
+  });
+
   it("describes each source on one line", () => {
     expect(sourceLine("bin", account, statusFixture).label).toBe("Recycle bin, keeps records 30 days");
     const audit = sourceLine("audit", project, statusFixture);
@@ -79,6 +92,17 @@ describe("restore batches", () => {
     expect(orderForRestore("bin", rows)).toEqual(rows);
   });
 
+  it("finds waiting records that are no longer in the bin, ignoring case", () => {
+    const waiting = [projectAlpha, projectBeta];
+    expect(leftTheBin(waiting, [projectBeta.recordId.toUpperCase()])).toEqual([projectAlpha]);
+    expect(leftTheBin(waiting, [projectAlpha.recordId, projectBeta.recordId])).toEqual([]);
+  });
+
+  it("marks records an earlier run tried as retries", () => {
+    expect(toRestoreItem(projectAlpha)).not.toHaveProperty("retry");
+    expect(toRestoreItem(projectAlpha, true)).toMatchObject({ recordId: projectAlpha.recordId, retry: true });
+  });
+
   it("splits selections into chunks the sidecar accepts", () => {
     const items = Array.from({ length: 60 }, (_, index) => index);
     const chunks = chunk(items);
@@ -101,6 +125,13 @@ describe("restore messages", () => {
     expect(restoreDetail(result({ code: "DataverseFault", message: "Something else" }))).toBe("Something else");
     expect(restoreDetail(result({ status: "restored", warning: "Restored as active." }))).toBe("Restored as active.");
     expect(restoreDetail(result({ status: "restored" }))).toBe("");
+    expect(restoreDetail(result({ status: "alreadyRestored" }))).toBe(
+      "This record already exists. An earlier attempt restored it.",
+    );
+    expect(summaryText({ restored: 3, failed: 1, skipped: 0, alreadyRestored: 0 })).toBe("3 restored, 1 failed");
+    expect(summaryText({ restored: 3, failed: 0, skipped: 1, alreadyRestored: 2 })).toBe(
+      "3 restored, 0 failed, 2 already restored, 1 skipped",
+    );
   });
 });
 

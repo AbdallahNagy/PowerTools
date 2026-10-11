@@ -42,6 +42,21 @@ export function chunk<T>(items: T[], size: number = RESTORE_CHUNK_SIZE): T[][] {
   return chunks;
 }
 
-export function toRestoreItem(row: DeletedRecord): RestoreItem {
-  return { table: row.table, recordId: row.recordId, auditId: row.auditId };
+/** Records per bin check request. The sidecar accepts at most 100. */
+export const BIN_CHECK_SIZE = 100;
+
+export const LEFT_BIN_DETAIL = "It is no longer in the recycle bin. It came back with a record restored earlier in this run.";
+
+export function toRestoreItem(row: DeletedRecord, retry = false): RestoreItem {
+  return retry
+    ? { table: row.table, recordId: row.recordId, auditId: row.auditId, retry: true }
+    : { table: row.table, recordId: row.recordId, auditId: row.auditId };
+}
+
+/**
+ * The rows still waiting to be restored that are no longer in the recycle bin. Ids are compared without case.
+ */
+export function leftTheBin(remaining: DeletedRecord[], inBin: string[]): DeletedRecord[] {
+  const stillThere = new Set(inBin.map((id) => id.toLowerCase()));
+  return remaining.filter((row) => !stillThere.has(row.recordId.toLowerCase()));
 }

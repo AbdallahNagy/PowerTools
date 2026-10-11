@@ -1,11 +1,21 @@
 import type { RecycleTable, Source, StatusResponse } from "./types";
 
-/** The recycle bin when the table is ready in it, otherwise the audit log when the table is audited. */
-export function sourceFor(table: RecycleTable | null | undefined): Source | null {
-  if (!table) return null;
-  if (table.binEnabled) return "bin";
-  if (table.auditEnabled) return "audit";
-  return null;
+/** The sources a table can be searched in, recycle bin first. */
+export function availableSources(table: RecycleTable | null | undefined): Source[] {
+  if (!table) return [];
+  const sources: Source[] = [];
+  if (table.binEnabled) sources.push("bin");
+  if (table.auditEnabled) sources.push("audit");
+  return sources;
+}
+
+/**
+ * The source to search: the preferred one when the table has it, otherwise the recycle bin when the table is
+ * ready in it, otherwise the audit log when the table is audited.
+ */
+export function sourceFor(table: RecycleTable | null | undefined, preferred: Source = "bin"): Source | null {
+  const sources = availableSources(table);
+  return sources.includes(preferred) ? preferred : (sources[0] ?? null);
 }
 
 function days(count: number): string {
@@ -33,6 +43,7 @@ export function sourceLine(source: Source, table: RecycleTable, status: StatusRe
   const retention = status?.audit.retentionDays ?? null;
   const notes = ["Only audited fields that had a value can be recovered."];
   if (status?.bin.state === "unavailable" && status.bin.reason) notes.push(`Recycle bin: ${status.bin.reason}`);
+  else if (table.binEnabled) notes.push("Records that are still in the recycle bin are skipped when restoring.");
   else if (status?.bin.state === "enabled") notes.push("This table is not in the recycle bin.");
   else notes.push("The recycle bin is off in this environment.");
   return {

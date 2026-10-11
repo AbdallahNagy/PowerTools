@@ -26,6 +26,7 @@ const FALLBACK = "The record could not be restored.";
 /** The Detail column text for one restore result. */
 export function restoreDetail(result: RestoreResult): string {
   if (result.status === "restored") return result.warning ?? "";
+  if (result.status === "alreadyRestored") return "This record already exists. An earlier attempt restored it.";
   if (result.code === "PluginError") {
     return result.message ? `A plug-in stopped the restore: ${result.message}` : FALLBACK;
   }

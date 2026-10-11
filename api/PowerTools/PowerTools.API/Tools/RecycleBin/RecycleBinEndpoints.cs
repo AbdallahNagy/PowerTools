@@ -53,6 +53,14 @@ public static class RecycleBinEndpoints
             CancellationToken ct) =>
             ToHttp(await Service(ctx, factory, delay).GetRecordAsync(table, id, source, auditId, ct)));
 
+        group.MapPost("/bin-check", async (
+            BinCheckBody body,
+            HttpContext ctx,
+            DataverseClientFactory factory,
+            IRecycleBinDelay delay,
+            CancellationToken ct) =>
+            ToHttp(await Service(ctx, factory, delay).CheckBinAsync(body, ct)));
+
         group.MapPost("/restore", async (
             RestoreBody body,
             HttpContext ctx,

@@ -552,6 +552,109 @@ public sealed class RecycleBinServiceTests
         Assert.Equal("TooManyItems", result.Problem!.Code);
     }
 
+    // ── Bin check and retries ────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Bin_check_returns_the_records_still_in_the_bin()
+    {
+        var client = new FakeRecycleBinClient
+        {
+            OnExecute = _ => EntityResponse(Table("account", "Account")),
+            OnRetrieve = _ => new EntityCollection([new Entity("account", RecordB)]),
+        };
+
+        var result = await Service(client).CheckBinAsync(
+            new BinCheckBody("account", [RecordA.ToString(), RecordB.ToString()]),
+            CancellationToken.None);
+
+        Assert.Equal([RecordB.ToString("D")], result.Value!.InBin);
+        var fetch = client.Fetches.Single();
+        Assert.Equal("bin", fetch.Attribute("datasource")!.Value);
+        var condition = fetch.Descendants("condition").Single();
+        Assert.Equal("in", condition.Attribute("operator")!.Value);
+        Assert.Equal(2, condition.Elements("value").Count());
+    }
+
+    [Fact]
+    public async Task Bin_check_is_refused_on_premises_and_for_too_many_ids()
+    {
+        var onPremises = await Service(new FakeRecycleBinClient(), online: false).CheckBinAsync(
+            new BinCheckBody("account", [RecordA.ToString()]),
+            CancellationToken.None);
+        Assert.Equal("BinUnavailable", onPremises.Problem!.Code);
+
+        var ids = Enumerable.Range(0, 101).Select(_ => Guid.NewGuid().ToString()).ToList();
+        var tooMany = await Service(new FakeRecycleBinClient()).CheckBinAsync(new BinCheckBody("account", ids), CancellationToken.None);
+        Assert.Equal("TooManyItems", tooMany.Problem!.Code);
+    }
+
+    [Fact]
+    public async Task Bin_retry_of_a_record_that_exists_again_is_already_restored()
+    {
+        var client = new FakeRecycleBinClient
+        {
+            OnExecute = request => request is RetrieveEntityRequest
+                ? EntityResponse(Table("account", "Account"))
+                : throw new InvalidOperationException("Restore must not run"),
+            OnRetrieve = query => query is QueryExpression { EntityName: "account" }
+                ? new EntityCollection([new Entity("account", RecordA)])
+                : new EntityCollection(),
+        };
+
+        var result = await Service(client).RestoreAsync(
+            new RestoreBody("bin", [new("account", RecordA.ToString(), null, true)]),
+            CancellationToken.None);
+
+        var outcome = Assert.Single(result.Value!.Results);
+        Assert.Equal(RestoreStatuses.AlreadyRestored, outcome.Status);
+        Assert.DoesNotContain(client.Requests, request => request.RequestName == "Restore");
+        var live = Assert.IsType<QueryExpression>(client.Queries.Single());
+        Assert.Equal("accountid", live.Criteria.Conditions.Single().AttributeName);
+    }
+
+    [Fact]
+    public async Task A_duplicate_fault_is_already_restored_only_on_a_retry()
+    {
+        FakeRecycleBinClient DuplicateClient() => new()
+        {
+            OnExecute = request => request is RetrieveEntityRequest
+                ? EntityResponse(Table("account", "Account"))
+                : throw Fault(RecycleBinFaults.DuplicateExceptionRestoreRecycleBin),
+        };
+
+        var first = await Service(DuplicateClient()).RestoreAsync(
+            new RestoreBody("bin", [new("account", RecordA.ToString(), null)]),
+            CancellationToken.None);
+        var retry = await Service(DuplicateClient()).RestoreAsync(
+            new RestoreBody("bin", [new("account", RecordA.ToString(), null, true)]),
+            CancellationToken.None);
+
+        Assert.Equal("failed", Assert.Single(first.Value!.Results).Status);
+        Assert.Equal(RestoreStatuses.AlreadyRestored, Assert.Single(retry.Value!.Results).Status);
+    }
+
+    [Fact]
+    public async Task A_duplicate_after_a_throttled_attempt_is_already_restored()
+    {
+        var attempts = 0;
+        var client = new FakeRecycleBinClient
+        {
+            OnExecute = _ =>
+            {
+                attempts++;
+                throw attempts == 1
+                    ? Fault(RecycleBinFaults.ConcurrencyLimitExceeded, retryAfter: "00:00:01")
+                    : Fault(RecycleBinFaults.DuplicateExceptionRestoreRecycleBin);
+            },
+        };
+
+        var result = await Service(client).RestoreAsync(
+            new RestoreBody("bin", [new("account", RecordA.ToString(), null)]),
+            CancellationToken.None);
+
+        Assert.Equal(RestoreStatuses.AlreadyRestored, Assert.Single(result.Value!.Results).Status);
+    }
+
     // ── Restore from the audit log ───────────────────────────────────────────
 
     private static EntityMetadata AccountWithColumns(bool activity = false, string name = "account") =>
@@ -719,6 +822,22 @@ public sealed class RecycleBinServiceTests
         var outcome = Assert.Single(result.Value!.Results);
         Assert.Equal("skipped", outcome.Status);
         Assert.Equal(RecycleBinFaults.InRecycleBinCode, outcome.Code);
+        Assert.Empty(client.Requests.OfType<CreateRequest>());
+    }
+
+    [Fact]
+    public async Task Audit_retry_of_a_record_that_exists_again_is_already_restored()
+    {
+        var client = AuditRestoreClient(AccountWithColumns(), new Entity("account", RecordA) { ["name"] = "Contoso" });
+        client.OnRetrieve = query => query is QueryExpression { EntityName: "account" }
+            ? new EntityCollection([new Entity("account", RecordA)])
+            : new EntityCollection();
+
+        var result = await Service(client, online: false).RestoreAsync(
+            new RestoreBody("audit", [new("account", RecordA.ToString(), AuditA.ToString(), true)]),
+            CancellationToken.None);
+
+        Assert.Equal(RestoreStatuses.AlreadyRestored, Assert.Single(result.Value!.Results).Status);
         Assert.Empty(client.Requests.OfType<CreateRequest>());
     }
 

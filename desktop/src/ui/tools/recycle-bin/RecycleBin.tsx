@@ -5,6 +5,7 @@ import { useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { Alert, Button, EmptyState, Spinner, ToastProvider, useToast } from "../../shared/ui";
 import {
+  checkBin,
   restoreRecords,
   useAttributes,
   useDeletedRecords,
@@ -21,15 +22,28 @@ import { SourceLine } from "./components/SourceLine";
 import { defaultRange, isRangeValid } from "./model/dates";
 import { isPermissionError, readErrorText, restoreDetail, toRecycleBinError } from "./model/faults";
 import {
+  BIN_CHECK_SIZE,
   chunk,
   latestDeletions,
+  LEFT_BIN_DETAIL,
+  leftTheBin,
   orderForRestore,
   repeatedRecordCount,
+  RESTORE_CHUNK_SIZE,
   toRestoreItem,
 } from "./model/restoreBatches";
-import { sourceFor, sourceLine } from "./model/sourceChoice";
+import { availableSources, sourceFor, sourceLine } from "./model/sourceChoice";
 import type { AppliedSearch, DeletedRecord, RestoreEntry, RestoreStatus, Source } from "./model/types";
-import { displayName, nextSort, plural, restoreSummary, sortRecords, type RecordSortKey, type SortState } from "./model/view";
+import {
+  displayName,
+  nextSort,
+  plural,
+  restoreSummary,
+  sortRecords,
+  summaryText,
+  type RecordSortKey,
+  type SortState,
+} from "./model/view";
 
 export default function RecycleBin() {
   return (
@@ -48,11 +62,32 @@ function RecycleBinTool() {
 interface RestoreRun {
   source: Source;
   tableName: string;
+  tableLogicalName: string;
   rows: DeletedRecord[];
+  /** Older deletions of the same records, left out of the run. */
+  leftOut: string[];
   repeated: number;
   phase: RestorePhase;
   entries: RestoreEntry[];
   stopping: boolean;
+}
+
+/** Rows still waiting that are no longer in the recycle bin. A failed check leaves them all waiting. */
+async function recordsThatLeftTheBin(
+  connectionName: string,
+  table: string,
+  waiting: DeletedRecord[],
+): Promise<DeletedRecord[]> {
+  const gone: DeletedRecord[] = [];
+  for (const part of chunk(waiting, BIN_CHECK_SIZE)) {
+    try {
+      const response = await checkBin(connectionName, table, part.map((row) => row.recordId));
+      gone.push(...leftTheBin(part, response.inBin));
+    } catch {
+      // Without an answer, the records are restored as planned and the server reports what happens.
+    }
+  }
+  return gone;
 }
 
 function NoEnvironment() {
@@ -69,6 +104,7 @@ function RecycleBinPage({ connectionName }: { connectionName: string | null }) {
   const initialRange = useMemo(() => defaultRange(), []);
 
   const [table, setTable] = useState("");
+  const [preferredSource, setPreferredSource] = useState<Source>("bin");
   const [from, setFrom] = useState(initialRange.from);
   const [to, setTo] = useState(initialRange.to);
   const [deletedBy, setDeletedBy] = useState("");
@@ -90,7 +126,8 @@ function RecycleBinPage({ connectionName }: { connectionName: string | null }) {
     [usersQuery.data],
   );
   const chosenTable = tables.find((item) => item.logicalName === table) ?? null;
-  const source = sourceFor(chosenTable);
+  const sources = availableSources(chosenTable);
+  const source = sourceFor(chosenTable, preferredSource);
 
   const appliedTable = tables.find((item) => item.logicalName === applied?.table) ?? null;
   const deletedQuery = useDeletedRecords(connectionName, applied);
@@ -155,10 +192,13 @@ function RecycleBinPage({ connectionName }: { connectionName: string | null }) {
     const chosen = rows.filter((row) => row.hasValues && checked.has(row.key));
     const repeated = repeatedRecordCount(chosen);
     const latest = latestDeletions(chosen).rows;
+    const kept = new Set(latest.map((row) => row.key));
     setRun({
       source: applied.source,
       tableName: appliedTable.displayName || appliedTable.logicalName,
+      tableLogicalName: appliedTable.logicalName,
       rows: orderForRestore(applied.source, latest),
+      leftOut: chosen.filter((row) => !kept.has(row.key)).map((row) => row.key),
       repeated,
       phase: "confirm",
       entries: [],
@@ -172,10 +212,20 @@ function RecycleBinPage({ connectionName }: { connectionName: string | null }) {
     stopRequested.current = false;
     setRun({ ...current, phase: "running" });
     const entries: RestoreEntry[] = [];
-    for (const batch of chunk(current.rows)) {
+    const queue = [...current.rows];
+    const publish = () => {
+      const snapshot = [...entries];
+      setRun((existing) => (existing ? { ...existing, entries: snapshot } : existing));
+    };
+    while (queue.length > 0) {
       if (stopRequested.current) break;
+      const batch = queue.splice(0, RESTORE_CHUNK_SIZE);
       try {
-        const response = await restoreRecords(connectionName, current.source, batch.map(toRestoreItem));
+        const response = await restoreRecords(
+          connectionName,
+          current.source,
+          batch.map((row) => toRestoreItem(row, results.get(row.key) === "failed")),
+        );
         batch.forEach((row, index) => {
           const result = response.results[index];
           entries.push(
@@ -188,8 +238,21 @@ function RecycleBinPage({ connectionName }: { connectionName: string | null }) {
         const message = toRecycleBinError(error).message;
         for (const row of batch) entries.push({ key: row.key, name: displayName(row), status: "failed", detail: message });
       }
-      const snapshot = [...entries];
-      setRun((existing) => (existing ? { ...existing, entries: snapshot } : existing));
+      publish();
+
+      // One restore can bring back other records (cascade), so re-check the bin for the records still waiting.
+      if (current.source === "bin" && queue.length > 0 && !stopRequested.current) {
+        const gone = await recordsThatLeftTheBin(connectionName, current.tableLogicalName, queue);
+        if (gone.length > 0) {
+          const goneKeys = new Set(gone.map((row) => row.key));
+          for (const row of gone) {
+            entries.push({ key: row.key, name: displayName(row), status: "alreadyRestored", detail: LEFT_BIN_DETAIL });
+          }
+          const waiting = queue.filter((row) => !goneKeys.has(row.key));
+          queue.splice(0, queue.length, ...waiting);
+          publish();
+        }
+      }
     }
     setRun((existing) => (existing ? { ...existing, phase: "done", stopping: false } : existing));
   };
@@ -205,9 +268,10 @@ function RecycleBinPage({ connectionName }: { connectionName: string | null }) {
     setChecked((current) => {
       const next = new Set(current);
       for (const entry of run.entries) if (entry.status !== "failed") next.delete(entry.key);
+      for (const key of run.leftOut) next.delete(key);
       return next;
     });
-    setRestoreStatus(`${summary.restored} restored, ${summary.failed} failed`);
+    setRestoreStatus(summaryText({ ...summary, skipped: 0 }));
     if (summary.failed > 0) {
       showToast(`${summary.failed} of ${run.rows.length} records could not be restored.`, "error");
     } else if (run.entries.length > 0) {
@@ -222,7 +286,10 @@ function RecycleBinPage({ connectionName }: { connectionName: string | null }) {
       loading={!!connectionName && listsLoading}
       tables={tables}
       table={table}
-      onTableChange={setTable}
+      onTableChange={(next) => {
+        setTable(next);
+        setPreferredSource("bin");
+      }}
       source={source}
       from={from}
       to={to}
@@ -374,7 +441,12 @@ function RecycleBinPage({ connectionName }: { connectionName: string | null }) {
     <div className="flex h-full min-h-0 flex-col bg-canvas">
       {filterBar}
       {chosenTable && source && connectionName ? (
-        <SourceLine line={sourceLine(source, chosenTable, statusQuery.data)} />
+        <SourceLine
+          line={sourceLine(source, chosenTable, statusQuery.data)}
+          sources={sources}
+          source={source}
+          onSourceChange={setPreferredSource}
+        />
       ) : null}
       {content}
       {run ? (

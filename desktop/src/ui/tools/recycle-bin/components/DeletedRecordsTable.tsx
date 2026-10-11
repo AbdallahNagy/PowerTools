@@ -9,6 +9,7 @@ const resultBadge: Record<RestoreStatus, { tone: "ok" | "danger" | "neutral"; la
   restored: { tone: "ok", label: "Restored" },
   failed: { tone: "danger", label: "Failed" },
   skipped: { tone: "neutral", label: "Skipped" },
+  alreadyRestored: { tone: "ok", label: "Already restored" },
 };
 
 interface DeletedRecordsTableProps {

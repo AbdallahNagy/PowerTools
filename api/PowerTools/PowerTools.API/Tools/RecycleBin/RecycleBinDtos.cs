@@ -20,6 +20,7 @@ public static class RestoreStatuses
     public const string Restored = "restored";
     public const string Failed = "failed";
     public const string Skipped = "skipped";
+    public const string AlreadyRestored = "alreadyRestored";
 }
 
 /// <summary>State of one source: enabled, disabled, or unavailable with a reason (privilege, on-premises).</summary>
@@ -80,7 +81,11 @@ public sealed record FieldDto(string LogicalName, string Kind, string? Value, st
 
 public sealed record RecordResponse(IReadOnlyList<FieldDto> Fields);
 
-public sealed record RestoreItem(string? Table, string? RecordId, string? AuditId);
+/// <summary>
+/// One record to restore. <c>Retry</c> marks a record an earlier run already tried: the sidecar then checks
+/// whether it exists before restoring it, and reports a duplicate fault as already restored.
+/// </summary>
+public sealed record RestoreItem(string? Table, string? RecordId, string? AuditId, bool? Retry = null);
 
 public sealed record RestoreBody(string? Source, IReadOnlyList<RestoreItem>? Items);
 
@@ -94,3 +99,8 @@ public sealed record RestoreResultDto(
     string? Warning);
 
 public sealed record RestoreResponse(IReadOnlyList<RestoreResultDto> Results);
+
+public sealed record BinCheckBody(string? Table, IReadOnlyList<string>? RecordIds);
+
+/// <summary>The given record ids that are still in the recycle bin.</summary>
+public sealed record BinCheckResponse(IReadOnlyList<string> InBin);

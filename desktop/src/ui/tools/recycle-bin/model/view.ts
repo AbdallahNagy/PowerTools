@@ -47,10 +47,27 @@ export function displayName(row: DeletedRecord): string {
   return row.name?.trim() || "(No name)";
 }
 
-export function restoreSummary(entries: RestoreEntry[]): { restored: number; failed: number; skipped: number } {
+export interface RestoreSummary {
+  restored: number;
+  failed: number;
+  skipped: number;
+  alreadyRestored: number;
+}
+
+export function restoreSummary(entries: RestoreEntry[]): RestoreSummary {
+  const count = (status: RestoreEntry["status"]) => entries.filter((entry) => entry.status === status).length;
   return {
-    restored: entries.filter((entry) => entry.status === "restored").length,
-    failed: entries.filter((entry) => entry.status === "failed").length,
-    skipped: entries.filter((entry) => entry.status === "skipped").length,
+    restored: count("restored"),
+    failed: count("failed"),
+    skipped: count("skipped"),
+    alreadyRestored: count("alreadyRestored"),
   };
+}
+
+/** "{r} restored, {f} failed", plus already restored and skipped counts when there are any. */
+export function summaryText(summary: RestoreSummary): string {
+  const parts = [`${summary.restored} restored`, `${summary.failed} failed`];
+  if (summary.alreadyRestored > 0) parts.push(`${summary.alreadyRestored} already restored`);
+  if (summary.skipped > 0) parts.push(`${summary.skipped} skipped`);
+  return parts.join(", ");
 }

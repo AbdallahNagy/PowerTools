@@ -9,6 +9,7 @@ import { recycleBinTool } from "../../tool";
 import type { DeletedBody, RestoreItem, RestoreResult } from "../../model/types";
 import {
   alphaValues,
+  binAccount,
   auditPageFixture,
   auditSecondPageFixture,
   binPageFixture,
@@ -279,6 +280,119 @@ describe("Recycle Bin", () => {
     const alphaRows = screen.getAllByRole("checkbox", { name: "Select Alpha" });
     expect(alphaRows.map((box) => within(box.closest("tr")!).queryByText("Restored") !== null)).toContain(true);
     expect(statuses()).toHaveTextContent("1 restored, 1 failed");
+
+    // Retrying the failed row tells the sidecar it is a retry; a record that came back is "Already restored".
+    httpServer.use(http.post(`${base}/restore`, async ({ request }) => {
+      const body = (await request.json()) as { items: RestoreItem[] };
+      restored.push(body.items);
+      return HttpResponse.json({
+        results: body.items.map((item) => ({
+          ...item,
+          status: "alreadyRestored",
+          code: null,
+          message: "Already restored",
+          warning: null,
+        })),
+      });
+    }));
+    fireEvent.click(screen.getByRole("button", { name: "Restore (1)" }));
+    const retryDialog = await screen.findByRole("dialog", { name: "Restore deleted records" });
+    fireEvent.click(within(retryDialog).getByRole("button", { name: "Restore 1 records" }));
+    expect(await within(retryDialog).findByText("0 restored, 0 failed, 1 already restored")).toBeInTheDocument();
+    expect(restored[1]).toEqual([
+      { table: "new_project", recordId: projectBeta.recordId, auditId: projectBeta.auditId, retry: true },
+    ]);
+    fireEvent.click(within(retryDialog).getByRole("button", { name: "Done" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(within(rowFor("Beta")).getByText("Already restored")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Select Beta" })).not.toBeChecked();
+  });
+
+  it("switches a table that is in the recycle bin to the audit log", async () => {
+    const bodies: DeletedBody[] = [];
+    httpServer.use(http.post(`${base}/deleted`, async ({ request }) => {
+      bodies.push((await request.json()) as DeletedBody);
+      return HttpResponse.json({ ...auditPageFixture, moreRecords: false });
+    }));
+    renderTool();
+    await chooseTable("account");
+
+    const binButton = screen.getByRole("button", { name: "Recycle bin" });
+    const auditButton = screen.getByRole("button", { name: "Audit log" });
+    expect(binButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.queryByLabelText("From")).not.toBeInTheDocument();
+
+    fireEvent.click(auditButton);
+    expect(auditButton).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByLabelText("Source")).toHaveTextContent("Audit log, keeps entries 90 days");
+    expect(screen.getByLabelText("Source")).toHaveTextContent(
+      "Records that are still in the recycle bin are skipped when restoring.",
+    );
+    expect(screen.getByLabelText("From")).toBeInTheDocument();
+    expect(screen.getByLabelText("Deleted by")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Find deleted records" }));
+    await screen.findByRole("heading", { name: "Deleted Account" });
+    expect(bodies[0]).toMatchObject({ source: "audit", table: "account" });
+    expect(bodies[0]!.fromUtc).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Find deleted records" }));
+    await waitFor(() => expect(bodies).toHaveLength(2));
+    await screen.findByRole("heading", { name: "Deleted Account" });
+    expect(screen.queryByText("Filters changed. Find again to update the list.")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Recycle bin" }));
+    expect(screen.getByText("Filters changed. Find again to update the list.")).toBeInTheDocument();
+
+    // A table with only one source shows no switch, and choosing a table goes back to the recycle bin.
+    await chooseTable("new_project");
+    expect(screen.queryByRole("button", { name: "Recycle bin" })).not.toBeInTheDocument();
+    await chooseTable("account");
+    expect(screen.getByRole("button", { name: "Recycle bin" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("re-checks the recycle bin between chunks and skips records that already came back", async () => {
+    const records = Array.from({ length: 30 }, (_, index) => {
+      const id = `33333333-0000-0000-0000-${String(index).padStart(12, "0")}`;
+      return { ...binAccount, key: id, recordId: id, name: `Account ${String(index).padStart(2, "0")}` };
+    });
+    const restoreCalls: RestoreItem[][] = [];
+    const checks: string[][] = [];
+    httpServer.use(
+      http.post(`${base}/deleted`, () => HttpResponse.json({ ...binPageFixture, records })),
+      http.post(`${base}/restore`, async ({ request }) => {
+        const body = (await request.json()) as { source: string; items: RestoreItem[] };
+        expect(body.source).toBe("bin");
+        restoreCalls.push(body.items);
+        return HttpResponse.json({
+          results: body.items.map((item) => ({ ...item, status: "restored", code: null, message: null, warning: null })),
+        });
+      }),
+      http.post(`${base}/bin-check`, async ({ request }) => {
+        const body = (await request.json()) as { table: string; recordIds: string[] };
+        expect(body.table).toBe("account");
+        checks.push(body.recordIds);
+        // Records 25 and 26 came back with an earlier restore (cascade).
+        return HttpResponse.json({ inBin: body.recordIds.filter((id) => !id.endsWith("25") && !id.endsWith("26")) });
+      }),
+    );
+    renderTool();
+    await chooseTable("account");
+    fireEvent.click(screen.getByRole("button", { name: "Find deleted records" }));
+    await screen.findByText("30 records");
+    fireEvent.click(screen.getByRole("button", { name: /^Name/ }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select all records" }));
+    fireEvent.click(screen.getByRole("button", { name: "Restore (30)" }));
+    const dialog = await screen.findByRole("dialog", { name: "Restore deleted records" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Restore 30 records" }));
+
+    expect(await within(dialog).findByText("28 restored, 0 failed, 2 already restored")).toBeInTheDocument();
+    expect(restoreCalls.map((items) => items.length)).toEqual([25, 3]);
+    expect(checks).toEqual([records.slice(25).map((row) => row.recordId)]);
+    expect(within(dialog).getAllByText("Already restored")).toHaveLength(2);
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Done" }));
+    expect(await screen.findByText("28 records restored.")).toBeInTheDocument();
+    expect(within(rowFor("Account 25")).getByText("Already restored")).toBeInTheDocument();
   });
 
   it("shows a permission message without Try again when audit history cannot be read", async () => {

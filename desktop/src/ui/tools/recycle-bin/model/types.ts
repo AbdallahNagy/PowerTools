@@ -103,12 +103,18 @@ export interface AttributeInfo {
   optionSet?: { value: number | null; label: string }[] | null;
 }
 
-export type RestoreStatus = "restored" | "failed" | "skipped";
+export type RestoreStatus = "restored" | "failed" | "skipped" | "alreadyRestored";
 
 export interface RestoreItem {
   table: string;
   recordId: string;
   auditId: string | null;
+  /** An earlier run in this tab tried this record: the sidecar checks whether it already came back. */
+  retry?: boolean;
+}
+
+export interface BinCheckResponse {
+  inBin: string[];
 }
 
 export interface RestoreResult {

@@ -491,6 +491,48 @@ public sealed partial class RecycleBinService(IRecycleBinClient client, IRecycle
         }
     }
 
+    // ── Bin check ────────────────────────────────────────────────────────────
+
+    /// <summary>Which of the given records are still in the recycle bin. Used between restore chunks.</summary>
+    public async Task<RecycleBinResult<BinCheckResponse>> CheckBinAsync(BinCheckBody? body, CancellationToken cancellationToken)
+    {
+        if (body is null || !IsLogicalName(body.Table))
+            return Fail<BinCheckResponse>(RecycleBinFaults.BadRequest("TableRequired", "Choose a table."));
+        var raw = body.RecordIds ?? [];
+        if (raw.Count > MaxRestoreItems)
+        {
+            return Fail<BinCheckResponse>(RecycleBinFaults.BadRequest(
+                "TooManyItems",
+                $"Send at most {MaxRestoreItems} records per request."));
+        }
+        var ids = new List<Guid>(raw.Count);
+        foreach (var value in raw)
+        {
+            if (!Guid.TryParse(value, out var id))
+                return Fail<BinCheckResponse>(RecycleBinFaults.BadRequest("InvalidRecord", "A record id is not valid."));
+            ids.Add(id);
+        }
+        if (!online)
+            return Fail<BinCheckResponse>(BinUnavailable());
+        if (ids.Count == 0)
+            return RecycleBinResult<BinCheckResponse>.Ok(new BinCheckResponse([]));
+
+        try
+        {
+            var metadata = await TableMetadataAsync(body.Table!, EntityFilters.Entity, cancellationToken);
+            var rows = await client.RetrieveMultipleAsync(
+                RecycleBinQueries.BinContainsAny(body.Table!, metadata.PrimaryIdAttribute, ids),
+                cancellationToken);
+            var found = rows.Entities.Select(row => RecordId(row, metadata.PrimaryIdAttribute)).ToHashSet();
+            return RecycleBinResult<BinCheckResponse>.Ok(new BinCheckResponse(
+                ids.Where(found.Contains).Select(id => id.ToString("D")).ToList()));
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return Fail<BinCheckResponse>(RecycleBinFaults.From(ex));
+        }
+    }
+
     // ── Restore ──────────────────────────────────────────────────────────────
 
     public async Task<RecycleBinResult<RestoreResponse>> RestoreAsync(RestoreBody? body, CancellationToken cancellationToken)
@@ -532,22 +574,34 @@ public sealed partial class RecycleBinService(IRecycleBinClient client, IRecycle
         CancellationToken cancellationToken)
     {
         var results = new List<RestoreResultDto>(items.Count);
+        var primaryIds = new Dictionary<string, string>(StringComparer.Ordinal);
         foreach (var item in items)
         {
             cancellationToken.ThrowIfCancellationRequested();
             var id = Guid.Parse(item.RecordId!);
+            var retried = item.Retry == true;
             try
             {
+                if (retried && await ExistsAsync(item.Table!, id, primaryIds, cancellationToken))
+                {
+                    results.Add(AlreadyRestored(item));
+                    continue;
+                }
+
                 var request = new OrganizationRequest(RestoreMessage)
                 {
                     Parameters = { ["Target"] = new Entity(item.Table!, id) },
                 };
-                await WithRetryAsync(() => client.ExecuteAsync(request, cancellationToken), cancellationToken);
+                await WithRetryAsync(
+                    () => client.ExecuteAsync(request, cancellationToken),
+                    cancellationToken,
+                    () => retried = true);
                 results.Add(Restored(item, null));
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                results.Add(Failed(item, RecycleBinFaults.ForRestore(ex, RecycleBinSources.Bin)));
+                var fault = RecycleBinFaults.ForRestore(ex, RecycleBinSources.Bin);
+                results.Add(retried && fault.Code == RecycleBinFaults.DuplicateCode ? AlreadyRestored(item) : Failed(item, fault));
             }
         }
 
@@ -596,8 +650,15 @@ public sealed partial class RecycleBinService(IRecycleBinClient client, IRecycle
                 continue;
             }
 
+            var retried = item.Retry == true;
             try
             {
+                if (retried && await LiveExistsAsync(tableMetadata.LogicalName, tableMetadata.PrimaryIdAttribute, id, cancellationToken))
+                {
+                    results.Add(AlreadyRestored(item));
+                    continue;
+                }
+
                 if (ready.ContainsKey(table) && await InBinAsync(tableMetadata, id, cancellationToken))
                 {
                     results.Add(new RestoreResultDto(
@@ -626,7 +687,8 @@ public sealed partial class RecycleBinService(IRecycleBinClient client, IRecycle
                 var plan = PlanAuditCreate(tableMetadata, id, oldValue);
                 await WithRetryAsync(
                     () => client.ExecuteAsync(new CreateRequest { Target = plan.Record }, cancellationToken),
-                    cancellationToken);
+                    cancellationToken,
+                    () => retried = true);
 
                 var warnings = new List<string>();
                 if (tableMetadata.IsActivity == true)
@@ -638,11 +700,34 @@ public sealed partial class RecycleBinService(IRecycleBinClient client, IRecycle
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                results.Add(Failed(item, RecycleBinFaults.ForRestore(ex, RecycleBinSources.Audit)));
+                var fault = RecycleBinFaults.ForRestore(ex, RecycleBinSources.Audit);
+                results.Add(retried && fault.Code == RecycleBinFaults.DuplicateCode ? AlreadyRestored(item) : Failed(item, fault));
             }
         }
 
         return results;
+    }
+
+    /// <summary>Whether the record exists in its table again, looking up the table's primary id once per call.</summary>
+    private async Task<bool> ExistsAsync(
+        string table,
+        Guid id,
+        Dictionary<string, string> primaryIds,
+        CancellationToken cancellationToken)
+    {
+        if (!primaryIds.TryGetValue(table, out var primaryId))
+        {
+            primaryId = (await TableMetadataAsync(table, EntityFilters.Entity, cancellationToken)).PrimaryIdAttribute;
+            primaryIds[table] = primaryId;
+        }
+
+        return await LiveExistsAsync(table, primaryId, id, cancellationToken);
+    }
+
+    private async Task<bool> LiveExistsAsync(string table, string primaryId, Guid id, CancellationToken cancellationToken)
+    {
+        var rows = await client.RetrieveMultipleAsync(RecycleBinQueries.LiveRecord(table, primaryId, id), cancellationToken);
+        return rows.Entities.Count > 0;
     }
 
     private async Task<bool> InBinAsync(EntityMetadata table, Guid id, CancellationToken cancellationToken)
@@ -736,7 +821,7 @@ public sealed partial class RecycleBinService(IRecycleBinClient client, IRecycle
     }
 
     /// <summary>Retries after service protection faults, waiting for Retry-After, instead of failing the record.</summary>
-    private async Task<T> WithRetryAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken)
+    private async Task<T> WithRetryAsync<T>(Func<Task<T>> action, CancellationToken cancellationToken, Action? onRetry = null)
     {
         for (var attempt = 1; ; attempt++)
         {
@@ -748,6 +833,7 @@ public sealed partial class RecycleBinService(IRecycleBinClient client, IRecycle
             {
                 var wait = RecycleBinFaults.RetryAfter(ex) ?? TimeSpan.FromSeconds(5 * attempt);
                 await delay.WaitAsync(wait, cancellationToken);
+                onRetry?.Invoke();
             }
         }
     }
@@ -777,6 +863,9 @@ public sealed partial class RecycleBinService(IRecycleBinClient client, IRecycle
 
     private static RestoreResultDto Restored(RestoreItem item, string? warning) =>
         new(item.Table!, item.RecordId!, item.AuditId, RestoreStatuses.Restored, null, null, warning);
+
+    private static RestoreResultDto AlreadyRestored(RestoreItem item) =>
+        new(item.Table!, item.RecordId!, item.AuditId, RestoreStatuses.AlreadyRestored, null, "Already restored", null);
 
     private static RestoreResultDto Failed(RestoreItem item, RestoreFault fault) =>
         new(item.Table!, item.RecordId!, item.AuditId, RestoreStatuses.Failed, fault.Code, fault.Message, null);

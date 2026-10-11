@@ -4,6 +4,7 @@ import { dayEndUtc, dayStartUtc } from "../model/dates";
 import type {
   AppliedSearch,
   AttributeInfo,
+  BinCheckResponse,
   DeletedBody,
   DeletedRecord,
   DeletedResponse,
@@ -112,6 +113,11 @@ export function useAttributes(connectionName: string | null, table: string | nul
     enabled: !!connectionName && !!table,
     staleTime: METADATA_STALE_MS,
   });
+}
+
+/** Which of these records (at most 100) are still in the recycle bin. */
+export function checkBin(connectionName: string, table: string, recordIds: string[]) {
+  return apiPost<BinCheckResponse>("/api/recycle-bin/bin-check", { table, recordIds }, connection(connectionName));
 }
 
 /** Restores one chunk of records. Never replayed: a replay could restore twice. */
