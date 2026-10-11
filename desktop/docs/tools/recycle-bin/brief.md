@@ -467,8 +467,80 @@ From `desktop/src/ui/shared/ui`: `Toolbar`, `Field`, `Select`, `Input` (`type="d
 - No title-bar menu item, no connection picker in the tab, no `WhoAmI`-style connection test button.
 - Do not copy the WinForms layout of the plugin: no left-docked grid with a property grid under it, no MessageBox prompts, no GitHub or donation links, no plugin icons or plugin copy.
 
+### Implementation notes and test evidence
+
+**Scope built.** The user's answer under `### Open questions` (recycle bin first, audit log as fallback) is implemented with the `### Dataverse review` rules for both sources and the UX from `### UX`, plus the bin-source delta that question describes.
+
+**Sidecar: `api/PowerTools/PowerTools.API/Tools/RecycleBin/`**, registered with `app.MapRecycleBinEndpoints()` and `IRecycleBinDelay` in `Program.cs`. Every route sits behind `DataverseContextFilter` and gets its client from `DataverseClientFactory`. Errors come back as `{ code, message }`, following the SolutionLayers pattern.
+
+- `RecycleBinDtos.cs`, `RecycleBinFaults.cs`, `RecycleBinClient.cs` (`IRecycleBinClient` plus `IRecycleBinDelay`), `RecycleBinQueries.cs` (FetchXML built with `XElement`, so names, ids and paging cookies are escaped), `RecycleBinValues.cs` (field serialization), `RecycleBinService.cs`, `RecycleBinEndpoints.cs`.
+- `GET /api/recycle-bin/status` returns a tri-state per source (`enabled` / `disabled` / `unavailable` with a reason) and the retention days for each.
+  - On an on-premises connection it makes no bin calls.
+  - A privilege fault on `recyclebinconfig` reads as "unavailable", not "off".
+  - Audit retention is read null-safely, so it still works when `auditretentionperiodv2` does not exist.
+- `GET /api/recycle-bin/tables[?source=]` uses `RetrieveAllEntities(EntityFilters.Entity)` and the ready-tables FetchXML.
+  - Each table's effective retention: its own `cleanupintervalindays` when positive, otherwise the organization value.
+  - Display labels are null-safe.
+  - A table counts as audited only when the org switch and the table switch are both on.
+  - Intersect, solution-aware, private, virtual and elastic tables, and a fixed list of solution component tables, are not offered for the audit log.
+- `GET /api/recycle-bin/users[?search=]` includes disabled users and application users; there is no `accessmode` filter.
+- `POST /api/recycle-bin/deleted` lists one page at a time, with a page size of at most 250 and a paging cookie.
+  - Bin: a `datasource='bin'` fetch ordered by primary id. When the table is audited, Deleted On and Deleted By come from the newest `operation = 3` audit row. A bin row's `modifiedon` is never used for this.
+  - Audit: `objecttypecode` by logical name, UTC bounds sent with a `Z`, `<order>` on `createdon` desc then `auditid` desc, and one `ExecuteMultiple` (`ContinueOnError`) of `RetrieveAuditDetails` per page.
+  - Audit rows show `callinguserid` when it differs from `userid`.
+- `GET /api/recycle-bin/records/{table}/{id}?source=&auditId=` returns typed field values: the bin row with `<all-attributes/>`, or the audit `OldValue`. It returns 404 `NotInRecycleBin` when the record has left the bin.
+- `POST /api/recycle-bin/restore` takes at most 100 items. One record's failure never stops the rest.
+  - Bin: `Restore` with a target that holds only the id, one call per record.
+  - Audit: keeps only attributes where `IsValidForCreate` is true, maps `createdon` to `overriddencreatedon` when the table has it, holds back an inactive `statecode`/`statuscode` and sets them with a follow-up `Update`.
+    - `incident`, `opportunity`, `quote`, `salesorder` and `invoice` are restored as active, with a warning.
+    - Activities are restored with a warning that their parties are lost.
+    - A record that is still in a ready bin is `skipped` with `InRecycleBin`.
+  - Faults are matched on the number first and the fault name second. Both documented codes for `DuplicateExceptionRestoreRecycleBin` are accepted.
+  - Service-protection faults wait for `Retry-After` and retry, up to 4 attempts, instead of failing the record.
+- Tests: `api/PowerTools/PowerTools.API.RecycleBin.Tests/` (added to `PowerTools.sln`), 36 xUnit tests against a fake `IRecycleBinClient`.
+
+**Desktop: `desktop/src/ui/tools/recycle-bin/`**
+
+- `tool.ts` sets `allowMultipleInstances: true`. Added once to `registry.tsx` and to `publicCatalog.ts` between Polymorphic Lookup Creator and Solution Components Mover. `desktop/test/toolRegistry.test.ts` now expects the new id.
+- `api/` holds react-query hooks. The list uses `useInfiniteQuery` to drive **Load more**. Field labels and choice labels come from the existing `/api/metadata/entities/{table}/attributes`. Restore uses `noAuthRetry`.
+- `model/` holds the types, fault messages, source choice, date bounds (local calendar days sent as UTC, including the whole To day), field formatting, restore batching and sorting.
+- `components/` holds `FilterBar`, `SourceLine`, `DeletedRecordsTable`, `RecordDetails` and `RestoreDialog`. The layout, empty states, error states, status text and toasts follow `### UX`.
+
+**Where the build differs from the audit-only UX text, because of the scope answer or the Dataverse review**
+
+- The source is chosen per table, with no source switch: the recycle bin when the table is ready in it, otherwise the audit log. The source line under the toolbar names the source and its retention.
+- For the bin source, the From, To and Deleted by filters are hidden, per the Dataverse review: no bin deletion columns are documented.
+- The bin-source details note and restore warning drop the "only audited fields" wording.
+- The tooltip and public description name both sources:
+  - Tooltip: "Find deleted records and restore them from the Dataverse recycle bin or the audit log".
+  - Public description: "Find records deleted from Dataverse tables, see the values they had before deletion, and restore them with the same ID from the recycle bin or the audit log."
+- The empty-tables message mentions the recycle bin too. Loading status reads "Loading tables…".
+- Deleted by lists disabled users as "(name) (disabled)", per the Dataverse review.
+- The restore dialog does not pass `busy` to `Modal`, because the busy overlay would cover **Stop**. Instead the dialog cannot be closed while a run is in progress, and **Stop** finishes the current request.
+- A **Skipped** result badge was added for audit rows that are still in the recycle bin.
+- The client sends 25 records per request. The sidecar accepts at most 100.
+
+**Not built, or left for a live check**
+
+- Nothing re-queries the bin after each chunk. If a record already came back with an earlier restore, the server reports it as "no longer in the recycle bin".
+- A duplicate fault on a retry is not detected as "already restored".
+- There is no opt-in to restore with the caller as owner when the original owner cannot be set.
+- Everything the Dataverse review marks as unverified still needs a check against a live online org and an on-premises org: bin paging, cookies and `<order>`, bin and `Restore` privileges, cascade behavior, and the on-premises `objecttypecode` by logical name.
+
+**Commands run**
+
+- `desktop/`: `npm test` passed (89 files, 515 tests). `npm run lint` passed. `npm run build` passed (only the existing chunk-size warning).
+- `desktop/`: `npm run check` passed: typecheck, lint with 0 warnings, 515 tests, renderer build, and the Playwright smoke test.
+  - The smoke step needs a display and the sidecar's .NET runtime, so it ran as `DOTNET_ROLL_FORWARD=Major xvfb-run -a npm run check`.
+  - Without them it fails with "Missing X server" or a sidecar timeout.
+- `api/PowerTools/`: `dotnet build` succeeded with no warnings in the new files. `dotnet test PowerTools.sln` passed every project, including `PowerTools.API.RecycleBin.Tests` with 36 tests.
+  - The .NET 9 SDK could not be downloaded here (dot.net is blocked by the egress policy), so these ran on the Ubuntu .NET 10 SDK with `DOTNET_ROLL_FORWARD=Major`.
+- No live Dataverse environment was used. Every test runs against fakes: MSW handlers for the renderer, and a fake `IRecycleBinClient` for the sidecar.
+
 ### Open questions
 
 - **Product scope: audit log only, or the native recycle bin too?** `### What it does` describes only the audit-log restore, and the UX above is written to that. The research summary recommends the Dataverse recycle bin (preview) as the better restore path, with the audit log as a fallback. These are two real scopes. If the native recycle bin is in v1, the UX adds one source line under the filter toolbar ("Recycle bin, keeps records {n} days" or "Audit log"), uses the same table, filters, list, details and restore dialog, and drops the "only audited fields" wording for bin records. Decide: audit only (as specified), or recycle bin first with audit fallback.
 
   - **Answer (user, 2026-10-11): recycle bin first, with audit fallback.** v1 includes the native Dataverse recycle bin as the default source when `/status` reports it enabled (online only), and the audit log as the fallback. Apply the bin-source UX delta described in this question (source line under the filter toolbar; no "only audited fields" wording for bin records) and the `### Dataverse review` rules for both sources.
+
+- **Audit log for tables that are in the recycle bin?** A table that is ready in the recycle bin always uses the bin, so records deleted *before* the bin was turned on, which are only in the audit log, cannot be found for that table. Decide: keep it as built (no source switch, as the UX asked), or add a switch on the source line to search the audit log for a bin-enabled table.

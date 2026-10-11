@@ -10,6 +10,7 @@ using PowerTools.API.Tools.Metadata;
 using PowerTools.API.Tools.PluginRegistration;
 using PowerTools.API.Tools.PluginRegistration.Gateway;
 using PowerTools.API.Tools.PolymorphicLookup;
+using PowerTools.API.Tools.RecycleBin;
 using PowerTools.API.Tools.SolutionComponentsMover;
 using PowerTools.API.Tools.SolutionLayers;
 using PowerTools.API.Tools.Translator;
@@ -62,6 +63,7 @@ builder.Services.AddSingleton<IPluginAssemblyInspector, PluginAssemblyInspector>
 builder.Services.AddScoped<AssemblyService>();
 builder.Services.AddScoped<UnregisterService>();
 builder.Services.AddSingleton<ISolutionLayersCache>(_ => new SolutionLayersCache());
+builder.Services.AddSingleton<IRecycleBinDelay, RecycleBinDelay>();
 
 var app = builder.Build();
 
@@ -113,6 +115,7 @@ app.MapSolutionComponentsMoverEndpoints();
 app.MapBulkWorkflowExecutionEndpoints();
 app.MapTranslatorEndpoints();
 app.MapSolutionLayersEndpoints();
+app.MapRecycleBinEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would

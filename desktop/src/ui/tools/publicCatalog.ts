@@ -53,6 +53,12 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
       "Create, update, and delete polymorphic lookups in the selected environment.",
   },
   {
+    id: "recycle-bin",
+    title: "Recycle Bin",
+    description:
+      "Find records deleted from Dataverse tables, see the values they had before deletion, and restore them with the same ID from the recycle bin or the audit log.",
+  },
+  {
     id: "solution-components-mover",
     title: "Solution Components Mover",
     description:
