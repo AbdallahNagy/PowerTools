@@ -241,6 +241,95 @@ Endpoints:
 - [Nishant Rana: Using the Restore Message to Recover Deleted Records in Dataverse](https://nishantrana.me/2026/01/20/using-the-restore-message-to-recover-deleted-records-in-dataverse/)
 - [Rajeev Pentyala: Dataverse restore deleted table records (preview)](https://rajeevpentyala.com/2024/05/06/dataverse-restore-deleted-table-records-preview/)
 
+
+### Dataverse review
+
+**Evidence used.** Microsoft's developer doc `restore-deleted-records.md` (ms.date 2026-01-30) and admin doc `restore-deleted-table-records.md` (ms.date 2026-09-25), from the researcher's scratchpad copies of the MicrosoftDocs repos. The SDK message contracts for `RetrieveMultiple`, `RetrieveAuditDetails`, `ExecuteMultiple`, `Create`, `Update` and the `audit`/`organization` tables come from platform knowledge. The sidecar connection code (`Services/DataverseClientFactory.cs`) shows that Power Tools supports both online (`ServiceClient`) and on-premises (`OnPremiseClient`, SOAP) connections. I had no live environment, so every claim marked "verify live" still needs a test against a real org before it ships.
+
+**Corrections to messages, metadata, paging and batching**
+
+- **Fault code table: one code is wrong.** The developer doc lists `DuplicateExceptionRestoreRecycleBin` as `0x80044a02` with number `-2147182279`. That number is `0x80049939`, and `0x80044a02` would be `-2147202558`. The doc's own example is internally inconsistent. `RecycleBinFaults` must match on the fault **number** (`OrganizationServiceFault.ErrorCode`) and keep the fault **name** as a fallback. Map `-2147182279` (`0x80049939`) and also accept `0x80044a02` in case the doc is right and the number is the typo. Verified numbers: `0x80049959` = -2147182247, `0x80049929` = -2147182295, `0x80049949` = -2147182263.
+- **Retention limit.** The two docs disagree: the developer doc says `CleanupIntervalInDays` accepts up to 30, and the newer admin doc says 1-90 days. Do not hard-code either limit. Show the value read from the `recyclebinconfig` row named `organization`. Per-table rows normally hold `-1`, meaning "use the organization value". A per-table row with a positive value overrides it, so `/tables` should return each table's effective retention and not only the org value.
+- **The environment status check.** `binEnabled` means "a `recyclebinconfig` row with `name = 'organization'` exists". Tables are ready only where `statecode = 0` and `isreadyforrecyclebin = 1`. The setting can be on while the background job "Enable keeping deleted data for Organization" has not finished. In that state the tables are not ready yet, so `binEnabled = true` with zero ready tables is a valid state and is not an error.
+- **Reading `recyclebinconfig` can fail for reasons other than "off".** A privilege fault (`0x80040220`) on that read means "unknown", not "disabled". On-premises the table does not exist and the query fails with an unknown-entity fault. `/status` must return a tri-state per source (`enabled` / `disabled` / `unavailable` with a reason) and must not turn every exception into `false`.
+- **Bin listing.** `datasource='bin'` works on `RetrieveMultiple` with FetchXML or `QueryExpression.DataSource`. Through the Web API only FetchXML works, which does not matter here because the sidecar uses the SDK. Paging cookies, `count`/`page`, `<order>` and the 5,000-row cap on bin queries are **not documented**. Verify live. If paging cookies are rejected, fall back to `top`/keyset paging on the primary id.
+- **Bin "deleted on" and "deleted by".** Nothing in the docs shows bin-specific columns. `modifiedon`/`modifiedby` on a bin row are the last *update* before deletion, not the deletion. They must not be labelled "Deleted on/by". Verify live with `<all-attributes/>` on a bin query. Until that is confirmed, date and user filters for `source=bin` should be omitted. When the table is also audited, the delete time and user can be joined from `audit` (`operation = 3`, `objectid = <id>`).
+- **Cascade semantics.** Bin restore restores records removed by a cascade. The admin doc says cascade-deleted children "can't be restored independently" and that the original record must be restored first. The developer doc says related records that the deletion did *not* remove must be restored before the primary record, or `RefCannotBeRestoredRecycleBinNotFound` follows. So restore order is "referenced parents first, then the record you deleted; cascade children follow it". The brief's "follow the user's order" is acceptable only if the tool re-queries the bin after each restore chunk, because one restore can remove other rows from the bin. Whether cascade children show up in a `datasource='bin'` query on their own table is unverified.
+- **`Restore` request shape.** `Target` is a full `Entity` (logical name and id). Any attributes set on it override the stored values. Power Tools should send only the id. The response is `Results["id"]`. Restore by alternate key is not supported. Whether `Restore` is allowed inside `ExecuteMultiple` is not documented, so one call per record (as the brief says) is the safe choice.
+- **Plug-in pipeline.** Bin restore runs steps registered on the **`Restore`** message, not on `Create`. The docs say `Restore` has Create-like input and output parameters and that the record is not available in PreOperation. Create-step plug-ins, auto-number logic and Create-triggered flows do **not** fire on a bin restore. Audit restore runs the normal `Create` pipeline. The brief's risk line ("run plug-ins and flows on Restore or Create") should be read that way: each path fires its own message's logic.
+- **Audit query: `objecttypecode` by logical name.** `audit.objecttypecode` is an `EntityName` attribute, and the FetchXML condition accepts the logical name. That is better than the plugin's integer OTC because OTCs differ between environments for custom tables. Verify live on both online and on-premises.
+- **Audit query: dates.** The plugin's bug is subtler than "local clock versus UTC". FetchXML date values without an offset are interpreted in the **calling user's Dataverse time zone**, not the machine's or UTC. The sidecar should send ISO 8601 values with an explicit `Z` (for example `2026-10-01T00:00:00Z`) so the bounds are UTC whatever the user's settings.
+- **Audit query: paging.** Add `<order attribute='createdon' descending='true'/>` and use the paging cookie. Adding a second order on `auditid` keeps the cookie stable when timestamps tie. `operation = 3` is Delete (the `action` column also uses 3 for Delete; filter on `operation`, as the plugin does).
+- **`RetrieveAuditDetails` batching.** Batching via `ExecuteMultiple` is correct. The limit is 1,000 requests per batch, so a page of 250 or fewer is fine. Every inner request counts toward service protection limits (6,000 requests per user per 5 minutes, 20 minutes of combined execution time, and 52 concurrent requests). The sidecar must handle `429`/service-protection faults (`-2147015902`, `-2147015903`, `-2147015898`) with `Retry-After`. `ServiceClient` retries some of these itself; `OnPremiseClient` does not, and on-premises has no service protection limits but has its own `ExecuteMultiple` server settings. The old "2 concurrent `ExecuteMultiple` per org" limit is not the binding constraint online; do not run batches in parallel anyway.
+- **What `OldValue` holds for a Delete.** `AttributeAuditDetail.OldValue` holds the audited, non-null attribute values at delete time, and `NewValue` is empty. `EntityReference.Name` is often null in audit data, so the details view must resolve names itself or show the id. `OptionSetValue` needs labels from `RetrieveAttribute`/the existing attributes endpoint. Other detail types (`ShareAuditDetail`, `RelationshipAuditDetail`) can appear for the same record and should be ignored, as the brief says. The audit table also exposes `changedata`, but its format is not a supported contract; do not parse it.
+- **Table list metadata.** `RetrieveAllEntitiesRequest(EntityFilters.Entity)` returns `IsAuditEnabled` (a `BooleanManagedProperty`; read `.Value`). That is the correct lighter call. It still returns every table. `RetrieveMetadataChangesRequest` with a property filter (`LogicalName`, `DisplayName`, `PrimaryIdAttribute`, `PrimaryNameAttribute`, `IsAuditEnabled`) is lighter still and works on-premises 8.x and later. `DisplayName.UserLocalizedLabel` can be null; fall back to `LocalizedLabels[0]`, then the logical name.
+- **Audit availability is three switches, not one.** Org `organization.isauditenabled`, table `IsAuditEnabled`, and attribute `IsAuditEnabled`. Only audited attributes reach `OldValue`. Audit retention is `organization.auditretentionperiodv2` (days, `-1` = forever) online. Admins can also delete audit logs. `/status` should return retention days for audit too, so the UI can say how far back it can look.
+- **Users filter.** Do not filter by `accessmode`. Deletions are often made by application users (flows, integrations, `accessmode = 4` non-interactive), and those must be selectable. Note also that `audit.userid` is the user the operation ran as. When a plug-in or integration impersonates, the real caller is `audit.callinguserid`. Show both when they differ. A cheaper alternative to the 50-user search is to offer the distinct `userid` values from the audit page already loaded.
+
+**Audit-path restore (Create) corrections**
+
+- Filtering on `AttributeMetadata.IsValidForCreate` is correct and required. That removes `createdon`, `modifiedon`, `createdby`, `versionnumber`, calculated and rollup columns, and formula columns. Map `createdon` to `overriddencreatedon` only when the table has that attribute and it is valid for create.
+- Setting the primary id on `Create` is supported. A record with that id already existing raises `DuplicateRecord` (`0x80040237`). A matching alternate key raises `DuplicateRecordEntityKey` (`0x80060892`, verify live).
+- **Do not use the audit path for a record that is also in the bin.** The developer doc says: if you create a record with the same primary key as a bin record, the bin record can no longer be restored until the new one is deleted. And the new one would be lossy. When the table is ready in the bin, the sidecar must check `datasource='bin'` for that id before an audit restore and return `skipped` with a message pointing to the bin source.
+- **State follow-up.** `statecode`/`statuscode` are valid on Create for some tables; rely on `IsValidForCreate`, not a hard-coded strip. Where the follow-up `Update` is needed, note that some tables reject state changes through `Update` and require their own message: `incident` (`CloseIncident`), `opportunity` (`WinOpportunity`/`LoseOpportunity`), `quote`, `salesorder`, `invoice`, and some activities. For those, return `restored` with a warning that the record is active, and do not attempt the special messages.
+- `ownerid` from the audit row: setting another owner on Create needs the **Assign** privilege on the table, and the new owner needs at least read access to the table. If the owner is disabled, Create can fail. Fall back to restoring with the caller as owner only if the user opts in; never silently.
+- Activities: party-list columns (`to`, `from`, `requiredattendees`) and `activityparty` rows are not reliably reconstructable from `OldValue`. Expect activities restored this way to lose parties. Verify live; until then warn on activity tables.
+- Lookups to deleted records fail with `ObjectDoesNotExist` (`0x80040217`). Restore order "oldest deletion first" helps for cascades but is not a guarantee. Report the failure per record.
+- Restored choice values that have since been deleted fail Create with an out-of-range error. Report it per record.
+
+**Privileges and connection requirements**
+
+- Audit listing: **View Audit Summary** (`prvReadAuditSummary`) to query the `audit` table. `RetrieveAuditDetails`: **View Audit History** (`prvReadRecordAuditHistory`). These names are correct. The plugin never checks them. Do not pre-check; map `0x80040220` (`PrivilegeDenied`) to a clear message that names the missing privilege.
+- Audit restore: Create on the table, plus Assign when keeping a different owner, plus Append/AppendTo for lookups.
+- Bin listing and `Restore`: the required privileges are **not documented**. The admin UIs require System Administrator, which does not prove the API does. Verify live with a non-admin user who has Create on the table. Until then, map `PrivilegeDenied` from `Restore` or a bin query per record.
+- Reading `recyclebinconfig` and `organization` needs read on those tables. Most roles have org read; `recyclebinconfig` read may be admin-only. Verify live and treat a denial as "unknown".
+- No impersonation: do not set `CallerId`. Every call runs as the signed-in connection. `WhoAmI` is not needed; `DataverseContextFilter` already validates the connection.
+
+**Online versus on-premises**
+
+- The native recycle bin (`recyclebinconfig`, `datasource='bin'`, `Restore`) exists only in Dataverse online. It is a preview feature. On an `OnPremisesConnectionContext` the sidecar must skip every bin call and report the bin source as unavailable, rather than letting an unknown-entity or unknown-message fault reach the user.
+- The audit path works on both. On-premises audit data lives in the org database with partitions. `auditretentionperiodv2` may not exist on older on-premises versions; read it null-safely.
+- The researcher's statement that the feature is "not available in Teams, trial or default environments" is **not** in either Microsoft doc copy reviewed (neither mentions it). Treat it as unverified. The status check, not the environment type, decides.
+
+**Solution and managed limits**
+
+- Tables that hold solution components are not supported by the bin, along with virtual and elastic tables and tables with more than 600 columns. The admin doc's list as of August 2024 includes `systemuser`, `businessunit`, `role`, `workflow`, `appointment`, `recurringappointmentmaster`, `queue`, `goal` and `position`, among others. Do not use that list; `isreadyforrecyclebin` is the source of truth and changes over time.
+- The audit path must also refuse solution-aware tables (`EntityMetadata.IsSolutionAware` or `IsManaged`-bearing component tables such as `workflow`, `webresource`, `savedquery`, `systemform`). Recreating a solution component through `Create` from audit values bypasses solution layering and can produce an unmanaged copy of something that was managed. Also exclude `IsIntersect` tables (N:N intersect rows cannot be created with `Create`) and `IsActivityParty`-style internal tables. Virtual and elastic tables have no usable audit for this.
+- `IsAuditEnabled` on a managed table can be locked by its managed property `CanModifyAuditSettings`. The tool reads only, so this is a note for the UI copy ("auditing is off for this table and may be locked by its solution"), not a blocker.
+- Deleted records kept in the bin count toward Dataverse storage capacity until purged (admin doc). The UI copy can mention it; the tool does not purge.
+
+**Failure modes**
+
+- Partial success is normal on both paths. Each record gets its own result; one failure never stops the loop. With chunks of about 100 per call, a dropped connection mid-chunk leaves an unknown state for the in-flight record. On retry, a `DuplicateExceptionRestoreRecycleBin` or `DuplicateRecord` for a record the tool itself just restored should be reported as "already restored", not as a failure. Check by retrieving the id first when a retry happens.
+- A record can disappear from the bin between listing and restore (retention cleanup, another user restored it, "Delete all records" purge). `Restore` then fails with an object-not-found fault. Map it to "no longer in the recycle bin".
+- Synchronous plug-ins on `Restore` or `Create` can throw `InvalidPluginExecutionException` (`-2147220891`). Surface the plug-in message per record.
+- Service protection faults (see above) must pause and retry, not mark the record failed.
+- Restore of a record whose owner was deleted or disabled can fail; restore of a record with a removed choice value fails with `PicklistValueOutOfRangeRecycleBin`.
+- Audit rows can exist for records whose table has since been deleted. `RetrieveAuditDetails` then fails; skip the row with a per-row error.
+
+**Plugin claims that are wrong**
+
+- Using the integer `ObjectTypeCode` in the audit filter. Custom table OTCs differ between environments; use the logical name.
+- Treating table `IsAuditEnabled` as enough. The org switch and attribute flags also decide what exists in the log.
+- The NuGet description implies a restore gives back the record. From audit it gives back only audited, non-null, create-valid attributes, without N:N links, notes, files, images or activity parties, and as active.
+- Removing only `statecode`/`statuscode` before `Create`. Every other system column that is not valid for create (`createdon`, `modifiedon`, `versionnumber`, calculated columns) makes `Create` fail or is ignored, depending on the column.
+- Hiding disabled users and the `accessmode = 0` filter. Those exclude real deleters, including application users.
+- Stopping at the first failure; no paging (silent truncation at 5,000 rows); one `RetrieveAuditDetails` round trip per row.
+- The local-date bounds. They are evaluated in the Dataverse user's time zone, which need not match the machine's.
+
+**Plugin and research claims that remain unverified**
+
+- The privileges needed for `datasource='bin'` queries and for `Restore`.
+- Whether bin rows expose a deletion timestamp or deleting user.
+- Whether bin queries support paging cookies, `<order>` and more than 5,000 rows.
+- Whether cascade-deleted children appear in a bin query on their own table, and whether restoring the parent brings them back automatically.
+- Whether `Restore` can run inside `ExecuteMultiple`.
+- The correct code for `DuplicateExceptionRestoreRecycleBin` (`0x80049939` per the documented number, `0x80044a02` per the documented code).
+- "Not available in Teams, trial or default environments."
+- The audit `objecttypecode` logical-name condition on on-premises versions.
+- The fault code for an alternate-key duplicate on `Create` (`0x80060892`).
+- How activity party lists come back from a delete audit record.
+
 ### UX
 
 Written from `### What it does` only: list audited tables, list active users, find Delete audit entries for one table in a date range with an optional user, show each record's name, deletion date and deleting user, inspect the field values the record had before deletion, and restore checked records with the same ID from those values. Anything else is out of v1 (see "What not to build"). Whether the native Dataverse recycle bin is also a source is an open question below; this section does not add screens for it.
