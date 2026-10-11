@@ -2,21 +2,35 @@ import { useEffect, useState } from "react";
 
 import { useConnections } from "../../shared/connections";
 
-interface TabConnectionMenuProps {
+interface TabContextMenuProps {
   x: number;
   y: number;
   connectionName: string | null;
+  /** Show "Change connection". Off for tabs that do not use a connection. */
+  canChangeConnection: boolean;
+  canCloseOthers: boolean;
   onSelect: (connectionName: string) => void;
+  onCloseTab: () => void;
+  onCloseOthers: () => void;
+  onCloseAll: () => void;
   onClose: () => void;
 }
 
-export default function TabConnectionMenu({
+const itemClassName =
+  "w-full px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong disabled:text-fg-muted disabled:hover:bg-transparent";
+
+export default function TabContextMenu({
   x,
   y,
   connectionName,
+  canChangeConnection,
+  canCloseOthers,
   onSelect,
+  onCloseTab,
+  onCloseOthers,
+  onCloseAll,
   onClose,
-}: TabConnectionMenuProps) {
+}: TabContextMenuProps) {
   const { connections, createConnectionWindow } = useConnections();
   const [listing, setListing] = useState(false);
 
@@ -79,14 +93,55 @@ export default function TabConnectionMenu({
           </div>
         </>
       ) : (
-        <button
-          type="button"
-          role="menuitem"
-          className="w-full px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong"
-          onClick={() => setListing(true)}
-        >
-          Change connection
-        </button>
+        <>
+          {canChangeConnection ? (
+            <>
+              <button
+                type="button"
+                role="menuitem"
+                className={itemClassName}
+                onClick={() => setListing(true)}
+              >
+                Change connection
+              </button>
+              <div role="separator" className="my-1 border-t border-line" />
+            </>
+          ) : null}
+          <button
+            type="button"
+            role="menuitem"
+            className={itemClassName}
+            onClick={() => {
+              onCloseTab();
+              onClose();
+            }}
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={!canCloseOthers}
+            className={itemClassName}
+            onClick={() => {
+              onCloseOthers();
+              onClose();
+            }}
+          >
+            Close others
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            className={itemClassName}
+            onClick={() => {
+              onCloseAll();
+              onClose();
+            }}
+          >
+            Close all
+          </button>
+        </>
       )}
     </div>
   );

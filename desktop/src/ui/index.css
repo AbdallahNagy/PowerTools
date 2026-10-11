@@ -85,3 +85,8 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--color-fg-muted);
 }
+
+/* The tab strip scrolls sideways; keep its scrollbar slim like VS Code. */
+.tab-strip::-webkit-scrollbar {
+  height: 3px;
+}

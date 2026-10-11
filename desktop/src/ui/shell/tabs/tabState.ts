@@ -124,3 +124,15 @@ export function closeTab(state: TabState, tabId: string): TabState {
     activeTabId: nextActiveTab?.id ?? "",
   };
 }
+
+export function closeOtherTabs(state: TabState, tabId: string): TabState {
+  const tab = state.tabs.find((candidate) => candidate.id === tabId);
+  if (!tab) return state;
+  if (state.tabs.length === 1 && state.activeTabId === tabId) return state;
+
+  return { tabs: [tab], activeTabId: tabId };
+}
+
+export function closeAllTabs(state: TabState): TabState {
+  return state.tabs.length === 0 ? state : { tabs: [], activeTabId: "" };
+}

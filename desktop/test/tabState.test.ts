@@ -4,6 +4,8 @@ import type { TabData } from "../src/ui/shell/tabs/types";
 import {
   activateTab,
   addTab,
+  closeAllTabs,
+  closeOtherTabs,
   closeTab,
   createInitialTabState,
   openToolTab,
@@ -242,5 +244,28 @@ describe("tab state", () => {
       tabs: [],
       activeTabId: "",
     });
+  });
+
+  it("closes every other tab and activates the kept one", () => {
+    const first = openToolTab(initialState, builderTool, 801);
+    const second = openToolTab(first, builderTool, 802);
+
+    expect(closeOtherTabs(second, "fetchxml-builder-801")).toEqual({
+      tabs: [first.tabs[1]],
+      activeTabId: "fetchxml-builder-801",
+    });
+  });
+
+  it("returns the same state when closing others leaves nothing to close", () => {
+    expect(closeOtherTabs(initialState, "welcome")).toBe(initialState);
+    expect(closeOtherTabs(initialState, "missing")).toBe(initialState);
+  });
+
+  it("closes all tabs and clears the active ID", () => {
+    const first = openToolTab(initialState, builderTool, 901);
+
+    expect(closeAllTabs(first)).toEqual({ tabs: [], activeTabId: "" });
+    const empty = closeAllTabs(first);
+    expect(closeAllTabs(empty)).toBe(empty);
   });
 });

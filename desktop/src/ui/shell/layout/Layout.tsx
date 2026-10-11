@@ -59,7 +59,10 @@ const Layout = () => {
                 <Panel
                   id="shell-main"
                   minSize="40%"
-                  className="flex min-h-0 min-w-0 flex-col overflow-hidden"
+                  className="flex min-h-0 min-w-0 flex-col"
+                  // The panel sets an inline `overflow: auto`, which beats the
+                  // class. Clip here so only the tab strip scrolls sideways.
+                  style={{ overflow: "hidden" }}
                 >
                   <TabBar />
                 </Panel>

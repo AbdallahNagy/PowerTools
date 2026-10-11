@@ -4,6 +4,8 @@ import { getActiveConnectionSnapshot } from "../../shared/connections/activeConn
 import {
   activateTab,
   addTab as addTabToState,
+  closeAllTabs as closeAllTabsInState,
+  closeOtherTabs as closeOtherTabsInState,
   closeTab as closeTabInState,
   createInitialTabState,
   openToolTab,
@@ -23,6 +25,8 @@ type TabAction =
     }
   | { type: "add-tab"; tab: TabData }
   | { type: "close-tab"; tabId: string }
+  | { type: "close-other-tabs"; tabId: string }
+  | { type: "close-all-tabs" }
   | { type: "activate-tab"; tabId: string }
   | { type: "set-connection"; tabId: string; connectionName: string | null };
 
@@ -41,6 +45,10 @@ function tabReducer(state: TabState, action: TabAction): TabState {
       return addTabToState(state, action.tab);
     case "close-tab":
       return closeTabInState(state, action.tabId);
+    case "close-other-tabs":
+      return closeOtherTabsInState(state, action.tabId);
+    case "close-all-tabs":
+      return closeAllTabsInState(state);
     case "activate-tab":
       return activateTab(state, action.tabId);
     case "set-connection":
@@ -82,6 +90,14 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: "close-tab", tabId });
   };
 
+  const closeOtherTabs = (tabId: string) => {
+    dispatch({ type: "close-other-tabs", tabId });
+  };
+
+  const closeAllTabs = () => {
+    dispatch({ type: "close-all-tabs" });
+  };
+
   const setActiveTab = (tabId: string) => {
     dispatch({ type: "activate-tab", tabId });
   };
@@ -94,6 +110,8 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
         openTool,
         addTab,
         closeTab,
+        closeOtherTabs,
+        closeAllTabs,
         setActiveTab,
         setTabConnection,
       }}
