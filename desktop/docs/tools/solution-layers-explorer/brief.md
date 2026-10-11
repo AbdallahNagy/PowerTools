@@ -264,6 +264,204 @@ Power Tools files to read before building:
 - `/home/user/PowerTools/api/PowerTools/PowerTools.API/Program.cs`
 - `/home/user/PowerTools/desktop/src/ui/shared/contracts/dataverse.ts`
 
+### UX
+
+Written from `### What it does` only: list a component's layers, inspect one layer (Changes, All properties, Children), compare two layers, and remove the Active layer singly or in bulk after a confirmation. Solution-wide browsing, Excel export, and cross-tool links are out of v1.
+
+#### Sidebar
+
+- Tool id `solution-layers-explorer`. Show it in the activity bar (`showInActivityBar: true`), one row under the existing Search tools field.
+- Title: **Solution Layers Explorer**. Tooltip: **Inspect and compare the solution layers of a component, and remove its unmanaged Active layer**. The tooltip is the activity-bar button `title` and accessible name.
+- More than one tab (`allowMultipleInstances: true`). Choosing the sidebar entry again opens another tab. Each tab keeps its own component type, search text, checked components, selected component, selected layer, detail tab, compare pair, "only differences" setting, chosen property, and removal results. Every tab follows the selected environment.
+- Icon: a new single-color SVG of stacked layers, drawn through `ToolIcon`. Do not reuse the plugin icon.
+
+#### Public listing
+
+- Title: **Solution Layers Explorer**.
+- Description: **See every solution layer of a Dataverse component, compare any two layers side by side, and remove the unmanaged Active layer.**
+- Add it to `publicCatalog.ts` in the same position as in `ACTIVITY_BAR_TOOLS`. Do not edit the welcome page or website markup.
+
+#### Title bar
+
+No title-bar menu item. File, Edit, View, and Help stay unchanged. Every action lives on the tool tab.
+
+#### Tool tab
+
+The tab is `bg-canvas`. The environment is the connection chosen in the sidebar footer. There is no connection picker in the tab.
+
+The surface is split left and right with a draggable divider. Use `Group`, `Panel`, and `Separator` from `react-resizable-panels`, as in `desktop/src/ui/shell/layout/Layout.tsx`, `orientation="horizontal"`.
+
+- Left `Panel` `id="sle-components"`: the component picker. `defaultSize="32%"`, `minSize="22%"`.
+- `Separator` `aria-label="Resize panes"`, classes `w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent`.
+- Right `Panel` `id="sle-layers"`: the layers of the selected component. `minSize="40%"`.
+
+The right panel is split again, top and bottom, with a second draggable divider: `Group orientation="vertical"`.
+
+- Top `Panel` `id="sle-layer-list"`: the layer table. `defaultSize="35%"`, `minSize="15%"`.
+- `Separator` `aria-label="Resize layer details"`, classes `h-1 cursor-row-resize bg-raised hover:bg-accent active:bg-accent`.
+- Bottom `Panel` `id="sle-layer-view"`: details and compare. `minSize="30%"`.
+
+Panels are `bg-surface`. Headings are `text-fg-strong`, values `text-fg`, hints and metadata `text-fg-muted`. Component names in code-like places (logical names, GUIDs, JSON) use `font-mono`.
+
+##### 1. No environment
+
+Every pane shows one `EmptyState`: **Select an environment** with the description "Choose an environment in the connection control at the bottom of the sidebar." The type select, search, and every action are disabled. Nothing is loaded.
+
+##### 2. Component picker (left)
+
+A `Toolbar` with a `Field` labeled **Component type** holding a `Select`. Options are the supported component types, by display label (Table, Column, Choice, Relationship, Security role, Form, View, Chart, Web resource, Process, Model-driven app, Plug-in assembly, Plug-in step, Canvas app). Default: **Web resource**. Types the environment does not support are left out.
+
+- When the type is **Column**, a second `Field` labeled **Table** holding a `Select` of tables appears under it, required. The search is disabled until a table is chosen.
+- When the type is **Form** or **View**, the same **Table** select appears and is optional, with first option **All tables**.
+
+Below it, `SearchInput` with placeholder **Search by name**. Typing searches after a short pause (about 300 ms). An empty search lists the first matches for the type. Changing the type clears the search, the results, and the checks, and keeps the selected component on the right until another is picked.
+
+Results are a `DataTable` (row key = component id), columns:
+
+| Header | Content | Sortable |
+| --- | --- | --- |
+| (checkbox) | `Checkbox` for bulk removal. Header checkbox **Select all components** checks or clears all visible rows and shows indeterminate for a partial set. | No |
+| Name | Display name, or the name when there is none | Yes |
+| Logical Name | Schema or unique name in `font-mono` | Yes |
+| Table | Parent table logical name, blank when none | Yes |
+
+Sorting is a click on a column header: first click ascending, the same header again descending, ↑ or ↓ on the active header. Default: Name ascending. No separate sort buttons. Headers are title case as written.
+
+The result count is capped by the server. When the cap is reached, a `text-xs text-fg-muted` line under the table reads "Showing the first 50 matches. Refine the search to narrow the list."
+
+Clicking a row selects it (`selectedKey`, `bg-accent-soft`) and loads its layers on the right. Checking a box does not select the row.
+
+Under the table, `Button` variant `danger` size `sm` **Remove Active layers (N)**, enabled when at least one component is checked. It opens the bulk removal dialog (step 6).
+
+##### 3. Layer list (right, top)
+
+A header row shows the selected component: name in `text-base font-semibold text-fg-strong`, then type and logical name in `text-xs text-fg-muted`. On its right: an icon `Button` variant `ghost` with `RotateCw`, `aria-label="Reload layers"`, and `Button` variant `danger` **Remove Active layer**.
+
+**Remove Active layer** is enabled only when the component has an Active layer and at least one other layer under it. When disabled, a `Tooltip` explains why: "No Active layer" or "This component exists only in the Active layer, so there is nothing to fall back to."
+
+The layer table is a `DataTable` (row key = layer id), sorted top to bottom from the highest order to the lowest, so Active sits on top and the base layer at the bottom. Columns:
+
+| Header | Content |
+| --- | --- |
+| Order | Stack position number |
+| Solution | Solution name. The Active row adds `Badge` tone `accent` **Active**. |
+| Publisher | Publisher name |
+| Version | Solution version, blank for Active |
+| Overwrite Time | Local date and time; blank when not set |
+
+The stack order is the meaning of this table, so it is not sortable by header.
+
+Clicking a row selects it (`selectedKey`) and shows its details below. When layers load, the top layer is selected.
+
+##### 4. Layer details (right, bottom, Details tab)
+
+The bottom pane is a `Tabs` with two tabs, `aria-label="Layer view"`: **Details** and **Compare**.
+
+**Details** shows the selected layer. A line at the top names it: "Layer {order} · {solution name}". Under it, a second `Tabs` with `aria-label="Layer content"`:
+
+- **Changes**: what this layer altered.
+- **All properties**: the full component state in this layer.
+- **Children**: child components.
+
+Each shows the value as pretty-printed JSON in a read-only `CodeEditor` (`readOnly`, `lineNumbers`, `flex-1`), `aria-label` "Changes", "All properties", or "Children". When the value is not valid JSON, show the raw text unchanged in the same editor. When the value is empty, show `EmptyState` "This layer records no changes." / "This layer has no properties." / "This layer has no child components."
+
+The last chosen inner tab stays chosen when another layer is selected.
+
+##### 5. Compare (right, bottom, Compare tab)
+
+A `Toolbar` with two `Field`s holding `Select`s: **Left layer** and **Right layer**. Options are "{order} · {solution name}" for each layer. Defaults: Left = the layer directly under the top layer, Right = the top layer. When the component has only one layer, both selects show that layer and the pane shows `EmptyState` "This component has only one layer. There is nothing to compare." Picking the same layer on both sides shows `Alert` tone `info` "Both sides show the same layer." and still renders.
+
+On the right of the toolbar, `Checkbox` labeled **Only differences**, unchecked by default.
+
+Below the toolbar, a second horizontal split with a draggable divider (`Group orientation="horizontal"`, `Separator aria-label="Resize compare panes"`, `w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent`):
+
+- Left `Panel` (`defaultSize="35%"`, `minSize="20%"`): a property `DataTable` (row key = property key). Columns **Property** (`font-mono`) and **Status**. Status is `Badge` tone `warn` **Different**, tone `neutral` **Only left**, tone `neutral` **Only right**, or empty when equal. Sortable by click on either header, first click ascending; default Property ascending. With **Only differences** checked, equal rows are hidden; when none remain, the table empty message is "No differences between these layers." Clicking a row chooses that property (`selectedKey`).
+- Right `Panel` (`minSize="35%"`): a read-only side-by-side text diff of the chosen property, left layer value on the left and right layer value on the right, changed lines highlighted. Values that parse as JSON are pretty-printed first. For a web resource, the `content` property is decoded from base64 to text before diffing, and a `text-xs text-fg-muted` note above the diff reads "Decoded from base64." Before a property is chosen, show `EmptyState` "Select a property to see its values side by side."
+
+The diff uses `@codemirror/merge` (approved). The merge view must load on first use, like `CodeEditor`: a lazy import inside the tool folder, never a static import from app code, so CodeMirror stays out of the main bundle. Show a same-sized frame with `Spinner` until it loads. Highlight colors come from theme tokens (`ok-soft` for added lines, `danger-soft` for removed lines, applied through `var(--color-…)` in the editor theme). Do not add the diff view to `desktop/src/ui/shared/ui`.
+
+Changing either layer keeps the chosen property when it exists in both, and clears it otherwise.
+
+##### 6. Remove the Active layer
+
+**Single.** **Remove Active layer** opens a `Modal` titled **Remove Active layer**.
+
+- Body: "Remove the unmanaged Active layer of **{component name}** ({type})? The component falls back to the layer below: **{solution name}** {version}."
+- `Alert` tone `warn`: "This permanently discards unmanaged customizations for this component. It cannot be undone. Some components, such as forms, views, and site maps, may need a publish before the change appears."
+- Buttons: `Button` secondary **Cancel** first, then `Button` variant `danger` **Remove Active layer**.
+- While the request runs, the `Modal` is `busy` with busy label "Removing Active layer…", and cannot be closed.
+- On success the dialog closes, the layer list reloads, the top layer is selected, and the Compare selects reset to their defaults.
+
+**Bulk.** **Remove Active layers (N)** in the picker opens a `Modal` titled **Remove Active layers**.
+
+- Body: "Remove the unmanaged Active layer of these N components?" followed by a scrolling list of the checked component names (max height, `text-sm text-fg`).
+- The same `Alert` tone `warn` as the single dialog.
+- `Button` secondary **Cancel**, then `Button` variant `danger` **Remove N Active layers**.
+- On confirm, the dialog stays open and switches to progress: a `ProgressBar` for done out of N, and a `DataTable` with columns **Component**, **Result**, **Detail**, one row per component as it finishes. Result is the word **Removed**, **Skipped**, or **Failed**, with `Badge` tones `ok`, `neutral`, `danger`. Skipped means the component has no Active layer above another layer; Detail says which. Failed shows the error text in Detail. One failure never stops the run.
+- Components run one at a time. While running, the footer shows `Button` secondary **Stop**, which finishes the current component and does not start the next. Closing is blocked while a request is in flight.
+- When the run ends, the footer shows `Button` primary **Done**. Done closes the dialog, clears the checks, and reloads the layers of the selected component if it was in the run.
+
+#### States
+
+- **Loading.**
+  - Component types or search results: `Spinner` in the picker table area. Status `Searching components…`.
+  - Layers: `Spinner` centered in the right panel; the previous component's layers are cleared, not shown stale. Status `Loading layers…`. Layer loads can be slow for big forms and web resources; nothing is prefetched.
+  - Diff view first load: same-sized frame with `Spinner`.
+  - Removal: `Modal` `busy` (single) or `ProgressBar` (bulk). Status `Removing Active layer…` or `Removing Active layers: n of N`.
+- **Empty.**
+  - No environment: step 1. Status `No environment selected`.
+  - No component selected: right panel `EmptyState` "Select a component to see its solution layers."
+  - Search with no results: table empty message "No matching components".
+  - Column type without a table: picker `EmptyState` "Choose a table to search its columns."
+  - Component with no layer rows: right panel `EmptyState` "No solution layers were found for this component." Remove is disabled. This is not an error.
+  - Layer content empty, one-layer compare, no differences: messages in steps 4 and 5.
+- **Success.**
+  - Layers loaded: status `N layers · Active layer present` or `N layers · No Active layer`. No toast.
+  - Single removal: `useToast` success "Active layer removed." Status reflects the reloaded layers.
+  - Bulk removal: `useToast` success "Removed N Active layers." when all were removed; `useToast` info "Removed X of N Active layers. Y skipped, Z failed." otherwise.
+- **Error.**
+  - Component search or type list failure: `Alert` tone `danger` in the picker with the error text and `Button` secondary **Retry**. Status `Could not search components`.
+  - Layer load failure: `Alert` tone `danger` in the right panel with the error text and **Retry**. Status `Could not load layers`. A permission failure reads "You need System Customizer or System Administrator rights to read solution layers."
+  - Single removal failure: the dialog stays open, leaves `busy`, and shows `Alert` tone `danger` with the error text above the buttons. A permission failure reads "You need System Customizer or System Administrator rights to remove the Active layer." A refusal because the layer cannot be removed reads "This component no longer has an Active layer above another layer." and the layer list reloads. `useToast` error with the same text.
+  - Bulk failures: per-row **Failed** as in step 6. `useToast` error "No Active layers were removed." when nothing succeeded.
+  - Malformed layer JSON is not an error: show the raw text (step 4) and, in Compare, treat the layer as having no parsed properties with `Alert` tone `warn` "One layer's properties could not be read as JSON."
+- **Environment change.** Clear the search results, checks, selected component, layers, and compare state, and reload component types. A bulk removal already running keeps going against the environment it started on, and its dialog heading names that environment.
+
+#### Shared controls
+
+From `desktop/src/ui/shared/ui`:
+
+- `Button`: Remove Active layer, Remove Active layers (N), Cancel, Remove N Active layers, Stop, Done, Retry, Reload layers (ghost icon button).
+- `Checkbox`: component checks for bulk removal, Select all components, Only differences.
+- `DataTable`: component results, layer list, compare property list, bulk removal results.
+- `Modal`: single and bulk removal confirmation.
+- `ProgressBar`: bulk removal.
+- `SearchInput`: component search.
+- `Spinner`: loading states and the diff view frame.
+- `Toast` and `useToast`: removal results and failures.
+- Also exported there and used: `Field`, `Select`, `Tabs`, `CodeEditor` (read-only JSON), `Badge`, `Alert`, `EmptyState`, `Toolbar`, `Tooltip`.
+- `useToolStatus` for the status strings above. The tool does not manage status ids.
+- `Group`, `Panel`, `Separator` from `react-resizable-panels` for the three draggable dividers.
+- Icons from `lucide-react` (`RotateCw`, `Layers`), `size={14}`, `aria-hidden="true"`.
+
+#### Colors
+
+Tokens only: `bg-canvas` for the tab, `bg-surface` for panels, `bg-raised` for dividers with `hover:bg-accent` and `active:bg-accent`, `bg-accent-soft` for selected rows, `text-fg-strong` for headings, `text-fg` for values, `text-fg-muted` for hints and metadata, `danger` for removal buttons and errors, `warn` for the Different badge and the removal warning, `ok-soft` and `danger-soft` for diff line highlights. No hex values.
+
+#### What not to build
+
+- Browsing a whole solution to find components that have an Active layer. The picker searches one component type at a time.
+- Excel or any other export, and links into other tools.
+- Removing managed layers, reordering layers, or editing any layer content. Everything except Active removal is read-only.
+- Publishing after removal. The dialog warns that a publish may be needed; it does not publish.
+- A second environment or comparing layers across environments.
+- A connection picker inside the tab, or a File, Edit, View, or Help menu item.
+- The plugin's WinForms layout: its docked solution picker, its separate comparer window, its fixed-size grids, and its log text box. This tab is a picker, a layer table, and a details/compare pane, each split by a draggable divider.
+- A preselected second layer by fixed index. Compare defaults follow step 5.
+- A separate row of sort buttons, all-capital column headers, or a sortable layer table.
+- New controls in `desktop/src/ui/shared/ui`, including a shared diff control.
+- XrmToolBox host chrome, the plugin icon, and the plugin's labels and dialog text.
+
 ### Open questions
 
 - Resolved: the source plugin is GPL-3.0. The user accepted a clean-room build. No plugin source, UI, icons or wording is copied; Dataverse behavior is reimplemented from this brief and Microsoft documentation.
