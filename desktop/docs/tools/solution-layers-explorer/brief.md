@@ -639,18 +639,6 @@ Tokens only: `bg-canvas` for the tab, `bg-surface` for panels, `bg-raised` for d
 
 At the user's request, the Details editors and both sides of the Compare diff can collapse and expand indented blocks. The arrows are in the gutter, and the keys are Ctrl+Shift+[ and Ctrl+Shift+]. Folding works by indentation (`shared/ui/codeFolding.ts`), so it covers formatted JSON, XML and decoded scripts, and needs no new dependency. `CodeEditor` gains an opt-in `folding` prop, so other tools are unchanged. In the diff, unchanged stretches of 8 or more lines also collapse into a clickable "unchanged lines" bar (`collapseUnchanged` from `@codemirror/merge`). The folding code loads in its own chunk, and the main bundle is unchanged. Tests: `codeFolding.test.ts` (node) and a `CodeEditor` renderer test. `npm test` (495), lint, typecheck and build pass.
 
-
-#### Follow-up: property view
-
-At the user's request, Changes and All properties now open as a property table, with a **Properties | JSON** switch that keeps the raw view.
-- **Table:** short values (80 characters or fewer, on one line) show in full. Longer values show a summary such as "XML · 120 lines" or "Decoded Text · 2 lines". A filter narrows the properties by name.
-- **Value pane:** selecting a row shows the whole value below, formatted, in a read-only editor that can collapse and expand. XML strings are indented, JSON text and objects are formatted, and web resource content is decoded from base64.
-- **Unreadable data:** layer data that is not readable as properties falls back to the raw text, with a warning.
-- **Children:** stays JSON.
-- **Compare:** gains a Values column. A change shows `old → new` when both values are short, and a property on one side only shows that side's value. The side-by-side diff uses the same formatting, so form and view XML diff line by line instead of as one escaped string.
-
-Model: `model/propertyValue.ts` (`formatXml`, `displayValue`, `shortValue`, `valueSummary`), replacing `diffValue` and `formatValue`. Tests: `tests/node/propertyValue.test.ts`, plus renderer coverage for the table, the filter, the value pane, the JSON switch, the fallback, and inline compare values. `npm test` (500), lint, typecheck and build pass.
-
 ### Open questions
 
 - Resolved: the source plugin is GPL-3.0. The user accepted a clean-room build. No plugin source, UI, icons or wording is copied; Dataverse behavior is reimplemented from this brief and Microsoft documentation.

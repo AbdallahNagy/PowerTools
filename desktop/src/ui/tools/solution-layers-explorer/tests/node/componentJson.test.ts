@@ -3,6 +3,8 @@ import {
   decodeBase64Text,
   deepEqual,
   diffProperties,
+  diffValue,
+  formatValue,
   parseComponentJson,
   prettyText,
 } from "../../model/componentJson";
@@ -59,12 +61,21 @@ describe("text helpers", () => {
     expect(prettyText('{"a":1}')).toBe('{\n  "a": 1\n}');
     expect(prettyText("plain <xml/>")).toBe("plain <xml/>");
     expect(prettyText("42")).toBe("42");
+    expect(formatValue({ a: 1 })).toBe('{\n  "a": 1\n}');
+    expect(formatValue(null)).toBe("");
+    expect(formatValue('["x"]')).toBe('[\n  "x"\n]');
   });
 
   it("decodes UTF-8 base64 and strips the byte order mark", () => {
     expect(decodeBase64Text(base64("é = 1;"))).toBe("é = 1;");
     expect(decodeBase64Text("not base64!")).toBeNull();
     expect(decodeBase64Text("")).toBeNull();
+  });
+
+  it("decodes only web resource content", () => {
+    expect(diffValue(61, "content", base64("let a;"))).toEqual({ text: "let a;", decoded: true });
+    expect(diffValue(60, "content", base64("let a;")).decoded).toBe(false);
+    expect(diffValue(61, "name", "new_/a.js")).toEqual({ text: "new_/a.js", decoded: false });
   });
 });
 

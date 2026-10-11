@@ -419,7 +419,7 @@ function ExplorerPage({ connectionName, bulkStatus, bulkFinished, onBulkRemove }
                   value: "details",
                   label: "Details",
                   content: selectedLayer ? (
-                    <LayerDetails componentType={selected.componentType} layer={selectedLayer} tab={contentTab} onTabChange={setContentTab} />
+                    <LayerDetails layer={selectedLayer} tab={contentTab} onTabChange={setContentTab} />
                   ) : null,
                 },
                 {

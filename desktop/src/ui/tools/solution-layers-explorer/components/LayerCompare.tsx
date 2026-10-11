@@ -1,8 +1,7 @@
 import { useId, useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Alert, Badge, Checkbox, DataTable, EmptyState, Field, Select, Toolbar } from "../../../shared/ui";
-import { diffProperties, parseComponentJson, type PropertyDiff } from "../model/componentJson";
-import { displayValue, shortValue } from "../model/propertyValue";
+import { diffProperties, diffValue, parseComponentJson, type PropertyDiff } from "../model/componentJson";
 import type { Layer } from "../model/types";
 import {
   layerOptionLabel,
@@ -72,35 +71,12 @@ export function LayerCompare({
     keepProperty(left, layers.find((layer) => layer.id === id) ?? right);
   };
 
-  /** Short values inline: "old → new" for a change, the one value for a property on one side only. */
-  const valuesCell = (row: PropertyDiff): string | null => {
-    if (row.status === "equal") return null;
-    const before = row.status === "onlyRight" ? null : shortValue(componentType, row.key, leftParsed.properties[row.key]);
-    const after = row.status === "onlyLeft" ? null : shortValue(componentType, row.key, rightParsed.properties[row.key]);
-    if (row.status === "onlyLeft") return before;
-    if (row.status === "onlyRight") return after;
-    if (before === null || after === null) return null;
-    return `${before === "" ? "(empty)" : before} → ${after === "" ? "(empty)" : after}`;
-  };
-
   const columns = [
     {
       key: "key",
       header: "Property",
       sortable: true,
       render: (row: PropertyDiff) => <span className="font-mono text-xs">{row.key}</span>,
-    },
-    {
-      key: "values",
-      header: "Values",
-      render: (row: PropertyDiff) => {
-        const text = valuesCell(row);
-        return text === null ? null : (
-          <span className="block truncate font-mono text-xs" title={text}>
-            {text}
-          </span>
-        );
-      },
     },
     {
       key: "status",
@@ -113,8 +89,8 @@ export function LayerCompare({
 
   const single = layers.length <= 1;
   const chosen = property !== null && diffs.some((row) => row.key === property) ? property : null;
-  const leftValue = chosen ? displayValue(componentType, chosen, leftParsed.properties[chosen]) : null;
-  const rightValue = chosen ? displayValue(componentType, chosen, rightParsed.properties[chosen]) : null;
+  const leftValue = chosen ? diffValue(componentType, chosen, leftParsed.properties[chosen]) : null;
+  const rightValue = chosen ? diffValue(componentType, chosen, rightParsed.properties[chosen]) : null;
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -160,7 +136,7 @@ export function LayerCompare({
             <Alert tone="warn">One layer's properties could not be read as JSON.</Alert>
           ) : null}
           <Group orientation="horizontal" className="min-h-0 flex-1">
-            <Panel id="sle-compare-properties" defaultSize="45%" minSize="20%" className="flex min-h-0 flex-col">
+            <Panel id="sle-compare-properties" defaultSize="35%" minSize="20%" className="flex min-h-0 flex-col">
               <DataTable
                 columns={columns}
                 rows={visible}
