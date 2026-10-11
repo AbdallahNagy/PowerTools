@@ -36,7 +36,7 @@ Stop and ask the user only for an ambiguous tool name, a GPL or other copyleft l
 
 ## Live Dataverse environment
 
-Offline tests prove the code against fakes. A live check proves it against a real environment. When `DATAVERSE_URL`, `DATAVERSE_TENANT_ID`, `DATAVERSE_CLIENT_ID`, and `DATAVERSE_CLIENT_SECRET` are set, `node scripts/dataverse-live.mjs check` connects to a non-production environment with an Entra application user. Setup, commands, and safety rules are in [`live-dataverse-environment.md`](live-dataverse-environment.md).
+Offline tests prove the code against fakes. A live check proves it against a real environment. `node scripts/dataverse-live.mjs check` connects to a non-production environment, either as the user after a one-time device code sign-in (`login start <url>`, `login finish`, no app registration needed) or as an Entra application user from `DATAVERSE_*` variables. `/build-tool` offers the sign-in at its first step. Setup, commands, and safety rules are in [`live-dataverse-environment.md`](live-dataverse-environment.md).
 
 - The Dataverse expert verifies claims with read-only Web API queries and marks them `Verified live`.
 - The developer starts the sidecar, calls every new endpoint against the environment, cleans up its test data, and records the calls under `#### Live Dataverse check`.

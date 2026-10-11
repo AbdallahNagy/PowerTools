@@ -46,7 +46,7 @@ From `desktop/`, run `npm test`, `npm run lint`, and `npm run build`. When `npm 
 After the offline checks pass, check the tool against a real environment. Read [`desktop/docs/live-dataverse-environment.md`](../../desktop/docs/live-dataverse-environment.md) and follow its rules.
 
 1. From the repository root, run `node scripts/dataverse-live.mjs check`.
-   - Exit `2`: no live environment is configured. Record that, with the missing variables the command named, and skip the rest of this section.
+   - Exit `2`: no live environment is configured. Record that, with the reason the command gave, and skip the rest of this section. Do not start a sign-in yourself.
    - Exit `1`: configured but failing. Record the error line and stop here. Do not report the tool as verified.
 2. Run `node scripts/dataverse-live.mjs sidecar start`.
 3. Call every endpoint the tool added or changed with `node scripts/dataverse-live.mjs call <METHOD> <path> [--body ...]`. Cover the main path from `### UX`, at least one empty or not-found case, and each write the tool performs. Use real metadata and records from the environment, not fixture ids.

@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 // Live Dataverse checks for the tool-building pipeline.
 //
-// Reads a non-production Dataverse environment and an Entra app registration
-// from environment variables, gets a token with the client credentials flow,
-// and either calls the Dataverse Web API (read only) or calls the local
+// Signs in to a non-production Dataverse environment, either as you (device
+// code, no app registration needed) or as an Entra app registration (client
+// credentials from environment variables), and either calls the Dataverse Web API (read only) or calls the local
 // sidecar the same way the desktop app does. Tokens, secrets, and the sidecar
 // shared secret are never printed.
 //
 // Setup and rules: desktop/docs/live-dataverse-environment.md
 //
 // Usage:
+//   node scripts/dataverse-live.mjs login start <environment URL>
+//   node scripts/dataverse-live.mjs login finish
+//   node scripts/dataverse-live.mjs logout
 //   node scripts/dataverse-live.mjs check [--json]
 //   node scripts/dataverse-live.mjs webapi <relative path>
 //   node scripts/dataverse-live.mjs sidecar start | status | stop
@@ -19,9 +22,9 @@
 
 import { spawn, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, openSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -41,60 +44,193 @@ const apiProject = join(repoRoot, "api", "PowerTools", "PowerTools.API", "PowerT
 const stateFile = join(tmpdir(), "powertools-live-sidecar.json");
 const sidecarLog = join(tmpdir(), "powertools-live-sidecar.log");
 
-const REQUIRED_VARS = [
-  "DATAVERSE_URL",
-  "DATAVERSE_TENANT_ID",
-  "DATAVERSE_CLIENT_ID",
-  "DATAVERSE_CLIENT_SECRET",
-];
+// The public client ID the desktop app signs in with (Microsoft's sample
+// Dataverse client). Signing in as yourself needs no app registration.
+const PUBLIC_CLIENT_ID = "51f81489-12ee-4a9e-aaae-a2591f45987d";
+const userTokenFile = join(homedir(), ".powertools-live", "user-token.json");
+const deviceCodeFile = join(homedir(), ".powertools-live", "device-code.json");
+
+const APP_VARS = ["DATAVERSE_TENANT_ID", "DATAVERSE_CLIENT_ID", "DATAVERSE_CLIENT_SECRET"];
 
 const EXIT_NOT_CONFIGURED = 2;
 
 class NotConfiguredError extends Error {}
 
-function readConfig() {
-  const missing = REQUIRED_VARS.filter((name) => !process.env[name]?.trim());
-  if (missing.length > 0) {
-    throw new NotConfiguredError(
-      `Live Dataverse environment is not configured. Missing: ${missing.join(", ")}. ` +
-        "See desktop/docs/live-dataverse-environment.md.",
-    );
-  }
+function authorityHost() {
+  return (process.env.DATAVERSE_AUTHORITY_HOST?.trim() || "https://login.microsoftonline.com").replace(/\/+$/, "");
+}
 
-  const url = process.env.DATAVERSE_URL.trim().replace(/\/+$/, "");
+function normalizeUrl(value) {
+  const url = value.trim().replace(/\/+$/, "");
   if (!/^https:\/\//i.test(url)) {
-    throw new Error("DATAVERSE_URL must be an https URL, for example https://contoso-dev.crm.dynamics.com.");
+    throw new Error("The environment URL must be an https URL, for example https://contoso-dev.crm.dynamics.com.");
+  }
+  return url;
+}
+
+function readJson(path) {
+  try {
+    return JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function writePrivateJson(path, value) {
+  mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+  writeFileSync(path, JSON.stringify(value), { mode: 0o600 });
+}
+
+// Two ways to authenticate, checked in this order:
+//   1. App registration: DATAVERSE_URL plus DATAVERSE_TENANT_ID,
+//      DATAVERSE_CLIENT_ID, and DATAVERSE_CLIENT_SECRET (client credentials).
+//   2. Your own account: `login start <url>` then `login finish` (device code).
+function readConfig() {
+  const appVarsSet = APP_VARS.filter((name) => process.env[name]?.trim());
+  if (appVarsSet.length === APP_VARS.length) {
+    if (!process.env.DATAVERSE_URL?.trim()) {
+      throw new NotConfiguredError("DATAVERSE_URL is missing. See desktop/docs/live-dataverse-environment.md.");
+    }
+    return {
+      mode: "app",
+      url: normalizeUrl(process.env.DATAVERSE_URL),
+      tenantId: process.env.DATAVERSE_TENANT_ID.trim(),
+      clientId: process.env.DATAVERSE_CLIENT_ID.trim(),
+      clientSecret: process.env.DATAVERSE_CLIENT_SECRET,
+    };
   }
 
-  return {
+  const cached = readJson(userTokenFile);
+  if (cached?.refreshToken && cached?.url) {
+    return { mode: "user", url: cached.url, cached };
+  }
+
+  throw new NotConfiguredError(
+    "Live Dataverse environment is not configured. Sign in with " +
+      "`node scripts/dataverse-live.mjs login start <environment URL>` and then `login finish`, " +
+      "or set DATAVERSE_URL, DATAVERSE_TENANT_ID, DATAVERSE_CLIENT_ID, and DATAVERSE_CLIENT_SECRET. " +
+      "See desktop/docs/live-dataverse-environment.md.",
+  );
+}
+
+async function tokenRequest(tenant, params) {
+  const response = await fetch(`${authorityHost()}/${encodeURIComponent(tenant)}/oauth2/v2.0/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(params),
+  });
+  const payload = await response.json().catch(() => ({}));
+  return { ok: response.ok && Boolean(payload.access_token), payload };
+}
+
+function failureReason(payload, status) {
+  return payload.error_description?.split("\r\n")[0] ?? payload.error ?? `HTTP ${status}`;
+}
+
+function tenantOf(accessToken) {
+  try {
+    return JSON.parse(Buffer.from(accessToken.split(".")[1], "base64url").toString("utf8")).tid ?? "organizations";
+  } catch {
+    return "organizations";
+  }
+}
+
+function saveUserToken(url, payload, previous) {
+  writePrivateJson(userTokenFile, {
     url,
-    tenantId: process.env.DATAVERSE_TENANT_ID.trim(),
-    clientId: process.env.DATAVERSE_CLIENT_ID.trim(),
-    clientSecret: process.env.DATAVERSE_CLIENT_SECRET,
-    authorityHost: (process.env.DATAVERSE_AUTHORITY_HOST?.trim() || "https://login.microsoftonline.com").replace(
-      /\/+$/,
-      "",
-    ),
-  };
+    tenantId: tenantOf(payload.access_token),
+    accessToken: payload.access_token,
+    expiresAt: Date.now() + (Number(payload.expires_in) || 3600) * 1000,
+    // Entra rotates refresh tokens; keep the old one if none came back.
+    refreshToken: payload.refresh_token ?? previous?.refreshToken,
+  });
 }
 
 async function getToken(config) {
-  const response = await fetch(`${config.authorityHost}/${encodeURIComponent(config.tenantId)}/oauth2/v2.0/token`, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
+  if (config.mode === "app") {
+    const { ok, payload } = await tokenRequest(config.tenantId, {
       grant_type: "client_credentials",
       client_id: config.clientId,
       client_secret: config.clientSecret,
       scope: `${config.url}/.default`,
-    }),
+    });
+    if (!ok) throw new Error(`Token request failed: ${failureReason(payload)}`);
+    return payload.access_token;
+  }
+
+  const { cached } = config;
+  if (cached.accessToken && cached.expiresAt - Date.now() > 5 * 60_000) return cached.accessToken;
+
+  const { ok, payload } = await tokenRequest(cached.tenantId ?? "organizations", {
+    grant_type: "refresh_token",
+    client_id: PUBLIC_CLIENT_ID,
+    refresh_token: cached.refreshToken,
+    scope: `${config.url}/user_impersonation offline_access`,
+  });
+  if (!ok) {
+    throw new Error(
+      `Sign-in expired or was revoked (${failureReason(payload)}). Run \`node scripts/dataverse-live.mjs login start ${config.url}\` again.`,
+    );
+  }
+  saveUserToken(config.url, payload, cached);
+  return payload.access_token;
+}
+
+async function loginStart(args) {
+  const url = normalizeUrl(args[0] ?? process.env.DATAVERSE_URL ?? "");
+  const tenant = process.env.DATAVERSE_TENANT_ID?.trim() || "organizations";
+  const response = await fetch(`${authorityHost()}/${encodeURIComponent(tenant)}/oauth2/v2.0/devicecode`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ client_id: PUBLIC_CLIENT_ID, scope: `${url}/user_impersonation offline_access` }),
   });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok || !payload.access_token) {
-    const reason = payload.error_description?.split("\r\n")[0] ?? payload.error ?? `HTTP ${response.status}`;
-    throw new Error(`Token request failed: ${reason}`);
+  if (!response.ok || !payload.device_code) {
+    throw new Error(`Could not start sign-in: ${failureReason(payload, response.status)}`);
   }
-  return payload.access_token;
+  writePrivateJson(deviceCodeFile, {
+    url,
+    tenant,
+    deviceCode: payload.device_code,
+    interval: payload.interval ?? 5,
+    expiresAt: Date.now() + (payload.expires_in ?? 900) * 1000,
+  });
+  console.log(payload.message);
+  console.log("Then run: node scripts/dataverse-live.mjs login finish");
+}
+
+async function loginFinish() {
+  const pending = readJson(deviceCodeFile);
+  if (!pending) throw new Error("No sign-in in progress. Run: node scripts/dataverse-live.mjs login start <environment URL>");
+
+  let interval = pending.interval;
+  while (Date.now() < pending.expiresAt) {
+    const { ok, payload } = await tokenRequest(pending.tenant, {
+      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+      client_id: PUBLIC_CLIENT_ID,
+      device_code: pending.deviceCode,
+    });
+    if (ok) {
+      saveUserToken(pending.url, payload);
+      rmSync(deviceCodeFile, { force: true });
+      console.log(`Signed in to ${pending.url}. Token saved to ${userTokenFile} (readable by this user only).`);
+      return;
+    }
+    if (payload.error === "slow_down") interval += 5;
+    else if (payload.error !== "authorization_pending") {
+      rmSync(deviceCodeFile, { force: true });
+      throw new Error(`Sign-in failed: ${failureReason(payload)}`);
+    }
+    await new Promise((r) => setTimeout(r, interval * 1000));
+  }
+  rmSync(deviceCodeFile, { force: true });
+  throw new Error("The sign-in code expired. Run login start again.");
+}
+
+function logout() {
+  rmSync(userTokenFile, { force: true });
+  rmSync(deviceCodeFile, { force: true });
+  console.log("Removed the saved sign-in.");
 }
 
 async function webApiGet(config, token, path) {
@@ -150,6 +286,7 @@ async function check(args) {
     version: version.ok ? version.body.Version : null,
     callerUserId: who.body.UserId,
     callerName: user.ok ? user.body.fullname : null,
+    signIn: config.mode === "app" ? "app registration" : "user account (device code)",
   };
 
   if (args.includes("--json")) {
@@ -162,6 +299,7 @@ async function check(args) {
   console.log(`  Organization: ${summary.organizationName ?? "(not readable)"} (${summary.organizationId})`);
   console.log(`  Version:      ${summary.version ?? "(not readable)"}`);
   console.log(`  Caller:       ${summary.callerName ?? "(not readable)"} (${summary.callerUserId})`);
+  console.log(`  Sign-in:      ${summary.signIn}`);
 }
 
 async function webapi(args) {
@@ -337,6 +475,12 @@ async function main() {
   switch (command) {
     case "check":
       return check(args);
+    case "login":
+      if (args[0] === "start") return loginStart(args.slice(1));
+      if (args[0] === "finish") return loginFinish();
+      throw new Error("Usage: login start <environment URL> | login finish");
+    case "logout":
+      return logout();
     case "webapi":
       return webapi(args);
     case "sidecar":
@@ -348,7 +492,7 @@ async function main() {
       return call(args);
     default:
       console.log(
-        "Usage: node scripts/dataverse-live.mjs <check [--json] | webapi <path> | sidecar start|status|stop | call <METHOD> <path> [--body <json>]>",
+        "Usage: node scripts/dataverse-live.mjs <login start <url> | login finish | logout | check [--json] | webapi <path> | sidecar start|status|stop | call <METHOD> <path> [--body <json>]>",
       );
       process.exitCode = command ? 1 : 0;
   }
