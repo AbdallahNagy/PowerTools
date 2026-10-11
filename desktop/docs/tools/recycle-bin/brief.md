@@ -240,3 +240,144 @@ Endpoints:
 - [Microsoft docs source on GitHub](https://github.com/MicrosoftDocs/power-platform/blob/main/power-platform/admin/restore-deleted-table-records.md)
 - [Nishant Rana: Using the Restore Message to Recover Deleted Records in Dataverse](https://nishantrana.me/2026/01/20/using-the-restore-message-to-recover-deleted-records-in-dataverse/)
 - [Rajeev Pentyala: Dataverse restore deleted table records (preview)](https://rajeevpentyala.com/2024/05/06/dataverse-restore-deleted-table-records-preview/)
+
+### UX
+
+Written from `### What it does` only: list audited tables, list active users, find Delete audit entries for one table in a date range with an optional user, show each record's name, deletion date and deleting user, inspect the field values the record had before deletion, and restore checked records with the same ID from those values. Anything else is out of v1 (see "What not to build"). Whether the native Dataverse recycle bin is also a source is an open question below; this section does not add screens for it.
+
+#### Sidebar
+
+- Tool id `recycle-bin`. Show it in the activity bar (`showInActivityBar: true`), one row under the existing Search tools field.
+- Title: **Recycle Bin**. Tooltip: **Find deleted records in the audit log and restore them with the same ID**. The tooltip is the activity-bar button `title` and accessible name.
+- More than one tab (`allowMultipleInstances: true`). Choosing the sidebar entry again opens another tab. Each tab keeps its own table, date range, deleted-by user, results, checked rows, selected record, field search text, sort, and restore results. Every tab follows the selected environment; when the environment changes, the tab clears its results, checks and selection and reloads its table and user lists.
+- Icon: a new single-color SVG of a bin with a circular arrow, drawn through `ToolIcon`. Do not reuse the plugin icon.
+
+#### Public listing
+
+- Title: **Recycle Bin**.
+- Description: **Find records deleted from audited Dataverse tables, see the values they had before deletion, and recreate them with the same ID.**
+- Add it to `publicCatalog.ts` in the same position as in `ACTIVITY_BAR_TOOLS`. Do not edit the welcome page or website markup.
+
+#### Title bar
+
+No title-bar menu item. File, Edit, View, and Help stay unchanged. Every action lives on the tool tab.
+
+#### Tool tab
+
+The tab is `bg-canvas`. The environment is the connection chosen in the sidebar footer. There is no connection picker in the tab.
+
+From top to bottom: a filter `Toolbar` across the full width, then the work area split left and right with a draggable divider. Use `Group`, `Panel`, and `Separator` from `react-resizable-panels`, as in `desktop/src/ui/shell/layout/Layout.tsx`, `orientation="horizontal"`.
+
+- Left `Panel` `id="rb-records"`: the deleted records. `defaultSize="58%"`, `minSize="35%"`.
+- `Separator` `aria-label="Resize panes"`, classes `w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent`.
+- Right `Panel` `id="rb-details"`: the field values of the selected record. `minSize="25%"`.
+
+Panels are `bg-surface`. Headings are `text-fg-strong`, values `text-fg`, hints and metadata `text-fg-muted`. Logical names, record IDs and raw values use `font-mono`.
+
+##### 1. No environment
+
+Both panes show one `EmptyState`: **Select an environment** with the description "Choose an environment in the connection control at the bottom of the sidebar." Every filter and action is disabled. Nothing is loaded.
+
+##### 2. Filter toolbar
+
+A `Toolbar`, left to right, each control inside a `Field` with a visible label:
+
+- **Table**: `Select` of the tables that have auditing turned on, labeled "{Display Name} ({logical name})", sorted by display name. First option **Choose a table**, not selectable as a search. A table with no display label shows its logical name only.
+- **From**: `Input` `type="date"`. Default: 30 days before today.
+- **To**: `Input` `type="date"`. Default: today. Both dates are local calendar days and include the whole To day. When From is after To, the To `Field` shows the error "To must be on or after From." and **Find** is disabled.
+- **Deleted by**: `Select` of active users by full name, sorted by full name. First option **Anyone** (default).
+- In the toolbar `end`: `Button` variant `secondary` **Find deleted records**, enabled when a table is chosen and the dates are valid. Enter in any filter control runs it too.
+
+Changing a filter does not search by itself. It keeps the current results until **Find deleted records** runs again, and a `text-xs text-fg-muted` line above the table reads "Filters changed. Find again to update the list." while they differ.
+
+##### 3. Deleted records (left)
+
+A header row: "Deleted {table display name}" in `text-base font-semibold text-fg-strong`, then the result count in `text-xs text-fg-muted` ("124 records"). On the right of the header: `Button` variant `primary` **Restore (N)**, enabled when at least one row is checked. It opens the restore dialog (step 5).
+
+Results are a `DataTable` (row key = audit entry id, so two deletions of the same ID stay separate rows), with its parent `min-h-0 flex-1`. Columns:
+
+| Header | Content | Sortable |
+| --- | --- | --- |
+| (checkbox) | `Checkbox` per row, `aria-label` "Select {name}". Header `Checkbox` **Select all records** checks or clears every loaded row and shows indeterminate for a partial set. | No |
+| Name | The record's primary name from its old values. When empty, `text-fg-muted` "(No name)". | Yes |
+| Deleted On | Local date and time | Yes |
+| Deleted By | User full name | Yes |
+| Record ID | GUID in `font-mono text-xs` | No |
+| Result | Empty until a restore run, then `Badge` tone `ok` **Restored** or tone `danger` **Failed** | No |
+
+Sorting is a click on a column header: first click ascending, the same header again descending, ↑ or ↓ on the active header. Default: Deleted On descending (the active header shows ↓). No separate sort buttons. Headers are title case as written.
+
+Results load a page at a time. When more matches exist, a `Button` variant `secondary` size `sm` **Load more** sits under the table with `text-xs text-fg-muted` "Showing {n} records. More match these filters." Sorting applies to the loaded rows only, and that line says so.
+
+Clicking a row selects it (`selectedKey`, `bg-accent-soft`) and shows its values on the right. Checking a box does not select the row, and selecting a row does not check it.
+
+##### 4. Record details (right)
+
+A header: the record name in `text-base font-semibold text-fg-strong`, then on one line in `text-xs text-fg-muted`: table logical name, record ID (`font-mono`), "Deleted {date time} by {user}".
+
+Under it, an `Alert` tone `info`: "These are the values recorded in the audit log when the record was deleted. Only audited fields that had a value appear here, and only these are restored."
+
+Then `SearchInput` with placeholder **Filter fields**, then a `DataTable` (row key = field logical name), parent `min-h-0 flex-1`:
+
+| Header | Content | Sortable |
+| --- | --- | --- |
+| Display Name | Field display label; logical name when there is none | Yes |
+| Name | Field logical name in `font-mono` | Yes |
+| Value | Formatted value: lookup as the related record's name, choice as its label, dates in local time, yes/no as Yes or No. The raw value is the cell `title`. | No |
+
+Default sort: Display Name ascending. The filter matches display name, logical name and value text.
+
+##### 5. Restore
+
+**Restore (N)** opens a `Modal` titled **Restore deleted records**.
+
+- Body: "Recreate these N records in **{table display name}** with their original IDs?" followed by a scrolling list (max height, `text-sm text-fg`) of "{name} · deleted {date}".
+- `Alert` tone `warn`: "Each record is recreated only from the field values shown in its details. Fields that were not audited, links to other records stored outside the record, notes, and files do not come back. Plug-ins and flows that run when a record is created will run."
+- When two checked rows share a record ID, an `Alert` tone `warn` above the list: "{n} records were deleted more than once. Only the most recent deletion of each is restored." and the older duplicates are left out of the run.
+- Buttons: `Button` secondary **Cancel** first, then `Button` primary **Restore N records**.
+- On confirm the dialog stays open and switches to progress: `ProgressBar` for done out of N, and a `DataTable` with columns **Record**, **Result**, **Detail**, one row per record as it finishes. Result is `Badge` tone `ok` **Restored** or tone `danger` **Failed**; Detail shows the error in plain words for a failure (for example "A record with this ID already exists." or "A related record this one points to no longer exists. Restore that record first."). One failure never stops the run.
+- While running, the footer shows `Button` secondary **Stop**, which finishes the current request and starts no more. The `Modal` is `busy` with busy label "Restoring records…" while a request is in flight, so it cannot be closed mid-request.
+- When the run ends, the footer shows a summary in `text-sm` ("{r} restored, {f} failed") and `Button` primary **Done**. Done closes the dialog, fills the **Result** column for those rows, unchecks the restored rows, and keeps failed rows checked so they can be retried.
+- A `useToast` `success` "{r} records restored." after Done when all succeeded; `error` "{f} of {N} records could not be restored." when any failed.
+
+#### States
+
+Status text is published with `useToolStatus`; the tool does not manage status ids.
+
+- **Loading.**
+  - Tables and users: `Spinner` inside the Table and Deleted by fields' area; both selects disabled. Status `Loading audited tables…`.
+  - Search: `Spinner` centered in the left panel; previous results are cleared, not shown stale. Status `Finding deleted records…`. **Load more** shows a `Spinner` in the button and keeps the loaded rows.
+  - Details: `Spinner` in the right panel. Status `Loading field values…`.
+  - Restore: `ProgressBar` in the dialog. Status `Restoring records: n of N`.
+- **Empty.**
+  - No environment: step 1. Status `No environment selected`.
+  - No audited tables: `EmptyState` across both panes "No tables have auditing turned on in this environment." with the description "Turn on auditing for the environment and the table, then refresh." and an icon `Button` ghost with `RotateCw`, `aria-label="Reload tables"`. Not an error.
+  - No table chosen: left `EmptyState` "Choose a table and a date range, then find deleted records." Right `EmptyState` "Select a deleted record to see the values it had."
+  - Search with no matches: table empty message "No deleted records match these filters." Status `0 deleted records`.
+  - No row selected: right `EmptyState` "Select a deleted record to see the values it had."
+  - Selected record has no audited values: right `EmptyState` "The audit log holds no field values for this record, so it cannot be restored." Its row checkbox is disabled with a `Tooltip` saying the same.
+  - Field filter with no matches: "No fields match the filter."
+- **Success.**
+  - Search: status `{n} deleted records`.
+  - Restore: `useToast` as in step 5, status `{r} restored, {f} failed`.
+- **Error.** Errors show in an `Alert` tone `danger` in the pane they belong to, with a `Button` secondary size `sm` **Try again** that repeats the same request. Text is the server message in plain words.
+  - Missing privilege to read the audit log: `Alert` tone `danger` "You do not have permission to read audit history in this environment." without **Try again**.
+  - A failed restore of one record is a row result in the dialog, never a page error.
+
+#### Shared controls
+
+From `desktop/src/ui/shared/ui`: `Toolbar`, `Field`, `Select`, `Input` (`type="date"`), `Button`, `Checkbox`, `DataTable`, `SearchInput`, `Modal`, `ProgressBar`, `Spinner`, `Alert`, `Badge`, `EmptyState`, `Tooltip`, `useToast`. Plus `Group`, `Panel` and `Separator` from `react-resizable-panels` for the divider. Icons from `lucide-react` (`RotateCw`). No new shared controls and no new color tokens.
+
+#### What not to build
+
+- No native Dataverse recycle bin source, source switch or source banner in v1 unless the open question below adds it.
+- No export of records or field values, no editing of values before restoring, no restoring to a different ID or a different environment.
+- No restoring of related records, notes, attachments, many-to-many links or records removed by cascade beyond what is checked in the list.
+- No search across several tables at once and no "all tables" option.
+- No deleting of audit entries or purging of anything.
+- No title-bar menu item, no connection picker in the tab, no `WhoAmI`-style connection test button.
+- Do not copy the WinForms layout of the plugin: no left-docked grid with a property grid under it, no MessageBox prompts, no GitHub or donation links, no plugin icons or plugin copy.
+
+### Open questions
+
+- **Product scope: audit log only, or the native recycle bin too?** `### What it does` describes only the audit-log restore, and the UX above is written to that. The research summary recommends the Dataverse recycle bin (preview) as the better restore path, with the audit log as a fallback. These are two real scopes. If the native recycle bin is in v1, the UX adds one source line under the filter toolbar ("Recycle bin, keeps records {n} days" or "Audit log"), uses the same table, filters, list, details and restore dialog, and drops the "only audited fields" wording for bin records. Decide: audit only (as specified), or recycle bin first with audit fallback.
