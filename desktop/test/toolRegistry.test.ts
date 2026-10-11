@@ -17,6 +17,7 @@ import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
 import { solutionComponentsMoverTool } from "../src/ui/tools/solution-components-mover/tool";
+import { solutionLayersExplorerTool } from "../src/ui/tools/solution-layers-explorer/tool";
 import { translatorTool } from "../src/ui/tools/translator/tool";
 import { workflowActivitiesTool } from "../src/ui/tools/workflow-activities-viewer/tool";
 
@@ -86,6 +87,7 @@ describe("tool registry", () => {
       "plugin-registration",
       "polymorphic-lookup-creator",
       "solution-components-mover",
+      "solution-layers-explorer",
       "translator",
       "workflow-activities-viewer",
     ]);
@@ -98,6 +100,7 @@ describe("tool registry", () => {
       "plugin-registration",
       "polymorphic-lookup-creator",
       "solution-components-mover",
+      "solution-layers-explorer",
       "translator",
       "workflow-activities-viewer",
     ]);
@@ -129,6 +132,13 @@ describe("tool registry", () => {
     expect(TOOL_REGISTRY["solution-components-mover"].showInActivityBar).toBe(true);
     expect(TOOL_REGISTRY["solution-components-mover"]).toBe(solutionComponentsMoverTool);
     expect(TOOL_REGISTRY["workflow-activities-viewer"]).toBe(workflowActivitiesTool);
+    expect(TOOL_REGISTRY["solution-layers-explorer"]).toBe(solutionLayersExplorerTool);
+    expect(solutionLayersExplorerTool.allowMultipleInstances).toBe(true);
+    expect(solutionLayersExplorerTool.showInActivityBar).toBe(true);
+    expect(solutionLayersExplorerTool.title).toBe("Solution Layers Explorer");
+    expect(solutionLayersExplorerTool.tooltip).toBe(
+      "Inspect and compare the solution layers of a component, and remove its unmanaged Active layer",
+    );
     expect(TOOL_REGISTRY["bulk-workflow-execution"]).toBe(bulkWorkflowExecutionTool);
     expect(bulkWorkflowExecutionTool.allowMultipleInstances).toBe(true);
     expect(bulkWorkflowExecutionTool.showInActivityBar).toBe(true);

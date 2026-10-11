@@ -15,6 +15,7 @@ import {
 import { tags } from "@lezer/highlight";
 import { useFieldControl } from "./useFieldControl";
 import { cn } from "./cn";
+import { indentFolding } from "./codeFolding";
 import type { CodeEditorProps } from "./CodeEditor";
 
 
@@ -71,6 +72,7 @@ export default function CodeMirrorEditor({
   placeholder,
   "aria-label": ariaLabel,
   lineNumbers: showLineNumbers = true,
+  folding = false,
   className,
 }: CodeEditorProps) {
   const field = useFieldControl();
@@ -83,6 +85,7 @@ export default function CodeMirrorEditor({
   const configuration: Extension = [
     EditorState.readOnly.of(readOnly),
     showLineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : [],
+    folding ? indentFolding() : [],
     readOnly ? [] : highlightActiveLine(),
     placeholder ? placeholderText(placeholder) : [],
     EditorView.contentAttributes.of({
@@ -155,7 +158,7 @@ export default function CodeMirrorEditor({
     viewRef.current?.dispatch({ effects: config.current.reconfigure(configuration) });
     // `configuration` is rebuilt from these inputs on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [readOnly, placeholder, ariaLabel, showLineNumbers, field.id, field["aria-describedby"], field["aria-invalid"]]);
+  }, [readOnly, placeholder, ariaLabel, showLineNumbers, folding, field.id, field["aria-describedby"], field["aria-invalid"]]);
 
   return (
     <div
