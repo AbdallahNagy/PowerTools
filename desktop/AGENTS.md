@@ -25,5 +25,6 @@
 
 - Add or update regression tests before changing behavior.
 - Use deterministic API and desktop fakes; never use production credentials in automated tests.
+- Live checks against a non-production Dataverse environment follow `docs/live-dataverse-environment.md`. They supplement automated tests and never replace them.
 - From `desktop/`, run `npm test`, `npm run lint`, and `npm run build` before completion.
 - When `npm run check` exists, use it as the required aggregate gate.

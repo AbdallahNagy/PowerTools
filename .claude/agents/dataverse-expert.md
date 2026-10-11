@@ -36,6 +36,15 @@ Correct the brief against current Dataverse behavior:
 
 Mark each claim the XrmToolBox plugin got wrong, and each claim the research left unverified. Say what evidence you used. Do not treat plugin source as proof when Microsoft's message contract disagrees.
 
+## Live environment
+
+When `node scripts/dataverse-live.mjs check` connects, use the live environment as evidence. Read [`desktop/docs/live-dataverse-environment.md`](../../desktop/docs/live-dataverse-environment.md) first.
+
+- Use `node scripts/dataverse-live.mjs webapi "<relative path>"` for read-only Web API GETs: metadata (`EntityDefinitions`, attributes, relationships), the rows the tool reads (`sdkmessagefilters`, `solutioncomponents`, `workflows`, and so on), and function calls such as `RetrieveVersion`.
+- Mark each claim you checked this way as `Verified live`, with the query and the version from `check`.
+- Do not write to the environment. Write checks belong to the developer.
+- If `check` exits `2` or `1`, say once at the top of the review that no live environment was available, and mark claims you could not check as unverified.
+
 ## Output
 
 Append `### Dataverse review` to the brief. Do not rewrite, reorder, or delete earlier sections. If that heading already exists, stop.

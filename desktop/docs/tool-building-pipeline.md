@@ -34,6 +34,16 @@ Save the researcher's brief unchanged as the start of the handoff file before Da
 
 Stop and ask the user only for an ambiguous tool name, a GPL or other copyleft license, or two real product scopes. Mark ordinary uncertainty in the owning section instead of opening a question.
 
+## Live Dataverse environment
+
+Offline tests prove the code against fakes. A live check proves it against a real environment. When `DATAVERSE_URL`, `DATAVERSE_TENANT_ID`, `DATAVERSE_CLIENT_ID`, and `DATAVERSE_CLIENT_SECRET` are set, `node scripts/dataverse-live.mjs check` connects to a non-production environment with an Entra application user. Setup, commands, and safety rules are in [`live-dataverse-environment.md`](live-dataverse-environment.md).
+
+- The Dataverse expert verifies claims with read-only Web API queries and marks them `Verified live`.
+- The developer starts the sidecar, calls every new endpoint against the environment, cleans up its test data, and records the calls under `#### Live Dataverse check`.
+- The reviewer reruns `check`. It fails a pull request that skipped the live check while an environment was available, and repeats one recorded read-only call.
+
+When no environment is configured, each role says so in its section, and the quality check reads `Not verified against live Dataverse`.
+
 ## Brief file
 
 One file per tool:
@@ -64,7 +74,7 @@ Screens, empty and error states, and what not to build. This section is written 
 
 ### Implementation notes and test evidence
 
-What the developer changed, which checks ran, and the results.
+What the developer changed, which checks ran, and the results. Ends with `#### Live Dataverse check`: `Passed`, `Failed`, or `Not run` with the reason, and each live call.
 
 ### Open questions
 
