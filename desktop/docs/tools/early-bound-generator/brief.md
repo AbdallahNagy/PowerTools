@@ -409,3 +409,97 @@ A vertical stack. No inner split.
 - Choosing a language other than C#.
 - Saving or loading named settings profiles beyond `builderSettings.json` in the output folder.
 - The WinForms layout. That means no property grid of every setting, no settings dialog behind a gear button, no log text box as the main output, no XrmToolBox ribbon or host chrome, and none of the plugin's copy or icons.
+
+### Dataverse review
+
+**Evidence used.** The engine source on GitHub: `microsoft/PowerPlatform-DataverseModelBuilder` at `04c1ff4` (2024-05-08). The shipped `Microsoft.PowerPlatform.Dataverse.ModelBuilderLib` 2.0.16 nupkg: its nuspec, release notes and DLL strings. The `Microsoft.PowerPlatform.Dataverse.Client` 1.2.10 nupkg. Microsoft's docs from `MicrosoftDocs/powerapps-docs` on GitHub (`generate-early-bound-classes.md`, `api-limits.md`, `query-schema-definitions.md`, `fetchxml/page-results.md`). The sidecar on main (`DataverseClientFactory.cs`, `ThirdParty/Data8.PowerPlatform.Dataverse.Client/OnPremiseClient.cs`, `Tools/Metadata/MetadataEndpoints.cs`). DLaB at `6f40528`, read only to check one workaround. learn.microsoft.com could not be reached from this session (proxy 403). Claims that need it are marked unverified.
+
+**Messages and metadata: confirmed, with corrections**
+
+- The table reads are as the researcher described. With an empty `entityNamesFilter` the engine sends `RetrieveAllEntities` (`Entity | Attributes | Relationships`, `RetrieveAsIfPublished = false`). With a filter it sends `RetrieveMetadataChangesRequest` with `logicalname Equals` conditions, 20 per request, `AllProperties = true`.
+  - Correction to the "always true" gotcha. It matters in one case. A filter that is not empty but parses to no names (for example `";"`) sends zero requests. The run "succeeds" with no tables. It does not fall back to all tables. Never send a filter made only of separators.
+  - Unknown or misspelled names come back as nothing, with no error. Logical names are lowercase. A mixed-case name may not match, so normalize to lowercase. Check every name against the `/api/metadata/entities` list before queuing. Report missing names as a validation error. Otherwise the user gets fewer files and no explanation.
+  - **Table wildcards are not a `pac modelbuilder` feature.** Microsoft's docs list `*` for `messageNamesFilter` only. The engine sends table names as `Equals`, so `new_*` in `entityNamesFilter` matches no table. Table wildcards are DLaB's extension (its `entity`-table `Like` query). In the chosen scope (A), any prefix picker must expand to explicit logical names from the entity list the sidecar has already loaded. Write only explicit names to `builderSettings.json` and the PAC command. Do not query the `entity` table. Once expanded, the saved settings reproduce in CI only the tables that existed at generation time. Tell the user this.
+  - Drop the planned sidecar test "at most 20 names per `RetrieveMetadataChanges` request". The batching happens inside Microsoft's engine, and Power Tools should not reimplement metadata reads. Test name normalization and the unknown-name check instead.
+  - `/api/metadata/entities` hides intersect and private tables. `pac` generates intersect tables when they are named or when no filter is set. Add a free-text entry for logical names the picker does not list, validated against a full `RetrieveAllEntities` (`EntityFilters.Entity`) list, not the filtered one.
+- **Published versus unpublished.** Tables come from published metadata. `RetrieveMetadataChanges` has no as-if-published option, and the unfiltered path passes `false`. Global choices from `RetrieveAllOptionSets` use `RetrieveAsIfPublished = true`. So unpublished column changes do not appear, but unpublished global choice edits do. Users must publish customizations before they generate.
+- **Labels** come from the organization base language: a `RetrieveMultiple` of `organization.languagecode`, `top=1`. They do not come from the user's UI language. Choice enum member names are built from these labels.
+- **Messages.** Confirmed: paged `ExecuteFetchRequest`. It uses `distinct='true'`, outer joins to request/response fields, an inner join to `sdkmessagefilter` (`isvisible = 1`) and `sdkmessagepair.endpoint = '2011/Organization.svc'`. A second paged query maps messages to tables.
+  - Corrections and additions:
+    - **The message filter is injected into FetchXML unescaped** (`value='{itm}'`, with `*` replaced by `%`). A name with `'`, `<` or `&` breaks the query or changes it. The sidecar must allow only `[A-Za-z0-9_]` and `*` in each message filter entry, and reject anything else before calling the engine.
+    - `*` becomes `like '%'`. In SQL `LIKE`, `_` is also a single-character wildcard, so `new_*` can also match `newX...`. This is minor and only over-includes.
+    - **A non-empty `messageNamesFilter` forces `GenerateSdkMessages = true`.** The engine sets it itself. A "generate messages: off" toggle with a leftover message filter still generates messages. The settings builder must clear `messageNamesFilter` when messages are off.
+    - **Messages on with no filter reads and generates every visible SDK message.** That is thousands of rows and files, and the joined result can be very large. Release 2.0.6 notes "SDK message builder would miss messages due to the volume of data". Distinct queries over link-entities may not return a paging cookie. Dataverse then falls back to page-number paging, which is capped at 50,000 rows in total (`page-results.md`). Recommendation: default to messages on only when the message filter is not empty. Otherwise default to off, or warn the way "all tables" warns.
+    - With messages off and no message filter, the engine sends no `sdkmessage*` queries at all. This lets a user without read access to SDK message tables still generate tables.
+    - The engine skips messages whose request classes already exist in `Microsoft.Xrm.Sdk.Messages` or `Microsoft.Crm.Sdk.Messages`. It checks by reflection against the **loaded** `Microsoft.Xrm.Sdk.dll` / `Microsoft.Crm.Sdk.Proxy.dll`, by prefix (`StartsWith`). The log line is "Wrote N Message(s). Skipped M". A picked message may produce no file. The message picker should show this ("already in the SDK") so the result is not a surprise.
+    - Microsoft's docs: when messages are generated, `serviceContextName` must be set. Without the generated `OrganizationServiceContext`, using the message classes fails at runtime with a `DataContractResolver` deserialization error. Add this to validation: if messages are on, the context name is required. An empty context name is otherwise legal and means no context file.
+  - `ExecuteFetch` is listed as deprecated in older SDK notices, but the 2011 Organization service still serves it. `pac modelbuilder build` uses it online today through this same engine. Power Tools cannot replace it without forking the engine, so accept it for v1. Current deprecation and removal status was not re-checked against learn.microsoft.com in this session.
+- **`/messages` picker endpoint (new).** Use `RetrieveMultiple` with a `QueryExpression`, not `ExecuteFetch`. Apply the same criteria as the engine: `sdkmessage.isprivate = false`, an inner link to `sdkmessagepair` with `endpoint = '2011/Organization.svc'`, and an inner link to `sdkmessagefilter` with `isvisible = true`, `distinct`. Otherwise the picker offers messages the engine will not emit. Page with the paging cookie, and fall back to page numbers when no cookie comes back. `customapi` (`uniquename`, `isprivate`) is a separate, optional query. Treat "entity `customapi` does not exist" as an empty result, not a failure (see on-premises).
+- **Settings file.** The engine has `writesettingsTemplateFile` (`wstf`). It deletes and rewrites `builderSettings.json` in the output directory from the effective settings. Use that instead of hand-writing the JSON, so the file matches what `pac` writes. `settingsTemplateFile` and `writesettingsTemplateFile` cannot be used together. The engine also creates the output and type folders itself (`Directory.CreateDirectory`). It never deletes `.cs` files, so the "never delete in v1" rule holds if Power Tools adds no delete step.
+
+**Paging, batching, throttling and limits**
+
+- No writes, no `ExecuteMultiple`, no transactions, no `$batch`. The total request count is small: a few metadata calls plus message pages. The request-count limit (6,000 per 5 minutes per user) is not a concern.
+- The **execution-time** service-protection limit (combined 20 minutes per 5-minute window per user) can matter. Repeated unfiltered `RetrieveAllEntities` runs are expensive by Microsoft's own description. The global one-job lock helps.
+- Online `ServiceClient` retries 429 service-protection faults automatically, waiting for `Retry-After` (`api-limits.md`). The Data8 on-premises client does not retry, but on-premises has no service-protection limits.
+- **Timeouts (not in the research):**
+  - On-premises: `OnPremiseClient` sets its operation timeout to **2 minutes** (`OnPremiseClient.cs:185`). Its `Timeout` property can be changed per instance. An unfiltered `RetrieveAllEntities` (`Entity | Attributes | Relationships`) on a large on-premises org can exceed 2 minutes. The job runner should raise `Timeout` on its own client instance (for example 10 minutes). This is safe because the factory creates a new client for each request.
+  - Online: `ServiceClient` has its own connection timeout (believed to be about 4 minutes by default). It is set through `ServiceClient.MaxConnectionTimeout`, which is believed to be **static and process-wide**. Do not change it for one job. Rely on the table filter instead. Unverified in this session.
+- Response size: an unfiltered read is tens of MB. On-premises WCF message-size limits in the Data8 claims-based binding were not checked. Unverified.
+
+**Privileges and connection requirements**
+
+- No `WhoAmI`, impersonation or `CallerId` is needed, and the engine sets none. Do not set `CallerId`, because the output depends only on metadata the caller can see.
+- Table and choice metadata (`RetrieveAllEntities`, `RetrieveMetadataChanges`, `RetrieveAllOptionSets`) can be read by any licensed user. `organization.languagecode` read is in every role.
+- **Unverified (the research claim is too broad):** "any user who can sign in has this" for `sdkmessage`, `sdkmessagepair`, `sdkmessagerequest(field)`, `sdkmessageresponse(field)`, `sdkmessagefilter` and `customapi`. These are organization-owned tables with their own read privileges. Whether a minimal custom role includes them was not confirmed.
+  - Failure shape: the engine reads all metadata before writing anything. A privilege fault on the message queries aborts the whole run with exit code 2 and writes nothing. Surface the fault text, and suggest turning messages off.
+- Token: `ExternalTokenManagement` with a fixed token captured per request. A run that outlives the token fails with 401 partway through the reads. This agrees with the research. It is acceptable for v1.
+
+**Online versus on-premises**
+
+- Both connection types reach the engine as `IOrganizationService`. That is `ServiceClient` online and Data8 `OnPremiseClient` (`IOrganizationServiceAsync2`) on-premises. Both share one `Microsoft.Xrm.Sdk` identity (see the assembly note below).
+- On-premises, every request goes through Data8's own SOAP serializer (`DataContractSerializer` + `KnownTypesResolver`). The sidecar on main already sends typed `RetrieveAllEntitiesRequest` and `RetrieveMetadataChangesRequest` this way. **Unverified:** the engine's untyped `OrganizationRequest("RetrieveAllEntities")` / `("RetrieveAllOptionSets")` with an `EntityFilters` enum parameter, and `ExecuteFetchRequest`, through Data8. Add a serializer round-trip test for those request shapes. If possible, run one live on-premises check before release.
+- **Custom APIs are online-only.** Dynamics 365 CE on-premises 9.x has no `customapi` table. That is believed but not re-checked against current docs. The message picker must not fail on-premises. Custom process actions (workflow `category = 3`) still appear as `sdkmessage` rows on both.
+- On-premises 2-minute timeout: see above.
+
+**Solution and managed limits**
+
+- Not applicable to writes; the tool changes nothing in Dataverse. Metadata comes from the merged, published result of all solution layers. Managed and unmanaged layers do not affect the output.
+- `pac modelbuilder` has no "tables in solution X" filter. Choosing tables by solution would be a Power Tools addition (`solutioncomponent`, `componenttype = 1`, resolved to logical names). It belongs in a later item, not v1 scope (A).
+
+**Failure modes and partial success**
+
+- `ModelBuilder.Invoke` catches `FaultException<OrganizationServiceFault>`, `MessageSecurityException` and `Exception`. It returns `2` and writes a one-line message to `Console.Error`, which is stderr. Confirmed. Electron drains sidecar stderr, so it cannot corrupt the stdout `LISTENING` handshake.
+  - The fault detail, including the error code needed to tell privilege, throttling and timeout apart, goes only to the engine logger's `TraceError`. The runner's `ILogger` must capture Error level.
+  - The `MessageSecurityException` branch dereferences `InnerException` without a null check. The runner must still wrap `Invoke` in its own `try`/`catch`.
+- **Partial output.** The engine writes files in order: entities, messages, option sets, context. A failure while writing (an IO error or a read-only file) leaves the files already written. On failure, list the `*.cs` files whose write time is at or after the run start. Report "failed, N files were written". Do not report "nothing written".
+- **Static state in Microsoft's engine (the research missed it, and it is a correctness bug for a long-lived sidecar):** `Utility.Utilites._locatedKeys` is a `static Dictionary` that caches the parsed `entitynamesfilter` and `messagenamesfilter` lists. It is never cleared. Confirmed in the source, and the field is present in the 2.0.16 DLL. **The second generation in the same sidecar process reuses the first run's table and message filters.** DLaB works around this by clearing the field by reflection before each run (`PacModelBuilderCodeGenHack.ClearMsUtilitiesCache`). `NamingService` and `CodeWriterFilterService` hold other static caches.
+  - Required in v1, choosing one:
+    - (a) Load ModelBuilderLib in a collectible `AssemblyLoadContext` per job. Note that `IOrganizationService` and `Microsoft.Xrm.Sdk` must stay in the default context so the client type is shared.
+    - (b) Clear `_locatedKeys` by reflection before each run (clean-room, a few lines), and fail the job loudly if the field is not found.
+  - Add a sidecar test: two runs in one process with different filters must use the second filter. Keep the global one-job lock in either case.
+- `VerifyArguments()` result ignored: confirmed. The sidecar's own validation is the only gate.
+
+**Assembly conflict (refines Recommended implementation step 1)**
+
+- Both packages ship `Microsoft.Xrm.Sdk.dll` and `Microsoft.Crm.Sdk.Proxy.dll`. ModelBuilderLib has them under `lib/net6.0` and Dataverse.Client 1.2.10 under `lib/net8.0`. They have the **same assembly version (9.0.0.0) and the same file version (9.2.49.14828)**, read from the DLL metadata.
+- So only one copy loads, and the researcher's "type identity / `MissingMethodException`" risk is low. The NuGet conflict resolver picks one copy. The spike is still worth doing, mainly to check that the single-file publish has no duplicate-path error.
+- "Output identical to `pac`" holds for the same ModelBuilderLib version. The PAC CLI bundles its own engine version, which may be newer than 2.0.16. Show the engine version in the run log.
+
+**Plugin claims that are wrong**
+
+- The research credits the static caches only to DLaB's extensions. Microsoft's own engine also keeps static state, and `_locatedKeys` leaks filters between runs.
+- "Metadata fetch in batches of 20 to 50 names" is listed as something to keep. Microsoft's engine uses 20. The 50-name `In` batch is DLaB's wildcard path, which is out of scope (A). Power Tools does no batching of its own.
+- Table wildcard filters presented as a general capability. They are DLaB-only, and `pac` does not support them.
+- The DLaB post-filter that removes `CreateMultiple`, `UpdateMultiple`, `DeleteMultiple` and `UpsertMultiple` must not be ported in scope (A), because `pac` output includes them.
+- "Both packages ship their own `Microsoft.Xrm.Sdk.dll`, so watch for type identity problems" overstates it. The identities match (see above).
+
+**Plugin claims that remain unverified**
+
+- Read privileges on `sdkmessage*` and `customapi` for minimal roles.
+- Current Microsoft deprecation and removal status of `ExecuteFetch`.
+- That `customapi` is absent on every on-premises 9.x version.
+- Data8 on-premises serialization of the engine's untyped requests and `ExecuteFetch`.
+- `ServiceClient.MaxConnectionTimeout` default and whether it is static.
+- Whether `RetrieveMetadataChanges` matching on `logicalname` is case-sensitive.
+- The researcher's "Gotcha" line numbers in `MetadataProviderQueryService.cs` match source `04c1ff4`. Whether the 2.0.16 package differs from that source was checked only through DLL strings.
