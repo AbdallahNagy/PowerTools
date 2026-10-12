@@ -503,3 +503,55 @@ A vertical stack. No inner split.
 - `ServiceClient.MaxConnectionTimeout` default and whether it is static.
 - Whether `RetrieveMetadataChanges` matching on `logicalname` is case-sensitive.
 - The researcher's "Gotcha" line numbers in `MetadataProviderQueryService.cs` match source `04c1ff4`. Whether the 2.0.16 package differs from that source was checked only through DLL strings.
+
+### Implementation notes and test evidence
+
+**Files and endpoints added**
+
+- Sidecar, `api/PowerTools/PowerTools.API/Tools/EarlyBoundGenerator/`, mapped by `MapEarlyBoundGeneratorEndpoints()` in `Program.cs`. The group `/api/early-bound-generator` has `DataverseContextFilter`. Clients come from `DataverseClientFactory`.
+  - `GET /tables`: every table logical name from `RetrieveAllEntities` (`EntityFilters.Entity`), including intersect and private tables. The renderer uses it to expand wildcards and to check names.
+  - `GET /folder?path=`: whether the folder exists and holds other files, plus the values in its `builderSettings.json`, or the reason it could not be read.
+  - `POST /jobs`: normalizes and validates the settings, checks explicit table names against the full table list, and queues the run. It returns `400` with `{ code, message, problems }` for invalid settings or unknown tables, and `409` while another generation is queued or running anywhere in the sidecar.
+  - `GET /jobs/{jobId}`: `{ state, stage, log, files: { path, kind, name, bytes }[], error, errorKind, outputDirectory, durationMs }`.
+  - `PowerTools.API.csproj` references `Microsoft.PowerPlatform.Dataverse.ModelBuilderLib` 2.0.16.
+  - New xUnit project `api/PowerTools/PowerTools.API.EarlyBoundGenerator.Tests/`, added to `PowerTools.sln`.
+- Platform: `desktop/src/electron/folders.ts` registers `select-directory` (`dialog.showOpenDialog` with `openDirectory` and `createDirectory`) and `open-path` (`shell.openPath`). `open-path` opens only absolute paths of existing folders. The preload exposes them, and `desktopBridge.ts` adds `selectDirectory(defaultPath?)` and `openPath(path)`. The typed test fake is updated.
+- Tool: `desktop/src/ui/tools/early-bound-generator/` (`tool.ts`, `EarlyBoundGenerator.tsx`, `api/`, `model/`, `state/`, `components/`, `tests/`, and a new icon). It has one entry in `registry.tsx` after `data-migration` and one in `publicCatalog.ts` in the same order, using the UX public-listing sentence.
+
+**Behavior taken from the brief**
+
+- Scope (A). Microsoft's ModelBuilder runs in-process with the tab's connection (`new ModelBuilder(logger).Invoke(service)` via `LoadArguments`). It always runs with `/splitfiles` and `/writesettingsTemplateFile`, the same as `pac modelbuilder build`. Nothing shells out to `pac`.
+- Dependency spike: ModelBuilderLib 2.0.16 builds next to Dataverse.Client 1.2.10 with no warnings. A self-contained single-file publish works for `win-x64` and `linux-x64`. The `linux-x64` single-file sidecar was started, and a job ran the engine in it. That run failed at the network as expected, and the failure was reported with `errorKind: "connection"`.
+- Dataverse review corrections applied:
+  - The engine's static `_locatedKeys` filter cache is cleared by reflection before each run. The job fails loudly if the field is missing. Runs are serialized behind a static lock and one global job.
+  - Table wildcards are expanded in the renderer against `GET /tables`, so only explicit lowercase names go to the engine, the command, and `builderSettings.json`. Unknown names, and patterns that match nothing, are inline errors and block Generate, so an expansion never becomes "every table" by accident. The hint says that saved wildcards become today's table names.
+  - The sidecar accepts only `[A-Za-z0-9_*]` in message names. `%` is written as `*`. The message filter is cleared when messages are off.
+  - Messages default to off. A context name is required when messages are on. With messages on and no message filter, a warning is shown, the same way the empty table list warns.
+  - `builderSettings.json` is written by the engine. Keys the form does not control are copied back after a successful run. When a run fails, the previous file is restored, or the engine's new file is deleted. No `.cs` file is ever deleted.
+  - On-premises clients get a 10-minute `Timeout` for the job only. Failed runs list the `*.cs` files written since the run started. The engine version (file version, for example 2.0.0.16) is the first log line.
+- UX decisions where the engine forced a choice:
+  - `One file per object` was left out. pac always splits output by object and has no single-file switch, so a single file would not be reproducible with the command shown.
+  - `Choice values as enums instead of OptionSetValue` was left out. ModelBuilder always emits enum properties (`EnumPropertyGenerator`) unless `legacyMode` is set, and there is no separate switch. Per the UX, the unsupported option is not shown.
+  - The shared `ProgressBar` has no indeterminate mode. The Generating state shows a `Spinner` with the UX text instead of changing a shared control.
+  - The research's `GET /messages`, `POST /preview-command`, and `GET /jobs/{id}/file` were not built. The UX rules out a message picker and a file preview. The command is built in the renderer (`model/command.ts`), so it updates offline while no environment is selected.
+  - Folder inspection needs the sidecar, so `builderSettings.json` is read once a tab has an environment.
+
+**Commands run and results** (Linux container; .NET SDK 10.0.112 building the `net9.0` projects with `DOTNET_ROLL_FORWARD=Major` to run tests, Node 22)
+
+- `dotnet build api/PowerTools/PowerTools.sln`: passed, 0 warnings, 0 errors.
+- `dotnet test api/PowerTools/PowerTools.sln`: passed. The new `PowerTools.API.EarlyBoundGenerator.Tests` has 40 tests, all passing. They cover validation, argument building, the real engine against a fake `IOrganizationService` (files written, settings file, two runs in one process each using their own filter, no SDK message queries while messages are off, privilege faults), run success and failure handling (file kinds, preserved settings keys, settings restore), the one-job lock behind the 409, and folder inspection. Every existing sidecar test project also passed.
+- `dotnet publish PowerTools.API -c Release -r win-x64 -p:PublishingForSidecar=true` and the same for `linux-x64`: passed.
+- From `desktop/`:
+  - `npm test`: passed, 92 files and 556 tests. The new tests are three node files and one renderer file (48 tests), plus updates to the folder IPC, preload, bridge, and registry tests.
+  - `npm run lint`: passed.
+  - `npm run build`: passed. Vite printed its usual chunk-size warning for the main bundle.
+  - `npm run check`: passed (typecheck, lint with `--max-warnings 0`, tests, renderer build, Electron smoke test). It ran under `xvfb-run` after `dotnet build` of the sidecar, as CI does.
+
+**Checks not run**
+
+- No live online or on-premises environment was used. The Data8 serialization of the engine's untyped `RetrieveAllEntities` / `RetrieveAllOptionSets` and `ExecuteFetch` requests on-premises is still unverified. So are SDK message read privileges for minimal roles.
+- The Windows-only parts were not exercised: the native folder dialog, `shell.openPath`, and the `win-x64` single-file executable at runtime. They were checked only through unit tests and the publish build.
+
+### Open questions
+
+The questions under the earlier `### Open questions` heading are answered: scope (A), the ModelBuilderLib license is accepted, and the work was built from `main`. None.
