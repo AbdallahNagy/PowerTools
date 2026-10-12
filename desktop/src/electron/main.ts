@@ -35,6 +35,7 @@ import {
   registerWindowChromeIpc,
 } from "./windowChrome.js";
 import { initializeTheme, windowBackgroundColor } from "./theme.js";
+import { registerFolderIpc } from "./folders.js";
 
 const { autoUpdater } = electronUpdater;
 
@@ -84,6 +85,7 @@ app.whenReady().then(async () => {
     await shell.openExternal(parsed.toString());
   });
   registerWindowChromeIpc(ipcMain, theme);
+  registerFolderIpc(ipcMain);
 
   let connectionWindow: BrowserWindow | null = null;
 

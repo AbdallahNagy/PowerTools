@@ -55,6 +55,10 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
     },
     openExternalUrl: (url: string) =>
       ipcRenderer.invoke("open-external-url", url),
+    selectDirectory: (defaultPath?: string) =>
+      ipcRenderer.invoke("select-directory", defaultPath),
+    openPath: (target: string) =>
+      ipcRenderer.invoke("open-path", target),
     popupAppMenu: (menuId: string, x: number, y: number) =>
       ipcRenderer.invoke("popup-app-menu", menuId, x, y),
     minimizeWindow: () => ipcRenderer.invoke("window-minimize"),
