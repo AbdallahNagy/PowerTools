@@ -14,6 +14,7 @@ import { fetchXmlBuilderTool } from "../src/ui/tools/fetchxml-builder/tool";
 import { fetchXmlTesterTool } from "../src/ui/tools/fetchxml-tester/tool";
 import { attributeExplorerTool } from "../src/ui/tools/attribute-explorer/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
+import { earlyBoundGeneratorTool } from "../src/ui/tools/early-bound-generator/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
 import { solutionComponentsMoverTool } from "../src/ui/tools/solution-components-mover/tool";
@@ -82,6 +83,7 @@ describe("tool registry", () => {
       "attribute-explorer",
       "bulk-workflow-execution",
       "data-migration",
+      "early-bound-generator",
       "fetchxml-builder",
       "fetchxml-tester",
       "plugin-registration",
@@ -95,6 +97,7 @@ describe("tool registry", () => {
       "attribute-explorer",
       "bulk-workflow-execution",
       "data-migration",
+      "early-bound-generator",
       "fetchxml-builder",
       "fetchxml-tester",
       "plugin-registration",
@@ -120,6 +123,9 @@ describe("tool registry", () => {
     expect(TOOL_REGISTRY["attribute-explorer"].title).toBe("Attribute Explorer");
     expect(TOOL_REGISTRY["attribute-explorer"].showInActivityBar).toBe(true);
     expect(TOOL_REGISTRY["data-migration"]).toBe(dataMigrationTool);
+    expect(TOOL_REGISTRY["early-bound-generator"]).toBe(earlyBoundGeneratorTool);
+    expect(earlyBoundGeneratorTool.allowMultipleInstances).toBe(true);
+    expect(earlyBoundGeneratorTool.showInActivityBar).toBe(true);
     expect(TOOL_REGISTRY["fetchxml-builder"]).toBe(fetchXmlBuilderTool);
     expect(TOOL_REGISTRY["fetchxml-tester"]).toBe(fetchXmlTesterTool);
     expect(TOOL_REGISTRY["plugin-registration"]).toBe(pluginRegistrationTool);

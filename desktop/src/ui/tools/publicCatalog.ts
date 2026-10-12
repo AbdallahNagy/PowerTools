@@ -29,6 +29,12 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
       "Move data between Dataverse environments with a guided, developer-friendly workflow that is easier to understand and control.",
   },
   {
+    id: "early-bound-generator",
+    title: "Early Bound Generator",
+    description:
+      "Pick tables and get one C# file with a typed class per table and an enum per choice column.",
+  },
+  {
     id: "fetchxml-builder",
     title: "FetchXML Builder",
     description:

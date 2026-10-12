@@ -20,6 +20,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerTools.API.Translator.T
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerTools.API.SolutionLayers.Tests", "PowerTools.API.SolutionLayers.Tests\PowerTools.API.SolutionLayers.Tests.csproj", "{0D6227F7-3A60-49B1-B6D4-B9A3811CC0B9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PowerTools.API.EarlyBound.Tests", "PowerTools.API.EarlyBound.Tests\PowerTools.API.EarlyBound.Tests.csproj", "{E43E1FF6-F281-4CD7-9555-2B32B135AA67}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -150,6 +152,18 @@ Global
 		{0D6227F7-3A60-49B1-B6D4-B9A3811CC0B9}.Release|x64.Build.0 = Release|Any CPU
 		{0D6227F7-3A60-49B1-B6D4-B9A3811CC0B9}.Release|x86.ActiveCfg = Release|Any CPU
 		{0D6227F7-3A60-49B1-B6D4-B9A3811CC0B9}.Release|x86.Build.0 = Release|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Debug|x64.Build.0 = Debug|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Debug|x86.Build.0 = Debug|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Release|x64.ActiveCfg = Release|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Release|x64.Build.0 = Release|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Release|x86.ActiveCfg = Release|Any CPU
+		{E43E1FF6-F281-4CD7-9555-2B32B135AA67}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -1,6 +1,7 @@
 import { attributeExplorerTool } from "./attribute-explorer/tool";
 import { bulkWorkflowExecutionTool } from "./bulk-workflow-execution/tool";
 import { dataMigrationTool } from "./data-migration/tool";
+import { earlyBoundGeneratorTool } from "./early-bound-generator/tool";
 import { fetchXmlBuilderTool } from "./fetchxml-builder/tool";
 import { fetchXmlTesterTool } from "./fetchxml-tester/tool";
 import { pluginRegistrationTool } from "./plugin-registration/tool";
@@ -17,6 +18,7 @@ export const BUILT_IN_TOOLS = [
   attributeExplorerTool,
   bulkWorkflowExecutionTool,
   dataMigrationTool,
+  earlyBoundGeneratorTool,
   fetchXmlBuilderTool,
   fetchXmlTesterTool,
   pluginRegistrationTool,
