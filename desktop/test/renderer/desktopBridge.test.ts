@@ -64,6 +64,14 @@ describe("desktopBridge", () => {
       openExternalUrl: async (url) => {
         observed.push(["openExternalUrl", url]);
       },
+      selectDirectory: async (defaultPath) => {
+        observed.push(["selectDirectory", defaultPath]);
+        return "C:\\src\\Model";
+      },
+      openPath: async (path) => {
+        observed.push(["openPath", path]);
+        return { success: false, error: "missing" };
+      },
       popupAppMenu: async (menuId, x, y) => {
         observed.push(["popupAppMenu", menuId, x, y]);
       },
@@ -99,6 +107,8 @@ describe("desktopBridge", () => {
     });
     await expect(desktopBridge.getActiveConnectionName()).resolves.toBe("Primary");
     await expect(desktopBridge.openExternalUrl("https://example.test/docs")).resolves.toBeUndefined();
+    await expect(desktopBridge.selectDirectory("C:\\src")).resolves.toBe("C:\\src\\Model");
+    await expect(desktopBridge.openPath("C:\\src\\Model")).resolves.toEqual({ success: false, error: "missing" });
     await expect(desktopBridge.popupAppMenu("file", 8, 24)).resolves.toBeUndefined();
     await expect(desktopBridge.minimizeWindow()).resolves.toBeUndefined();
 
@@ -110,6 +120,8 @@ describe("desktopBridge", () => {
       ["deleteConnection", "Primary"],
       ["getActiveConnectionName"],
       ["openExternalUrl", "https://example.test/docs"],
+      ["selectDirectory", "C:\\src"],
+      ["openPath", "C:\\src\\Model"],
       ["popupAppMenu", "file", 8, 24],
       ["minimizeWindow"],
     ]);
@@ -198,6 +210,8 @@ describe("createFakeDesktopBridge", () => {
     await expect(bridge.downloadUpdate()).resolves.toBeUndefined();
     await expect(bridge.installUpdate()).resolves.toBeUndefined();
     await expect(bridge.openExternalUrl("https://example.test")).resolves.toBeUndefined();
+    await expect(bridge.selectDirectory()).resolves.toBeNull();
+    await expect(bridge.openPath("C:\\src")).resolves.toEqual({ success: true });
     await expect(bridge.popupAppMenu("help", 0, 0)).resolves.toBeUndefined();
     await expect(bridge.minimizeWindow()).resolves.toBeUndefined();
     await expect(bridge.toggleMaximizeWindow()).resolves.toBeUndefined();

@@ -72,6 +72,10 @@ export interface DesktopBridge {
   installUpdate(): Promise<void>;
   onUpdateStatusChanged(callback: (status: UpdateStatus) => void): () => void;
   openExternalUrl(url: string): Promise<void>;
+  /** Opens the native folder picker. Resolves to the chosen absolute path, or null when cancelled. */
+  selectDirectory(defaultPath?: string): Promise<string | null>;
+  /** Opens an existing folder in the system file manager. */
+  openPath(path: string): Promise<DesktopOperationResult>;
   popupAppMenu(menuId: "file" | "edit" | "view" | "help", x: number, y: number): Promise<void>;
   minimizeWindow(): Promise<void>;
   toggleMaximizeWindow(): Promise<void>;
@@ -116,6 +120,8 @@ export const desktopBridge: DesktopBridge = {
   installUpdate: () => bridge().installUpdate(),
   onUpdateStatusChanged: (callback) => bridge().onUpdateStatusChanged(callback),
   openExternalUrl: (url) => bridge().openExternalUrl(url),
+  selectDirectory: (defaultPath) => bridge().selectDirectory(defaultPath),
+  openPath: (path) => bridge().openPath(path),
   popupAppMenu: (menuId, x, y) => bridge().popupAppMenu(menuId, x, y),
   minimizeWindow: () => bridge().minimizeWindow(),
   toggleMaximizeWindow: () => bridge().toggleMaximizeWindow(),

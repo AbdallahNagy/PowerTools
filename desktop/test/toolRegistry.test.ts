@@ -14,6 +14,7 @@ import { fetchXmlBuilderTool } from "../src/ui/tools/fetchxml-builder/tool";
 import { fetchXmlTesterTool } from "../src/ui/tools/fetchxml-tester/tool";
 import { attributeExplorerTool } from "../src/ui/tools/attribute-explorer/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
+import { earlyBoundGeneratorTool } from "../src/ui/tools/early-bound-generator/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
 import { solutionComponentsMoverTool } from "../src/ui/tools/solution-components-mover/tool";
@@ -82,6 +83,7 @@ describe("tool registry", () => {
       "attribute-explorer",
       "bulk-workflow-execution",
       "data-migration",
+      "early-bound-generator",
       "fetchxml-builder",
       "fetchxml-tester",
       "plugin-registration",
@@ -95,6 +97,7 @@ describe("tool registry", () => {
       "attribute-explorer",
       "bulk-workflow-execution",
       "data-migration",
+      "early-bound-generator",
       "fetchxml-builder",
       "fetchxml-tester",
       "plugin-registration",
@@ -112,6 +115,12 @@ describe("tool registry", () => {
       "See which activated processes reference a custom workflow activity",
     );
     expect(TOOL_REGISTRY["workflow-activities-viewer"].showInActivityBar).toBe(true);
+    expect(TOOL_REGISTRY["early-bound-generator"]).toBe(earlyBoundGeneratorTool);
+    expect(TOOL_REGISTRY["early-bound-generator"].allowMultipleInstances).toBe(true);
+    expect(TOOL_REGISTRY["early-bound-generator"].showInActivityBar).toBe(true);
+    expect(TOOL_REGISTRY["early-bound-generator"].tooltip).toBe(
+      "Generate C# early-bound classes from an environment's metadata",
+    );
     expect(TOOL_REGISTRY.translator).toBe(translatorTool);
     expect(TOOL_REGISTRY.translator.allowMultipleInstances).toBe(true);
     expect(TOOL_REGISTRY.translator.showInActivityBar).toBe(true);

@@ -54,6 +54,8 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
       return () => updateStatusChangedListeners.delete(callback);
     },
     openExternalUrl: async () => undefined,
+    selectDirectory: async () => null,
+    openPath: async () => ({ success: true }),
     popupAppMenu: async () => undefined,
     minimizeWindow: async () => undefined,
     toggleMaximizeWindow: async () => undefined,

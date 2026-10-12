@@ -29,6 +29,12 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
       "Move data between Dataverse environments with a guided, developer-friendly workflow that is easier to understand and control.",
   },
   {
+    id: "early-bound-generator",
+    title: "Early Bound Generator",
+    description:
+      "Generate C# early-bound classes for tables, choices, and messages from an environment's live metadata, and copy the matching pac modelbuilder command for CI.",
+  },
+  {
     id: "fetchxml-builder",
     title: "FetchXML Builder",
     description:
