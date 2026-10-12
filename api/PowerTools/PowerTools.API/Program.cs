@@ -5,6 +5,7 @@ using PowerTools.API.Tools.AttributeExplorer;
 using PowerTools.API.Tools.BulkWorkflowExecution;
 using PowerTools.API.Tools.Connection;
 using PowerTools.API.Tools.DataMigration;
+using PowerTools.API.Tools.EarlyBoundGenerator;
 using PowerTools.API.Tools.Fetch;
 using PowerTools.API.Tools.Metadata;
 using PowerTools.API.Tools.PluginRegistration;
@@ -52,6 +53,9 @@ builder.Services.AddHostedService<BulkWorkflowJobRunner>();
 builder.Services.AddSingleton<ITranslatorJobStore, InMemoryTranslatorJobStore>();
 builder.Services.AddSingleton<ITranslatorDelay, TranslatorDelay>();
 builder.Services.AddHostedService<TranslatorJobRunner>();
+builder.Services.AddSingleton<IEarlyBoundGeneratorJobStore, InMemoryEarlyBoundGeneratorJobStore>();
+builder.Services.AddSingleton<IEarlyBoundEngine, ModelBuilderEngine>();
+builder.Services.AddHostedService<EarlyBoundGeneratorJobRunner>();
 builder.Services.AddScoped<IPluginRegistrationGateway, DataversePluginRegistrationGateway>();
 builder.Services.AddScoped<CapabilitiesService>();
 builder.Services.AddScoped<CatalogService>();
@@ -113,6 +117,7 @@ app.MapSolutionComponentsMoverEndpoints();
 app.MapBulkWorkflowExecutionEndpoints();
 app.MapTranslatorEndpoints();
 app.MapSolutionLayersEndpoints();
+app.MapEarlyBoundGeneratorEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would
