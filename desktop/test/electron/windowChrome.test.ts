@@ -146,6 +146,22 @@ describe("window chrome", () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
+  it("puts the crash reports opt-out in the Help menu", async () => {
+    const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
+    const onChange = vi.fn();
+    const template = createApplicationMenuTemplate(undefined, undefined, { enabled: false, onChange });
+    const help = template.find((item) => item.label === "Help");
+    const [, crashReports] = help?.submenu as Electron.MenuItemConstructorOptions[];
+
+    expect(crashReports).toMatchObject({
+      label: "Send Crash Reports",
+      type: "checkbox",
+      checked: false,
+    });
+    (crashReports.click as (menuItem: { checked: boolean }) => void)({ checked: true });
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
   it("leaves Ctrl+W free so the shell can close the active tab", async () => {
     const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
     const template = createApplicationMenuTemplate();

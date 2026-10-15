@@ -53,6 +53,7 @@ vi.mock("electron", () => {
   };
 });
 
+vi.mock("../../src/electron/sentry.js", () => ({}));
 vi.mock("electron-updater", () => ({ default: { autoUpdater: {} } }));
 vi.mock("../../src/electron/autoUpdate.js", () => ({
   configureAutoUpdates: vi.fn(() => ({
@@ -67,6 +68,11 @@ vi.mock("../../src/electron/usageStats.js", () => ({
   loadUsageStatsEnabled: () => true,
   saveUsageStatsEnabled: vi.fn(),
   startUsageStats: vi.fn(),
+}));
+vi.mock("../../src/electron/crashReports.js", () => ({
+  createCrashReportsMenuItem: () => ({ label: "Send Crash Reports" }),
+  loadCrashReportsEnabled: () => true,
+  saveCrashReportsEnabled: vi.fn(),
 }));
 vi.mock("../../src/electron/auth.js", () => ({
   acquireTokenInteractive: vi.fn(),

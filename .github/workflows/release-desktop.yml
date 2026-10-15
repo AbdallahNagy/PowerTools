@@ -60,6 +60,8 @@ jobs:
         if: ${{ !inputs.notes_only }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Uploads renderer source maps to Sentry. See desktop/vite.config.ts.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: |
           npm run publish:api:win
           npm run transpile:electron

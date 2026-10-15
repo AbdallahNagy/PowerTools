@@ -1,3 +1,5 @@
+// Must load first so Sentry hooks the app before anything else runs.
+import "./sentry.js";
 import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";

@@ -16,6 +16,11 @@ import {
   loadUsageStatsEnabled,
   saveUsageStatsEnabled,
 } from "./usageStats.js";
+import {
+  createCrashReportsMenuItem,
+  loadCrashReportsEnabled,
+  saveCrashReportsEnabled,
+} from "./crashReports.js";
 
 export const TITLE_BAR_MENU_IDS = ["file", "edit", "view", "help"] as const;
 export type TitleBarMenuId = (typeof TITLE_BAR_MENU_IDS)[number];
@@ -90,6 +95,13 @@ export interface UsageStatsMenuOptions {
   onChange: (enabled: boolean) => void;
 }
 
+export type CrashReportsMenuOptions = UsageStatsMenuOptions;
+
+const DEFAULT_CRASH_REPORTS_MENU: CrashReportsMenuOptions = {
+  enabled: true,
+  onChange: saveCrashReportsEnabled,
+};
+
 const DEFAULT_USAGE_STATS_MENU: UsageStatsMenuOptions = {
   enabled: true,
   onChange: saveUsageStatsEnabled,
@@ -98,6 +110,7 @@ const DEFAULT_USAGE_STATS_MENU: UsageStatsMenuOptions = {
 export function createApplicationMenuTemplate(
   themeMenu: ThemeMenuOptions = DEFAULT_THEME_MENU,
   usageStatsMenu: UsageStatsMenuOptions = DEFAULT_USAGE_STATS_MENU,
+  crashReportsMenu: CrashReportsMenuOptions = DEFAULT_CRASH_REPORTS_MENU,
 ): Electron.MenuItemConstructorOptions[] {
   return [
     { role: "fileMenu" },
@@ -133,6 +146,7 @@ export function createApplicationMenuTemplate(
       role: "help",
       submenu: [
         createUsageStatsMenuItem(usageStatsMenu.enabled, usageStatsMenu.onChange),
+        createCrashReportsMenuItem(crashReportsMenu.enabled, crashReportsMenu.onChange),
       ],
     },
   ];
@@ -144,6 +158,7 @@ export function installApplicationMenu(theme: ThemePreference = "system"): void 
       createApplicationMenuTemplate(
         { ...DEFAULT_THEME_MENU, theme },
         { ...DEFAULT_USAGE_STATS_MENU, enabled: loadUsageStatsEnabled() },
+        { ...DEFAULT_CRASH_REPORTS_MENU, enabled: loadCrashReportsEnabled() },
       ),
     ),
   );

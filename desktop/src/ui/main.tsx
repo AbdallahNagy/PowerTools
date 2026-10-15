@@ -10,6 +10,9 @@ import { queryClient } from "./shared/api/queryClient.ts";
 import { clearAuthCache } from "./shared/api/client.ts";
 import { getDesktopBridge } from "./platform/desktopBridge.ts";
 import { followColorScheme } from "./shell/theme/colorScheme.ts";
+import { initRendererCrashReports, rootErrorHandlers } from "./platform/sentry.ts";
+
+initRendererCrashReports();
 
 followColorScheme();
 
@@ -20,7 +23,7 @@ getDesktopBridge()?.onConnectionStatusUpdate(() => {
   queryClient.invalidateQueries();
 });
 
-createRoot(document.getElementById("root")!).render(
+createRoot(document.getElementById("root")!, rootErrorHandlers).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <App />

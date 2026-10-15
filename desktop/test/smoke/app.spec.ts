@@ -23,6 +23,8 @@ test("launches the desktop app with an isolated profile and opens FetchXML Build
       env: {
         ...process.env,
         NODE_ENV: "development",
+        // Never send crash reports from automated runs.
+        SENTRY_DSN: "",
       },
     });
 
