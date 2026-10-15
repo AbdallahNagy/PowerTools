@@ -129,6 +129,23 @@ describe("window chrome", () => {
     expect(onThemeChange).toHaveBeenCalledWith("dark");
   });
 
+  it("puts the usage stats opt-out in the Help menu", async () => {
+    const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
+    const onChange = vi.fn();
+    const template = createApplicationMenuTemplate(undefined, { enabled: false, onChange });
+    const help = template.find((item) => item.label === "Help");
+    const [usageStats] = help?.submenu as Electron.MenuItemConstructorOptions[];
+
+    expect(help?.role).toBe("help");
+    expect(usageStats).toMatchObject({
+      label: "Send Anonymous Usage Stats",
+      type: "checkbox",
+      checked: false,
+    });
+    (usageStats.click as (menuItem: { checked: boolean }) => void)({ checked: true });
+    expect(onChange).toHaveBeenCalledWith(true);
+  });
+
   it("leaves Ctrl+W free so the shell can close the active tab", async () => {
     const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
     const template = createApplicationMenuTemplate();
