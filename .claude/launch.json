@@ -14,6 +14,13 @@
       "runtimeArgs": ["run", "--launch-profile", "https"],
       "cwd": "api/PowerTools/PowerTools.API",
       "port": 7258
+    },
+    {
+      "name": "Website (Astro)",
+      "runtimeExecutable": "corepack",
+      "runtimeArgs": ["pnpm", "dev", "--port", "4321"],
+      "cwd": "website",
+      "port": 4321
     }
   ]
 }

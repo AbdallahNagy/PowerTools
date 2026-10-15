@@ -1,0 +1,19 @@
+---
+import { toolIconUrl } from "../lib/tools";
+
+interface Props {
+  id: string;
+}
+
+// The desktop icons are white-stroke SVGs, so they are drawn as a mask and
+// filled with the accent color to follow the site theme.
+const url = toolIconUrl(Astro.props.id);
+---
+
+{
+  url && (
+    <span class="feature-icon tool-icon" aria-hidden="true">
+      <span class="tool-icon-glyph" style={`--tool-icon: url("${url}")`} />
+    </span>
+  )
+}
