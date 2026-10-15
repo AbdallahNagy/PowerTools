@@ -1,10 +1,11 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
 import { getAppIconPath, getPreloadPath } from "./pathResolver.js";
 import { createStartupSplashWindow } from "./startupSplash.js";
 import {
   configureAutoUpdates,
+  shouldCheckForUpdates,
   type AutoUpdateController,
   type UpdateStatus,
 } from "./autoUpdate.js";
@@ -35,6 +36,7 @@ import {
   registerWindowChromeIpc,
 } from "./windowChrome.js";
 import { initializeTheme, windowBackgroundColor } from "./theme.js";
+import { startUsageStats } from "./usageStats.js";
 
 const { autoUpdater } = electronUpdater;
 
@@ -494,6 +496,15 @@ app.whenReady().then(async () => {
       updater: autoUpdater,
       sendStatus: broadcastUpdateStatus,
     });
+    // Same gate as updates: development runs never count as active installs.
+    if (shouldCheckForUpdates({ isPackaged: app.isPackaged, isDevelopment: isDev() })) {
+      startUsageStats({
+        version: app.getVersion(),
+        platform: process.platform,
+        arch: process.arch,
+        fetch: (url, init) => net.fetch(url, init),
+      });
+    }
   });
 
   if (isDev()) {

@@ -1,6 +1,5 @@
-import { app, BrowserWindow, nativeTheme } from "electron";
-import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { BrowserWindow, nativeTheme } from "electron";
+import { readSettings, writeSettings } from "./settings.js";
 
 export const THEME_PREFERENCES = ["system", "dark", "light"] as const;
 export type ThemePreference = (typeof THEME_PREFERENCES)[number];
@@ -26,21 +25,6 @@ export function isThemePreference(value: unknown): value is ThemePreference {
   return typeof value === "string" && (THEME_PREFERENCES as readonly string[]).includes(value);
 }
 
-function settingsFilePath(): string {
-  return join(app.getPath("userData"), "settings.json");
-}
-
-function readSettings(): Record<string, unknown> {
-  const path = settingsFilePath();
-  if (!existsSync(path)) return {};
-  try {
-    const parsed: unknown = JSON.parse(readFileSync(path, "utf-8"));
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, unknown>) : {};
-  } catch {
-    return {};
-  }
-}
-
 export function loadThemePreference(): ThemePreference {
   const { theme } = readSettings();
   return isThemePreference(theme) ? theme : "system";
@@ -48,7 +32,7 @@ export function loadThemePreference(): ThemePreference {
 
 export function saveThemePreference(theme: ThemePreference): void {
   try {
-    writeFileSync(settingsFilePath(), JSON.stringify({ ...readSettings(), theme }, null, 2), "utf-8");
+    writeSettings({ theme });
   } catch (err) {
     console.error("Failed to persist theme preference:", err);
   }

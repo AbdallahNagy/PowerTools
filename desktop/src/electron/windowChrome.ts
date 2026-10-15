@@ -11,6 +11,11 @@ import {
   windowBackgroundColor,
   type ThemePreference,
 } from "./theme.js";
+import {
+  createUsageStatsMenuItem,
+  loadUsageStatsEnabled,
+  saveUsageStatsEnabled,
+} from "./usageStats.js";
 
 export const TITLE_BAR_MENU_IDS = ["file", "edit", "view", "help"] as const;
 export type TitleBarMenuId = (typeof TITLE_BAR_MENU_IDS)[number];
@@ -80,8 +85,19 @@ const DEFAULT_THEME_MENU: ThemeMenuOptions = {
   },
 };
 
+export interface UsageStatsMenuOptions {
+  enabled: boolean;
+  onChange: (enabled: boolean) => void;
+}
+
+const DEFAULT_USAGE_STATS_MENU: UsageStatsMenuOptions = {
+  enabled: true,
+  onChange: saveUsageStatsEnabled,
+};
+
 export function createApplicationMenuTemplate(
   themeMenu: ThemeMenuOptions = DEFAULT_THEME_MENU,
+  usageStatsMenu: UsageStatsMenuOptions = DEFAULT_USAGE_STATS_MENU,
 ): Electron.MenuItemConstructorOptions[] {
   return [
     { role: "fileMenu" },
@@ -112,13 +128,24 @@ export function createApplicationMenuTemplate(
         { role: "close", accelerator: "" },
       ],
     },
-    { role: "help" },
+    {
+      label: "Help",
+      role: "help",
+      submenu: [
+        createUsageStatsMenuItem(usageStatsMenu.enabled, usageStatsMenu.onChange),
+      ],
+    },
   ];
 }
 
 export function installApplicationMenu(theme: ThemePreference = "system"): void {
   Menu.setApplicationMenu(
-    Menu.buildFromTemplate(createApplicationMenuTemplate({ ...DEFAULT_THEME_MENU, theme })),
+    Menu.buildFromTemplate(
+      createApplicationMenuTemplate(
+        { ...DEFAULT_THEME_MENU, theme },
+        { ...DEFAULT_USAGE_STATS_MENU, enabled: loadUsageStatsEnabled() },
+      ),
+    ),
   );
 }
 

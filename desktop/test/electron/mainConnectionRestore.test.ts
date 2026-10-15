@@ -60,6 +60,13 @@ vi.mock("../../src/electron/autoUpdate.js", () => ({
     downloadUpdate: vi.fn(),
     quitAndInstall: vi.fn(),
   })),
+  shouldCheckForUpdates: () => false,
+}));
+vi.mock("../../src/electron/usageStats.js", () => ({
+  createUsageStatsMenuItem: () => ({ label: "Send Anonymous Usage Stats" }),
+  loadUsageStatsEnabled: () => true,
+  saveUsageStatsEnabled: vi.fn(),
+  startUsageStats: vi.fn(),
 }));
 vi.mock("../../src/electron/auth.js", () => ({
   acquireTokenInteractive: vi.fn(),
