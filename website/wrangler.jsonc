@@ -12,5 +12,15 @@
       "binding": "USAGE",
       "dataset": "power_tools_usage"
     }
-  ]
+  ],
+  // Pull request previews. They don't inherit bindings, and a separate dataset
+  // keeps test heartbeats out of the real counts.
+  "previews": {
+    "analytics_engine_datasets": [
+      {
+        "binding": "USAGE",
+        "dataset": "power_tools_usage_preview"
+      }
+    ]
+  }
 }
