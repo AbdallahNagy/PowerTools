@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Power Tools Promo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=block" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d1014;
+    --surface: #1b1f26;
+    --raised: #232832;
+    --line: #2e3540;
+    --fg-strong: #f3f5f8;
+    --fg: #d3d8df;
+    --fg-muted: #8b94a3;
+    --accent: #1f8075;
+    --accent-text: #3fbfae;
+    --mint: #7fe3d4;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+  body { font-family: "IBM Plex Sans", "Segoe UI", sans-serif; color: var(--fg-strong); }
+  #stage { position: absolute; inset: 0; overflow: hidden; background: var(--bg); }
+  .layer { position: absolute; inset: 0; }
+  .center { display: flex; align-items: center; justify-content: center; }
+  .glow { position: absolute; border-radius: 50%; filter: blur(120px); opacity: .55; }
+  .grid-bg {
+    position: absolute; inset: -200px;
+    background-image:
+      linear-gradient(rgba(63,191,174,.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(63,191,174,.06) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse at center, #000 20%, transparent 70%);
+  }
+  .eyebrow { font-family: "IBM Plex Mono", monospace; font-size: 26px; letter-spacing: .22em; text-transform: uppercase; color: var(--accent-text); }
+  .grad { background: linear-gradient(100deg, #ffffff 10%, #7fe3d4 55%, #34b6a3 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+
+  /* Scene 1 */
+  #logoWrap { position: absolute; left: 50%; top: 50%; width: 300px; height: 300px; margin: -150px 0 0 -150px; }
+  #wordmark { position: absolute; left: 50%; top: 50%; transform: translateY(-50%); white-space: nowrap; }
+  #wordmark h1 { font-size: 150px; font-weight: 700; letter-spacing: -.035em; line-height: 1; }
+  #wordmark .eyebrow { margin-top: 22px; }
+
+  /* Scene 2 */
+  .bigline { font-size: 112px; font-weight: 700; letter-spacing: -.03em; line-height: 1.12; text-align: center; }
+  .w { display: inline-block; margin: 0 .12em; }
+
+  /* Scene 3 */
+  #s3title { position: absolute; top: 120px; width: 100%; text-align: center; }
+  #s3title h2 { font-size: 76px; font-weight: 700; letter-spacing: -.025em; margin-top: 18px; }
+  #cards { position: absolute; top: 410px; left: 50%; width: 1640px; margin-left: -820px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 28px; }
+  .card { height: 230px; border-radius: 22px; background: linear-gradient(160deg, #1d232b, #161a20); border: 1px solid var(--line); padding: 34px 30px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 24px 60px rgba(0,0,0,.4); }
+  .card .ic { width: 64px; height: 64px; border-radius: 16px; background: rgba(63,191,174,.14); border: 1px solid rgba(63,191,174,.35); display: flex; align-items: center; justify-content: center; }
+  .card .ic svg { width: 36px; height: 36px; stroke: var(--accent-text); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .card .nm { font-size: 29px; font-weight: 600; line-height: 1.2; color: var(--fg-strong); }
+
+  /* Scene 4 */
+  #s4 { perspective: 2400px; }
+  #win { position: absolute; left: 50%; top: 50%; width: 1530px; height: 922px; margin: -461px 0 0 -765px; border-radius: 18px; overflow: hidden; border: 1px solid #39414d; box-shadow: 0 60px 140px rgba(0,0,0,.65), 0 0 0 1px rgba(63,191,174,.12), 0 0 120px rgba(31,128,117,.25); transform-origin: 50% 50%; }
+  #win img { width: 100%; height: 100%; display: block; }
+  #ring { position: absolute; border: 4px solid var(--mint); border-radius: 14px; box-shadow: 0 0 40px rgba(127,227,212,.8); }
+  #s4cap { position: absolute; left: 0; right: 0; bottom: 70px; text-align: center; }
+  #s4cap .pill { display: inline-block; padding: 22px 44px; border-radius: 999px; background: rgba(13,16,20,.82); border: 1px solid rgba(63,191,174,.4); font-size: 40px; font-weight: 600; backdrop-filter: blur(8px); }
+
+  /* Scene 5 */
+  #s5title { position: absolute; top: 150px; width: 100%; text-align: center; }
+  #s5title h2 { font-size: 96px; font-weight: 700; letter-spacing: -.03em; margin-top: 18px; }
+  .node { position: absolute; top: 520px; width: 400px; height: 250px; margin-left: -200px; border-radius: 26px; background: linear-gradient(160deg, #1f262f, #161a20); border: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; box-shadow: 0 30px 70px rgba(0,0,0,.45); }
+  .node svg { width: 76px; height: 76px; stroke: var(--accent-text); fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .node .t { font-size: 34px; font-weight: 600; }
+  .node .s { font-family: "IBM Plex Mono", monospace; font-size: 22px; color: var(--fg-muted); margin-top: -12px; }
+  #wires { position: absolute; inset: 0; }
+  #machine { position: absolute; top: 470px; left: 210px; width: 1060px; height: 350px; border: 2px dashed rgba(63,191,174,.45); border-radius: 36px; }
+  #machine span { position: absolute; top: -46px; left: 30px; font-family: "IBM Plex Mono", monospace; font-size: 24px; color: var(--accent-text); letter-spacing: .14em; text-transform: uppercase; }
+  #s5foot { position: absolute; bottom: 120px; width: 100%; text-align: center; font-size: 38px; color: var(--fg); }
+
+  /* Scene 6 */
+  #endLogo { position: absolute; left: 50%; top: 260px; width: 230px; height: 230px; margin-left: -115px; }
+  #endTitle { position: absolute; top: 530px; width: 100%; text-align: center; font-size: 132px; font-weight: 700; letter-spacing: -.035em; }
+  #endSub { position: absolute; top: 700px; width: 100%; text-align: center; font-size: 40px; color: var(--fg); }
+  #endSub b { color: var(--accent-text); font-weight: 600; }
+  #endUrl { position: absolute; top: 810px; left: 50%; transform: translateX(-50%); padding: 22px 46px; border-radius: 999px; background: var(--accent); font-family: "IBM Plex Mono", monospace; font-size: 34px; font-weight: 500; white-space: nowrap; box-shadow: 0 20px 60px rgba(31,128,117,.45); }
+</style>
+</head>
+<body>
+<div id="stage">
+  <!-- Background -->
+  <div class="layer" id="bg">
+    <div class="grid-bg" id="gridbg"></div>
+    <div class="glow" id="g1" style="width:900px;height:900px;background:#1f8075;"></div>
+    <div class="glow" id="g2" style="width:700px;height:700px;background:#0f4a43;"></div>
+  </div>
+
+  <!-- Scene 1: logo + wordmark -->
+  <div class="layer" id="s1">
+    <div id="logoWrap"></div>
+    <div id="wordmark">
+      <h1 class="grad">Power Tools</h1>
+      <div class="eyebrow">for Dataverse developers</div>
+    </div>
+  </div>
+
+  <!-- Scene 2: tagline -->
+  <div class="layer center" id="s2">
+    <div class="bigline">
+      <div><span class="w">Dataverse</span><span class="w">tooling</span></div>
+      <div><span class="w">that</span><span class="w">feels</span><span class="w grad">easier to use.</span></div>
+    </div>
+  </div>
+
+  <!-- Scene 3: tools -->
+  <div class="layer" id="s3">
+    <div id="s3title"><div class="eyebrow">The toolkit</div><h2>Every tool in one workspace.</h2></div>
+    <div id="cards"></div>
+  </div>
+
+  <!-- Scene 4: app -->
+  <div class="layer" id="s4">
+    <div id="win"><img src="app.png" alt=""><div id="ring"></div></div>
+    <div id="s4cap"><span class="pill" id="capText"></span></div>
+  </div>
+
+  <!-- Scene 5: local data -->
+  <div class="layer" id="s5">
+    <div id="s5title"><div class="eyebrow">Secure by design</div><h2>Your data stays <span class="grad">local.</span></h2></div>
+    <div id="machine"><span>Your machine</span></div>
+    <svg id="wires" viewBox="0 0 1920 1080"></svg>
+    <div class="node" id="n1" style="left:480px">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M2 20h20"/></svg>
+      <div class="t">Power Tools</div><div class="s">Electron + React</div>
+    </div>
+    <div class="node" id="n2" style="left:1000px">
+      <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="7" rx="1.5"/><rect x="4" y="14" width="16" height="7" rx="1.5"/><path d="M8 6.5h.01M8 17.5h.01"/></svg>
+      <div class="t">Local API</div><div class="s">127.0.0.1</div>
+    </div>
+    <div class="node" id="n3" style="left:1520px">
+      <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+      <div class="t">Your Dataverse</div><div class="s">online / on-prem</div>
+    </div>
+    <div id="s5foot">No hosted service in between. Direct connection to your environments.</div>
+  </div>
+
+  <!-- Scene 6: end card -->
+  <div class="layer" id="s6">
+    <div id="endLogo"></div>
+    <div id="endTitle" class="grad">Power Tools</div>
+    <div id="endSub"><b>Free</b> &nbsp;·&nbsp; <b>Open source</b> &nbsp;·&nbsp; <b>Windows</b></div>
+    <div id="endUrl">powertools.abdallahnagy.com</div>
+  </div>
+</div>
+
+<script>
+const FPS = 30, DURATION = 30;
+
+// ---------- logo ----------
+function logoSVG(id) {
+  return `<svg viewBox="0 0 100 100" width="100%" height="100%" style="overflow:visible">
+    <defs>
+      <linearGradient id="${id}bg" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#34b6a3"/><stop offset=".5" stop-color="#1f8075"/><stop offset="1" stop-color="#0f4a43"/>
+      </linearGradient>
+      <linearGradient id="${id}bl" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#d4f3ee"/>
+      </linearGradient>
+    </defs>
+    <rect class="lbg" x="4" y="4" width="92" height="92" rx="22" fill="url(#${id}bg)" style="transform-origin:50px 50px"/>
+    <g class="blades">
+      <rect class="b3" x="23" y="16" width="14" height="62" rx="7" fill="#fff" fill-opacity=".3" style="transform-origin:30px 72px"/>
+      <rect class="b2" x="23" y="16" width="14" height="62" rx="7" fill="#fff" fill-opacity=".5" style="transform-origin:30px 72px"/>
+      <rect class="b1" x="23" y="16" width="14" height="62" rx="7" fill="#7fe3d4" style="transform-origin:30px 72px"/>
+      <rect class="b0" x="23" y="16" width="14" height="62" rx="7" fill="url(#${id}bl)" style="transform-origin:30px 72px"/>
+      <circle cx="30" cy="25" r="3" fill="#1f8075"/>
+      <circle cx="30" cy="72" r="5" fill="#0f4a43"/>
+    </g>
+  </svg>`;
+}
+document.getElementById('logoWrap').innerHTML = logoSVG('a');
+document.getElementById('endLogo').innerHTML = logoSVG('b');
+
+// ---------- tool cards ----------
+const ICONS = {
+  table: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 9v11"/>',
+  flow: '<rect x="3" y="4" width="6" height="5" rx="1"/><rect x="3" y="15" width="6" height="5" rx="1"/><path d="M9 6.5h4v11H9M13 12h3"/><path d="M16 9l4 3-4 3z"/>',
+  db: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+  build: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4"/><path d="M14 3v5h5"/><circle cx="16" cy="16" r="3.5"/><path d="M18.5 18.5L21 21"/>',
+  code: '<path d="M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16"/>',
+  plug: '<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>',
+  share: '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="5" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.6M8.2 13.2l7.6 4.6"/>',
+  move: '<rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/><path d="M15 4h4v4M19 4l-5 5"/>',
+  lang: '<path d="M4 5h9M8.5 3v2M6 5c.5 3 2.5 5.5 5 7M11 5c-.5 3-3 6-6 8"/><path d="M13 21l4-10 4 10M14.5 17.5h5"/>',
+  wf: '<rect x="3" y="3" width="7" height="6" rx="1"/><rect x="14" y="3" width="7" height="6" rx="1"/><rect x="8.5" y="15" width="7" height="6" rx="1"/><path d="M6.5 9v3h11V9M12 12v3"/>'
+};
+const TOOLS = [
+  ['Attribute Explorer','table'], ['Bulk Workflow Execution','flow'], ['Data Migration','db'],
+  ['FetchXML Builder','build'], ['FetchXML Tester','code'], ['Plugin Registration','plug'],
+  ['Polymorphic Lookup Creator','share'], ['Solution Components Mover','move'], ['Translator','lang'],
+  ['Workflow Activities Viewer','wf']
+];
+document.getElementById('cards').innerHTML = TOOLS.map(([n,i]) =>
+  `<div class="card"><div class="ic"><svg viewBox="0 0 24 24">${ICONS[i]}</svg></div><div class="nm">${n}</div></div>`).join('');
+
+// ---------- wires ----------
+const wires = document.getElementById('wires');
+wires.innerHTML = `
+  <defs><linearGradient id="wg" x1="0" x2="1"><stop offset="0" stop-color="#3fbfae"/><stop offset="1" stop-color="#7fe3d4"/></linearGradient></defs>
+  <path id="w1" d="M680 645 L800 645" stroke="#3fbfae" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path id="w2" d="M1200 645 L1320 645" stroke="#3fbfae" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <g id="pk"></g>`;
+const pk = document.getElementById('pk');
+for (let i = 0; i < 6; i++) pk.insertAdjacentHTML('beforeend', `<circle r="8" fill="#7fe3d4" style="filter:drop-shadow(0 0 10px #7fe3d4)"/>`);
+
+// ---------- math ----------
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const p = (t, s, d) => clamp((t - s) / d);
+const lerp = (a, b, k) => a + (b - a) * k;
+const eOut = k => 1 - Math.pow(1 - k, 3);
+const eInOut = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+const eBack = k => { const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+const eIn = k => k * k * k;
+// visibility window with fade in/out
+const win = (t, a, b, f = .4) => clamp(Math.min((t - a) / f, (b - t) / f));
+const $ = id => document.getElementById(id);
+const set = (el, o, tr = '') => { el.style.opacity = o; el.style.transform = tr; el.style.visibility = o <= 0.001 ? 'hidden' : 'visible'; };
+
+function animateLogo(root, t0, t) {
+  const bg = root.querySelector('.lbg');
+  const k = eBack(p(t, t0, .7));
+  bg.style.transform = `scale(${lerp(.4, 1, k)}) rotate(${lerp(-25, 0, eOut(p(t, t0, .9)))}deg)`;
+  bg.style.opacity = p(t, t0, .25);
+  const targets = { b0: 0, b1: 22, b2: 44, b3: 66 };
+  for (const [cls, deg] of Object.entries(targets)) {
+    const el = root.querySelector('.' + cls);
+    const i = +cls[1];
+    const kk = eBack(p(t, t0 + .45 + i * .14, .55));
+    el.style.transform = `rotate(${deg * kk}deg)`;
+    el.style.opacity = i === 0 ? p(t, t0 + .3, .2) : p(t, t0 + .45 + i * .14, .15);
+  }
+}
+
+// ---------- timeline ----------
+function render(t) {
+  // background drift
+  $('g1').style.transform = `translate(${-150 + Math.sin(t * .35) * 260}px, ${-250 + Math.cos(t * .27) * 180}px)`;
+  $('g2').style.transform = `translate(${1250 + Math.cos(t * .3) * 240}px, ${500 + Math.sin(t * .4) * 160}px)`;
+  $('gridbg').style.transform = `translate(${(t * 12) % 80}px, ${(t * 8) % 80}px)`;
+
+  // S1: 0 - 4.3
+  {
+    const v = win(t, -1, 4.3, .5);
+    set($('s1'), v, `scale(${lerp(1, 1.06, eIn(p(t, 3.8, .5)))})`);
+    animateLogo($('logoWrap'), .2, t);
+    const slide = eInOut(p(t, 1.9, .8));
+    $('logoWrap').style.transform = `translateX(${lerp(0, -560, slide)}px) scale(${lerp(1, .82, slide)})`;
+    const w = $('wordmark');
+    const wk = eOut(p(t, 2.25, .8));
+    w.style.opacity = wk;
+    w.style.transform = `translate(${lerp(-280, -360, wk)}px, -50%)`;
+    w.style.clipPath = `inset(0 ${lerp(100, 0, wk)}% 0 0)`;
+  }
+
+  // S2: 4.3 - 8.2
+  {
+    const v = win(t, 4.3, 8.2, .35);
+    set($('s2'), v, `scale(${lerp(1, .96, eIn(p(t, 7.8, .4)))})`);
+    document.querySelectorAll('#s2 .w').forEach((el, i) => {
+      const k = eOut(p(t, 4.45 + i * .16, .6));
+      el.style.opacity = k;
+      el.style.transform = `translateY(${lerp(60, 0, k)}px)`;
+      el.style.filter = `blur(${lerp(12, 0, k)}px)`;
+    });
+  }
+
+  // S3: 8.2 - 14.6
+  {
+    const v = win(t, 8.2, 14.6, .4);
+    set($('s3'), v);
+    const tk = eOut(p(t, 8.3, .7));
+    $('s3title').style.opacity = tk;
+    $('s3title').style.transform = `translateY(${lerp(40, 0, tk)}px)`;
+    document.querySelectorAll('#s3 .card').forEach((el, i) => {
+      const row = Math.floor(i / 5), col = i % 5;
+      const k = eBack(p(t, 8.8 + (col + row) * .13, .6));
+      const out = eIn(p(t, 14 + i * .02, .5));
+      el.style.opacity = clamp(p(t, 8.8 + (col + row) * .13, .25)) * (1 - out);
+      el.style.transform = `translateY(${lerp(90, 0, k) - out * 40}px) scale(${lerp(.85, 1, k)})`;
+      // highlight sweep
+      const hl = Math.max(0, 1 - Math.abs((t - 11.4) * 2.2 - i * .55));
+      el.style.borderColor = `rgba(63,191,174,${.15 + hl * .75})`;
+      el.style.boxShadow = `0 24px 60px rgba(0,0,0,.4), 0 0 ${hl * 50}px rgba(63,191,174,${hl * .45})`;
+    });
+  }
+
+  // S4: 14.6 - 21.4
+  {
+    const v = win(t, 14.6, 21.4, .4);
+    set($('s4'), v);
+    const k = eOut(p(t, 14.6, 1.4));
+    const zoom = eInOut(p(t, 17.4, 1.4));
+    const back = eInOut(p(t, 20.2, 1.0));
+    const z = zoom * (1 - back);
+    // zoom target: Start Migration button, in screenshot pixels (2040x1230)
+    const BX = 1811, BY = 151, BW = 205, BH = 53;
+    const sx = 1530 / 2040, sy = 922 / 1230;
+    const Px = (BX + BW / 2) * sx - 765, Py = (BY + BH / 2) * sy - 461;
+    const s = lerp(.82, .9, k) * lerp(1, 2.1, z);
+    const dx = -s * Px * z, dy = (-s * Py - 90) * z;
+    $('win').style.transform =
+      `translate(${dx}px, ${lerp(500, 0, k) + dy}px) rotateX(${lerp(28, 0, k)}deg) rotateZ(${lerp(-3, 0, k)}deg) scale(${s})`;
+    const ring = $('ring');
+    const rk = p(t, 18.4, .5) * (1 - p(t, 20.1, .3));
+    const pulse = 1 + Math.sin((t - 18.4) * 6) * .05 * rk;
+    Object.assign(ring.style, { left: (BX * sx - 7) + 'px', top: (BY * sy - 7) + 'px', width: (BW * sx + 14) + 'px', height: (BH * sy + 14) + 'px', opacity: rk, transform: `scale(${pulse})` });
+    // captions
+    const c1 = win(t, 15.6, 18.0, .35), c2 = win(t, 18.2, 20.9, .35);
+    $('capText').textContent = t < 18.1 ? 'Built for everyday Dataverse work' : 'Guided data migration between environments';
+    const c = Math.max(c1, c2);
+    $('s4cap').style.opacity = c;
+    $('s4cap').style.transform = `translateY(${lerp(30, 0, eOut(c))}px)`;
+  }
+
+  // S5: 21.4 - 26.4
+  {
+    const v = win(t, 21.4, 26.4, .4);
+    set($('s5'), v);
+    const tk = eOut(p(t, 21.5, .7));
+    $('s5title').style.opacity = tk;
+    $('s5title').style.transform = `translateY(${lerp(40, 0, tk)}px)`;
+    ['n1', 'n2', 'n3'].forEach((id, i) => {
+      const k = eBack(p(t, 22 + i * .35, .6));
+      $(id).style.opacity = p(t, 22 + i * .35, .25);
+      $(id).style.transform = `translateY(${lerp(70, 0, k)}px) scale(${lerp(.85, 1, k)})`;
+    });
+    const mk = eOut(p(t, 23.1, .6));
+    $('machine').style.opacity = mk;
+    $('machine').style.transform = `scale(${lerp(1.05, 1, mk)})`;
+    [['w1', 22.5], ['w2', 22.85]].forEach(([id, s]) => {
+      const el = $(id), L = 120;
+      el.style.strokeDasharray = L;
+      el.style.strokeDashoffset = L * (1 - eOut(p(t, s, .4)));
+    });
+    // packets travel n1 -> n2 -> n3 and back
+    const pts = pk.querySelectorAll('circle');
+    pts.forEach((c, i) => {
+      const life = (t - 23.4 - i * .33);
+      if (life < 0) { c.style.opacity = 0; return; }
+      const cyc = (life % 2) / 2;  // 0..1
+      const x = cyc < .5 ? lerp(690, 1310, eInOut(cyc * 2)) : lerp(1310, 690, eInOut((cyc - .5) * 2));
+      // only visible on wires, not inside nodes
+      const onWire = (x > 680 && x < 800) || (x > 1200 && x < 1320);
+      c.setAttribute('cx', x); c.setAttribute('cy', 645);
+      c.style.opacity = onWire ? 1 : 0;
+    });
+    const fk = eOut(p(t, 23.6, .6));
+    $('s5foot').style.opacity = fk;
+    $('s5foot').style.transform = `translateY(${lerp(30, 0, fk)}px)`;
+  }
+
+  // S6: 26.4 - 30
+  {
+    const v = win(t, 26.4, 40, .4);
+    set($('s6'), v);
+    animateLogo($('endLogo'), 26.4, t);
+    $('endLogo').style.transform = `translateY(${Math.sin((t - 26.4) * 1.6) * 6}px)`;
+    [['endTitle', 27.1], ['endSub', 27.45]].forEach(([id, s]) => {
+      const k = eOut(p(t, s, .7));
+      $(id).style.opacity = k;
+      $(id).style.transform = `translateY(${lerp(40, 0, k)}px)`;
+    });
+    const uk = eBack(p(t, 27.8, .6));
+    $('endUrl').style.opacity = p(t, 27.8, .25);
+    $('endUrl').style.transform = `translateX(-50%) scale(${lerp(.7, 1, uk)})`;
+    // final fade to black
+    $('stage').style.filter = `brightness(${1 - p(t, 29.5, .5)})`;
+  }
+}
+
+window.render = render;
+window.FPS = FPS; window.DURATION = DURATION;
+
+// Live preview when opened in a browser (no ?render)
+if (!location.search.includes('render')) {
+  const start = performance.now();
+  const loop = () => { render(((performance.now() - start) / 1000) % DURATION); requestAnimationFrame(loop); };
+  document.fonts.ready.then(loop);
+} else {
+  render(0);
+}
+</script>
+</body>
+</html>
