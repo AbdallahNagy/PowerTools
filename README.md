@@ -60,7 +60,7 @@ flowchart LR
 | --- | --- |
 | [`desktop/`](desktop/) | Electron and React client. Windows is the production target. |
 | [`api/PowerTools/`](api/PowerTools/) | Local ASP.NET Core API the desktop app starts. |
-| [`website/`](website/) | Product website, published to GitHub Pages. |
+| [`website/`](website/) | Product website, deployed to Cloudflare Workers. |
 
 ## Develop
 
