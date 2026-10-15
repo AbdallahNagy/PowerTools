@@ -1,4 +1,5 @@
 // Renders promo.html frame by frame and encodes power-tools-promo.mp4.
+// Muxes voiceover.m4a (from voiceover.mjs) when present.
 // Usage: node render.mjs <path-to-ffmpeg> [--frames a,b,c]
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
@@ -32,8 +33,10 @@ if (stills) {
 }
 
 const out = path.join(here, 'power-tools-promo.mp4');
+const vo = path.join(here, 'voiceover.m4a');
+const audio = fs.existsSync(vo) ? ['-i', vo, '-map', '0:v', '-map', '1:a', '-c:a', 'copy', '-shortest'] : [];
 const ff = spawn(ffmpeg, [
-  '-y', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-',
+  '-y', '-f', 'image2pipe', '-framerate', String(fps), '-c:v', 'mjpeg', '-i', '-', ...audio,
   '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-crf', '18', '-preset', 'slow', '-movflags', '+faststart', out
 ], { stdio: ['pipe', 'inherit', 'inherit'] });
 
