@@ -1,7 +1,26 @@
 {
   "name": "power-tools",
+  "main": "./worker/index.ts",
   "compatibility_date": "2026-10-01",
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "binding": "ASSETS"
+  },
+  // Anonymous daily heartbeats from the desktop app. See worker/README.md.
+  "analytics_engine_datasets": [
+    {
+      "binding": "USAGE",
+      "dataset": "power_tools_usage"
+    }
+  ],
+  // Pull request previews. They don't inherit bindings, and a separate dataset
+  // keeps test heartbeats out of the real counts.
+  "previews": {
+    "analytics_engine_datasets": [
+      {
+        "binding": "USAGE",
+        "dataset": "power_tools_usage_preview"
+      }
+    ]
   }
 }
