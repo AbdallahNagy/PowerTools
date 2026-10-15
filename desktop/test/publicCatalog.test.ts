@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
@@ -38,6 +38,16 @@ describe("public tool catalog", () => {
     for (const tool of PUBLIC_TOOLS) {
       expect(welcome).not.toContain(`title: "${tool.title}"`);
       expect(website).not.toContain(`<h3>${tool.title}</h3>`);
+    }
+  });
+
+  it("has a website tool page for every tool", () => {
+    for (const tool of PUBLIC_TOOLS) {
+      const page = resolve(repoRoot, `website/src/content/tools/${tool.id}.md`);
+      expect(existsSync(page), `missing ${page}`).toBe(true);
+
+      const source = readFileSync(page, "utf8");
+      expect(source).toMatch(/^---\r?\n[\s\S]*?seoTitle:[\s\S]*?seoDescription:[\s\S]*?features:[\s\S]*?\r?\n---\r?\n/);
     }
   });
 });

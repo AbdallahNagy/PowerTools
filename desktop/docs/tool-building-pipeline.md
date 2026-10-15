@@ -80,7 +80,24 @@ Activity-bar tools appear on the welcome page and the website from one list: `de
 
 `PUBLIC_TOOLS` follows `ACTIVITY_BAR_TOOLS` in `desktop/src/ui/tools/registry.tsx`. Each entry uses that tool's id and title, plus the one-sentence description from `### UX`.
 
-The welcome page and `website/src/pages/index.astro` render `PUBLIC_TOOLS`. Adding a tool means adding that catalog entry. It does not mean editing either screen's tool markup. Welcome is not a public tool.
+The welcome page, `website/src/pages/index.astro`, and the website's Tools tab (`website/src/pages/tools/index.astro`) render `PUBLIC_TOOLS`. Adding a tool means adding that catalog entry. It does not mean editing any screen's tool markup. Welcome is not a public tool.
+
+### Website tool page
+
+Every public tool also has its own page at `/tools/<tool-id>/`, so people and search engines can find it. The page route and the sitemap come from `PUBLIC_TOOLS`. The page text comes from one Markdown file:
+
+`website/src/content/tools/<tool-id>.md`
+
+The file name is the catalog id. The catalog owns the title and the one-sentence description, so the file does not repeat them. The frontmatter schema is in `website/src/content/config.ts`:
+
+- `seoTitle`: the page `<title>`, under about 65 characters, ending with `| PowerTools`. Lead with the words people search for, such as `Dataverse` or `Dynamics 365` and the job.
+- `seoDescription`: 140 to 160 characters. Say what the tool does in plain words.
+- `xrmToolBoxEquivalent`: the XrmToolBox plugin name from `### Match`, when there is one. Omit it otherwise.
+- `features`: three to six short capability bullets, taken from `### What it does` and limited to what Power Tools ships per `### UX` and the Dataverse review.
+
+The body is three or four `##` sections: what the tool is for, how it works, and `## When to use it` with real developer scenarios. Write for a Dataverse developer who has never opened the app. Describe only shipped behavior; leave out anything in "what not to build". Do not copy wording from the XrmToolBox plugin. Use other tool pages in that folder as the model.
+
+The website build fails when a catalog tool has no page, and `desktop/test/publicCatalog.test.ts` fails too. Run `pnpm build` from `website/` when you can.
 
 ## Developer gate
 

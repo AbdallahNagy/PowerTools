@@ -656,6 +656,134 @@ h3 {
   margin-top: 8px;
 }
 
+/* Tool listing and tool pages */
+.tool-link-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.tool-link-card h2 {
+  margin-bottom: 8px;
+  font-size: 1.15rem;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+
+.tool-link-card:hover h2,
+.tool-link-card:hover h3 {
+  color: var(--accent-text);
+}
+
+.tool-link-more {
+  margin-top: auto;
+  padding-top: 14px;
+  color: var(--accent-text);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.tool-link-more::after {
+  content: " \2192";
+}
+
+.tool-icon-glyph {
+  display: block;
+  width: 26px;
+  height: 26px;
+  background: currentColor;
+  -webkit-mask: var(--tool-icon) center / contain no-repeat;
+  mask: var(--tool-icon) center / contain no-repeat;
+}
+
+.tool-hero .tool-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+}
+
+.tool-hero .tool-icon-glyph {
+  width: 32px;
+  height: 32px;
+}
+
+.tool-hero h1 {
+  font-size: clamp(2.3rem, 5vw, 3.8rem);
+}
+
+.breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 26px;
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+}
+
+.breadcrumbs a:hover {
+  color: var(--accent-text);
+}
+
+.breadcrumbs [aria-current="page"] {
+  color: var(--fg);
+}
+
+.tool-equivalent {
+  max-width: 650px;
+  margin-inline: auto;
+  color: var(--fg-muted);
+}
+
+.tool-prose {
+  min-width: 0;
+  color: var(--fg);
+}
+
+.tool-prose h2 {
+  margin-top: 36px;
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+}
+
+.tool-prose h2:first-child {
+  margin-top: 0;
+}
+
+.tool-prose p,
+.tool-prose li {
+  line-height: 1.7;
+}
+
+.tool-prose ul,
+.tool-prose ol {
+  padding-left: 22px;
+}
+
+.tool-prose li + li {
+  margin-top: 6px;
+}
+
+.tool-prose a {
+  color: var(--accent-text);
+}
+
+.tool-prose a:hover {
+  text-decoration: underline;
+}
+
+.tool-prose code {
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background: var(--raised);
+}
+
+.tool-features {
+  align-self: start;
+  position: sticky;
+  top: 24px;
+}
+
 .site-footer {
   display: flex;
   justify-content: space-between;
@@ -741,6 +869,10 @@ h3 {
 
   .content-grid {
     grid-template-columns: 1fr;
+  }
+
+  .tool-features {
+    position: static;
   }
 
   .hero {
