@@ -9,6 +9,7 @@ const pages = [
   "/tools/",
   ...PUBLIC_TOOLS.map((tool) => toolPath(tool.id)),
   "/download/",
+  "/changelog/",
   "/contact/"
 ];
 

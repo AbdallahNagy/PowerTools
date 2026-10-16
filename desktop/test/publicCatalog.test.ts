@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import { readToolTable, renderToolTable } from "../../scripts/sync-readme-tools.mjs";
 import { PUBLIC_TOOLS } from "../src/ui/tools/publicCatalog";
 import { ACTIVITY_BAR_TOOLS } from "../src/ui/tools/registry";
 
@@ -39,6 +40,15 @@ describe("public tool catalog", () => {
       expect(welcome).not.toContain(`title: "${tool.title}"`);
       expect(website).not.toContain(`<h3>${tool.title}</h3>`);
     }
+  });
+
+  it("is the tool table in the README", () => {
+    const readme = readFileSync(resolve(repoRoot, "README.md"), "utf8");
+
+    expect(
+      readToolTable(readme),
+      "README.md tool table is out of date. Run: node scripts/sync-readme-tools.mjs",
+    ).toBe(renderToolTable(PUBLIC_TOOLS));
   });
 
   it("has a website tool page for every tool", () => {

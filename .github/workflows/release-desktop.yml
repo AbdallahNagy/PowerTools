@@ -1,9 +1,17 @@
 name: Release Desktop
 
 # Builds the Windows installer and publishes it as a GitHub release for the
-# version in desktop/package.json. The release body comes from
-# desktop/docs/releases/v<version>.md, which the in-app update dialog shows.
+# version in desktop/package.json. The release body is that version's section
+# of CHANGELOG.md, which the in-app update dialog shows. See docs/releasing.md.
+#
+# It runs when a version bump lands on main (usually by merging the pull
+# request from Prepare Release), and can also be run by hand.
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - desktop/package.json
   workflow_dispatch:
     inputs:
       notes_only:
@@ -23,7 +31,36 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # A push to desktop/package.json publishes only when its version has no
+  # release yet, so dependency updates do not start a release.
+  decide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      publish: ${{ steps.check.outputs.publish }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Check for an existing release
+        id: check
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version=$(node -p "require('./desktop/package.json').version")
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          elif gh release view "v$version" > /dev/null 2>&1; then
+            echo "v$version is already released. Nothing to publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Publishing v$version."
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
   release:
+    needs: decide
+    if: needs.decide.outputs.publish == 'true'
     runs-on: windows-latest
     timeout-minutes: 45
     defaults:
@@ -51,8 +88,9 @@ jobs:
         id: meta
         run: |
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $notes = Join-Path $PWD "docs/releases/v$version.md"
-          if (-not (Test-Path $notes)) { throw "Missing release notes: docs/releases/v$version.md" }
+          $notes = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          node ../scripts/changelog.mjs extract $version --out $notes
+          if ($LASTEXITCODE -ne 0) { throw "Missing release notes: add a [$version] section to CHANGELOG.md" }
           "version=$version" >> $env:GITHUB_OUTPUT
           "notes=$notes" >> $env:GITHUB_OUTPUT
 

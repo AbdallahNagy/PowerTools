@@ -1,0 +1,94 @@
+name: Prepare Release
+
+# Opens a release pull request: moves the [Unreleased] notes in CHANGELOG.md
+# into a new version section and bumps desktop/package.json. Merging that pull
+# request runs Release Desktop, which publishes the installer. See
+# docs/releasing.md.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: minor
+      version:
+        description: Exact version instead of a bump (optional, for example 1.2.0)
+        type: string
+        required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: prepare-release
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Pull requests opened with GITHUB_TOKEN do not start other workflows, so
+      # Desktop CI only runs after the merge. Store a fine-grained token with
+      # contents and pull-requests write access as RELEASE_PR_TOKEN to run CI on
+      # the release pull request too.
+      GH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN || secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.RELEASE_PR_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Move Unreleased notes into the new version
+        id: version
+        env:
+          BUMP: ${{ inputs.version || inputs.bump }}
+        run: |
+          version=$(node scripts/changelog.mjs release "$BUMP")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Preparing $version"
+
+      - name: Bump desktop/package.json
+        working-directory: desktop
+        run: npm version "${{ steps.version.outputs.version }}" --no-git-tag-version
+
+      - name: Check changelog
+        run: |
+          node scripts/changelog.mjs check
+          node scripts/changelog.mjs extract "${{ steps.version.outputs.version }}" --out "$RUNNER_TEMP/notes.md"
+
+      - name: Open release pull request
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          branch="release/v$VERSION"
+          if git ls-remote --exit-code --heads origin "$branch" > /dev/null; then
+            echo "::error::$branch already exists. Merge or delete its pull request first."
+            exit 1
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add CHANGELOG.md desktop/package.json desktop/package-lock.json
+          git commit -m "Release $VERSION"
+          git push -u origin "$branch"
+
+          {
+            echo "Merging this pull request publishes Power Tools $VERSION. These notes become the GitHub release and the in-app update notes."
+            echo
+            cat "$RUNNER_TEMP/notes.md"
+          } > "$RUNNER_TEMP/body.md"
+          gh pr create --base main --head "$branch" --title "Release $VERSION" --body-file "$RUNNER_TEMP/body.md"

@@ -7,11 +7,19 @@ on:
     paths:
       - "desktop/**"
       - "api/**"
+      - "CHANGELOG.md"
+      - "scripts/changelog*.mjs"
+      - "README.md"
+      - "scripts/sync-readme-tools.*"
       - ".github/workflows/desktop-ci.yml"
   pull_request:
     paths:
       - "desktop/**"
       - "api/**"
+      - "CHANGELOG.md"
+      - "scripts/changelog*.mjs"
+      - "README.md"
+      - "scripts/sync-readme-tools.*"
       - ".github/workflows/desktop-ci.yml"
 
 permissions:
@@ -40,6 +48,11 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 9.0.x
+
+      - name: Check changelog
+        run: |
+          node --test ../scripts/changelog.test.mjs
+          node ../scripts/changelog.mjs check
 
       - name: Install dependencies
         run: npm ci
