@@ -12,6 +12,13 @@ import {
   validateOnPremisesConnection,
 } from "./connectionValidation.js";
 import type { BrowserLauncher } from "./browserLauncher.js";
+import {
+  classifyImport,
+  commitImport,
+  exportConnections,
+  parseImportFile,
+  type ImportEntry,
+} from "./connectionImportExport.js";
 import { cleanBrowser, cleanText, type ConnectionStore, type DescriptionPatch } from "./connectionStore.js";
 import type {
   ConnectionInput,
@@ -33,6 +40,13 @@ export interface ConnectionIpcDeps {
   launcher: BrowserLauncher;
   sidecar: { baseUrl: string; secret: string };
   getMainWindow: () => BrowserWindow | null;
+  /** File dialogs and file access for import and export. */
+  files: {
+    chooseSaveFile: (window: BrowserWindow | null, defaultName: string) => Promise<string | null>;
+    chooseOpenFile: (window: BrowserWindow | null) => Promise<string | null>;
+    readFile: (path: string) => Promise<string>;
+    writeFile: (path: string, content: string) => Promise<void>;
+  };
   /** Opens a renderer route in its own window. */
   openWindow: (route: ConnectionWindowRoute, options: { width: number; height: number; resizable?: boolean }) => BrowserWindow;
 }
@@ -63,13 +77,16 @@ export function registerConnectionIpc({
   launcher,
   sidecar,
   getMainWindow,
+  files,
   openWindow,
 }: ConnectionIpcDeps) {
   const windows: Partial<Record<ConnectionWindowRoute, BrowserWindow>> = {};
   // Signed-in connection waiting for the user to describe it.
   let pending: PendingConnection | null = null;
-  // Connection the manager window should select once it has loaded.
-  let pendingManagerSelection: string | null = null;
+  // Connections read from the last import file, waiting for the user to pick.
+  let pendingImport: ImportEntry[] = [];
+  // What the manager window should do once it has loaded.
+  let pendingManagerRequest: { selectId: string | null; action: "import" | null } | null = null;
 
   function showWindow(
     route: ConnectionWindowRoute,
@@ -195,12 +212,12 @@ export function registerConnectionIpc({
     }
   }
 
-  function openManager(selectId?: string | null) {
+  function openManager(selectId?: string | null, action?: "import" | null) {
     const window = showWindow("connections", { width: 900, height: 620 });
-    if (selectId) {
-      // A window that is still loading asks for the selection itself.
-      pendingManagerSelection = selectId;
-      window.webContents.send("connection-manager-select", selectId);
+    if (selectId || action) {
+      // A window that is still loading asks for the request itself.
+      pendingManagerRequest = { selectId: selectId ?? null, action: action ?? null };
+      window.webContents.send("connection-manager-request", pendingManagerRequest);
     }
   }
 
@@ -355,8 +372,8 @@ export function registerConnectionIpc({
     return getConnectionForRenderer(store.activeId);
   });
 
-  ipcMain.handle("open-connection-manager", (_event, id: unknown) => {
-    openManager(isString(id) ? id : null);
+  ipcMain.handle("open-connection-manager", (_event, id: unknown, action: unknown) => {
+    openManager(isString(id) ? id : null, action === "import" ? "import" : null);
   });
 
   ipcMain.handle("list-browsers", () => {
@@ -375,16 +392,70 @@ export function registerConnectionIpc({
     launcher.openUrl(url, cleanBrowser(browser)),
   );
 
-  ipcMain.handle("take-connection-manager-selection", () => {
-    const id = pendingManagerSelection;
-    pendingManagerSelection = null;
-    return id;
+  async function exportToFile(window: BrowserWindow | null, ids: unknown) {
+    const chosen = Array.isArray(ids)
+      ? store.list().filter((conn) => ids.includes(conn.id))
+      : store.list();
+    if (chosen.length === 0) return { success: false, error: "There are no connections to export." };
+    const path = await files.chooseSaveFile(
+      window,
+      `powertools-connections-${new Date().toISOString().slice(0, 10)}.json`,
+    );
+    if (!path) return { success: false, cancelled: true };
+    try {
+      await files.writeFile(path, exportConnections(chosen));
+      return { success: true, count: chosen.length };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
+  }
+
+  ipcMain.handle("export-connections", (event: IpcMainInvokeEvent, ids: unknown) =>
+    exportToFile(BrowserWindow.fromWebContents(event.sender), ids),
+  );
+
+  ipcMain.handle("preview-connection-import", async (event: IpcMainInvokeEvent) => {
+    const path = await files.chooseOpenFile(BrowserWindow.fromWebContents(event.sender));
+    if (!path) return null;
+    const parsed = parseImportFile(await files.readFile(path));
+    pendingImport = classifyImport(parsed.entries, store.list());
+    return {
+      source: parsed.source,
+      fileName: path.split(/[\\/]/).pop() ?? path,
+      items: pendingImport.map(({ key, organization, environment, legacyName, envUrl, crmType, status, reason }) => ({
+        key,
+        organization,
+        environment,
+        legacyName,
+        envUrl,
+        crmType,
+        status,
+        ...(reason ? { reason } : {}),
+      })),
+    };
+  });
+
+  ipcMain.handle("commit-connection-import", (_event, keys: unknown) => {
+    if (!Array.isArray(keys)) return { success: false, error: "Choose the connections to import." };
+    const hadActive = store.activeId !== null;
+    const imported = commitImport(store, pendingImport, keys.filter(isString));
+    pendingImport = [];
+    if (!hadActive && store.activeId) broadcastActive();
+    broadcastConnections();
+    return { success: true, imported };
+  });
+
+  ipcMain.handle("take-connection-manager-request", () => {
+    const request = pendingManagerRequest;
+    pendingManagerRequest = null;
+    return request;
   });
 
   return {
     registerRestoredOnPremises,
     openManager,
     openAddConnection: () => showWindow("connection", { width: 500, height: 600 }),
+    exportToFile,
     broadcastConnections,
     broadcastActive,
     getConnectionForRenderer,

@@ -115,6 +115,32 @@ const DEFAULT_TOOL_REQUEST_MENU: ToolRequestMenuOptions = {
   },
 };
 
+export interface ConnectionsMenuOptions {
+  onAddConnection: () => void;
+  onManageConnections: () => void;
+  onImportConnections: () => void;
+  onExportConnections: () => void;
+}
+
+// The menu is built before connections load, so the items call whatever main sets later.
+let connectionsMenuHandlers: ConnectionsMenuOptions = {
+  onAddConnection: () => undefined,
+  onManageConnections: () => undefined,
+  onImportConnections: () => undefined,
+  onExportConnections: () => undefined,
+};
+
+export function setConnectionsMenuHandlers(handlers: ConnectionsMenuOptions): void {
+  connectionsMenuHandlers = handlers;
+}
+
+const DEFAULT_CONNECTIONS_MENU: ConnectionsMenuOptions = {
+  onAddConnection: () => connectionsMenuHandlers.onAddConnection(),
+  onManageConnections: () => connectionsMenuHandlers.onManageConnections(),
+  onImportConnections: () => connectionsMenuHandlers.onImportConnections(),
+  onExportConnections: () => connectionsMenuHandlers.onExportConnections(),
+};
+
 const DEFAULT_USAGE_STATS_MENU: UsageStatsMenuOptions = {
   enabled: true,
   onChange: saveUsageStatsEnabled,
@@ -125,9 +151,22 @@ export function createApplicationMenuTemplate(
   usageStatsMenu: UsageStatsMenuOptions = DEFAULT_USAGE_STATS_MENU,
   crashReportsMenu: CrashReportsMenuOptions = DEFAULT_CRASH_REPORTS_MENU,
   toolRequestMenu: ToolRequestMenuOptions = DEFAULT_TOOL_REQUEST_MENU,
+  connectionsMenu: ConnectionsMenuOptions = DEFAULT_CONNECTIONS_MENU,
 ): Electron.MenuItemConstructorOptions[] {
   return [
-    { role: "fileMenu" },
+    {
+      label: "File",
+      submenu: [
+        { label: "Add Connection…", click: () => connectionsMenu.onAddConnection() },
+        { label: "Manage Connections…", click: () => connectionsMenu.onManageConnections() },
+        { type: "separator" },
+        { label: "Import Connections…", click: () => connectionsMenu.onImportConnections() },
+        { label: "Export Connections…", click: () => connectionsMenu.onExportConnections() },
+        { type: "separator" },
+        // The rest matches Electron's default fileMenu role.
+        process.platform === "darwin" ? { role: "close" } : { role: "quit" },
+      ],
+    },
     { role: "editMenu" },
     {
       label: "View",

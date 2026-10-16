@@ -40,7 +40,7 @@ describe("connection footer", () => {
     expect(within(other).getByRole("menuitem", { name: "old" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Update these to group them" }));
-    expect(openConnectionManager).toHaveBeenCalledWith("old");
+    expect(openConnectionManager).toHaveBeenCalledWith("old", undefined);
   });
 });
 
@@ -92,7 +92,7 @@ describe("manage connections", () => {
     renderWithProviders(<ConnectionManagerWindow />, {
       bridgeOverrides: {
         listConnections: async () => connections,
-        takeConnectionManagerSelection: async () => "old",
+        takeConnectionManagerRequest: async () => ({ selectId: "old", action: null }),
         listBrowsers: async () => [
           {
             id: "edge" as const,

@@ -62,6 +62,13 @@ export interface SaveConnectionResult extends DesktopOperationResult {
   id?: string;
 }
 
+export type ConnectionManagerAction = "import";
+
+export interface ConnectionManagerRequest {
+  selectId: string | null;
+  action: ConnectionManagerAction | null;
+}
+
 export interface OpenUrlResult {
   /** The chosen browser or profile was not found, so the system default browser opened the link. */
   fallback: boolean;
@@ -91,9 +98,11 @@ export interface DesktopBridge {
   getActiveConnectionId(): Promise<string | null>;
   getActiveConnection(): Promise<ConnectionResult>;
   refreshToken(): Promise<ConnectionResult>;
-  openConnectionManager(id?: string | null): Promise<void>;
-  takeConnectionManagerSelection(): Promise<string | null>;
-  onConnectionManagerSelect(callback: (id: string) => void): () => void;
+  /** Opens Manage connections, optionally selecting a connection or starting an import. */
+  openConnectionManager(id?: string | null, action?: ConnectionManagerAction): Promise<void>;
+  /** What the manager window was opened for; each request is handed out once. */
+  takeConnectionManagerRequest(): Promise<ConnectionManagerRequest | null>;
+  onConnectionManagerRequest(callback: (request: ConnectionManagerRequest) => void): () => void;
   listBrowsers(): Promise<InstalledBrowser[]>;
   /** Opens a URL with the connection's browser and profile. `null` uses the active connection. */
   openUrlForConnection(id: string | null, url: string): Promise<OpenUrlResult>;
@@ -148,9 +157,9 @@ export const desktopBridge: DesktopBridge = {
   getActiveConnectionId: () => bridge().getActiveConnectionId(),
   getActiveConnection: () => bridge().getActiveConnection(),
   refreshToken: () => bridge().refreshToken(),
-  openConnectionManager: (id) => bridge().openConnectionManager(id),
-  takeConnectionManagerSelection: () => bridge().takeConnectionManagerSelection(),
-  onConnectionManagerSelect: (callback) => bridge().onConnectionManagerSelect(callback),
+  openConnectionManager: (id, action) => bridge().openConnectionManager(id, action),
+  takeConnectionManagerRequest: () => bridge().takeConnectionManagerRequest(),
+  onConnectionManagerRequest: (callback) => bridge().onConnectionManagerRequest(callback),
   listBrowsers: () => bridge().listBrowsers(),
   openUrlForConnection: (id, url) => bridge().openUrlForConnection(id, url),
   openUrlInBrowser: (browser, url) => bridge().openUrlInBrowser(browser, url),

@@ -1,6 +1,7 @@
 // Must load first so Sentry hooks the app before anything else runs.
 import "./sentry.js";
 import { spawn } from "child_process";
+import { readFile, writeFile } from "fs/promises";
 import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
@@ -22,6 +23,7 @@ import {
   configureMainWindowChrome,
   getMainWindowOptions,
   registerWindowChromeIpc,
+  setConnectionsMenuHandlers,
 } from "./windowChrome.js";
 import { initializeTheme, windowBackgroundColor } from "./theme.js";
 import { startUsageStats } from "./usageStats.js";
@@ -80,6 +82,31 @@ app.whenReady().then(async () => {
     store,
     launcher,
     sidecar: sidecarHandle,
+    files: {
+      chooseSaveFile: async (window, defaultName) => {
+        const options = {
+          title: "Export connections",
+          defaultPath: defaultName,
+          filters: [{ name: "Power Tools connections", extensions: ["json"] }],
+        };
+        const result = window ? await dialog.showSaveDialog(window, options) : await dialog.showSaveDialog(options);
+        return result.canceled || !result.filePath ? null : result.filePath;
+      },
+      chooseOpenFile: async (window) => {
+        const options = {
+          title: "Import connections",
+          properties: ["openFile" as const],
+          filters: [
+            { name: "Connections", extensions: ["json", "xml"] },
+            { name: "All files", extensions: ["*"] },
+          ],
+        };
+        const result = window ? await dialog.showOpenDialog(window, options) : await dialog.showOpenDialog(options);
+        return result.canceled ? null : result.filePaths[0] ?? null;
+      },
+      readFile: (path) => readFile(path, "utf-8"),
+      writeFile: (path, content) => writeFile(path, content, "utf-8"),
+    },
     getMainWindow: () => mainWindow,
     openWindow: (route, { width, height, resizable }) => {
       const window = new BrowserWindow({
@@ -106,6 +133,19 @@ app.whenReady().then(async () => {
     updateStatus = status;
     mainWindow.webContents.send("update-status-changed", status);
   }
+
+  setConnectionsMenuHandlers({
+    onAddConnection: () => connectionIpc.openAddConnection(),
+    onManageConnections: () => connectionIpc.openManager(),
+    onImportConnections: () => connectionIpc.openManager(null, "import"),
+    onExportConnections: () => {
+      void connectionIpc.exportToFile(mainWindow, null).then((result) => {
+        if (!result.success && !result.cancelled && result.error) {
+          dialog.showErrorBox("Export connections", result.error);
+        }
+      });
+    },
+  });
 
   await connectionIpc.registerRestoredOnPremises();
 

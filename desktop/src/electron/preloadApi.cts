@@ -42,14 +42,14 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
     getActiveConnection: () =>
       ipcRenderer.invoke("get-active-connection"),
     refreshToken: () => ipcRenderer.invoke("refresh-token"),
-    openConnectionManager: (id?: string | null) =>
-      ipcRenderer.invoke("open-connection-manager", id ?? null),
-    takeConnectionManagerSelection: () =>
-      ipcRenderer.invoke("take-connection-manager-selection"),
-    onConnectionManagerSelect: (callback: (id: string) => void) => {
-      const listener = (_: unknown, id: string) => callback(id);
-      ipcRenderer.on("connection-manager-select", listener);
-      return () => ipcRenderer.removeListener("connection-manager-select", listener);
+    openConnectionManager: (id?: string | null, action?: string) =>
+      ipcRenderer.invoke("open-connection-manager", id ?? null, action ?? null),
+    takeConnectionManagerRequest: () =>
+      ipcRenderer.invoke("take-connection-manager-request"),
+    onConnectionManagerRequest: (callback: (request: any) => void) => {
+      const listener = (_: unknown, request: any) => callback(request);
+      ipcRenderer.on("connection-manager-request", listener);
+      return () => ipcRenderer.removeListener("connection-manager-request", listener);
     },
     listBrowsers: () => ipcRenderer.invoke("list-browsers"),
     openUrlForConnection: (id: string | null, url: string) =>

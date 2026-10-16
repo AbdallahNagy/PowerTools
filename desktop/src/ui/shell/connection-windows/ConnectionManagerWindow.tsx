@@ -1,7 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Plus, Upload } from "lucide-react";
 
-import { desktopBridge } from "../../platform/desktopBridge";
+import { desktopBridge, type ConnectionManagerRequest } from "../../platform/desktopBridge";
 import {
   toConnectionInfo,
   type ConnectionInfo,
@@ -20,6 +20,12 @@ import {
 
 type Notice = { tone: "ok" | "danger" | "info"; text: string } | null;
 
+/** Electron prefixes errors from the main process; show only the message. */
+function readableError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.replace(/^Error invoking remote method '[^']+': (?:Error: )?/, "");
+}
+
 function matches(connection: ConnectionInfo, query: string) {
   const needle = query.trim().toLowerCase();
   if (!needle) return true;
@@ -36,15 +42,31 @@ const ConnectionManagerWindow = () => {
   const [importPreview, setImportPreview] = useState<ImportPreview | null>(null);
   const browsers = useInstalledBrowsers();
 
+  const startImport = async () => {
+    try {
+      const preview = await desktopBridge.previewConnectionImport();
+      if (preview) setImportPreview(preview);
+    } catch (error) {
+      setNotice({ tone: "danger", text: readableError(error) });
+    }
+  };
+  // Requests arrive from the main process, outside React's render cycle.
+  const handleRequest = useRef<(request: ConnectionManagerRequest) => void>(() => undefined);
+  handleRequest.current = (request) => {
+    if (request.selectId) setSelectedId(request.selectId);
+    if (request.action === "import") void startImport();
+  };
+
   useEffect(() => {
     let loaded = false;
     void Promise.all([
       desktopBridge.listConnections(),
-      desktopBridge.takeConnectionManagerSelection(),
-    ]).then(([list, requested]) => {
+      desktopBridge.takeConnectionManagerRequest(),
+    ]).then(([list, request]) => {
       loaded = true;
       setSummaries(list);
-      setSelectedId((current) => current ?? requested ?? list[0]?.id ?? null);
+      setSelectedId((current) => current ?? request?.selectId ?? list[0]?.id ?? null);
+      if (request?.action) handleRequest.current(request);
     });
     const unsubscribeList = desktopBridge.onConnectionsUpdated((list) => {
       setSummaries(list);
@@ -54,9 +76,10 @@ const ConnectionManagerWindow = () => {
         );
       }
     });
-    const unsubscribeSelect = desktopBridge.onConnectionManagerSelect((id) => {
-      setSelectedId(id);
-      void desktopBridge.takeConnectionManagerSelection();
+    const unsubscribeSelect = desktopBridge.onConnectionManagerRequest((request) => {
+      // Take it so the window does not handle it a second time after loading.
+      void desktopBridge.takeConnectionManagerRequest();
+      handleRequest.current(request);
     });
     return () => {
       unsubscribeList();
@@ -76,15 +99,6 @@ const ConnectionManagerWindow = () => {
         ? { tone: "ok", text: `Exported ${result.count ?? 0} connection${result.count === 1 ? "" : "s"}. Passwords are not included.` }
         : { tone: "danger", text: result.error ?? "Export failed." },
     );
-  };
-
-  const startImport = async () => {
-    try {
-      const preview = await desktopBridge.previewConnectionImport();
-      if (preview) setImportPreview(preview);
-    } catch (error) {
-      setNotice({ tone: "danger", text: (error as Error).message });
-    }
   };
 
   return (
