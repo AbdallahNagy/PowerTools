@@ -1,3 +1,4 @@
+import { MessageSquarePlus } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 
 import { filterSidebarItems } from "./sidebarSearch";
@@ -15,9 +16,17 @@ interface CommandPaletteProps {
   tools: readonly QuickOpenTool[];
   onClose: () => void;
   onOpen: (toolId: string) => void;
+  /** Adds a last option that asks for a new tool, named after the query. */
+  onRequestTool?: (query: string) => void;
 }
 
-export default function CommandPalette({ open, tools, onClose, onOpen }: CommandPaletteProps) {
+export default function CommandPalette({
+  open,
+  tools,
+  onClose,
+  onOpen,
+  onRequestTool,
+}: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const [highlight, setHighlight] = useState(0);
   const [openSession, setOpenSession] = useState(open);
@@ -29,10 +38,18 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
     setHighlight(0);
   }
   const results = useMemo(() => filterSidebarItems(tools, query), [query, tools]);
-  const selectedIndex =
-    results.length === 0 ? 0 : Math.min(highlight, results.length - 1);
+  // The request option, when shown, sits after the tools in the highlight order.
+  const optionCount = results.length + (onRequestTool ? 1 : 0);
+  const selectedIndex = optionCount === 0 ? 0 : Math.min(highlight, optionCount - 1);
   const selected = results[selectedIndex];
-  const activeOptionId = selected ? `${listId}-${selected.id}` : undefined;
+  const requestSelected = Boolean(onRequestTool) && selectedIndex === results.length;
+  const requestOptionId = `${listId}-request-tool`;
+  const activeOptionId = selected
+    ? `${listId}-${selected.id}`
+    : requestSelected
+      ? requestOptionId
+      : undefined;
+  const trimmedQuery = query.trim();
 
   useEffect(() => {
     if (!open) return;
@@ -63,13 +80,16 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
   if (!open) return null;
 
   const openSelected = () => {
-    if (!selected) return;
-    onOpen(selected.id);
+    if (selected) {
+      onOpen(selected.id);
+    } else if (requestSelected) {
+      onRequestTool?.(trimmedQuery);
+    }
   };
 
   const moveHighlight = (next: number) => {
-    if (results.length === 0) return;
-    const clamped = Math.max(0, Math.min(next, results.length - 1));
+    if (optionCount === 0) return;
+    const clamped = Math.max(0, Math.min(next, optionCount - 1));
     setHighlight(clamped);
   };
 
@@ -111,7 +131,7 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
               moveHighlight(0);
             } else if (event.key === "End") {
               event.preventDefault();
-              moveHighlight(results.length - 1);
+              moveHighlight(optionCount - 1);
             } else if (event.key === "Enter") {
               event.preventDefault();
               openSelected();
@@ -157,6 +177,26 @@ export default function CommandPalette({ open, tools, onClose, onOpen }: Command
           {results.length === 0 ? (
             <li className="px-3 py-2 text-sm text-fg-muted">
               No matching tools
+            </li>
+          ) : null}
+          {onRequestTool ? (
+            <li
+              id={requestOptionId}
+              role="option"
+              aria-selected={requestSelected}
+              className={`flex min-w-0 cursor-pointer items-center gap-2 overflow-hidden border-t border-line px-3 py-1.5 text-sm ${
+                requestSelected ? "bg-hover text-fg-strong" : "text-fg-muted"
+              }`}
+              onMouseEnter={() => setHighlight(results.length)}
+              onMouseDown={(event) => {
+                event.preventDefault();
+                onRequestTool(trimmedQuery);
+              }}
+            >
+              <MessageSquarePlus size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0" />
+              <span className="min-w-0 truncate">
+                {trimmedQuery ? `Request "${trimmedQuery}" as a new tool…` : "Request a new tool…"}
+              </span>
             </li>
           ) : null}
         </ul>

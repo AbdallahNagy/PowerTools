@@ -4,6 +4,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 const email = "abdallah@abdallahnagy.com";
 const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
 const issuesUrl = `${githubUrl}/issues`;
+const requestToolPath = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/request-tool/`;
 ---
 
 <BaseLayout
@@ -50,11 +51,13 @@ const issuesUrl = `${githubUrl}/issues`;
         <ul class="detail-list">
           <li>Report a bug.</li>
           <li>Suggest an improvement.</li>
+          <li>Ask for a new tool.</li>
           <li>Share feedback from real Dataverse work.</li>
           <li>Discuss contribution ideas.</li>
         </ul>
         <div class="action-row">
           <a class="button secondary" href={issuesUrl}>Open GitHub issues</a>
+          <a class="button secondary" href={requestToolPath}>Request a tool</a>
         </div>
       </article>
     </div>

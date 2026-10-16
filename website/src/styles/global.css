@@ -1017,3 +1017,57 @@ h3 {
     transition: none !important;
   }
 }
+
+/* Request a tool form */
+.request-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.request-form label {
+  margin-top: 8px;
+  color: var(--fg-strong);
+  font-weight: 500;
+}
+
+.request-form .optional {
+  color: var(--fg-muted);
+  font-weight: 400;
+}
+
+.request-form input,
+.request-form textarea {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 10px 12px;
+  color: var(--fg);
+  background: var(--raised);
+  font: inherit;
+}
+
+.request-form textarea {
+  resize: vertical;
+}
+
+.request-form input:focus,
+.request-form textarea:focus {
+  outline: 2px solid var(--accent-border);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.request-form .action-row {
+  margin-top: 12px;
+}
+
+.request-form button {
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.request-form .form-note {
+  font-size: 0.9rem;
+}

@@ -4,6 +4,7 @@ import { Group, Panel, Separator } from "react-resizable-panels";
 import { useTabs } from "../tabs/useTabs";
 import { useShellShortcuts } from "../keyboard/useShellShortcuts";
 import { ConnectionsProvider } from "../../shared/connections";
+import { openToolRequest } from "../../shared/links/openToolRequest";
 import { StatusBarProvider } from "../../shared/status";
 import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 import ActivityBar from "./ActivityBar";
@@ -76,6 +77,10 @@ const Layout = () => {
               onOpen={(toolId) => {
                 openTool(toolId);
                 setQuickOpen(false);
+              }}
+              onRequestTool={(name) => {
+                setQuickOpen(false);
+                void openToolRequest(name);
               }}
             />
             <UpdateDialog />
