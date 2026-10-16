@@ -1,0 +1,49 @@
+name: Tool request
+description: Ask for a new PowerTools tool.
+title: "[Tool request]: "
+labels: ["tool-request"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tell us about a Dataverse task that PowerTools should make easier.
+        Search existing tool requests first, and add a 👍 to one that matches instead of opening a duplicate.
+  - type: input
+    id: tool-name
+    attributes:
+      label: Tool name
+      description: A short name for the tool.
+      placeholder: Bulk record updater
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What should it do?
+      description: The Dataverse task it solves and how you do it today.
+    validations:
+      required: true
+  - type: input
+    id: xrmtoolbox-plugin
+    attributes:
+      label: Similar XrmToolBox plugin
+      description: Link to an XrmToolBox plugin that does something similar, if there is one.
+      placeholder: https://www.xrmtoolbox.com/plugins/...
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment
+      options:
+        - Dataverse online
+        - On-premises
+        - Both
+  - type: textarea
+    id: details
+    attributes:
+      label: Anything else
+      description: Screenshots, edge cases, or links that help.
+  - type: input
+    id: source
+    attributes:
+      label: Sent from
+      description: Filled in automatically when you come from the website or the app.

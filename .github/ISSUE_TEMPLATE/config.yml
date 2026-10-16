@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Contact the author
+    url: https://powertools.abdallahnagy.com/contact/
+    about: Questions and feedback that aren't a bug or a tool request.
