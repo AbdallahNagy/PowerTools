@@ -27,7 +27,7 @@ export function loadQueries(store: QueryStore): SavedQuery[] {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isSavedQuery).sort(byNewest);
+    return parsed.map(readLegacyQuery).filter(isSavedQuery).sort(byNewest);
   } catch {
     return [];
   }
@@ -86,11 +86,18 @@ export function deleteQuery(existing: readonly SavedQuery[], id: string): SavedQ
 
 export function filterQueries(
   queries: readonly SavedQuery[],
-  options: { connectionId: string; allEnvironments: boolean; search: string },
+  options: {
+    connectionId: string;
+    /** Name the connection had before ids; queries saved back then carry it. */
+    legacyName?: string | null;
+    allEnvironments: boolean;
+    search: string;
+  },
 ): SavedQuery[] {
   const search = options.search.trim().toLowerCase();
+  const connectionKeys = [options.connectionId, options.legacyName].filter(Boolean);
   return queries.filter((query) => {
-    if (!options.allEnvironments && query.connectionId !== options.connectionId) return false;
+    if (!options.allEnvironments && !connectionKeys.includes(query.connectionId)) return false;
     if (!search) return true;
     return [query.table, query.description, query.fetchXml, query.environment]
       .join("\n")
@@ -109,6 +116,15 @@ function normalizeFetchXml(fetchXml: string): string {
 
 function byNewest(left: SavedQuery, right: SavedQuery): number {
   return right.savedAt.localeCompare(left.savedAt);
+}
+
+/** Queries saved before connections had ids stored the connection name as `connectionName`. */
+function readLegacyQuery(value: unknown): unknown {
+  if (!value || typeof value !== "object") return value;
+  const record = value as Record<string, unknown>;
+  if (typeof record.connectionId === "string" || typeof record.connectionName !== "string") return value;
+  const { connectionName, ...rest } = record;
+  return { ...rest, connectionId: connectionName };
 }
 
 function isSavedQuery(value: unknown): value is SavedQuery {

@@ -5,6 +5,7 @@ import {
   deleteQuery,
   filterQueries,
   loadQueries,
+  QUERY_LIBRARY_STORAGE_KEY,
   saveQuery,
   writeQueries,
   type QueryStore,
@@ -120,6 +121,31 @@ describe("query library", () => {
     store.setItem("ignored", "{");
     expect(loadQueries(store)).toEqual([]);
     expect(deleteQuery(second.queries, "dev").map((query) => query.id)).toEqual(["prod"]);
+  });
+});
+
+describe("queries saved before connection ids", () => {
+  it("still load and match the connection by its old name", () => {
+    const store = memoryStore();
+    store.setItem(QUERY_LIBRARY_STORAGE_KEY, JSON.stringify([{
+      id: "old",
+      table: "account",
+      description: "Old query",
+      environment: "Contoso Dev",
+      connectionName: "Contoso Dev",
+      fetchXml: accountQuery,
+      savedAt: "2026-01-01T00:00:00.000Z",
+    }]));
+
+    const queries = loadQueries(store);
+    expect(queries.map((query) => query.connectionId)).toEqual(["Contoso Dev"]);
+    expect(filterQueries(queries, {
+      connectionId: "conn-1",
+      legacyName: "Contoso Dev",
+      allEnvironments: false,
+      search: "",
+    })).toHaveLength(1);
+    expect(filterQueries(queries, { connectionId: "conn-1", allEnvironments: false, search: "" })).toEqual([]);
   });
 });
 

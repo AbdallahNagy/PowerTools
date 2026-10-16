@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { useTabConnection } from "../../shared/connections";
+import { useConnection, useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { usePrimaryAction } from "../../shared/keyboard";
 import { Button, Checkbox, Spinner, ToastProvider, useToast } from "../../shared/ui";
@@ -28,6 +28,7 @@ export default function FetchXmlTester() {
 
 function FetchXmlTesterPage() {
   const { connectionId } = useTabConnection();
+  const connection = useConnection(connectionId);
   const { showToast } = useToast();
   const library = useQueryLibrary();
   const [fetchXml, setFetchXml] = useState(SAMPLE_FETCH_XML);
@@ -43,10 +44,11 @@ function FetchXmlTesterPage() {
   const visibleQueries = useMemo(
     () => filterQueries(library.queries, {
       connectionId: connectionId ?? "",
+      legacyName: connection?.legacyName,
       allEnvironments,
       search,
     }),
-    [allEnvironments, connectionId, library.queries, search],
+    [allEnvironments, connection?.legacyName, connectionId, library.queries, search],
   );
 
   const statusContent = isPending
@@ -99,7 +101,7 @@ function FetchXmlTesterPage() {
       fetchXml,
       description,
       connectionId,
-      environment: connectionId,
+      environment: connection?.displayName ?? connectionId,
     });
     if (!saved.ok) {
       showToast(saved.error, "error");
