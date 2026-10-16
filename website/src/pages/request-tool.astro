@@ -1,0 +1,103 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { TOOL_REQUEST_ISSUE_URL, buildToolRequestUrl } from "../lib/toolRequest";
+
+const email = "abdallah@abdallahnagy.com";
+const githubFormUrl = buildToolRequestUrl({ source: "website" });
+const existingRequestsUrl =
+  "https://github.com/AbdallahNagy/PowerTools/issues?q=is%3Aissue+label%3Atool-request";
+---
+
+<BaseLayout
+  title="Request a Tool | PowerTools"
+  description="Ask for a new PowerTools tool for Dataverse, Dynamics 365, or Power Platform work."
+>
+  <section class="page-hero">
+    <p class="eyebrow">Request a tool</p>
+    <h1>What should PowerTools do next?</h1>
+    <p class="lead">
+      Tell us about a Dataverse task that takes too long today. Requests are
+      tracked as GitHub issues, so anyone can follow them and add a vote.
+    </p>
+  </section>
+
+  <section class="section content-grid">
+    <article class="contact-card">
+      <span class="meta-label">New request</span>
+      <h2>Describe the tool</h2>
+      <!-- Without JavaScript this still opens the GitHub form with the fields filled in. -->
+      <form
+        class="request-form"
+        action={TOOL_REQUEST_ISSUE_URL}
+        method="get"
+        target="_blank"
+        data-tool-request-form
+      >
+        <input type="hidden" name="template" value="tool-request.yml" />
+        <input type="hidden" name="source" value="website" />
+
+        <label for="tool-name">Tool name</label>
+        <input id="tool-name" name="tool-name" type="text" required maxlength="120" placeholder="Bulk record updater" />
+
+        <label for="problem">What should it do?</label>
+        <textarea id="problem" name="problem" rows="5" required maxlength="2000"
+          placeholder="The Dataverse task it solves and how you do it today."></textarea>
+
+        <label for="xrmtoolbox-plugin">Similar XrmToolBox plugin <span class="optional">(optional)</span></label>
+        <input id="xrmtoolbox-plugin" name="xrmtoolbox-plugin" type="url" placeholder="https://www.xrmtoolbox.com/plugins/..." />
+
+        <div class="action-row">
+          <button class="button primary" type="submit">Continue on GitHub</button>
+        </div>
+        <p class="form-note">
+          You review and submit the issue on GitHub. It needs a GitHub account.
+        </p>
+      </form>
+    </article>
+
+    <div class="stack">
+      <article class="contact-card">
+        <h3>Check existing requests</h3>
+        <p>Someone may have asked already. A 👍 on an existing request helps it move up.</p>
+        <div class="action-row">
+          <a class="button secondary" href={existingRequestsUrl}>See tool requests</a>
+        </div>
+      </article>
+
+      <article class="contact-card">
+        <h3>Prefer the full form?</h3>
+        <p><a href={githubFormUrl}>Open the tool request form on GitHub</a></p>
+      </article>
+
+      <article class="contact-card">
+        <h3>No GitHub account?</h3>
+        <p>Email the request to <a href={`mailto:${email}?subject=Tool%20request`}>{email}</a>.</p>
+      </article>
+
+      <article class="contact-card">
+        <h3>From the app</h3>
+        <p>In PowerTools, open <strong>Help &gt; Request a Tool…</strong>, or search for a tool in the command palette and pick the request option.</p>
+      </article>
+    </div>
+  </section>
+</BaseLayout>
+
+<script>
+  import { buildToolRequestUrl } from "../lib/toolRequest";
+
+  // Adds the issue title, which the plain form submission leaves to GitHub.
+  const form = document.querySelector<HTMLFormElement>("[data-tool-request-form]");
+  form?.addEventListener("submit", (event) => {
+    if (!form.reportValidity()) return;
+    event.preventDefault();
+    const data = new FormData(form);
+    const value = (key: string) => String(data.get(key) ?? "");
+    const url = buildToolRequestUrl({
+      name: value("tool-name"),
+      problem: value("problem"),
+      xrmToolBoxPlugin: value("xrmtoolbox-plugin"),
+      source: "website"
+    });
+    window.open(url, "_blank", "noopener");
+  });
+</script>
