@@ -10,6 +10,10 @@ on:
         description: Only update the release notes of an existing release
         type: boolean
         default: false
+      draft:
+        description: Publish as a draft release (hidden from users and the auto-updater)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -62,6 +66,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Uploads renderer source maps to Sentry. See desktop/vite.config.ts.
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          # Overrides releaseType in electron-builder.json.
+          EP_DRAFT: ${{ inputs.draft }}
         run: |
           npm run publish:api:win
           npm run transpile:electron
