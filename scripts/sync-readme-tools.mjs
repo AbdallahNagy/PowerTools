@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Writes the README tool table from the public tool catalog.
 //
 // Source of truth: PUBLIC_TOOLS in desktop/src/ui/tools/publicCatalog.ts

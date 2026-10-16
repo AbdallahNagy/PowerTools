@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 // Reads CHANGELOG.md (Keep a Changelog 1.1.0) for the release workflow,
 // desktop CI, and the website changelog page.
 //
