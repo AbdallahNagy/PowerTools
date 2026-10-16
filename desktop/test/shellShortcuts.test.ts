@@ -34,6 +34,23 @@ describe("shell shortcuts", () => {
     expect(matchShellShortcut({ ...plainKey, key: "k", ctrlKey: true })).toBeNull();
   });
 
+  it("matches letter shortcuts on non-Latin keyboard layouts by physical key", () => {
+    expect(matchShellShortcut({ ...plainKey, key: "ص", code: "KeyW", ctrlKey: true })).toBe(
+      "close-tab",
+    );
+    expect(matchShellShortcut({ ...plainKey, key: "ح", code: "KeyP", ctrlKey: true })).toBe(
+      "toggle-quick-open",
+    );
+    expect(matchShellShortcut({ ...plainKey, key: "لا", code: "KeyB", ctrlKey: true })).toBe(
+      "toggle-sidebar",
+    );
+    // Latin layouts keep the typed letter: AZERTY puts "w" on the physical Z key.
+    expect(matchShellShortcut({ ...plainKey, key: "w", code: "KeyZ", ctrlKey: true })).toBe(
+      "close-tab",
+    );
+    expect(matchShellShortcut({ ...plainKey, key: "z", code: "KeyW", ctrlKey: true })).toBeNull();
+  });
+
   it("cycles tabs forward, backward, and through an empty list", () => {
     expect(cycleTabId(["welcome", "builder", "tester"], "builder", 1)).toBe("tester");
     expect(cycleTabId(["welcome", "builder", "tester"], "tester", 1)).toBe("welcome");
