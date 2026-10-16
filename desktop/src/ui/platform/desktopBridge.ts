@@ -29,6 +29,13 @@ export type UpdateStatus =
   | ({ state: "downloaded" } & UpdateDetails)
   | { state: "error"; message: string };
 
+/** Shown once after the app was updated. Notes are missing when the update was not installed by the app. */
+export type WhatsNew = UpdateDetails & {
+  version: string;
+  /** True only the first time the panel is shown on this install. */
+  showStarPrompt: boolean;
+};
+
 export type OnPremisesAuthMode = "ad" | "ifd";
 
 export type ConnectionInput =
@@ -71,6 +78,8 @@ export interface DesktopBridge {
   downloadUpdate(): Promise<void>;
   installUpdate(): Promise<void>;
   onUpdateStatusChanged(callback: (status: UpdateStatus) => void): () => void;
+  getWhatsNew(): Promise<WhatsNew | null>;
+  dismissWhatsNew(): Promise<void>;
   openExternalUrl(url: string): Promise<void>;
   popupAppMenu(menuId: "file" | "edit" | "view" | "help", x: number, y: number): Promise<void>;
   minimizeWindow(): Promise<void>;
@@ -115,6 +124,8 @@ export const desktopBridge: DesktopBridge = {
   downloadUpdate: () => bridge().downloadUpdate(),
   installUpdate: () => bridge().installUpdate(),
   onUpdateStatusChanged: (callback) => bridge().onUpdateStatusChanged(callback),
+  getWhatsNew: () => bridge().getWhatsNew(),
+  dismissWhatsNew: () => bridge().dismissWhatsNew(),
   openExternalUrl: (url) => bridge().openExternalUrl(url),
   popupAppMenu: (menuId, x, y) => bridge().popupAppMenu(menuId, x, y),
   minimizeWindow: () => bridge().minimizeWindow(),

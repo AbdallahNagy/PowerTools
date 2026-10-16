@@ -69,6 +69,10 @@ vi.mock("../../src/electron/usageStats.js", () => ({
   saveUsageStatsEnabled: vi.fn(),
   startUsageStats: vi.fn(),
 }));
+vi.mock("../../src/electron/whatsNew.js", () => ({
+  rememberDownloadedUpdate: vi.fn(),
+  takeWhatsNew: () => null,
+}));
 vi.mock("../../src/electron/crashReports.js", () => ({
   createCrashReportsMenuItem: () => ({ label: "Send Crash Reports" }),
   loadCrashReportsEnabled: () => true,

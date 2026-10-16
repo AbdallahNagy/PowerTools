@@ -1,6 +1,7 @@
 import type { UpdateStatus } from "../../platform/desktopBridge";
 
-export const RELEASES_URL = "https://github.com/AbdallahNagy/PowerTools/releases";
+export const REPOSITORY_URL = "https://github.com/AbdallahNagy/PowerTools";
+export const RELEASES_URL = `${REPOSITORY_URL}/releases`;
 
 export function formatAppVersion(version: string) {
   return version ? `v${version}` : "";
@@ -53,6 +54,16 @@ export function isUpdateActionDisabled(status: UpdateStatus) {
 /** States where the update dialog opens by itself once per launch. */
 export function shouldPromptForUpdate(status: UpdateStatus) {
   return status.state === "available" || status.state === "downloaded";
+}
+
+export function formatReleaseDate(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? null
+    : date.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
 }
 
 export function getReleaseUrl(version: string | undefined) {

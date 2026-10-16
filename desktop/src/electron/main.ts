@@ -39,6 +39,7 @@ import {
 } from "./windowChrome.js";
 import { initializeTheme, windowBackgroundColor } from "./theme.js";
 import { startUsageStats } from "./usageStats.js";
+import { rememberDownloadedUpdate, takeWhatsNew, type WhatsNew } from "./whatsNew.js";
 
 const { autoUpdater } = electronUpdater;
 
@@ -122,6 +123,16 @@ app.whenReady().then(async () => {
     ? persisted.activeConnectionName
     : null;
 
+  // Shown once after an update.
+  let whatsNew: WhatsNew | null = takeWhatsNew({
+    currentVersion: app.getVersion(),
+    hasSavedConnections: persisted.connections.length > 0,
+  });
+  ipcMain.handle("get-whats-new", () => whatsNew);
+  ipcMain.handle("dismiss-whats-new", () => {
+    whatsNew = null;
+  });
+
   function persist() {
     saveState({
       connections: Object.values(connections).map((c) =>
@@ -159,6 +170,9 @@ app.whenReady().then(async () => {
 
   function broadcastUpdateStatus(status: UpdateStatus) {
     updateStatus = status;
+    if (status.state === "downloaded") {
+      rememberDownloadedUpdate(status);
+    }
     mainWindow.webContents.send("update-status-changed", status);
   }
 

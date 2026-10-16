@@ -53,6 +53,8 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       ipcRenderer.on("update-status-changed", listener);
       return () => ipcRenderer.removeListener("update-status-changed", listener);
     },
+    getWhatsNew: () => ipcRenderer.invoke("get-whats-new"),
+    dismissWhatsNew: () => ipcRenderer.invoke("dismiss-whats-new"),
     openExternalUrl: (url: string) =>
       ipcRenderer.invoke("open-external-url", url),
     popupAppMenu: (menuId: string, x: number, y: number) =>

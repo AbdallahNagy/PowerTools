@@ -14,6 +14,7 @@ import StatusBar from "./StatusBar";
 import TitleBar from "./TitleBar";
 import { UpdateDialog } from "./UpdateDialog";
 import { UpdateProvider } from "./UpdateProvider";
+import { WhatsNewDialog } from "./WhatsNewDialog";
 
 const Layout = () => {
   const [sidebarVisible, setSidebarVisible] = useState(true);
@@ -84,6 +85,7 @@ const Layout = () => {
               }}
             />
             <UpdateDialog />
+            <WhatsNewDialog />
           </div>
         </UpdateProvider>
       </StatusBarProvider>
