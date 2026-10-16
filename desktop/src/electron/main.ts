@@ -1,5 +1,6 @@
 // Must load first so Sentry hooks the app before anything else runs.
 import "./sentry.js";
+import { spawn } from "child_process";
 import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
@@ -15,6 +16,8 @@ import { loadState, saveState } from "./storage.js";
 import * as sidecar from "./sidecar.js";
 import { createConnectionStore } from "./connectionStore.js";
 import { registerConnectionIpc } from "./connectionIpc.js";
+import { listInstalledBrowsers, windowsBrowserEnvironment } from "./browserProfiles.js";
+import { createBrowserLauncher, parseWebUrl } from "./browserLauncher.js";
 import {
   configureMainWindowChrome,
   getMainWindowOptions,
@@ -59,19 +62,23 @@ app.whenReady().then(async () => {
   ipcMain.handle("check-for-updates", () => updateController?.checkForUpdates());
   ipcMain.handle("download-update", () => updateController?.downloadUpdate());
   ipcMain.handle("install-update", () => updateController?.quitAndInstall());
-  ipcMain.handle("open-external-url", async (_event, url: string) => {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      throw new Error("Only HTTP and HTTPS URLs can be opened.");
-    }
-    await shell.openExternal(parsed.toString());
+  ipcMain.handle("open-external-url", async (_event, url: unknown) => {
+    await shell.openExternal(parseWebUrl(url));
   });
   registerWindowChromeIpc(ipcMain, theme);
 
   const store = createConnectionStore({ initial: loadState(), save: saveState });
+  const browserEnvironment = windowsBrowserEnvironment();
+  const launcher = createBrowserLauncher({
+    listBrowsers: async () => (browserEnvironment ? listInstalledBrowsers(browserEnvironment) : []),
+    spawn: (executable, args) =>
+      spawn(executable, args, { detached: true, stdio: "ignore", windowsHide: false }),
+    openExternal: (url) => shell.openExternal(url),
+  });
   const connectionIpc = registerConnectionIpc({
     ipcMain,
     store,
+    launcher,
     sidecar: sidecarHandle,
     getMainWindow: () => mainWindow,
     openWindow: (route, { width, height, resizable }) => {

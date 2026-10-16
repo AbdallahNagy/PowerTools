@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateActio
 import { RotateCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { desktopBridge } from "../../platform/desktopBridge";
-import { useConnections, useTabConnection } from "../../shared/connections";
+import { solutionEditorUrl, useConnections, useOpenInBrowser, useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { Button, Checkbox, DataTable, SearchInput, Spinner, ToastProvider, useToast, type ToastType } from "../../shared/ui";
 import { fetchComponentTypes, fetchCopyJob, fetchSolutions, startCopy } from "./api/solutionComponentsApi";
@@ -17,7 +16,6 @@ import {
   defaultSort,
   filterSolutions,
   managedLabel,
-  solutionEditorUrl,
   solutionLabel,
   sortSolutions,
   toggleSort,
@@ -38,6 +36,7 @@ export default function SolutionComponentsMover() {
 
 function SolutionComponentsMoverPage() {
   const { showToast } = useToast();
+  const openInBrowser = useOpenInBrowser();
   const { connections } = useConnections();
   const { connectionId: tabConnectionId } = useTabConnection();
   const connectionId = tabConnectionId ?? "";
@@ -191,11 +190,7 @@ function SolutionComponentsMoverPage() {
       showToast("The environment address is not available.", "error");
       return;
     }
-    try {
-      await desktopBridge.openExternalUrl(solutionEditorUrl(environment.envUrl, solution.id));
-    } catch (error) {
-      showToast(toSolutionComponentsError(error), "error");
-    }
+    await openInBrowser(solutionEditorUrl(environment.envUrl, solution.id));
   };
 
   const confirmCopy = async (componentTypes: number[], allComponents: boolean) => {

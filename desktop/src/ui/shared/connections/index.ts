@@ -2,6 +2,9 @@ export { ConnectionsProvider } from "./ConnectionsProvider";
 export { useConnections } from "./useConnections";
 export { useConnection } from "./useConnection";
 export { useTabConnection } from "./useTabConnection";
+export { useOpenInBrowser } from "./useOpenInBrowser";
+export { buildDynamicsRecordUrl, solutionEditorUrl } from "./dataverseUrls";
+export type { DynamicsRecordUrlInput } from "./dataverseUrls";
 export {
   ENVIRONMENT_PRESETS,
   UNGROUPED_LABEL,

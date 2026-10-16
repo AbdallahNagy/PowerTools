@@ -313,14 +313,21 @@ describe("Solution Components Mover", () => {
     expect(posts).toBe(0);
   });
 
-  it("opens a solution in the browser on double-click", async () => {
-    const openExternalUrl = vi.fn(async () => undefined);
-    renderTool({ ...toolBridge, openExternalUrl });
+  it("opens a solution in the connection's browser on double-click", async () => {
+    const openUrlForConnection = vi.fn(async () => ({ fallback: false }));
+    renderTool({ ...toolBridge, openUrlForConnection });
     fireEvent.doubleClick(await screen.findByText("Alpha Widgets"));
-    await waitFor(() => expect(openExternalUrl).toHaveBeenCalledWith(
+    await waitFor(() => expect(openUrlForConnection).toHaveBeenCalledWith(
+      connection.id,
       `https://dev.example.test/tools/solution/edit.aspx?id=${alphaId}`,
     ));
     expect(screen.queryByRole("button", { name: "Open in browser" })).not.toBeInTheDocument();
     expect(document.querySelector("[data-toast-type]")).toBeNull();
+  });
+
+  it("says so when the chosen browser is missing", async () => {
+    renderTool({ ...toolBridge, openUrlForConnection: async () => ({ fallback: true }) });
+    fireEvent.doubleClick(await screen.findByText("Alpha Widgets"));
+    expect(await screen.findByText(/default browser opened/)).toBeInTheDocument();
   });
 });

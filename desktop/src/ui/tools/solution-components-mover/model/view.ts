@@ -30,11 +30,6 @@ export function toggleSort(current: SortState, column: SortColumn): SortState {
   return { column, direction: current.direction === "asc" ? "desc" : "asc" };
 }
 
-export function solutionEditorUrl(envUrl: string, solutionId: string): string {
-  const base = envUrl.endsWith("/") ? envUrl.slice(0, -1) : envUrl;
-  return `${base}/tools/solution/edit.aspx?id=${solutionId}`;
-}
-
 export function exportLogText(environmentName: string | null, rows: readonly { label: string; solutionUniqueName: string; succeeded: boolean; message: string }[]): string {
   const lines = [
     `Environment: ${environmentName ?? ""}`,

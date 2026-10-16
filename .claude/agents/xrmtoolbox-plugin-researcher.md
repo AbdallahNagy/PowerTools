@@ -33,8 +33,9 @@ Read the closest nested `AGENTS.md` before recommending file placement.
 - Register the tool once in `desktop/src/ui/tools/registry.tsx`.
 - Keep components, models, API hooks, state, fixtures, and tests private to that folder.
 - Import only public shared/platform modules. Never import another tool's private files or shell internals.
-- Use `desktop/src/ui/shared/api/client.ts` (`apiGet`, `apiPost`, `apiPut`, `apiDelete`) with `meta.connectionName` and, when needed, `meta.targetConnectionName`.
-- Use `useTabConnection` for the tab's environment and pass `meta.connectionName`. Do not add an in-tool connection field. Use `useConnections` for the connection list.
+- Use `desktop/src/ui/shared/api/client.ts` (`apiGet`, `apiPost`, `apiPut`, `apiDelete`) with `meta.connectionId` and, when needed, `meta.targetConnectionId`.
+- Use `useTabConnection` for the tab's environment and pass `meta.connectionId`. Do not add an in-tool connection field. Use `useConnections` for the connection list; show `displayName`, key by `id`.
+- Open Dataverse pages (records, solutions, forms) with `useOpenInBrowser`, which uses the connection's browser profile.
 - Publish status-bar content with `useToolStatus`.
 - Reuse shared UI from `desktop/src/ui/shared/ui` and shared contracts from `desktop/src/ui/shared/contracts`.
 - Renderer code must not call raw IPC, `window.electron`, or the Dataverse SDK.
@@ -133,7 +134,7 @@ For every important XrmToolBox behavior, decide:
 | WinForms control | React component in the tool folder |
 | `Service.Execute(...)` | Sidecar endpoint using `DataverseClientFactory` |
 | Plugin settings XML | Tool-local React state first; persist later only if needed |
-| Multiple CRM connections | `meta.connectionName` / `meta.targetConnectionName` |
+| Multiple CRM connections | `meta.connectionId` / `meta.targetConnectionId` |
 | Background worker / progress bar | react-query mutation or polled job, plus `useToolStatus` |
 | Metadata cache | react-query with the existing metadata endpoints |
 | FetchXML execution | `POST /api/fetch/execute` when it fits |

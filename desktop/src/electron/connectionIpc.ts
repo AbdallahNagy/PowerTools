@@ -11,7 +11,8 @@ import {
   validateDataverseConnection,
   validateOnPremisesConnection,
 } from "./connectionValidation.js";
-import { cleanText, type ConnectionStore, type DescriptionPatch } from "./connectionStore.js";
+import type { BrowserLauncher } from "./browserLauncher.js";
+import { cleanBrowser, cleanText, type ConnectionStore, type DescriptionPatch } from "./connectionStore.js";
 import type {
   ConnectionInput,
   StoredConnection,
@@ -29,6 +30,7 @@ export type ConnectionWindowRoute = "connection" | "connection-details" | "conne
 export interface ConnectionIpcDeps {
   ipcMain: IpcMain;
   store: ConnectionStore;
+  launcher: BrowserLauncher;
   sidecar: { baseUrl: string; secret: string };
   getMainWindow: () => BrowserWindow | null;
   /** Opens a renderer route in its own window. */
@@ -58,6 +60,7 @@ export function parseDescriptionPatch(value: unknown): DescriptionPatch {
 export function registerConnectionIpc({
   ipcMain,
   store,
+  launcher,
   sidecar,
   getMainWindow,
   openWindow,
@@ -355,6 +358,22 @@ export function registerConnectionIpc({
   ipcMain.handle("open-connection-manager", (_event, id: unknown) => {
     openManager(isString(id) ? id : null);
   });
+
+  ipcMain.handle("list-browsers", () => {
+    // Read again each time a form asks, so a browser installed meanwhile shows up.
+    launcher.refresh();
+    return launcher.list();
+  });
+
+  ipcMain.handle("open-url-for-connection", (_event, id: unknown, url: unknown) => {
+    const connectionId = isString(id) ? id : store.activeId;
+    const conn = connectionId ? store.get(connectionId) : null;
+    return launcher.openUrl(url, conn?.browser ?? null);
+  });
+
+  ipcMain.handle("open-url-in-browser", (_event, browser: unknown, url: unknown) =>
+    launcher.openUrl(url, cleanBrowser(browser)),
+  );
 
   ipcMain.handle("take-connection-manager-selection", () => {
     const id = pendingManagerSelection;
