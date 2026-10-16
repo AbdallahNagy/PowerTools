@@ -1,0 +1,68 @@
+---
+import { marked } from "marked";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import changelogText from "../../../CHANGELOG.md?raw";
+import { UNRELEASED, parseChangelog } from "../../../scripts/changelog.mjs";
+
+// Built from CHANGELOG.md at the repository root, the same file the desktop
+// release workflow uses for GitHub release notes. Unreleased changes stay off
+// the site until they ship.
+const { releases, links } = parseChangelog(changelogText);
+const published = releases
+  .filter((release) => release.version !== UNRELEASED)
+  .map((release) => ({
+    ...release,
+    id: `v${release.version}`,
+    html: marked.parse(release.body, { async: false }) as string,
+    compareUrl: links[release.version],
+    displayDate: new Date(`${release.date}T00:00:00Z`).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      timeZone: "UTC"
+    })
+  }));
+
+const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const localPath = (path: string) => `${basePath}${path}`;
+---
+
+<BaseLayout
+  title="PowerTools Changelog: Release Notes for Every Version"
+  description="Release notes for every PowerTools version: new Dataverse and Dynamics 365 tools, improvements, and fixes in the free Windows desktop toolkit."
+>
+  <section class="page-hero">
+    <p class="eyebrow">Changelog</p>
+    <h1>What's new in <br /> <span class="gradient-text">PowerTools</span></h1>
+    <p class="lead">New tools, improvements, and fixes in every release. The installed app offers each update as it ships.</p>
+    <div class="hero-actions centered-actions">
+      <a class="button primary" href={localPath("/download")}>Download the latest version</a>
+      <a class="button secondary" href={`${githubUrl}/releases`}>GitHub releases</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <ol class="release-list">
+      {
+        published.map((release, index) => (
+          <li class="release" id={release.id}>
+            <header class="release-header">
+              <h2>
+                <a href={`#${release.id}`}>{release.version}</a>
+                {index === 0 && <span class="release-badge">Latest</span>}
+              </h2>
+              <time datetime={release.date}>{release.displayDate}</time>
+            </header>
+            <div class="tool-prose release-notes" set:html={release.html} />
+            {release.compareUrl && (
+              <a class="release-compare" href={release.compareUrl}>
+                View changes on GitHub
+              </a>
+            )}
+          </li>
+        ))
+      }
+    </ol>
+  </section>
+</BaseLayout>

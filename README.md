@@ -5,7 +5,7 @@ A modern open-source desktop toolkit for everyday Dataverse, Dynamics 365, and P
 [![Website](https://img.shields.io/badge/website-powertools.abdallahnagy.com-1f6feb)](https://powertools.abdallahnagy.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea043)](LICENSE)
 
-**[Download for Windows](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe)** · **[Website](https://powertools.abdallahnagy.com/)** · **[Issues](https://github.com/AbdallahNagy/PowerTools/issues)**
+**[Download for Windows](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe)** · **[Website](https://powertools.abdallahnagy.com/)** · **[Changelog](CHANGELOG.md)** · **[Issues](https://github.com/AbdallahNagy/PowerTools/issues)**
 
 Power Tools is a Windows desktop app for Dataverse and Dynamics 365 developers. Migration, FetchXML, plug-in registration, and related metadata work live in one workspace. The app runs on your machine and connects directly to your environments.
 
@@ -109,6 +109,8 @@ Issues and pull requests are welcome.
 - Report a bug from real Dataverse work.
 - Suggest a rough edge in a tool you already use.
 - Open an issue before starting a new tool, so the scope is clear.
+
+Add user-visible desktop changes under `## [Unreleased]` in [CHANGELOG.md](CHANGELOG.md). [docs/releasing.md](docs/releasing.md) covers how releases are cut.
 
 For desktop changes, run `npm run check` from `desktop/` before opening a pull request. [Desktop CI](.github/workflows/desktop-ci.yml) runs that same check.
 

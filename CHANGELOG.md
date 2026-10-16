@@ -1,0 +1,93 @@
+# Changelog
+
+All notable changes to the Power Tools desktop app are recorded in this file. The local API ships inside the app, so its user-visible changes are listed here too.
+
+The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Each release section becomes the GitHub release notes and the notes in the in-app update dialog. See [docs/releasing.md](docs/releasing.md).
+
+## [Unreleased]
+
+### Added
+
+- **Solution Layers Explorer.** See every layer of a solution component, compare a layer with the one below it, and collapse or expand the JSON views and the diff.
+- Close actions in the tab menu.
+- Crash reporting. Errors and crashes are reported so they can be fixed. Reports leave out request data, headers, and local variables. Turn it off from **Help > Send Crash Reports**.
+- Anonymous usage stats. Once a day the app sends a random install ID, the app version, the OS, and the CPU architecture, with no user names, connection details, or Dataverse data. Turn it off from **Help > Send Anonymous Usage Stats**.
+
+### Changed
+
+- Only the tab strip scrolls when many tabs are open, so the rest of the title bar stays in place.
+- The status bar shows the status of the active tab's tool only.
+
+## [1.0.1] - 2026-10-09
+
+### Added
+
+- **Translator.** Edit the display names and descriptions of tables, columns, choices, views, and charts side by side in every installed language. Load labels from a solution and add changes to a target solution.
+- **Attribute Explorer.** Browse every table in an environment and inspect its fields, types, and lookups.
+- **Bulk Workflow Execution.** Run an on-demand workflow against every record a view or FetchXML query returns, in batches you can pace and stop.
+
+### Changed
+
+- Updates are easier to spot. An **Update** button appears in the title bar, and a dialog shows the release notes with **Later** and **Update now**.
+- Refreshed look with a teal accent, light and dark themes, IBM Plex type, and Lucide icons.
+- Large tables scroll faster, and FetchXML is edited in a full code editor.
+- New app icon.
+
+## [1.0.0] - 2026-10-04
+
+The first stable release.
+
+### Added
+
+- **FetchXML Tester.** Run FetchXML as written and keep a query library, in a split layout with a row count.
+- **Plugin Registration.** Browse and manage plug-in assemblies, types, steps, and images.
+- **Polymorphic Lookup Creator.** Create, update, and delete polymorphic lookups.
+- **Solution Components Mover.** Copy solution components from selected solutions into unmanaged solutions in the same environment.
+- **Workflow Activities Viewer.** See which activated processes reference a custom workflow activity.
+- Each tool tab keeps its own connection.
+- Keyboard shortcuts for tabs, quick open, and primary actions.
+- A searchable tool sidebar and unified title-bar menus.
+- Shortcuts in the empty workspace, and a prompt when every tool tab is closed.
+- The welcome page and website list every current tool.
+
+## [0.1.0-beta.5] - 2026-08-25
+
+### Changed
+
+- Enhancements and bug fixes.
+
+## [0.1.0-beta.4] - 2026-08-09
+
+No release notes were published for this build.
+
+## [0.1.0-beta.3] - 2026-08-09
+
+No release notes were published for this build.
+
+## [0.1.0-beta.2] - 2026-08-09
+
+No release notes were published for this build.
+
+## [0.1.0-beta.1] - 2026-08-09
+
+No release notes were published for this build.
+
+## [0.1.0-beta.0] - 2026-08-02
+
+The first public beta, built for Windows.
+
+### Added
+
+- A secure local connection flow for Dataverse.
+- **Data Migration.** Move data between Dataverse environments with a guided workflow.
+- **FetchXML Builder.** Build, run, and refine FetchXML queries.
+
+[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.5...v1.0.0
+[0.1.0-beta.5]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.4...v0.1.0-beta.5
+[0.1.0-beta.4]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.3...v0.1.0-beta.4
+[0.1.0-beta.3]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.2...v0.1.0-beta.3
+[0.1.0-beta.2]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.1...v0.1.0-beta.2
+[0.1.0-beta.1]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.0...v0.1.0-beta.1
+[0.1.0-beta.0]: https://github.com/AbdallahNagy/PowerTools/releases/tag/v0.1.0-beta.0

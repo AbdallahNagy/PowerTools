@@ -1,8 +1,8 @@
 name: Release Desktop
 
 # Builds the Windows installer and publishes it as a GitHub release for the
-# version in desktop/package.json. The release body comes from
-# desktop/docs/releases/v<version>.md, which the in-app update dialog shows.
+# version in desktop/package.json. The release body is that version's section
+# of CHANGELOG.md, which the in-app update dialog shows. See docs/releasing.md.
 on:
   workflow_dispatch:
     inputs:
@@ -47,8 +47,9 @@ jobs:
         id: meta
         run: |
           $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $notes = Join-Path $PWD "docs/releases/v$version.md"
-          if (-not (Test-Path $notes)) { throw "Missing release notes: docs/releases/v$version.md" }
+          $notes = Join-Path $env:RUNNER_TEMP "release-notes.md"
+          node ../scripts/changelog.mjs extract $version --out $notes
+          if ($LASTEXITCODE -ne 0) { throw "Missing release notes: add a [$version] section to CHANGELOG.md" }
           "version=$version" >> $env:GITHUB_OUTPUT
           "notes=$notes" >> $env:GITHUB_OUTPUT
 
