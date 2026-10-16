@@ -74,13 +74,13 @@ function renderCondition(
 
   render(
     <QueryClientProvider client={queryClient}>
-      <FetchXmlBuilderProvider connectionName={null} tables={tables}>
+      <FetchXmlBuilderProvider connectionId={null} tables={tables}>
         <DragProvider root={root}>
           <GroupNode
             group={root}
             fields={[field]}
             rootEntity={account}
-            connectionName={null}
+            connectionId={null}
             tables={tables}
             relationships={[]}
             errors={[]}

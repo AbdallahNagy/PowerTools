@@ -1,15 +1,16 @@
 import { useEffect, useState } from "react";
 
 import { useConnections } from "../../shared/connections";
+import { ConnectionGroupList, ProductionBadge } from "../connections/ConnectionGroupList";
 
 interface TabContextMenuProps {
   x: number;
   y: number;
-  connectionName: string | null;
+  connectionId: string | null;
   /** Show "Change connection". Off for tabs that do not use a connection. */
   canChangeConnection: boolean;
   canCloseOthers: boolean;
-  onSelect: (connectionName: string) => void;
+  onSelect: (connectionId: string) => void;
   onCloseTab: () => void;
   onCloseOthers: () => void;
   onCloseAll: () => void;
@@ -22,7 +23,7 @@ const itemClassName =
 export default function TabContextMenu({
   x,
   y,
-  connectionName,
+  connectionId,
   canChangeConnection,
   canCloseOthers,
   onSelect,
@@ -59,25 +60,30 @@ export default function TabContextMenu({
           {connections.length === 0 && (
             <div className="px-3 py-1.5 text-fg-muted">No connections</div>
           )}
-          {connections.map((connection) => {
-            const selected = connection.name === connectionName;
-            return (
-              <button
-                key={connection.name}
-                type="button"
-                role="menuitemradio"
-                aria-checked={selected}
-                className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong"
-                onClick={() => {
-                  onSelect(connection.name);
-                  onClose();
-                }}
-              >
-                <span className="inline-block w-3">{selected ? "✓" : ""}</span>
-                <span className="truncate">{connection.name}</span>
-              </button>
-            );
-          })}
+          <ConnectionGroupList
+            connections={connections}
+            renderRow={(connection, label) => {
+              const selected = connection.id === connectionId;
+              return (
+                <button
+                  key={connection.id}
+                  type="button"
+                  role="menuitemradio"
+                  aria-checked={selected}
+                  aria-label={connection.displayName}
+                  className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong"
+                  onClick={() => {
+                    onSelect(connection.id);
+                    onClose();
+                  }}
+                >
+                  <span className="inline-block w-3">{selected ? "✓" : ""}</span>
+                  <span className="truncate">{label}</span>
+                  <ProductionBadge connection={connection} />
+                </button>
+              );
+            }}
+          />
           <div className="mt-1 border-t border-line pt-1">
             <button
               type="button"

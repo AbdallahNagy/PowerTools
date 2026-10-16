@@ -21,7 +21,7 @@ export interface TabContextValue {
   /**
    * Bind one tab to a connection. Does not change the active connection.
    */
-  setTabConnection: (tabId: string, connectionName: string | null) => void;
+  setTabConnection: (tabId: string, connectionId: string | null) => void;
 }
 
 export const TabProviderContext = createContext<TabContextValue | undefined>(undefined);

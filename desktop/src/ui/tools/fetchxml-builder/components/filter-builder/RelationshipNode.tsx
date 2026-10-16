@@ -16,7 +16,7 @@ type TreeActions = ReturnType<typeof useFilterTree>;
 
 interface RelationshipNodeProps {
   node: FilterRelationship;
-  connectionName: string | null;
+  connectionId: string | null;
   tables: EntityInfo[];
   errors: ValidationError[];
   depth: number;
@@ -26,15 +26,15 @@ interface RelationshipNodeProps {
 
 export function RelationshipNode({
   node,
-  connectionName,
+  connectionId,
   tables,
   errors,
   depth,
   path,
   actions,
 }: RelationshipNodeProps) {
-  const fieldsQuery = useTableMetadata(node.relationship.targetEntity, connectionName);
-  const relationshipsQuery = useEntityRelationships(node.relationship.targetEntity, connectionName);
+  const fieldsQuery = useTableMetadata(node.relationship.targetEntity, connectionId);
+  const relationshipsQuery = useEntityRelationships(node.relationship.targetEntity, connectionId);
   const targetEntity =
     tables.find((table) => table.logicalName === node.relationship.targetEntity) ??
     fallbackEntity(node.relationship.targetEntity);
@@ -115,7 +115,7 @@ export function RelationshipNode({
           group={node.group}
           fields={fieldsQuery.data ?? []}
           rootEntity={targetEntity}
-          connectionName={connectionName}
+          connectionId={connectionId}
           tables={tables}
           relationships={relationshipsQuery.data ?? []}
           errors={errors}

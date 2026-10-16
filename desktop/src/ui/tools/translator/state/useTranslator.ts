@@ -69,8 +69,8 @@ export type ConfirmKind = "discard" | "reload" | "source" | null;
 
 /** Scope, tabs, filters, drafts, and the apply flow for one Translator tab. */
 export function useTranslator() {
-  const { connectionName } = useTabConnection();
-  const connection = connectionName || null;
+  const { connectionId } = useTabConnection();
+  const connection = connectionId || null;
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
@@ -476,7 +476,7 @@ export function useTranslator() {
   }, [apply, connection, showToast]);
 
   return {
-    connectionName: connection,
+    connectionId: connection,
     status,
     languages,
     visibleLanguages,

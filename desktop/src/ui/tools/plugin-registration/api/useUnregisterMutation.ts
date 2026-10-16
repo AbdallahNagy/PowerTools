@@ -12,10 +12,10 @@ const pathByKind: Record<UnregisterKind, string> = {
   image: "images",
 };
 
-export function useUnregisterMutation(connectionName: string | null) {
+export function useUnregisterMutation(connectionId: string | null) {
   const queryClient = useQueryClient();
   const meta = {
-    connectionName: connectionName ?? undefined,
+    connectionId: connectionId ?? undefined,
     noAuthRetry: true as const,
   };
 
@@ -28,7 +28,7 @@ export function useUnregisterMutation(connectionName: string | null) {
       ),
     onSuccess: () =>
       queryClient.invalidateQueries({
-        queryKey: registrationKeys.catalog(connectionName ?? ""),
+        queryKey: registrationKeys.catalog(connectionId ?? ""),
       }),
   });
 }

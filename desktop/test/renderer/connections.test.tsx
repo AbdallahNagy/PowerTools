@@ -12,6 +12,7 @@ import { useTabs } from "../../src/ui/shell/tabs/useTabs";
 import ToolHost from "../../src/ui/shell/tool-runtime/ToolHost";
 import { TOOL_REGISTRY } from "../../src/ui/tools/registry";
 import { renderWithProviders } from "../support/render";
+import { legacyConnection } from "../support/desktopBridge";
 
 class TestResizeObserver {
   observe() {}
@@ -28,16 +29,8 @@ function deferred<T>() {
 }
 
 const availableConnections = [
-  {
-    name: "Primary",
-    envUrl: "https://primary.example.test",
-    crmType: "online" as const,
-  },
-  {
-    name: "Secondary",
-    envUrl: "https://secondary.example.test",
-    crmType: "online" as const,
-  },
+  legacyConnection("Primary", "https://primary.example.test", "online"),
+  legacyConnection("Secondary", "https://secondary.example.test", "online"),
 ];
 
 function HostedDataMigration() {
@@ -47,7 +40,7 @@ function HostedDataMigration() {
         id: "data-migration-test",
         toolId: "data-migration",
         title: "Data Migration",
-        connectionName: null,
+        connectionId: null,
       }}
       definition={TOOL_REGISTRY["data-migration"]}
     />
@@ -67,7 +60,7 @@ function OpenToolProbe() {
       <output aria-label="tab connections">
         {tabs
           .filter((tab) => tab.toolId !== "welcome")
-          .map((tab) => `${tab.toolId}:${tab.connectionName ?? "none"}`)
+          .map((tab) => `${tab.toolId}:${tab.connectionId ?? "none"}`)
           .join("|")}
       </output>
     </>
@@ -79,14 +72,14 @@ afterAll(() => vi.unstubAllGlobals());
 
 function ConnectionState({ label }: { label: string }) {
   const {
-    activeConnectionName,
+    activeConnectionId,
     connections,
   } = useConnections();
 
   return (
     <output aria-label={label}>
-      {connections.map((connection) => connection.name).join(",")}|
-      {activeConnectionName ?? "none"}
+      {connections.map((connection) => connection.displayName).join(",")}|
+      {activeConnectionId ?? "none"}
     </output>
   );
 }
@@ -143,7 +136,7 @@ describe("shared connections", () => {
       </ConnectionsProvider>,
       {
         bridgeOverrides: {
-          getActiveConnectionName: () => activeConnection.promise,
+          getActiveConnectionId: () => activeConnection.promise,
         },
       },
     );
@@ -159,18 +152,10 @@ describe("shared connections", () => {
 
   it("loads connection state once and shares subsequent updates", async () => {
     const listConnections = vi.fn(async () => [
-      {
-        name: "Primary",
-        envUrl: "https://primary.example.test",
-        crmType: "online" as const,
-      },
+      legacyConnection("Primary", "https://primary.example.test", "online"),
     ]);
-    const getActiveConnectionName = vi.fn(async () => "Primary");
-    const getActiveConnection = vi.fn(async () => ({
-      name: "Primary",
-      envUrl: "https://primary.example.test",
-      crmType: "online" as const,
-    }));
+    const getActiveConnectionId = vi.fn(async () => "Primary");
+    const getActiveConnection = vi.fn(async () => (legacyConnection("Primary", "https://primary.example.test", "online")));
     const { bridge } = renderWithProviders(
       <ConnectionsProvider>
         <ConnectionState label="first connection state" />
@@ -179,7 +164,7 @@ describe("shared connections", () => {
       {
         bridgeOverrides: {
           getActiveConnection,
-          getActiveConnectionName,
+          getActiveConnectionId,
           listConnections,
         },
       },
@@ -194,16 +179,12 @@ describe("shared connections", () => {
       "Primary|Primary",
     );
     expect(listConnections).toHaveBeenCalledTimes(1);
-    expect(getActiveConnectionName).toHaveBeenCalledTimes(1);
+    expect(getActiveConnectionId).toHaveBeenCalledTimes(1);
     expect(getActiveConnection).not.toHaveBeenCalled();
 
     act(() => {
       bridge.emitConnectionsUpdated([
-        {
-          name: "Secondary",
-          envUrl: "https://secondary.example.test",
-          crmType: "onpremise",
-        },
+        legacyConnection("Secondary", "https://secondary.example.test", "onpremise"),
       ]);
       bridge.emitConnectionStatusUpdate("Secondary");
     });
@@ -224,7 +205,7 @@ describe("shared connections", () => {
       </ConnectionsProvider>,
       {
         bridgeOverrides: {
-          getActiveConnectionName: () => activeConnection.promise,
+          getActiveConnectionId: () => activeConnection.promise,
         },
       },
     );
@@ -305,7 +286,7 @@ describe("shared connections", () => {
 
   it("lets FetchXML Builder reuse the shared connection load", async () => {
     const listConnections = vi.fn(async () => []);
-    const getActiveConnectionName = vi.fn(async () => null);
+    const getActiveConnectionId = vi.fn(async () => null);
     renderWithProviders(
       <ConnectionsProvider>
         <ToolHost
@@ -313,34 +294,34 @@ describe("shared connections", () => {
             id: "fetchxml-builder-load",
             toolId: "fetchxml-builder",
             title: "FetchXML Builder",
-            connectionName: null,
+            connectionId: null,
           }}
           definition={TOOL_REGISTRY["fetchxml-builder"]}
         />
       </ConnectionsProvider>,
-      { bridgeOverrides: { getActiveConnectionName, listConnections } },
+      { bridgeOverrides: { getActiveConnectionId, listConnections } },
     );
 
     await waitFor(() => expect(listConnections).toHaveBeenCalled());
     expect(listConnections).toHaveBeenCalledTimes(1);
-    expect(getActiveConnectionName).toHaveBeenCalledTimes(1);
+    expect(getActiveConnectionId).toHaveBeenCalledTimes(1);
   });
 
   it("lets Data Migration reuse the shared connection load and initial active lookup", async () => {
     const listConnections = vi.fn(async () => []);
-    const getActiveConnectionName = vi.fn(async () => null);
+    const getActiveConnectionId = vi.fn(async () => null);
     renderWithProviders(
       <ConnectionsProvider>
         <StatusBarProvider>
           <HostedDataMigration />
         </StatusBarProvider>
       </ConnectionsProvider>,
-      { bridgeOverrides: { getActiveConnectionName, listConnections } },
+      { bridgeOverrides: { getActiveConnectionId, listConnections } },
     );
 
     await waitFor(() => expect(listConnections).toHaveBeenCalled());
     expect(listConnections).toHaveBeenCalledTimes(1);
-    expect(getActiveConnectionName).toHaveBeenCalledTimes(1);
+    expect(getActiveConnectionId).toHaveBeenCalledTimes(1);
   });
 
   it("stamps new tool tabs with the active connection and leaves them when it changes", async () => {
@@ -354,7 +335,7 @@ describe("shared connections", () => {
       </ConnectionsProvider>,
       {
         bridgeOverrides: {
-          getActiveConnectionName: async () => "Primary",
+          getActiveConnectionId: async () => "Primary",
           listConnections: async () => availableConnections,
           setActiveConnection,
         },

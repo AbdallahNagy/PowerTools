@@ -3,7 +3,7 @@ import type { AxiosRequestConfig } from "axios";
 import { desktopBridge } from "../../platform/desktopBridge";
 
 interface CachedAuth {
-  name: string;
+  id: string;
   token?: string;
   envUrl: string;
   crmType: "online" | "onpremise";
@@ -56,7 +56,7 @@ async function loadAuth(forceRefresh = false): Promise<CachedAuth> {
     if ("error" in result) throw new Error(result.error);
 
     cached = {
-      name: result.name,
+      id: result.id,
       token: result.token,
       envUrl: result.envUrl,
       crmType: result.crmType,
@@ -72,32 +72,32 @@ async function loadAuth(forceRefresh = false): Promise<CachedAuth> {
   }
 }
 
-async function loadTargetAuth(name: string, forceRefresh = false): Promise<CachedAuth> {
-  if (!forceRefresh && targetCache[name] && !shouldRefreshAuth(targetCache[name])) {
-    return targetCache[name];
+async function loadTargetAuth(id: string, forceRefresh = false): Promise<CachedAuth> {
+  if (!forceRefresh && targetCache[id] && !shouldRefreshAuth(targetCache[id])) {
+    return targetCache[id];
   }
-  const existing = inFlightTargets.get(name);
+  const existing = inFlightTargets.get(id);
   if (existing) return existing;
 
   const promise = (async () => {
-    const result = await desktopBridge.getConnection(name);
+    const result = await desktopBridge.getConnection(id);
     if ("error" in result) throw new Error(result.error);
 
-    targetCache[name] = {
-      name: result.name,
+    targetCache[id] = {
+      id: result.id,
       token: result.token,
       envUrl: result.envUrl,
       crmType: result.crmType,
       expiresOn: result.expiresOn,
     };
-    return targetCache[name];
+    return targetCache[id];
   })();
 
-  inFlightTargets.set(name, promise);
+  inFlightTargets.set(id, promise);
   try {
     return await promise;
   } finally {
-    inFlightTargets.delete(name);
+    inFlightTargets.delete(id);
   }
 }
 
@@ -106,18 +106,18 @@ export function clearAuthCache() {
   inFlightPrimary = null;
 }
 
-export function clearTargetAuthCache(name: string) {
-  delete targetCache[name];
-  inFlightTargets.delete(name);
+export function clearTargetAuthCache(id: string) {
+  delete targetCache[id];
+  inFlightTargets.delete(id);
 }
 
 declare module "axios" {
   interface AxiosRequestConfig {
     meta?: {
       /** Override the primary connection used for this request. Defaults to the active connection. */
-      connectionName?: string;
+      connectionId?: string;
       /** Optional second connection sent via X-Target-* headers. */
-      targetConnectionName?: string;
+      targetConnectionId?: string;
       /** Skip the automatic 401 refresh-and-replay. Required for non-idempotent mutations. */
       noAuthRetry?: boolean;
     };
@@ -131,24 +131,25 @@ api.interceptors.request.use(async (config) => {
   config.baseURL = baseUrl;
   config.headers.set("X-Local-Secret", secret);
 
-  const auth = config.meta?.connectionName
-    ? await loadTargetAuth(config.meta.connectionName)
+  const auth = config.meta?.connectionId
+    ? await loadTargetAuth(config.meta.connectionId)
     : await loadAuth();
 
   if (auth.crmType === "online") {
     config.headers.set("Authorization", `Bearer ${auth.token}`);
     config.headers.set("X-Environment-Url", auth.envUrl);
   } else {
-    config.headers.set("X-Connection-Name", auth.name);
+    // The sidecar keys on-premises connections by id; the header name predates ids.
+    config.headers.set("X-Connection-Name", auth.id);
   }
 
-  if (config.meta?.targetConnectionName) {
-    const target = await loadTargetAuth(config.meta.targetConnectionName);
+  if (config.meta?.targetConnectionId) {
+    const target = await loadTargetAuth(config.meta.targetConnectionId);
     if (target.crmType === "online") {
       config.headers.set("X-Target-Authorization", `Bearer ${target.token}`);
       config.headers.set("X-Target-Environment-Url", target.envUrl);
     } else {
-      config.headers.set("X-Target-Connection-Name", target.name);
+      config.headers.set("X-Target-Connection-Name", target.id);
     }
   }
 
@@ -169,13 +170,13 @@ api.interceptors.response.use(
     ) {
       original._retry = true;
       try {
-        if (original.meta?.connectionName) {
-          await loadTargetAuth(original.meta.connectionName, true);
+        if (original.meta?.connectionId) {
+          await loadTargetAuth(original.meta.connectionId, true);
         } else {
           await loadAuth(true);
         }
-        if (original.meta?.targetConnectionName) {
-          await loadTargetAuth(original.meta.targetConnectionName, true);
+        if (original.meta?.targetConnectionId) {
+          await loadTargetAuth(original.meta.targetConnectionId, true);
         }
         return api.request(original);
       } catch (refreshErr) {

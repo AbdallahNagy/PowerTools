@@ -20,7 +20,7 @@ interface GroupNodeProps {
   group: FilterGroup;
   fields: FieldMetadata[];
   rootEntity: EntityInfo;
-  connectionName: string | null;
+  connectionId: string | null;
   tables: EntityInfo[];
   relationships: RelationshipMetadata[];
   errors: ValidationError[];
@@ -41,7 +41,7 @@ export function GroupNode({
   group,
   fields,
   rootEntity,
-  connectionName,
+  connectionId,
   tables,
   relationships,
   errors,
@@ -130,7 +130,7 @@ export function GroupNode({
                 group={child}
                 fields={fields}
                 rootEntity={rootEntity}
-                connectionName={connectionName}
+                connectionId={connectionId}
                 tables={tables}
                 relationships={relationships}
                 errors={errors}
@@ -142,7 +142,7 @@ export function GroupNode({
             ) : child.kind === "relationship" ? (
               <RelationshipNode
                 node={child}
-                connectionName={connectionName}
+                connectionId={connectionId}
                 tables={tables}
                 errors={errors}
                 depth={depth + 1}

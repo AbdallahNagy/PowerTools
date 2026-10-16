@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import { StatusBarProvider, useStatusItems } from "../../../../shared/status";
@@ -10,14 +11,10 @@ import { metadataFixture, solutionsFixture } from "../fixtures";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
-const connection = {
-  name: "Dev Org",
-  envUrl: "https://dev.example.test",
-  crmType: "online" as const,
-};
+const connection = legacyConnection("Dev Org", "https://dev.example.test", "online");
 
 const toolBridge = {
-  getActiveConnectionName: async () => connection.name,
+  getActiveConnectionId: async () => connection.id,
   getActiveConnection: async () => ({
     ...connection,
     token: "dev-token",
@@ -51,7 +48,7 @@ function renderTool() {
             id: "polymorphic-lookup-creator-test",
             toolId: "polymorphic-lookup-creator",
             title: "Polymorphic Lookup Creator",
-            connectionName: connection.name,
+            connectionId: connection.id,
           }}
           definition={polymorphicLookupTool}
         />

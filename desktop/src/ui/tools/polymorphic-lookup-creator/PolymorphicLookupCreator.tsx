@@ -60,8 +60,8 @@ function PolymorphicLookupPage() {
       ? displayName.trim() !== "" || fragment !== "" || drafts.length > 0
       : mode === "existing" && isExistingDirty(drafts, originalDrafts);
   const connection = useSessionConnection(dirty);
-  const solutionsQuery = useUnmanagedSolutions(connection.connectionName);
-  const metadataQuery = usePolymorphicMetadata(connection.connectionName, !!solutionUniqueName);
+  const solutionsQuery = useUnmanagedSolutions(connection.connectionId);
+  const metadataQuery = usePolymorphicMetadata(connection.connectionId, !!solutionUniqueName);
 
   const solutions = solutionsQuery.data ?? [];
   const entities = useMemo(() => metadataQuery.data?.entities ?? [], [metadataQuery.data]);
@@ -84,7 +84,7 @@ function PolymorphicLookupPage() {
       : null;
 
   const writes = useLookupWrites({
-    connectionName: connection.connectionName,
+    connectionId: connection.connectionId,
     solution,
     table,
     lookupAttribute: selectedLookup?.logicalName ?? lookupLogicalName,
@@ -124,9 +124,9 @@ function PolymorphicLookupPage() {
   // A new connection starts the tool over.
   useEffect(() => {
     if (!connection.ready) return;
-    if (seenConnection.current === connection.connectionName) return;
+    if (seenConnection.current === connection.connectionId) return;
     const previous = seenConnection.current;
-    seenConnection.current = connection.connectionName;
+    seenConnection.current = connection.connectionId;
     if (previous === undefined) return;
     setSolutionUniqueName(null);
     setTableLogicalName(null);
@@ -135,7 +135,7 @@ function PolymorphicLookupPage() {
     setModal(null);
     setExpandedPicker("solution");
     synced.current = null;
-  }, [connection.connectionName, connection.ready]);
+  }, [connection.connectionId, connection.ready]);
 
   // Load an existing lookup's relationships into the editor once its metadata is available.
   useEffect(() => {
@@ -182,7 +182,7 @@ function PolymorphicLookupPage() {
   const contextLine = [solution?.friendlyName, table?.displayName, openLookupName].filter(Boolean).join(", ");
   let status: string | null = null;
   if (!connection.ready) status = null;
-  else if (!connection.connectionName) status = "No environment selected";
+  else if (!connection.connectionId) status = "No environment selected";
   else if (writePhase) status = writePhase;
   else if (solutionsQuery.isLoading) status = "Loading solutions…";
   else if ((metadataQuery.isLoading || metadataQuery.isFetching) && table) status = "Loading lookups…";
@@ -202,7 +202,7 @@ function PolymorphicLookupPage() {
         <div className="flex flex-1 items-center justify-center p-6">
           <Spinner />
         </div>
-      ) : !connection.connectionName ? (
+      ) : !connection.connectionId ? (
         <div className="flex flex-1 items-center justify-center p-6 text-sm text-fg">
           Right-click this tab and choose Change connection.
         </div>

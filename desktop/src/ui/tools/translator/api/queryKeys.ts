@@ -1,10 +1,10 @@
 /** Source "" is All tables; otherwise a solution id. */
 export const translatorKeys = {
-  languages: (connectionName: string) => ["translator", connectionName, "languages"] as const,
-  solutions: (connectionName: string) => ["translator", connectionName, "solutions"] as const,
-  publishers: (connectionName: string) => ["translator", connectionName, "publishers"] as const,
-  tables: (connectionName: string, source: string) => ["translator", connectionName, "tables", source] as const,
-  allLabels: (connectionName: string) => ["translator", connectionName, "labels"] as const,
-  labels: (connectionName: string, source: string, scope: string, tab: string, lcids: readonly number[]) =>
-    ["translator", connectionName, "labels", source, scope, tab, lcids.join(",")] as const,
+  languages: (connectionId: string) => ["translator", connectionId, "languages"] as const,
+  solutions: (connectionId: string) => ["translator", connectionId, "solutions"] as const,
+  publishers: (connectionId: string) => ["translator", connectionId, "publishers"] as const,
+  tables: (connectionId: string, source: string) => ["translator", connectionId, "tables", source] as const,
+  allLabels: (connectionId: string) => ["translator", connectionId, "labels"] as const,
+  labels: (connectionId: string, source: string, scope: string, tab: string, lcids: readonly number[]) =>
+    ["translator", connectionId, "labels", source, scope, tab, lcids.join(",")] as const,
 };

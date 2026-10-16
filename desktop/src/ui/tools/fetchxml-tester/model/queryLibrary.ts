@@ -12,7 +12,7 @@ export interface QueryStore {
 export interface SaveQueryInput {
   fetchXml: string;
   description: string;
-  connectionName: string;
+  connectionId: string;
   environment: string;
 }
 
@@ -62,7 +62,7 @@ export function saveQuery(
     table,
     description: input.description.trim(),
     environment: input.environment,
-    connectionName: input.connectionName,
+    connectionId: input.connectionId,
     fetchXml: formatted,
     savedAt: options.savedAt ?? new Date().toISOString(),
   };
@@ -86,11 +86,11 @@ export function deleteQuery(existing: readonly SavedQuery[], id: string): SavedQ
 
 export function filterQueries(
   queries: readonly SavedQuery[],
-  options: { connectionName: string; allEnvironments: boolean; search: string },
+  options: { connectionId: string; allEnvironments: boolean; search: string },
 ): SavedQuery[] {
   const search = options.search.trim().toLowerCase();
   return queries.filter((query) => {
-    if (!options.allEnvironments && query.connectionName !== options.connectionName) return false;
+    if (!options.allEnvironments && query.connectionId !== options.connectionId) return false;
     if (!search) return true;
     return [query.table, query.description, query.fetchXml, query.environment]
       .join("\n")
@@ -118,7 +118,7 @@ function isSavedQuery(value: unknown): value is SavedQuery {
     && typeof record.table === "string"
     && typeof record.description === "string"
     && typeof record.environment === "string"
-    && typeof record.connectionName === "string"
+    && typeof record.connectionId === "string"
     && typeof record.fetchXml === "string"
     && typeof record.savedAt === "string";
 }

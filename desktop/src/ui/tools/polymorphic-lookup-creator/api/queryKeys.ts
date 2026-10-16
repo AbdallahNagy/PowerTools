@@ -1,6 +1,6 @@
 export const polymorphicKeys = {
-  solutions: (connectionName: string) =>
-    ["polymorphic-lookup-creator", connectionName, "solutions"] as const,
-  metadata: (connectionName: string) =>
-    ["polymorphic-lookup-creator", connectionName, "metadata"] as const,
+  solutions: (connectionId: string) =>
+    ["polymorphic-lookup-creator", connectionId, "solutions"] as const,
+  metadata: (connectionId: string) =>
+    ["polymorphic-lookup-creator", connectionId, "metadata"] as const,
 };

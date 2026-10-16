@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import { StatusBarProvider, useStatusItems } from "../../../../shared/status";
@@ -23,14 +24,10 @@ import { renderWithProviders } from "../../../../../../test/support/render";
 
 const API = "http://localhost/api";
 
-const connection = {
-  name: "Dev Org",
-  envUrl: "https://dev.example.test",
-  crmType: "online" as const,
-};
+const connection = legacyConnection("Dev Org", "https://dev.example.test", "online");
 
 const toolBridge = {
-  getActiveConnectionName: async () => connection.name,
+  getActiveConnectionId: async () => connection.id,
   getActiveConnection: async () => ({ ...connection, token: "dev-token", expiresOn: "2099-01-01T00:00:00.000Z" }),
   listConnections: async () => [connection],
   getConnection: async () => ({ ...connection, token: "dev-token", expiresOn: "2099-01-01T00:00:00.000Z" }),
@@ -47,12 +44,12 @@ function StatusItemsProbe() {
   );
 }
 
-function renderTool(bridgeOverrides: DesktopBridgeOverrides = toolBridge, connectionName: string | null = connection.name) {
+function renderTool(bridgeOverrides: DesktopBridgeOverrides = toolBridge, connectionId: string | null = connection.id) {
   return renderWithProviders(
     <ConnectionsProvider>
       <StatusBarProvider>
         <ToolHost
-          tab={{ id: "translator-test", toolId: "translator", title: "Translator", connectionName }}
+          tab={{ id: "translator-test", toolId: "translator", title: "Translator", connectionId }}
           definition={translatorTool}
         />
         <StatusItemsProbe />
@@ -130,7 +127,7 @@ describe("Translator", () => {
       calls += 1;
       return HttpResponse.json(languagesFixture);
     }));
-    renderTool({ ...toolBridge, getActiveConnectionName: async () => null }, null);
+    renderTool({ ...toolBridge, getActiveConnectionId: async () => null }, null);
 
     expect(await screen.findByText("Right-click this tab and choose Change connection.")).toBeInTheDocument();
     expect(screen.getByLabelText("tool statuses")).toHaveTextContent("No environment selected");

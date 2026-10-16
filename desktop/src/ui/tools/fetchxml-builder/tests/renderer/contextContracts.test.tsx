@@ -9,8 +9,8 @@ import { useFetchXmlBuilder } from "../../context/useFetchXmlBuilder";
 const root = { id: "root", kind: "group" as const, logic: "and" as const, children: [] };
 
 function FetchXmlBuilderState() {
-  const { connectionName, tables } = useFetchXmlBuilder();
-  return <output aria-label="fetchxml builder state">{connectionName}:{tables.length}</output>;
+  const { connectionId, tables } = useFetchXmlBuilder();
+  return <output aria-label="fetchxml builder state">{connectionId}:{tables.length}</output>;
 }
 
 function DragState() {
@@ -35,7 +35,7 @@ describe("FetchXML Builder context contracts", () => {
   it("keeps provider state and drag commands available", () => {
     render(
       <>
-        <FetchXmlBuilderProvider connectionName="Main" tables={[]}>
+        <FetchXmlBuilderProvider connectionId="Main" tables={[]}>
           <FetchXmlBuilderState />
         </FetchXmlBuilderProvider>
         <DragProvider root={root}><DragState /></DragProvider>

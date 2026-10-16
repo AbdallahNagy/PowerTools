@@ -34,7 +34,7 @@ import { FormField, fieldControlClass } from "./FormField";
 
 interface StepDialogProps {
   open: boolean;
-  connectionName: string;
+  connectionId: string;
   pluginTypeId: string;
   step?: StepDto;
   onClose: () => void;
@@ -42,14 +42,14 @@ interface StepDialogProps {
 
 export function StepDialog({
   open,
-  connectionName,
+  connectionId,
   pluginTypeId,
   step,
   onClose,
 }: StepDialogProps) {
   const { showToast } = useToast();
-  const optionsQuery = useStepOptions(open ? connectionName : null);
-  const mutations = useStepMutations(connectionName);
+  const optionsQuery = useStepOptions(open ? connectionId : null);
+  const mutations = useStepMutations(connectionId);
   const [form, setForm] = useState<StepFormState>(() =>
     createStepForm(step, pluginTypeId),
   );
@@ -104,7 +104,7 @@ export function StepDialog({
   );
   const attributesEnabled = filteringAttributesEnabled(messageName, form.primaryEntity);
   const attributesQuery = useEntityAttributes(
-    open ? connectionName : null,
+    open ? connectionId : null,
     attributesEnabled ? form.primaryEntity : null,
   );
   const users = usersForSelect(

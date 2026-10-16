@@ -33,7 +33,7 @@ function TranslatorPage() {
     [translator.scope, translator.tables],
   );
 
-  const hasConnection = !!translator.connectionName;
+  const hasConnection = !!translator.connectionId;
   const ready = hasConnection && !translator.firstLoading && !translator.firstError;
   const edits = translator.editedCount;
 

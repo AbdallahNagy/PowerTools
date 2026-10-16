@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Button, DataTable, ProgressBar } from "../../../shared/ui";
+import { useConnection } from "../../../shared/connections";
 import { endSummary, formatCount, formatRemaining, isEndStatus } from "../model/run";
 import type { RunError, RunState, SortState, WorkflowRow } from "../model/types";
 import { modeLabel, nextSort, sortErrors, type ErrorSortKey } from "../model/view";
@@ -7,7 +8,7 @@ import { ErrorLine, LoadingLine } from "./Notice";
 
 export interface RunInfo {
   jobId: string;
-  connectionName: string;
+  connectionId: string;
   workflow: WorkflowRow;
   entityName: string;
   batchSize: number;
@@ -28,7 +29,8 @@ export function RunView({
   stopping: boolean;
   onStop: () => void;
   onNewRun: () => void;
-}) {
+}) {  const connectionLabel = useConnection(info.connectionId)?.displayName ?? "";
+
   const [errorSort, setErrorSort] = useState<SortState<ErrorSortKey> | null>(null);
   const errors = useMemo(
     () => sortErrors((run?.errors ?? []).map((error, index) => ({ ...error, index })), errorSort),
@@ -48,7 +50,7 @@ export function RunView({
         <header className="flex flex-col gap-1">
           <h2 className="text-base text-fg-strong">{info.workflow.name}</h2>
           <p className="text-sm text-fg">
-            {info.entityName} · {modeLabel(info.workflow.mode)} · {info.connectionName}
+            {info.entityName} · {modeLabel(info.workflow.mode)} · {connectionLabel}
           </p>
           <p className="text-sm text-fg-muted">
             Batch size {formatCount(info.batchSize)}, delay {info.delaySeconds} s between batches

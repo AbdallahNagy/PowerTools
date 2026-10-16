@@ -3,14 +3,14 @@ import { SearchInput, Spinner } from "../../../shared/ui";
 import { useTables } from "../hooks/useTables";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 interface TableSelectorProps {
-  connectionName: string | null;
+  connectionId: string | null;
   selected: EntityInfo | null;
   onSelect: (entity: EntityInfo) => void;
 }
 
-export function TableSelector({ connectionName, selected, onSelect }: TableSelectorProps) {
+export function TableSelector({ connectionId, selected, onSelect }: TableSelectorProps) {
   const [search, setSearch] = useState("");
-  const { data, isLoading, error } = useTables(connectionName);
+  const { data, isLoading, error } = useTables(connectionId);
 
   const filtered = (data ?? []).filter(
     (e) =>
@@ -31,7 +31,7 @@ export function TableSelector({ connectionName, selected, onSelect }: TableSelec
         </p>
       )}
 
-      {!connectionName ? (
+      {!connectionId ? (
         <p className="text-xs text-fg-muted italic mt-2">Select a connection first.</p>
       ) : isLoading ? (
         <div className="flex items-center gap-2 text-fg-muted text-sm mt-2">

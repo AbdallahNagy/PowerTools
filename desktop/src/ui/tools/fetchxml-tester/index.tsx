@@ -27,7 +27,7 @@ export default function FetchXmlTester() {
 }
 
 function FetchXmlTesterPage() {
-  const { connectionName } = useTabConnection();
+  const { connectionId } = useTabConnection();
   const { showToast } = useToast();
   const library = useQueryLibrary();
   const [fetchXml, setFetchXml] = useState(SAMPLE_FETCH_XML);
@@ -37,16 +37,16 @@ function FetchXmlTesterPage() {
   const [saveOpen, setSaveOpen] = useState(false);
   const [showQueryLibrary, setShowQueryLibrary] = useState(true);
   const [result, setResult] = useState<FetchResult | null>(null);
-  const { mutate: runFetch, isPending } = useRunFetch(connectionName || null);
+  const { mutate: runFetch, isPending } = useRunFetch(connectionId || null);
 
   const hasQuery = fetchXml.trim().length > 0;
   const visibleQueries = useMemo(
     () => filterQueries(library.queries, {
-      connectionName: connectionName ?? "",
+      connectionId: connectionId ?? "",
       allEnvironments,
       search,
     }),
-    [allEnvironments, connectionName, library.queries, search],
+    [allEnvironments, connectionId, library.queries, search],
   );
 
   const statusContent = isPending
@@ -59,7 +59,7 @@ function FetchXmlTesterPage() {
   const handleExecute = () => {
     const emptyMessage = emptyFetchMessage(fetchXml);
     if (emptyMessage || isPending) return;
-    if (!connectionName) {
+    if (!connectionId) {
       showToast("Select a connection before running the query.", "error");
       return;
     }
@@ -90,7 +90,7 @@ function FetchXmlTesterPage() {
   };
 
   const handleSave = (description: string) => {
-    if (!connectionName) {
+    if (!connectionId) {
       showToast("Select a connection before saving the query.", "error");
       return;
     }
@@ -98,8 +98,8 @@ function FetchXmlTesterPage() {
     const saved = library.save({
       fetchXml,
       description,
-      connectionName,
-      environment: connectionName,
+      connectionId,
+      environment: connectionId,
     });
     if (!saved.ok) {
       showToast(saved.error, "error");

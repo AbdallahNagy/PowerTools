@@ -1,7 +1,8 @@
 import Layout from "./shell/layout/Layout";
 import { HashRouter, Routes, Route } from "react-router-dom";
 import ConnectionWindow from "./shell/connection-windows/ConnectionWindow";
-import ConnectionNamingWindow from "./shell/connection-windows/ConnectionNamingWindow";
+import ConnectionDetailsWindow from "./shell/connection-windows/ConnectionDetailsWindow";
+import ConnectionManagerWindow from "./shell/connection-windows/ConnectionManagerWindow";
 import { TabProvider } from "./shell/tabs/TabContext";
 import { PrimaryActionProvider } from "./shared/keyboard";
 
@@ -17,9 +18,10 @@ function App() {
             />
             <Route path="/connection" element={<ConnectionWindow />} />
             <Route
-              path="/connection-naming"
-              element={<ConnectionNamingWindow />}
+              path="/connection-details"
+              element={<ConnectionDetailsWindow />}
             />
+            <Route path="/connections" element={<ConnectionManagerWindow />} />
           </Routes>
         </HashRouter>
       </PrimaryActionProvider>

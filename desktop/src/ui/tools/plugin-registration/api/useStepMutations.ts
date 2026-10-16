@@ -3,15 +3,15 @@ import { apiPost } from "../../../shared/api/client";
 import type { MutationResultDto, StepDraftDto } from "../model/contracts";
 import { registrationKeys } from "./queryKeys";
 
-export function useStepMutations(connectionName: string | null) {
+export function useStepMutations(connectionId: string | null) {
   const queryClient = useQueryClient();
   const meta = {
-    connectionName: connectionName ?? undefined,
+    connectionId: connectionId ?? undefined,
     noAuthRetry: true as const,
   };
   const invalidate = () =>
     queryClient.invalidateQueries({
-      queryKey: registrationKeys.catalog(connectionName ?? ""),
+      queryKey: registrationKeys.catalog(connectionId ?? ""),
     });
 
   const create = useMutation({

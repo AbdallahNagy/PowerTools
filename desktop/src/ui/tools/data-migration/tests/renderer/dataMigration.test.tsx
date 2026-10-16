@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import {
@@ -18,17 +19,9 @@ class TestResizeObserver {
   disconnect() {}
 }
 
-const sourceConnection = {
-  name: "Migration Source",
-  envUrl: "https://source.example.test",
-  crmType: "online" as const,
-};
+const sourceConnection = legacyConnection("Migration Source", "https://source.example.test", "online");
 
-const targetConnection = {
-  name: "Migration Target",
-  envUrl: "https://target.example.test",
-  crmType: "online" as const,
-};
+const targetConnection = legacyConnection("Migration Target", "https://target.example.test", "online");
 
 function StatusItemsProbe() {
   const items = useStatusItems();
@@ -106,7 +99,7 @@ describe("Data Migration", () => {
               id: "data-migration-characterization",
               toolId: "data-migration",
               title: "Data Migration",
-              connectionName: sourceConnection.name,
+              connectionId: sourceConnection.id,
             }}
             definition={dataMigrationTool}
           />
@@ -115,7 +108,7 @@ describe("Data Migration", () => {
       </ConnectionsProvider>,
       {
         bridgeOverrides: {
-          getActiveConnectionName: async () => sourceConnection.name,
+          getActiveConnectionId: async () => sourceConnection.id,
           getActiveConnection: async () => ({
             ...sourceConnection,
             token: "source-active-token",
@@ -123,7 +116,7 @@ describe("Data Migration", () => {
           }),
           listConnections: async () => [sourceConnection, targetConnection],
           getConnection: async (name) => ({
-            ...(name === sourceConnection.name ? sourceConnection : targetConnection),
+            ...(name === sourceConnection.id ? sourceConnection : targetConnection),
             token: `${name}-token`,
             expiresOn: "2099-01-01T00:00:00.000Z",
           }),
@@ -132,8 +125,8 @@ describe("Data Migration", () => {
     );
 
     const [sourceSelect, targetSelect] = await screen.findAllByRole("combobox");
-    await waitFor(() => expect(sourceSelect).toHaveValue(sourceConnection.name));
-    fireEvent.change(targetSelect, { target: { value: targetConnection.name } });
+    await waitFor(() => expect(sourceSelect).toHaveValue(sourceConnection.id));
+    fireEvent.change(targetSelect, { target: { value: targetConnection.id } });
 
     fireEvent.click(await screen.findByRole("button", { name: /Account.*account/ }));
     fireEvent.click(await screen.findByText("Account Name"));

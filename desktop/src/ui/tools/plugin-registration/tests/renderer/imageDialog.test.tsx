@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ToastProvider } from "../../../../shared/ui";
 import { ImageDialog } from "../../components/dialogs/ImageDialog";
@@ -17,11 +18,7 @@ function deferred() {
   return { promise, resolve };
 }
 
-const connection = {
-  name: "Dev Org",
-  envUrl: "https://dev.example.test",
-  crmType: "online" as const,
-};
+const connection = legacyConnection("Dev Org", "https://dev.example.test", "online");
 
 const attributes = [
   {
@@ -49,7 +46,7 @@ function renderDialog(step: StepDto = catalogFixture.steps[0]!) {
     <ToastProvider>
       <ImageDialog
         open
-        connectionName={connection.name}
+        connectionId={connection.id}
         step={step}
         onClose={() => undefined}
       />

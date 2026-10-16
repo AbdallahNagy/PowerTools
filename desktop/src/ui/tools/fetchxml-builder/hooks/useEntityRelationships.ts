@@ -4,16 +4,16 @@ import type { RelationshipMetadata } from "../model/types";
 
 export function useEntityRelationships(
   logicalName: string | null,
-  connectionName: string | null,
+  connectionId: string | null,
 ) {
   return useQuery({
-    queryKey: ["metadata", "relationships", connectionName, logicalName],
+    queryKey: ["metadata", "relationships", connectionId, logicalName],
     queryFn: () =>
       apiGet<RelationshipMetadata[]>(
         `/api/metadata/entities/${logicalName}/relationships`,
-        { meta: { connectionName: connectionName ?? undefined } },
+        { meta: { connectionId: connectionId ?? undefined } },
       ),
-    enabled: !!logicalName && !!connectionName,
+    enabled: !!logicalName && !!connectionId,
     staleTime: 10 * 60 * 1000,
   });
 }

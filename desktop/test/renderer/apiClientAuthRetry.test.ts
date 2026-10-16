@@ -14,7 +14,7 @@ import { httpServer } from "../support/httpServer";
 const SIDECAR_BASE_URL = "http://127.0.0.1:43123";
 
 const ONLINE_PRIMARY = {
-  name: "Primary Online",
+  id: "Primary Online",
   envUrl: "https://primary.crm.dynamics.com",
   crmType: "online",
   token: "primary-token",

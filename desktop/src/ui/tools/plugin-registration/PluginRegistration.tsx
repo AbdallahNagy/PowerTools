@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { Spinner, ToastProvider, useToast } from "../../shared/ui";
-import { useTabConnection } from "../../shared/connections";
+import { useConnection, useTabConnection } from "../../shared/connections";
 import { usePrimaryAction } from "../../shared/keyboard";
 import { useToolStatus } from "../../shared/status";
 import { useCapabilities } from "./api/useCapabilities";
@@ -50,7 +50,8 @@ interface ConfirmState {
 }
 
 function PluginRegistrationPage() {
-  const { connectionName } = useTabConnection();
+  const { connectionId } = useTabConnection();
+  const connectionLabel = useConnection(connectionId)?.displayName ?? "this environment";
   const { showToast } = useToast();
   const [search, setSearch] = useState("");
   const [showSystem, setShowSystem] = useState(false);
@@ -64,11 +65,11 @@ function PluginRegistrationPage() {
   );
   const [confirm, setConfirm] = useState<ConfirmState | null>(null);
 
-  const catalogQuery = useCatalog(connectionName || null);
-  const stepOptionsQuery = useStepOptions(connectionName || null);
-  useCapabilities(connectionName || null);
-  const stepMutations = useStepMutations(connectionName || null);
-  const unregister = useUnregisterMutation(connectionName || null);
+  const catalogQuery = useCatalog(connectionId || null);
+  const stepOptionsQuery = useStepOptions(connectionId || null);
+  useCapabilities(connectionId || null);
+  const stepMutations = useStepMutations(connectionId || null);
+  const unregister = useUnregisterMutation(connectionId || null);
 
   useEffect(() => {
     setExpanded(new Set());
@@ -78,7 +79,7 @@ function PluginRegistrationPage() {
     setImageDialog(null);
     setAssemblyDialog(null);
     setConfirm(null);
-  }, [connectionName]);
+  }, [connectionId]);
 
   const tree = useMemo(
     () =>
@@ -90,13 +91,13 @@ function PluginRegistrationPage() {
   const selectedNode = useMemo(() => findNode(tree, selectedId), [tree, selectedId]);
 
   const statusContent = useMemo(() => {
-    if (!connectionName) return "Plugin Registration";
+    if (!connectionId) return "Plugin Registration";
     if (catalogQuery.isLoading) return <Spinner />;
     if (catalogQuery.data) {
       return `${catalogQuery.data.assemblies.length} assemblies · ${catalogQuery.data.steps.length} steps`;
     }
     return null;
-  }, [catalogQuery.data, catalogQuery.isLoading, connectionName]);
+  }, [catalogQuery.data, catalogQuery.isLoading, connectionId]);
   useToolStatus(statusContent);
 
   const toggleExpanded = (id: string) => {
@@ -113,10 +114,10 @@ function PluginRegistrationPage() {
     name: string,
     id: string,
   ) => {
-    if (!connectionName) return;
+    if (!connectionId) return;
     setConfirm({
       title: `Unregister ${kind}`,
-      message: unregisterMessage(kind, name, id, connectionName, catalogQuery.data),
+      message: unregisterMessage(kind, name, id, connectionLabel, catalogQuery.data),
       confirmLabel: "Unregister",
       successMessage: `${kind[0]?.toUpperCase()}${kind.slice(1)} unregistered.`,
       run: () => unregister.mutateAsync({ kind, id }),
@@ -142,7 +143,7 @@ function PluginRegistrationPage() {
         if (node.kind === "step") {
           setConfirm({
             title: "Enable step",
-            message: `Enable “${node.data.name}” on ${connectionName}?`,
+            message: `Enable “${node.data.name}” on ${connectionLabel}?`,
             confirmLabel: "Enable",
             successMessage: "Step updated.",
             run: () => stepMutations.enable.mutateAsync(node.data.id),
@@ -153,7 +154,7 @@ function PluginRegistrationPage() {
         if (node.kind === "step") {
           setConfirm({
             title: "Disable step",
-            message: `Disable “${node.data.name}” on ${connectionName}?`,
+            message: `Disable “${node.data.name}” on ${connectionLabel}?`,
             confirmLabel: "Disable",
             successMessage: "Step updated.",
             run: () => stepMutations.disable.mutateAsync(node.data.id),
@@ -208,19 +209,19 @@ function PluginRegistrationPage() {
   };
 
   let emptyMessage = "Right-click this tab and choose Change connection.";
-  if (connectionName && catalogQuery.isLoading) emptyMessage = "Loading registrations…";
-  else if (connectionName && catalogQuery.isError) {
+  if (connectionId && catalogQuery.isLoading) emptyMessage = "Loading registrations…";
+  else if (connectionId && catalogQuery.isError) {
     emptyMessage =
       catalogQuery.error instanceof Error
         ? catalogQuery.error.message
         : "The catalog could not be loaded.";
-  } else if (connectionName && tree.length === 0) {
+  } else if (connectionId && tree.length === 0) {
     emptyMessage = "No plug-in assemblies found.";
   }
 
   usePrimaryAction({
     label: "Register assembly",
-    enabled: Boolean(connectionName),
+    enabled: Boolean(connectionId),
     run: () => setAssemblyDialog({}),
   });
 
@@ -236,10 +237,10 @@ function PluginRegistrationPage() {
           void stepOptionsQuery.refetch();
         }}
         refreshDisabled={
-          !connectionName || catalogQuery.isFetching || stepOptionsQuery.isFetching
+          !connectionId || catalogQuery.isFetching || stepOptionsQuery.isFetching
         }
         onRegisterAssembly={() => setAssemblyDialog({})}
-        registerAssemblyDisabled={!connectionName}
+        registerAssemblyDisabled={!connectionId}
       />
 
       <Group className="flex flex-1 min-h-0">
@@ -271,30 +272,30 @@ function PluginRegistrationPage() {
         />
       ) : null}
 
-      {stepDialog && connectionName ? (
+      {stepDialog && connectionId ? (
         <StepDialog
           open
-          connectionName={connectionName}
+          connectionId={connectionId}
           pluginTypeId={stepDialog.pluginTypeId}
           step={stepDialog.step}
           onClose={() => setStepDialog(null)}
         />
       ) : null}
 
-      {imageDialog && connectionName ? (
+      {imageDialog && connectionId ? (
         <ImageDialog
           open
-          connectionName={connectionName}
+          connectionId={connectionId}
           step={imageDialog.step}
           image={imageDialog.image}
           onClose={() => setImageDialog(null)}
         />
       ) : null}
 
-      {assemblyDialog && connectionName ? (
+      {assemblyDialog && connectionId ? (
         <AssemblyDialog
           open
-          connectionName={connectionName}
+          connectionId={connectionId}
           assembly={assemblyDialog.assembly}
           onClose={() => setAssemblyDialog(null)}
         />
@@ -331,10 +332,10 @@ function unregisterMessage(
   kind: "image" | "step" | "type" | "assembly",
   name: string,
   id: string,
-  connectionName: string,
+  connectionLabel: string,
   catalog?: CatalogDto,
 ): string {
-  const intro = `Unregister the ${kind} “${name}” from ${connectionName}?`;
+  const intro = `Unregister the ${kind} “${name}” from ${connectionLabel}?`;
   if (!catalog) return intro;
   if (kind === "step") {
     const images = catalog.images.filter((image) => image.stepId === id).length;

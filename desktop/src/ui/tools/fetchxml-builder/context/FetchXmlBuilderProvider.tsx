@@ -1,12 +1,12 @@
 import { FetchXmlBuilderContext, type FetchXmlBuilderProviderProps } from "./FetchXmlBuilderContext";
 
 export function FetchXmlBuilderProvider({
-  connectionName,
+  connectionId,
   tables,
   children,
 }: FetchXmlBuilderProviderProps) {
   return (
-    <FetchXmlBuilderContext.Provider value={{ connectionName, tables }}>
+    <FetchXmlBuilderContext.Provider value={{ connectionId, tables }}>
       {children}
     </FetchXmlBuilderContext.Provider>
   );

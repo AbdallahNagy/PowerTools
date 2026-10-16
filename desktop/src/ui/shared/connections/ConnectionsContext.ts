@@ -4,11 +4,13 @@ import type { ConnectionInfo } from "./types";
 
 export interface ConnectionsContextValue {
   connections: ConnectionInfo[];
-  activeConnectionName: string | null;
+  activeConnectionId: string | null;
   isActiveConnectionLoaded: boolean;
   createConnectionWindow: () => Promise<void>;
-  deleteConnection: (name: string) => Promise<DesktopOperationResult>;
-  setActiveConnection: (name: string) => Promise<DesktopOperationResult>;
+  /** Opens the Manage connections window, optionally with a connection selected. */
+  openConnectionManager: (id?: string | null) => Promise<void>;
+  deleteConnection: (id: string) => Promise<DesktopOperationResult>;
+  setActiveConnection: (id: string) => Promise<DesktopOperationResult>;
 }
 
 export const ConnectionsContext = createContext<ConnectionsContextValue | null>(null);

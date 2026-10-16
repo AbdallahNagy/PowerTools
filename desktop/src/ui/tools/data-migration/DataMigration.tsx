@@ -23,7 +23,7 @@ export default function DataMigration() {
 }
 
 function DataMigrationPage() {
-  const { connectionName: sourceName, setConnectionName: setSourceName } =
+  const { connectionId: sourceName, setConnectionId: setSourceName } =
     useTabConnection();
   const [targetName, setTargetName] = useState("");
   const [entity, setEntity] = useState<EntityInfo | null>(null);
@@ -85,8 +85,8 @@ function DataMigrationPage() {
         attributes,
         fetchXmlFilter: fetchFilter || undefined,
         mode,
-        sourceConnectionName: sourceName,
-        targetConnectionName: targetName,
+        sourceConnectionId: sourceName,
+        targetConnectionId: targetName,
       },
       {
         onSuccess: (res) => {
@@ -131,13 +131,13 @@ function DataMigrationPage() {
 
       <Group className="flex flex-1 min-h-0">
         <Panel defaultSize="35%" minSize="15%" className="flex flex-col min-h-0">
-          <EntityListPanel connectionName={sourceName || null} selected={entity} onSelect={selectEntity} />
+          <EntityListPanel connectionId={sourceName || null} selected={entity} onSelect={selectEntity} />
         </Panel>
         <Separator className="w-1 mx-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent transition-colors" />
         <Panel minSize="15%" className="flex flex-col min-h-0">
           <FieldsPanel
             entityLogicalName={entity?.logicalName ?? null}
-            connectionName={sourceName || null}
+            connectionId={sourceName || null}
             selected={attributes}
             onChange={setAttributes}
           />
@@ -162,7 +162,7 @@ function DataMigrationPage() {
         <PreviewModal
           open={previewOpen}
           onClose={() => setPreviewOpen(false)}
-          connectionName={sourceName ?? ""}
+          connectionId={sourceName ?? ""}
           entityLogicalName={entity.logicalName}
           attributes={attributes}
           fetchXmlFilter={fetchFilter}

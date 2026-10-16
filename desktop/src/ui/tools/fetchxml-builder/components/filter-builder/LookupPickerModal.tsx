@@ -32,7 +32,7 @@ export function LookupPickerModal({
   onSelect,
   onApply,
 }: LookupPickerModalProps) {
-  const { connectionName, tables } = useFetchXmlBuilder();
+  const { connectionId, tables } = useFetchXmlBuilder();
   const targetTables = useMemo(
     () => (targetOverride ? [targetOverride] : field.targets ?? [])
       .map((target) => tables.find((table) => table.logicalName === target))
@@ -52,7 +52,7 @@ export function LookupPickerModal({
   }, [fallbackTarget, initialTarget, open, selectedRecords]);
 
   const selectedEntity = targetTables.find((table) => table.logicalName === selectedTarget) ?? null;
-  const { data: records, isLoading, error } = useLookupRecords(connectionName, selectedEntity, search);
+  const { data: records, isLoading, error } = useLookupRecords(connectionId, selectedEntity, search);
   const pendingCount = Object.keys(pendingSelections).length;
 
   function toggleRecord(record: LookupRecord) {

@@ -2,7 +2,8 @@ import { X } from "lucide-react";
 
 interface TabProps {
   title: string;
-  connectionName?: string | null;
+  /** Display name of the tab's connection. */
+  connectionLabel?: string | null;
   content?: React.ReactNode;
   active?: boolean;
   onClick?: () => void;
@@ -12,13 +13,13 @@ interface TabProps {
 
 function Tab({
   title,
-  connectionName,
+  connectionLabel,
   active = false,
   onClick,
   onClose,
   onContextMenu,
 }: TabProps) {
-  const label = connectionName ? `${title}, ${connectionName}` : title;
+  const label = connectionLabel ? `${title}, ${connectionLabel}` : title;
 
   return (
     <div
@@ -37,9 +38,9 @@ function Tab({
       `}
     >
       <span className="mr-2 truncate">{title}</span>
-      {connectionName ? (
+      {connectionLabel ? (
         <span className="mr-2 max-w-32 truncate text-xs text-fg-muted">
-          {connectionName}
+          {connectionLabel}
         </span>
       ) : null}
       {onClose && (

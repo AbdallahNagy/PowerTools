@@ -9,7 +9,7 @@ export interface PreviewResult {
 }
 
 export interface PreviewArgs {
-  connectionName: string;
+  connectionId: string;
   entityLogicalName: string;
   attributes: string[];
   fetchXmlFilter?: string;
@@ -22,9 +22,9 @@ export function usePreviewRecords(args: PreviewArgs | null) {
   return useQuery({
     queryKey: ["migration", "preview", args],
     queryFn: () => {
-      const { connectionName, ...body } = args!;
+      const { connectionId, ...body } = args!;
       return apiPost<PreviewResult>("/api/migration/preview", body, {
-        meta: { connectionName },
+        meta: { connectionId },
       });
     },
     enabled: !!args,

@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo, useContext, useEffect, useRef, useState } from "react";
 import Tab from "./TabHeader";
 import TabContextMenu from "./TabContextMenu";
 import EmptyWorkspace from "../layout/EmptyWorkspace";
@@ -6,6 +6,7 @@ import { useTabs } from "./useTabs";
 import ToolHost from "../tool-runtime/ToolHost";
 import { TOOL_REGISTRY } from "../../tools/registry";
 import type { TabData } from "./types";
+import { ConnectionsContext } from "../../shared/connections/ConnectionsContext";
 
 const TabContent = memo(({ tab }: { tab: TabData }) => {
   const def = TOOL_REGISTRY[tab.toolId];
@@ -30,6 +31,9 @@ function TabBar() {
     y: number;
   } | null>(null);
   const menuTab = tabs.find((tab) => tab.id === menu?.tabId);
+  // The tab strip also renders in tests and screens without connections.
+  const connections = useContext(ConnectionsContext)?.connections ?? [];
+  const connectionLabels = new Map(connections.map((connection) => [connection.id, connection.displayName]));
 
   useEffect(() => {
     const strip = stripRef.current;
@@ -61,7 +65,7 @@ function TabBar() {
           <Tab
             key={tab.id}
             title={tab.title}
-            connectionName={tab.connectionName}
+            connectionLabel={tab.connectionId ? connectionLabels.get(tab.connectionId) ?? null : null}
             active={tab.id === activeTabId}
             onClick={() => setActiveTab(tab.id)}
             onClose={() => closeTab(tab.id)}
@@ -76,10 +80,10 @@ function TabBar() {
         <TabContextMenu
           x={menu.x}
           y={menu.y}
-          connectionName={menuTab.connectionName ?? null}
+          connectionId={menuTab.connectionId ?? null}
           canChangeConnection={menuTab.toolId !== "welcome"}
           canCloseOthers={tabs.length > 1}
-          onSelect={(connectionName) => setTabConnection(menu.tabId, connectionName)}
+          onSelect={(connectionId) => setTabConnection(menu.tabId, connectionId)}
           onCloseTab={() => closeTab(menu.tabId)}
           onCloseOthers={() => closeOtherTabs(menu.tabId)}
           onCloseAll={closeAllTabs}

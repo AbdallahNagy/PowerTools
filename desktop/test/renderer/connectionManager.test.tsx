@@ -1,0 +1,152 @@
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+
+import { ConnectionsProvider } from "../../src/ui/shared/connections";
+import ConnectionDetailsWindow from "../../src/ui/shell/connection-windows/ConnectionDetailsWindow";
+import ConnectionManagerWindow from "../../src/ui/shell/connection-windows/ConnectionManagerWindow";
+import ConnectionFooter from "../../src/ui/shell/layout/ConnectionFooter";
+import { describedConnection, legacyConnection } from "../support/desktopBridge";
+import { renderWithProviders } from "../support/render";
+
+const connections = [
+  describedConnection("p", "Contoso", "Production", "https://contoso.crm.dynamics.com"),
+  describedConnection("d", "Contoso", "Dev", "https://contoso-dev.crm.dynamics.com"),
+  legacyConnection("old", "https://fabrikam.crm.dynamics.com"),
+];
+
+describe("connection footer", () => {
+  it("groups connections by organization and sends old ones to Manage connections", async () => {
+    const openConnectionManager = vi.fn(async () => undefined);
+    renderWithProviders(
+      <ConnectionsProvider>
+        <ConnectionFooter />
+      </ConnectionsProvider>,
+      {
+        bridgeOverrides: {
+          listConnections: async () => connections,
+          getActiveConnectionId: async () => "p",
+          openConnectionManager,
+        },
+      },
+    );
+
+    const button = await screen.findByRole("button", { name: "Connection: Contoso · Production" });
+    expect(within(button).getByText("PROD")).toBeInTheDocument();
+    fireEvent.click(button);
+
+    const contoso = screen.getByRole("group", { name: "Contoso" });
+    expect(within(contoso).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Dev", "✓ProductionPROD"]);
+    const other = screen.getByRole("group", { name: "Other" });
+    expect(within(other).getByRole("menuitem", { name: "old" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Update these to group them" }));
+    expect(openConnectionManager).toHaveBeenCalledWith("old");
+  });
+});
+
+describe("describe this connection", () => {
+  it("fills in the next free environment and saves organization and environment", async () => {
+    const saveConnectionDetails = vi.fn(async () => ({ success: true, id: "new" }));
+    renderWithProviders(<ConnectionDetailsWindow />, {
+      bridgeOverrides: {
+        getPendingConnection: async () => ({ envUrl: "https://contoso-dev2.crm.dynamics.com", crmType: "online" as const }),
+        listConnections: async () => connections,
+        saveConnectionDetails,
+      },
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Use “contoso-dev2” from the address" }));
+    fireEvent.change(screen.getByLabelText("Organization"), { target: { value: "Contoso" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Dev 2" }));
+    expect(screen.getByLabelText("Environment")).toHaveValue("Dev 2");
+    expect(screen.getByText("Contoso · Dev 2")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(saveConnectionDetails).toHaveBeenCalledWith({ organization: "Contoso", environment: "Dev 2", browser: null }),
+    );
+  });
+
+  it("explains a clash instead of saving it", async () => {
+    const saveConnectionDetails = vi.fn(async () => ({ success: true }));
+    renderWithProviders(<ConnectionDetailsWindow />, {
+      bridgeOverrides: {
+        getPendingConnection: async () => ({ envUrl: "https://x.crm.dynamics.com", crmType: "online" as const }),
+        listConnections: async () => connections,
+        saveConnectionDetails,
+      },
+    });
+
+    await screen.findByText("https://x.crm.dynamics.com");
+    fireEvent.change(screen.getByLabelText("Organization"), { target: { value: "contoso" } });
+    fireEvent.change(screen.getByLabelText("Environment"), { target: { value: "dev" } });
+    expect(await screen.findByText('Contoso already has "Dev". Try "dev 2".')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    expect(saveConnectionDetails).not.toHaveBeenCalled();
+  });
+});
+
+describe("manage connections", () => {
+  it("edits the selected connection and its browser profile", async () => {
+    const updateConnection = vi.fn(async () => ({ success: true }));
+    renderWithProviders(<ConnectionManagerWindow />, {
+      bridgeOverrides: {
+        listConnections: async () => connections,
+        takeConnectionManagerSelection: async () => "old",
+        listBrowsers: async () => [
+          {
+            id: "edge" as const,
+            name: "Microsoft Edge",
+            profiles: [
+              { id: "Default", name: "Personal" },
+              { id: "Profile 1", name: "Work" },
+            ],
+          },
+        ],
+        updateConnection,
+      },
+    });
+
+    expect(await screen.findByText("Was named", { exact: false })).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Organization"), { target: { value: "Fabrikam" } });
+    fireEvent.click(screen.getByRole("button", { name: "Test" }));
+    fireEvent.change(screen.getByLabelText("Open links in"), { target: { value: "edge" } });
+    fireEvent.change(await screen.findByLabelText("Profile"), { target: { value: "Profile 1" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(updateConnection).toHaveBeenCalledWith("old", {
+        organization: "Fabrikam",
+        environment: "Test",
+        browser: { id: "edge", profile: "Profile 1" },
+      }),
+    );
+    expect(await screen.findByText("Saved.")).toBeInTheDocument();
+  });
+
+  it("previews an import and imports the chosen connections", async () => {
+    const commitConnectionImport = vi.fn(async () => ({ success: true, imported: 1 }));
+    renderWithProviders(<ConnectionManagerWindow />, {
+      bridgeOverrides: {
+        listConnections: async () => connections,
+        previewConnectionImport: async () => ({
+          source: "xrmtoolbox" as const,
+          fileName: "connections.xml",
+          items: [
+            { key: "1", organization: "Contoso", environment: "UAT", legacyName: null, envUrl: "https://uat.test", crmType: "online" as const, status: "new" as const },
+            { key: "2", organization: null, environment: null, legacyName: "Cert app", envUrl: "https://cert.test", crmType: "online" as const, status: "unsupported" as const, reason: "Certificate sign-in is not supported." },
+          ],
+        }),
+        commitConnectionImport,
+      },
+    });
+
+    fireEvent.click(await screen.findByRole("button", { name: "Import" }));
+    const dialog = await screen.findByRole("dialog", { name: "Import from XrmToolBox" });
+    expect(within(dialog).getByRole("checkbox", { name: "Cert app" })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Import 1" }));
+
+    await waitFor(() => expect(commitConnectionImport).toHaveBeenCalledWith(["1"]));
+    expect(await screen.findByText("Imported 1 connection.")).toBeInTheDocument();
+  });
+});

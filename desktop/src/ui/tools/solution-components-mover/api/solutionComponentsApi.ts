@@ -7,28 +7,28 @@ import type {
   StartCopyResponse,
 } from "../model/types";
 
-function connection(connectionName: string) {
-  return { meta: { connectionName } };
+function connection(connectionId: string) {
+  return { meta: { connectionId } };
 }
 
-export function fetchSolutions(connectionName: string) {
-  return apiGet<SolutionsResponse>("/api/solution-components-mover/solutions", connection(connectionName));
+export function fetchSolutions(connectionId: string) {
+  return apiGet<SolutionsResponse>("/api/solution-components-mover/solutions", connection(connectionId));
 }
 
-export function fetchComponentTypes(connectionName: string) {
+export function fetchComponentTypes(connectionId: string) {
   return apiGet<ComponentTypesResponse>(
     "/api/solution-components-mover/component-types",
-    connection(connectionName),
+    connection(connectionId),
   );
 }
 
-export function startCopy(connectionName: string, body: StartCopyRequest) {
-  return apiPost<StartCopyResponse>("/api/solution-components-mover/copies", body, connection(connectionName));
+export function startCopy(connectionId: string, body: StartCopyRequest) {
+  return apiPost<StartCopyResponse>("/api/solution-components-mover/copies", body, connection(connectionId));
 }
 
-export function fetchCopyJob(connectionName: string, jobId: string) {
+export function fetchCopyJob(connectionId: string, jobId: string) {
   return apiGet<CopyJob>(
     `/api/solution-components-mover/copies/${encodeURIComponent(jobId)}`,
-    connection(connectionName),
+    connection(connectionId),
   );
 }

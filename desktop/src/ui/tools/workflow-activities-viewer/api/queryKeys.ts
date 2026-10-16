@@ -1,6 +1,6 @@
 export const workflowActivityKeys = {
-  activities: (connectionName: string) =>
-    ["workflow-activities-viewer", connectionName, "activities"] as const,
-  processes: (connectionName: string, pluginTypeId: string) =>
-    ["workflow-activities-viewer", connectionName, "processes", pluginTypeId] as const,
+  activities: (connectionId: string) =>
+    ["workflow-activities-viewer", connectionId, "activities"] as const,
+  processes: (connectionId: string, pluginTypeId: string) =>
+    ["workflow-activities-viewer", connectionId, "processes", pluginTypeId] as const,
 };

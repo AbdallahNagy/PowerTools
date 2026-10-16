@@ -1,15 +1,15 @@
 type ActiveConnectionSnapshot = {
-  name: string | null;
+  id: string | null;
   loaded: boolean;
 };
 
-let snapshot: ActiveConnectionSnapshot = { name: null, loaded: false };
+let snapshot: ActiveConnectionSnapshot = { id: null, loaded: false };
 
 export function setActiveConnectionSnapshot(
-  name: string | null,
+  id: string | null,
   loaded: boolean,
 ): void {
-  snapshot = { name, loaded };
+  snapshot = { id, loaded };
 }
 
 export function getActiveConnectionSnapshot(): ActiveConnectionSnapshot {

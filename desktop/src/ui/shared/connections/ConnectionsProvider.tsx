@@ -12,17 +12,18 @@ import {
   type ConnectionsContextValue,
 } from "./ConnectionsContext";
 import { setActiveConnectionSnapshot } from "./activeConnectionSnapshot";
-import type { ConnectionInfo } from "./types";
+import { toConnectionInfo } from "./connectionNaming";
+import type { ConnectionSummary } from "./types";
 
 export function ConnectionsProvider({ children }: { children: ReactNode }) {
-  const [connections, setConnections] = useState<ConnectionInfo[]>([]);
-  const [activeConnectionName, setActiveConnectionName] = useState<string | null>(null);
+  const [summaries, setSummaries] = useState<ConnectionSummary[]>([]);
+  const [activeConnectionId, setActiveConnectionId] = useState<string | null>(null);
   const [isActiveConnectionLoaded, setIsActiveConnectionLoaded] = useState(false);
   const activeConnectionVersion = useRef(0);
 
   useEffect(() => {
-    setActiveConnectionSnapshot(activeConnectionName, isActiveConnectionLoaded);
-  }, [activeConnectionName, isActiveConnectionLoaded]);
+    setActiveConnectionSnapshot(activeConnectionId, isActiveConnectionLoaded);
+  }, [activeConnectionId, isActiveConnectionLoaded]);
 
   useEffect(() => {
     return () => setActiveConnectionSnapshot(null, false);
@@ -30,10 +31,10 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initialActiveConnectionVersion = activeConnectionVersion.current;
-    desktopBridge.listConnections().then(setConnections);
-    desktopBridge.getActiveConnectionName().then((name) => {
+    desktopBridge.listConnections().then(setSummaries);
+    desktopBridge.getActiveConnectionId().then((id) => {
       if (activeConnectionVersion.current === initialActiveConnectionVersion) {
-        setActiveConnectionName(name);
+        setActiveConnectionId(id);
       }
     }).catch(() => {
       // Connection selection remains empty if startup hydration fails.
@@ -41,28 +42,34 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
       setIsActiveConnectionLoaded(true);
     });
 
-    desktopBridge.onConnectionStatusUpdate((name) => {
+    desktopBridge.onConnectionStatusUpdate((id) => {
       activeConnectionVersion.current += 1;
-      setActiveConnectionName(name);
+      setActiveConnectionId(id);
       setIsActiveConnectionLoaded(true);
     });
-    const unsubscribeConnections = desktopBridge.onConnectionsUpdated(setConnections);
+    const unsubscribeConnections = desktopBridge.onConnectionsUpdated(setSummaries);
 
     return unsubscribeConnections;
   }, []);
+
+  const connections = useMemo(() => summaries.map(toConnectionInfo), [summaries]);
 
   const createConnectionWindow = useCallback(
     () => desktopBridge.createConnectionWindow(),
     [],
   );
-  const deleteConnection = useCallback(
-    (name: string) => desktopBridge.deleteConnection(name),
+  const openConnectionManager = useCallback(
+    (id?: string | null) => desktopBridge.openConnectionManager(id),
     [],
   );
-  const setActiveConnection = useCallback(async (name: string) => {
+  const deleteConnection = useCallback(
+    (id: string) => desktopBridge.deleteConnection(id),
+    [],
+  );
+  const setActiveConnection = useCallback(async (id: string) => {
     activeConnectionVersion.current += 1;
-    const result = await desktopBridge.setActiveConnection(name);
-    setActiveConnectionName(name);
+    const result = await desktopBridge.setActiveConnection(id);
+    setActiveConnectionId(id);
     setIsActiveConnectionLoaded(true);
     return result;
   }, []);
@@ -70,18 +77,20 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ConnectionsContextValue>(
     () => ({
       connections,
-      activeConnectionName,
+      activeConnectionId,
       isActiveConnectionLoaded,
       createConnectionWindow,
+      openConnectionManager,
       deleteConnection,
       setActiveConnection,
     }),
     [
-      activeConnectionName,
+      activeConnectionId,
       connections,
       createConnectionWindow,
       deleteConnection,
       isActiveConnectionLoaded,
+      openConnectionManager,
       setActiveConnection,
     ],
   );

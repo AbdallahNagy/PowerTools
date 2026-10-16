@@ -30,7 +30,7 @@ export default function FetchXmlBuilder() {
 }
 
 function FetchXmlBuilderPage() {
-  const { connectionName } = useTabConnection();
+  const { connectionId } = useTabConnection();
   const [selectedEntity, setSelectedEntity] = useState<EntityInfo | null>(null);
   const [page, setPage] = useState(1);
   const [pagingCookies, setPagingCookies] = useState<Record<number, string>>({});
@@ -40,16 +40,16 @@ function FetchXmlBuilderPage() {
   const { showToast } = useToast();
   const { connections } = useConnections();
   const tree = useFilterTree();
-  const { data: tables, isLoading: tablesLoading, error: tablesError } = useTables(connectionName || null);
+  const { data: tables, isLoading: tablesLoading, error: tablesError } = useTables(connectionId || null);
   const { data: fields, isLoading: fieldsLoading } = useTableMetadata(
     selectedEntity?.logicalName ?? null,
-    connectionName || null,
+    connectionId || null,
   );
   const { data: relationships } = useEntityRelationships(
     selectedEntity?.logicalName ?? null,
-    connectionName || null,
+    connectionId || null,
   );
-  const { mutate: runFetch, data: result, isPending, reset: resetResult } = useRunFetch(connectionName || null);
+  const { mutate: runFetch, data: result, isPending, reset: resetResult } = useRunFetch(connectionId || null);
 
   const sortedTables = useMemo(
     () => [...(tables ?? [])].sort((a, b) => a.displayName.localeCompare(b.displayName)),
@@ -61,8 +61,8 @@ function FetchXmlBuilderPage() {
     [fields],
   );
   const selectedConnection = useMemo(
-    () => connections.find((connection) => connection.name === connectionName) ?? null,
-    [connections, connectionName],
+    () => connections.find((connection) => connection.id === connectionId) ?? null,
+    [connections, connectionId],
   );
 
   const handleSelectEntity = (entity: EntityInfo | null) => {
@@ -76,13 +76,13 @@ function FetchXmlBuilderPage() {
   };
   const resetForConnection = useRef(handleSelectEntity);
   resetForConnection.current = handleSelectEntity;
-  const appliedConnection = useRef(connectionName);
+  const appliedConnection = useRef(connectionId);
 
   useEffect(() => {
-    if (appliedConnection.current === connectionName) return;
-    appliedConnection.current = connectionName;
+    if (appliedConnection.current === connectionId) return;
+    appliedConnection.current = connectionId;
     resetForConnection.current(null);
-  }, [connectionName]);
+  }, [connectionId]);
 
   const handleEntityChange = (logicalName: string) => {
     const entity = sortedTables.find((e) => e.logicalName === logicalName) ?? null;
@@ -135,7 +135,7 @@ function FetchXmlBuilderPage() {
     setLastFetchXml("");
   };
 
-  const canRun = !!selectedEntity && !!connectionName && !fieldsLoading && !isPending;
+  const canRun = !!selectedEntity && !!connectionId && !fieldsLoading && !isPending;
   usePrimaryAction({
     label: "Run",
     enabled: canRun,
@@ -144,7 +144,7 @@ function FetchXmlBuilderPage() {
   const resultData: FetchResult | null = result ?? null;
 
   return (
-    <FetchXmlBuilderProvider connectionName={connectionName || null} tables={tables ?? []}>
+    <FetchXmlBuilderProvider connectionId={connectionId || null} tables={tables ?? []}>
       <div className="flex flex-col flex-1 min-h-0 p-4 gap-4 text-fg overflow-hidden">
       {/* Top bar */}
       <div className="flex items-end gap-4 flex-wrap">
@@ -165,11 +165,11 @@ function FetchXmlBuilderPage() {
               <Select
                 value={selectedEntity?.logicalName ?? ""}
                 onChange={(e) => handleEntityChange(e.target.value)}
-                disabled={!connectionName || tablesLoading}
+                disabled={!connectionId || tablesLoading}
                 className="w-72 shrink-0 [&>select]:truncate [&>select]:bg-raised"
               >
                 <option value="">
-                  {!connectionName
+                  {!connectionId
                     ? "— select a connection first —"
                     : tablesLoading
                       ? "Loading tables…"
@@ -209,7 +209,7 @@ function FetchXmlBuilderPage() {
                   root={tree.root}
                   fields={fields ?? []}
                   rootEntity={selectedEntity}
-                  connectionName={connectionName || null}
+                  connectionId={connectionId || null}
                   tables={tables ?? []}
                   relationships={relationships ?? []}
                   errors={validationErrors}

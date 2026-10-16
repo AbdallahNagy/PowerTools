@@ -4,18 +4,18 @@ import { useEntities } from "../api/useEntities";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 
 interface EntityListPanelProps {
-  connectionName: string | null;
+  connectionId: string | null;
   selected: EntityInfo | null;
   onSelect: (entity: EntityInfo) => void;
 }
 
 export function EntityListPanel({
-  connectionName,
+  connectionId,
   selected,
   onSelect,
 }: EntityListPanelProps) {
   const [search, setSearch] = useState("");
-  const { data, isLoading, error } = useEntities(connectionName);
+  const { data, isLoading, error } = useEntities(connectionId);
 
   const filtered = (data ?? []).filter(
     (e) =>
@@ -42,7 +42,7 @@ export function EntityListPanel({
         </p>
       )}
 
-      {!connectionName ? (
+      {!connectionId ? (
         <p className="text-xs text-fg-muted italic mt-2">
           Select a source connection.
         </p>

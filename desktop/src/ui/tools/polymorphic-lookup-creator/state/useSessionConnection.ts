@@ -6,8 +6,8 @@ import { useTabConnection } from "../../../shared/connections";
  * while there are unsaved edits, the switch waits for the user to confirm.
  */
 export function useSessionConnection(dirty: boolean) {
-  const { connectionName: tabConnectionName, setConnectionName } = useTabConnection();
-  const [sessionName, setSessionName] = useState<string | null>(tabConnectionName);
+  const { connectionId: tabConnectionId, setConnectionId } = useTabConnection();
+  const [sessionName, setSessionName] = useState<string | null>(tabConnectionId);
   const [pendingName, setPendingName] = useState<string | null | undefined>(undefined);
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
@@ -15,19 +15,19 @@ export function useSessionConnection(dirty: boolean) {
   sessionRef.current = sessionName;
 
   useEffect(() => {
-    if (tabConnectionName === sessionRef.current) {
+    if (tabConnectionId === sessionRef.current) {
       setPendingName(undefined);
       return;
     }
     if (!dirtyRef.current) {
-      setSessionName(tabConnectionName);
+      setSessionName(tabConnectionId);
       return;
     }
-    setPendingName(tabConnectionName);
-  }, [tabConnectionName]);
+    setPendingName(tabConnectionId);
+  }, [tabConnectionId]);
 
   return {
-    connectionName: sessionName,
+    connectionId: sessionName,
     ready: true,
     pendingName,
     confirmSwitch() {
@@ -36,7 +36,7 @@ export function useSessionConnection(dirty: boolean) {
     },
     cancelSwitch() {
       setPendingName(undefined);
-      setConnectionName(sessionRef.current);
+      setConnectionId(sessionRef.current);
     },
   };
 }

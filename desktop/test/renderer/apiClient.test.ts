@@ -14,7 +14,7 @@ import { httpServer } from "../support/httpServer";
 const SIDECAR_BASE_URL = "http://127.0.0.1:43123";
 
 const ONLINE_PRIMARY = {
-  name: "Primary Online",
+  id: "Primary Online",
   envUrl: "https://primary.crm.dynamics.com",
   crmType: "online",
   token: "primary-token",
@@ -22,7 +22,7 @@ const ONLINE_PRIMARY = {
 } satisfies ActiveConnection;
 
 const ON_PREMISES_PRIMARY = {
-  name: "Primary On Premises",
+  id: "Primary On Premises",
   envUrl: "https://primary.internal.example.test",
   crmType: "onpremise",
   token: undefined,
@@ -30,7 +30,7 @@ const ON_PREMISES_PRIMARY = {
 } satisfies ActiveConnection;
 
 const ONLINE_TARGET = {
-  name: "Target Online",
+  id: "Target Online",
   envUrl: "https://target.crm.dynamics.com",
   crmType: "online",
   token: "target-token",
@@ -38,7 +38,7 @@ const ONLINE_TARGET = {
 } satisfies ActiveConnection;
 
 const ON_PREMISES_TARGET = {
-  name: "Target On Premises",
+  id: "Target On Premises",
   envUrl: "https://target.internal.example.test",
   crmType: "onpremise",
   token: undefined,
@@ -48,11 +48,11 @@ const ON_PREMISES_TARGET = {
 interface ObservedRequest {
   authorization: string | null;
   environmentUrl: string | null;
-  connectionName: string | null;
+  connectionId: string | null;
   localSecret: string | null;
   targetAuthorization: string | null;
   targetEnvironmentUrl: string | null;
-  targetConnectionName: string | null;
+  targetConnectionId: string | null;
   url: string;
 }
 
@@ -60,11 +60,11 @@ function observeRequest(request: Request): ObservedRequest {
   return {
     authorization: request.headers.get("Authorization"),
     environmentUrl: request.headers.get("X-Environment-Url"),
-    connectionName: request.headers.get("X-Connection-Name"),
+    connectionId: request.headers.get("X-Connection-Name"),
     localSecret: request.headers.get("X-Local-Secret"),
     targetAuthorization: request.headers.get("X-Target-Authorization"),
     targetEnvironmentUrl: request.headers.get("X-Target-Environment-Url"),
-    targetConnectionName: request.headers.get("X-Target-Connection-Name"),
+    targetConnectionId: request.headers.get("X-Target-Connection-Name"),
     url: request.url,
   };
 }
@@ -95,11 +95,11 @@ describe("Axios API client", () => {
     expect(observed).toEqual({
       authorization: "Bearer primary-token",
       environmentUrl: "https://primary.crm.dynamics.com",
-      connectionName: null,
+      connectionId: null,
       localSecret: "local-secret",
       targetAuthorization: null,
       targetEnvironmentUrl: null,
-      targetConnectionName: null,
+      targetConnectionId: null,
       url: "http://127.0.0.1:43123/online-primary",
     });
   });
@@ -122,7 +122,7 @@ describe("Axios API client", () => {
     const { api } = await import("../../src/ui/shared/api/client");
     await api.get("/on-premises-primary");
 
-    expect(observed?.connectionName).toBe("Primary On Premises");
+    expect(observed?.connectionId).toBe("Primary On Premises");
     expect(observed?.authorization).toBeNull();
     expect(observed?.environmentUrl).toBeNull();
   });
@@ -147,12 +147,12 @@ describe("Axios API client", () => {
 
     const { api } = await import("../../src/ui/shared/api/client");
     await api.get("/online-target", {
-      meta: { targetConnectionName: "Target Online" },
+      meta: { targetConnectionId: "Target Online" },
     });
 
     expect(observed?.targetAuthorization).toBe("Bearer target-token");
     expect(observed?.targetEnvironmentUrl).toBe("https://target.crm.dynamics.com");
-    expect(observed?.targetConnectionName).toBeNull();
+    expect(observed?.targetConnectionId).toBeNull();
   });
 
   it("sends the target connection name for on-premises target auth", async () => {
@@ -175,10 +175,10 @@ describe("Axios API client", () => {
 
     const { api } = await import("../../src/ui/shared/api/client");
     await api.get("/on-premises-target", {
-      meta: { targetConnectionName: "Target On Premises" },
+      meta: { targetConnectionId: "Target On Premises" },
     });
 
-    expect(observed?.targetConnectionName).toBe("Target On Premises");
+    expect(observed?.targetConnectionId).toBe("Target On Premises");
     expect(observed?.targetAuthorization).toBeNull();
     expect(observed?.targetEnvironmentUrl).toBeNull();
   });
@@ -211,7 +211,7 @@ describe("Axios API client", () => {
 
   it("refreshes once after a 401 and retries with the refreshed primary token", async () => {
     const refreshedPrimary = {
-      name: "Primary Online",
+      id: "Primary Online",
       envUrl: "https://primary.crm.dynamics.com",
       crmType: "online",
       token: "refreshed-token",
@@ -252,7 +252,7 @@ describe("Axios API client", () => {
 
   it("rejects an always-401 response after one refresh and one retry", async () => {
     const refreshedPrimary = {
-      name: "Primary Online",
+      id: "Primary Online",
       envUrl: "https://primary.crm.dynamics.com",
       crmType: "online",
       token: "refreshed-token",
@@ -287,7 +287,7 @@ describe("Axios API client", () => {
 
   it("dedupes concurrent primary refreshes into one main-process call", async () => {
     const refreshedPrimary = {
-      name: "Primary Online",
+      id: "Primary Online",
       envUrl: "https://primary.crm.dynamics.com",
       crmType: "online",
       token: "refreshed-token",

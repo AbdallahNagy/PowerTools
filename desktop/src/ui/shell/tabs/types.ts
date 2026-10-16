@@ -14,7 +14,7 @@ export interface TabData {
    * Environment bound to this tab. Copied from the active connection when the
    * tab opens. Welcome and other static tabs leave this unset.
    */
-  connectionName?: string | null;
+  connectionId?: string | null;
   /**
    * Optional static content used for special tabs (e.g. Welcome) that are
    * not backed by a tool in the registry.

@@ -16,7 +16,7 @@ import { joinSchema } from "../model/schemaName";
 import type { EditPlan, PolymorphicEntity, RelationshipDraft, UnmanagedSolution } from "../model/types";
 
 interface LookupWritesOptions {
-  connectionName: string | null;
+  connectionId: string | null;
   solution: UnmanagedSolution | null;
   table: PolymorphicEntity | null;
   /** Logical name of the lookup column being edited. */
@@ -35,7 +35,7 @@ interface LookupWritesOptions {
  * progress for the status bar, or is null when idle.
  */
 export function useLookupWrites({
-  connectionName,
+  connectionId,
   solution,
   table,
   lookupAttribute,
@@ -52,17 +52,17 @@ export function useLookupWrites({
   const customizationPrefix = solution?.customizationPrefix ?? "";
 
   async function refreshMetadata() {
-    if (!connectionName) return;
-    await queryClient.invalidateQueries({ queryKey: polymorphicKeys.metadata(connectionName) });
+    if (!connectionId) return;
+    await queryClient.invalidateQueries({ queryKey: polymorphicKeys.metadata(connectionId) });
   }
 
   async function create() {
-    if (!connectionName || !solution || !table) return;
+    if (!connectionId || !solution || !table) return;
     setWritePhase("Creating lookup…");
     setNotice(null);
     try {
       const schemaName = joinSchema(customizationPrefix, editor.fragment);
-      await createLookup(connectionName, {
+      await createLookup(connectionId, {
         solutionUniqueName: solution.uniqueName,
         referencingEntityLogicalName: table.logicalName,
         displayName: editor.displayName.trim(),
@@ -81,7 +81,7 @@ export function useLookupWrites({
   }
 
   async function save(plan: EditPlan) {
-    if (!connectionName || !solution || !table || !lookupAttribute) return;
+    if (!connectionId || !solution || !table || !lookupAttribute) return;
     setNotice(null);
     let applied = 0;
     const completedAdds: RelationshipDraft[] = [];
@@ -89,7 +89,7 @@ export function useLookupWrites({
     try {
       for (const add of plan.adds) {
         setWritePhase("Saving lookup… Adding relationships…");
-        await addRelationship(connectionName, {
+        await addRelationship(connectionId, {
           solutionUniqueName: solution.uniqueName,
           referencingEntityLogicalName: table.logicalName,
           referencingAttributeLogicalName: lookupAttribute,
@@ -100,14 +100,14 @@ export function useLookupWrites({
       }
       for (const removal of plan.deletes) {
         setWritePhase("Saving lookup… Removing relationships…");
-        await deleteRelationship(connectionName, removal.schemaName, table.logicalName);
+        await deleteRelationship(connectionId, removal.schemaName, table.logicalName);
         applied += 1;
         completedDeletes.push(removal.referencedLogicalName);
       }
       for (const update of plan.updates) {
         setWritePhase("Saving lookup… Updating relationships…");
         const payload = relationshipPayload(update);
-        await updateRelationship(connectionName, update.schemaName, {
+        await updateRelationship(connectionId, update.schemaName, {
           referencingEntityLogicalName: table.logicalName,
           isValidForAdvancedFind: payload.isValidForAdvancedFind,
           cascade: payload.cascade,
@@ -138,11 +138,11 @@ export function useLookupWrites({
   }
 
   async function remove() {
-    if (!connectionName || !table || !lookupAttribute) return;
+    if (!connectionId || !table || !lookupAttribute) return;
     setWritePhase("Deleting lookup…");
     setNotice(null);
     try {
-      await deleteLookupColumn(connectionName, table.logicalName, lookupAttribute);
+      await deleteLookupColumn(connectionId, table.logicalName, lookupAttribute);
       showToast("Lookup deleted", "success");
       onDeleted();
       closeModal();
