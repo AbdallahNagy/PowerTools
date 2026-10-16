@@ -9,6 +9,8 @@ on:
       - "api/**"
       - "CHANGELOG.md"
       - "scripts/changelog*.mjs"
+      - "README.md"
+      - "scripts/sync-readme-tools.*"
       - ".github/workflows/desktop-ci.yml"
   pull_request:
     paths:
@@ -16,6 +18,8 @@ on:
       - "api/**"
       - "CHANGELOG.md"
       - "scripts/changelog*.mjs"
+      - "README.md"
+      - "scripts/sync-readme-tools.*"
       - ".github/workflows/desktop-ci.yml"
 
 permissions:
