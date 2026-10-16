@@ -1,6 +1,8 @@
 import {
+  app,
   BrowserWindow,
   Menu,
+  shell,
   type IpcMain,
   type IpcMainInvokeEvent,
 } from "electron";
@@ -21,6 +23,7 @@ import {
   loadCrashReportsEnabled,
   saveCrashReportsEnabled,
 } from "./crashReports.js";
+import { toolRequestUrl } from "./toolRequest.js";
 
 export const TITLE_BAR_MENU_IDS = ["file", "edit", "view", "help"] as const;
 export type TitleBarMenuId = (typeof TITLE_BAR_MENU_IDS)[number];
@@ -102,6 +105,16 @@ const DEFAULT_CRASH_REPORTS_MENU: CrashReportsMenuOptions = {
   onChange: saveCrashReportsEnabled,
 };
 
+export interface ToolRequestMenuOptions {
+  onRequestTool: () => void;
+}
+
+const DEFAULT_TOOL_REQUEST_MENU: ToolRequestMenuOptions = {
+  onRequestTool: () => {
+    void shell.openExternal(toolRequestUrl(app.getVersion()));
+  },
+};
+
 const DEFAULT_USAGE_STATS_MENU: UsageStatsMenuOptions = {
   enabled: true,
   onChange: saveUsageStatsEnabled,
@@ -111,6 +124,7 @@ export function createApplicationMenuTemplate(
   themeMenu: ThemeMenuOptions = DEFAULT_THEME_MENU,
   usageStatsMenu: UsageStatsMenuOptions = DEFAULT_USAGE_STATS_MENU,
   crashReportsMenu: CrashReportsMenuOptions = DEFAULT_CRASH_REPORTS_MENU,
+  toolRequestMenu: ToolRequestMenuOptions = DEFAULT_TOOL_REQUEST_MENU,
 ): Electron.MenuItemConstructorOptions[] {
   return [
     { role: "fileMenu" },
@@ -147,6 +161,8 @@ export function createApplicationMenuTemplate(
       submenu: [
         createUsageStatsMenuItem(usageStatsMenu.enabled, usageStatsMenu.onChange),
         createCrashReportsMenuItem(crashReportsMenu.enabled, crashReportsMenu.onChange),
+        { type: "separator" },
+        { label: "Request a Tool…", click: () => toolRequestMenu.onRequestTool() },
       ],
     },
   ];

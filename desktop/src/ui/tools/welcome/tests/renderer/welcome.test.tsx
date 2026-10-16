@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { renderWithProviders } from "../../../../../../test/support/render";
@@ -33,6 +33,25 @@ describe("Welcome tool", () => {
     expect(openedUrls).toEqual([
       "https://github.com/AbdallahNagy/PowerTools",
     ]);
+  });
+
+  it("opens the tool request form with the app version", async () => {
+    const openedUrls: string[] = [];
+    renderWithProviders(<WelcomeTab />, {
+      bridgeOverrides: {
+        getAppVersion: async () => "1.2.0",
+        openExternalUrl: async (url) => {
+          openedUrls.push(url);
+        },
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Request a tool" }));
+
+    await waitFor(() => expect(openedUrls).toHaveLength(1));
+    const url = new URL(openedUrls[0]);
+    expect(url.searchParams.get("template")).toBe("tool-request.yml");
+    expect(url.searchParams.get("source")).toBe("desktop 1.2.0");
   });
 
   it("lists every public tool from the catalog", () => {

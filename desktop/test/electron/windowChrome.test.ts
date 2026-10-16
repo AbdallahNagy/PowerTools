@@ -162,6 +162,19 @@ describe("window chrome", () => {
     expect(onChange).toHaveBeenCalledWith(true);
   });
 
+  it("puts Request a Tool in the Help menu", async () => {
+    const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
+    const onRequestTool = vi.fn();
+    const template = createApplicationMenuTemplate(undefined, undefined, undefined, { onRequestTool });
+    const help = template.find((item) => item.label === "Help");
+    const helpItems = help?.submenu as Electron.MenuItemConstructorOptions[];
+    const requestTool = helpItems[helpItems.length - 1];
+
+    expect(requestTool?.label).toBe("Request a Tool…");
+    (requestTool?.click as () => void)();
+    expect(onRequestTool).toHaveBeenCalledOnce();
+  });
+
   it("leaves Ctrl+W free so the shell can close the active tab", async () => {
     const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
     const template = createApplicationMenuTemplate();

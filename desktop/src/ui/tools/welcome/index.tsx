@@ -1,6 +1,7 @@
 import { ArrowLeftRight, List, ShieldCheck, Sparkles } from "lucide-react";
 import type { ReactElement } from "react";
 import { desktopBridge } from "../../platform/desktopBridge";
+import { openToolRequest } from "../../shared/links/openToolRequest";
 import { PUBLIC_TOOLS } from "../publicCatalog";
 
 const features: {
@@ -123,6 +124,18 @@ export default function WelcomeTab() {
             >
               View on GitHub
             </a>
+            <button
+              type="button"
+              className="px-5 py-2.5 rounded-md text-sm font-medium transition-colors"
+              style={{
+                background: "var(--color-raised)",
+                color: "var(--color-fg)",
+                border: "1px solid var(--color-line)",
+              }}
+              onClick={() => void openToolRequest()}
+            >
+              Request a tool
+            </button>
           </div>
         </div>
       </div>
