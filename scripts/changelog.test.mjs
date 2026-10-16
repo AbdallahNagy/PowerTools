@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { compareVersions, parseChangelog, releaseNotes, validateChangelog } from "./changelog.mjs";
+import {
+  compareVersions,
+  cutRelease,
+  nextVersion,
+  parseChangelog,
+  releaseNotes,
+  validateChangelog,
+} from "./changelog.mjs";
 
 const valid = `# Changelog
 
@@ -85,4 +92,38 @@ test("the repository changelog is valid", () => {
 test("reports headings that are not release headings", () => {
   const problems = validateChangelog(valid.replace("## [1.1.0] - 2026-11-01", "## 1.1.0"));
   assert.ok(problems.some((p) => p.includes('"## 1.1.0" is not a release heading')));
+});
+
+test("bumps versions", () => {
+  assert.equal(nextVersion("1.0.1", "patch"), "1.0.2");
+  assert.equal(nextVersion("1.0.1", "minor"), "1.1.0");
+  assert.equal(nextVersion("1.0.1", "major"), "2.0.0");
+  assert.equal(nextVersion("1.1.0-beta.1", "patch"), "1.1.0");
+  assert.equal(nextVersion("1.0.1", "v1.2.3"), "1.2.3");
+  assert.throws(() => nextVersion("1.0.1", "huge"), /patch, minor, major/);
+});
+
+test("cuts a release from Unreleased", () => {
+  const cut = cutRelease(valid, "1.2.0", "2026-12-01");
+  assert.deepEqual(validateChangelog(cut), []);
+
+  const { releases, links } = parseChangelog(cut);
+  assert.deepEqual(
+    releases.slice(0, 3).map(({ version, date }) => ({ version, date })),
+    [
+      { version: "Unreleased", date: undefined },
+      { version: "1.2.0", date: "2026-12-01" },
+      { version: "1.1.0", date: "2026-11-01" },
+    ],
+  );
+  assert.equal(releases[0].body, "");
+  assert.equal(releases[1].body, "### Added\n\n- Something new.");
+  assert.equal(links.Unreleased, "https://example.com/compare/v1.2.0...HEAD");
+  assert.equal(links["1.2.0"], "https://example.com/compare/v1.1.0...v1.2.0");
+});
+
+test("refuses to cut an empty or lower release", () => {
+  const empty = cutRelease(valid, "1.2.0", "2026-12-01");
+  assert.throws(() => cutRelease(empty, "1.3.0", "2026-12-02"), /has no entries/);
+  assert.throws(() => cutRelease(valid, "1.0.0", "2026-12-01"), /must be higher/);
 });

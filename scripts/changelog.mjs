@@ -5,6 +5,11 @@
 // Usage:
 //   node scripts/changelog.mjs check                        exit 1 if CHANGELOG.md is malformed
 //   node scripts/changelog.mjs extract <version> [--out f]  print or write one release's notes
+//   node scripts/changelog.mjs release <patch|minor|major|x.y.z> [--date YYYY-MM-DD]
+//       move [Unreleased] into a new release, bumped from desktop/package.json,
+//       and print the new version. The Prepare Release workflow runs this.
+//
+// --changelog <file> reads and writes another file instead of CHANGELOG.md.
 
 import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
@@ -139,10 +144,86 @@ export function releaseNotes(text, version) {
   return `# Power Tools ${version}\n\n${release.body}\n`;
 }
 
+/** The version after `current` for a patch, minor, or major bump, or an exact x.y.z. */
+export function nextVersion(current, bump) {
+  const parsed = parseSemver(current);
+  if (!parsed) throw new Error(`"${current}" is not a semantic version.`);
+  const [major, minor, patch] = parsed.core;
+  if (bump === "major") return `${major + 1}.0.0`;
+  if (bump === "minor") return `${major}.${minor + 1}.0`;
+  if (bump === "patch") return parsed.pre.length ? `${major}.${minor}.${patch}` : `${major}.${minor}.${patch + 1}`;
+  const exact = bump?.replace(/^v/, "");
+  if (exact && parseSemver(exact)) return exact;
+  throw new Error(`Use patch, minor, major, or an exact version, not "${bump}".`);
+}
+
+/**
+ * Moves the [Unreleased] notes into a new "## [version] - date" section, leaves
+ * an empty [Unreleased] above it, and updates the compare links.
+ */
+export function cutRelease(text, version, date) {
+  const normalized = text.replace(/\r\n/g, "\n");
+  const { releases } = parseChangelog(normalized);
+  const unreleased = releases.find((r) => r.version === UNRELEASED);
+  const latest = releases.find((r) => r.version !== UNRELEASED);
+
+  if (!unreleased) throw new Error(`CHANGELOG.md has no "## [${UNRELEASED}]" section.`);
+  if (!/^\s*[-*] /m.test(unreleased.body)) {
+    throw new Error(`[${UNRELEASED}] has no entries. Add what changed before cutting ${version}.`);
+  }
+  if (!parseSemver(version)) throw new Error(`"${version}" is not a semantic version.`);
+  if (!ISO_DATE.test(date)) throw new Error(`"${date}" is not a YYYY-MM-DD date.`);
+  if (latest && compareVersions(version, latest.version) <= 0) {
+    throw new Error(`${version} must be higher than the latest release, ${latest.version}.`);
+  }
+
+  const lines = normalized.split("\n");
+  const headingIndex = lines.findIndex((line) => RELEASE_HEADING.exec(line)?.[1] === UNRELEASED);
+  lines.splice(headingIndex, 1, `## [${UNRELEASED}]`, "", `## [${version}] - ${date}`);
+
+  const linkIndex = lines.findIndex((line) => LINK_DEFINITION.exec(line)?.[1] === UNRELEASED);
+  const compare = linkIndex === -1 ? undefined : /^(.*)\/compare\/(\S+)\.\.\.HEAD$/.exec(LINK_DEFINITION.exec(lines[linkIndex])[2]);
+  if (!compare) {
+    throw new Error(`The [${UNRELEASED}] link must look like "[${UNRELEASED}]: <repo>/compare/v<latest>...HEAD".`);
+  }
+  const [, repo, previous] = compare;
+  lines.splice(
+    linkIndex,
+    1,
+    `[${UNRELEASED}]: ${repo}/compare/v${version}...HEAD`,
+    `[${version}]: ${repo}/compare/${previous}...v${version}`,
+  );
+
+  return lines.join("\n");
+}
+
+function optionValue(args, name) {
+  const index = args.indexOf(name);
+  return index === -1 ? undefined : args[index + 1];
+}
+
 function main(args) {
   const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-  const text = readFileSync(join(root, "CHANGELOG.md"), "utf8");
+  const changelogPath = resolve(optionValue(args, "--changelog") ?? join(root, "CHANGELOG.md"));
+  const text = readFileSync(changelogPath, "utf8");
   const [command, version] = args;
+
+  if (command === "release" && version) {
+    const { version: current } = JSON.parse(readFileSync(join(root, "desktop", "package.json"), "utf8"));
+    const date = optionValue(args, "--date") ?? new Date().toISOString().slice(0, 10);
+    try {
+      const next = nextVersion(current, version);
+      const updated = cutRelease(text, next, date);
+      const problems = validateChangelog(updated);
+      if (problems.length) throw new Error(problems.join("\n"));
+      writeFileSync(changelogPath, updated);
+      process.stdout.write(`${next}\n`);
+      return 0;
+    } catch (error) {
+      console.error(error.message);
+      return 1;
+    }
+  }
 
   if (command === "check") {
     const problems = validateChangelog(text);
@@ -161,16 +242,18 @@ function main(args) {
       console.error(`CHANGELOG.md has no notes for ${version}. Add a "## [${version}] - YYYY-MM-DD" section.`);
       return 1;
     }
-    const outIndex = args.indexOf("--out");
-    if (outIndex !== -1 && args[outIndex + 1]) {
-      writeFileSync(resolve(args[outIndex + 1]), notes);
+    const out = optionValue(args, "--out");
+    if (out) {
+      writeFileSync(resolve(out), notes);
     } else {
       process.stdout.write(notes);
     }
     return 0;
   }
 
-  console.error("Usage: node scripts/changelog.mjs check | extract <version> [--out <file>]");
+  console.error(
+    "Usage: node scripts/changelog.mjs check | extract <version> [--out <file>] | release <patch|minor|major|x.y.z> [--date YYYY-MM-DD]",
+  );
   return 2;
 }
 
