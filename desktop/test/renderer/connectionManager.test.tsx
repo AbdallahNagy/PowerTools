@@ -5,6 +5,7 @@ import { ConnectionsProvider } from "../../src/ui/shared/connections";
 import ConnectionDetailsWindow from "../../src/ui/shell/connection-windows/ConnectionDetailsWindow";
 import ConnectionManagerWindow from "../../src/ui/shell/connection-windows/ConnectionManagerWindow";
 import ConnectionFooter from "../../src/ui/shell/layout/ConnectionFooter";
+import { useConnectionCommands } from "../../src/ui/shell/layout/useConnectionCommands";
 import { describedConnection, legacyConnection } from "../support/desktopBridge";
 import { renderWithProviders } from "../support/render";
 
@@ -148,5 +149,55 @@ describe("manage connections", () => {
 
     await waitFor(() => expect(commitConnectionImport).toHaveBeenCalledWith(["1"]));
     expect(await screen.findByText("Imported 1 connection.")).toBeInTheDocument();
+  });
+});
+
+function CommandsProbe() {
+  const sections = useConnectionCommands();
+  return (
+    <ul>
+      {sections.flatMap((section) => section.commands).map((command) => (
+        <li key={command.id}>
+          <button type="button" onClick={command.onRun}>{command.title}</button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+describe("connection commands", () => {
+  it("switches the active connection and opens Manage connections for the current one", async () => {
+    const setActiveConnection = vi.fn(async () => ({ success: true }));
+    const openConnectionManager = vi.fn(async () => undefined);
+    const openUrlForConnection = vi.fn(async () => ({ fallback: false }));
+    renderWithProviders(
+      <ConnectionsProvider>
+        <CommandsProbe />
+      </ConnectionsProvider>,
+      {
+        bridgeOverrides: {
+          listConnections: async () => connections,
+          getActiveConnectionId: async () => "p",
+          setActiveConnection,
+          openConnectionManager,
+          openUrlForConnection,
+        },
+      },
+    );
+
+    expect(await screen.findByRole("button", { name: "Edit Contoso · Production" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Switch to Contoso · Production" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Switch to Contoso · Dev" }));
+    expect(setActiveConnection).toHaveBeenCalledWith("d");
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Contoso · Production" }));
+    expect(openConnectionManager).toHaveBeenCalledWith("p", undefined);
+
+    fireEvent.click(screen.getByRole("button", { name: "Open Contoso · Production in browser" }));
+    expect(openUrlForConnection).toHaveBeenCalledWith("p", "https://contoso.crm.dynamics.com");
+
+    fireEvent.click(screen.getByRole("button", { name: "Import connections" }));
+    expect(openConnectionManager).toHaveBeenLastCalledWith(null, "import");
   });
 });

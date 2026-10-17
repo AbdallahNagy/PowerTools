@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { desktopBridge } from "../../platform/desktopBridge";
+import { desktopBridge, type ConnectionManagerAction } from "../../platform/desktopBridge";
 import {
   ConnectionsContext,
   type ConnectionsContextValue,
@@ -59,7 +59,7 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
     [],
   );
   const openConnectionManager = useCallback(
-    (id?: string | null) => desktopBridge.openConnectionManager(id),
+    (id?: string | null, action?: ConnectionManagerAction) => desktopBridge.openConnectionManager(id, action),
     [],
   );
   const deleteConnection = useCallback(

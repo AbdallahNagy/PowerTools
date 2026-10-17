@@ -89,4 +89,54 @@ describe("command palette results", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onRequestTool).toHaveBeenCalledWith("");
   });
+
+  it("lists connection commands after the tools, under headings, and runs them", () => {
+    const switchToProd = vi.fn();
+    const manage = vi.fn();
+    const onOpen = vi.fn();
+    render(
+      <CommandPalette
+        open
+        tools={[{ id: "fetchxml-builder", title: "FetchXML Builder", icon: "icon.svg" }]}
+        sections={[
+          {
+            id: "connections",
+            label: "Connections",
+            commands: [
+              { id: "p", title: "Switch to Contoso · Production", tooltip: "https://contoso.crm.dynamics.com", icon: null, onRun: switchToProd },
+            ],
+          },
+          {
+            id: "connection-commands",
+            label: "Connection commands",
+            commands: [{ id: "manage", title: "Manage connections", icon: null, onRun: manage }],
+          },
+        ]}
+        onClose={vi.fn()}
+        onOpen={onOpen}
+      />,
+    );
+
+    expect(screen.getByRole("group", { name: "Tools" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Connections" })).toBeInTheDocument();
+
+    const input = screen.getByRole("combobox", { name: "Open tool" });
+    fireEvent.change(input, { target: { value: "prod" } });
+    expect(screen.queryByRole("group")).not.toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Switch to Contoso · Production/ })).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(switchToProd).toHaveBeenCalledOnce();
+
+    fireEvent.change(input, { target: { value: "contoso.crm" } });
+    expect(screen.getByRole("option", { name: /Switch to Contoso/ })).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.keyDown(input, { key: "End" });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(manage).toHaveBeenCalledOnce();
+    expect(onOpen).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: "zzz" } });
+    expect(screen.getByText("No matches")).toBeInTheDocument();
+  });
 });

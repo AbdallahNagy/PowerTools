@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import type { DesktopOperationResult } from "../../platform/desktopBridge";
+import type { ConnectionManagerAction, DesktopOperationResult } from "../../platform/desktopBridge";
 import type { ConnectionInfo } from "./types";
 
 export interface ConnectionsContextValue {
@@ -8,7 +8,7 @@ export interface ConnectionsContextValue {
   isActiveConnectionLoaded: boolean;
   createConnectionWindow: () => Promise<void>;
   /** Opens the Manage connections window, optionally with a connection selected. */
-  openConnectionManager: (id?: string | null) => Promise<void>;
+  openConnectionManager: (id?: string | null, action?: ConnectionManagerAction) => Promise<void>;
   deleteConnection: (id: string) => Promise<DesktopOperationResult>;
   setActiveConnection: (id: string) => Promise<DesktopOperationResult>;
 }
