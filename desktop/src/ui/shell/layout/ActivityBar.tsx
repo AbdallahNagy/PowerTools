@@ -6,10 +6,17 @@ import ConnectionFooter from "./ConnectionFooter";
 import { filterSidebarItems } from "./sidebarSearch";
 import { Input } from "../../shared/ui";
 import { ToolIcon } from "./ToolIcon";
+import ToolContextMenu from "./ToolContextMenu";
 
 const ActivityBar = () => {
   const { openTool } = useTabs();
   const [query, setQuery] = useState("");
+  const [menu, setMenu] = useState<{
+    toolId: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  const menuTool = ACTIVITY_BAR_TOOLS.find((tool) => tool.id === menu?.toolId);
   const tools = useMemo(
     () => filterSidebarItems(ACTIVITY_BAR_TOOLS, query),
     [query],
@@ -40,6 +47,10 @@ const ActivityBar = () => {
             aria-label={tool.tooltip || tool.title}
             className="mb-0.5 flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-fg hover:bg-hover hover:text-fg-strong"
             onClick={() => openTool(tool.id)}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              setMenu({ toolId: tool.id, x: event.clientX, y: event.clientY });
+            }}
           >
             <ToolIcon src={tool.icon} />
             <span className="truncate">{tool.title}</span>
@@ -52,6 +63,18 @@ const ActivityBar = () => {
           </p>
         )}
       </div>
+      {menu && menuTool ? (
+        <ToolContextMenu
+          x={menu.x}
+          y={menu.y}
+          toolTitle={menuTool.title}
+          onOpen={() => openTool(menuTool.id)}
+          onOpenWithConnection={(connectionName) =>
+            openTool(menuTool.id, { connectionName })
+          }
+          onClose={() => setMenu(null)}
+        />
+      ) : null}
       <ConnectionFooter />
     </nav>
   );

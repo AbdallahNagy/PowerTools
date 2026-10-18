@@ -499,4 +499,57 @@ describe("renderer shell", () => {
     expect(setActiveConnection).toHaveBeenCalledWith("Primary");
     expect(screen.getByText("connected to: Secondary")).toBeInTheDocument();
   });
+  it("opens a tool with the active or another connection from the sidebar menu", async () => {
+    const listConnections = vi.fn(async () => [
+      {
+        name: "Primary",
+        envUrl: "https://primary.example.test",
+        crmType: "online" as const,
+      },
+      {
+        name: "Secondary",
+        envUrl: "https://secondary.example.test",
+        crmType: "online" as const,
+      },
+    ]);
+    const getActiveConnectionName = vi.fn(async () => "Primary");
+    const setActiveConnection = vi.fn(async () => ({ success: true as const }));
+    renderWithProviders(
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+          <TabBar />
+        </TabProvider>
+      </ConnectionsProvider>,
+      {
+        bridgeOverrides: {
+          getActiveConnectionName,
+          listConnections,
+          setActiveConnection,
+        },
+      },
+    );
+    await screen.findByRole("button", { name: "Connection: Primary" });
+
+    const builder = screen.getByRole("button", {
+      name: "Build, run, and refine FetchXML queries",
+    });
+
+    fireEvent.contextMenu(builder);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Open with Primary" }));
+    expect(screen.getByLabelText("FetchXML Builder, Primary")).toBeInTheDocument();
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    fireEvent.contextMenu(builder);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Open with another connection…" }));
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Secondary" }));
+    expect(screen.getByLabelText("FetchXML Builder, Secondary")).toBeInTheDocument();
+    expect(screen.getByLabelText("FetchXML Builder, Primary")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Connection: Primary" })).toBeInTheDocument();
+    expect(setActiveConnection).not.toHaveBeenCalled();
+
+    fireEvent.contextMenu(builder);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
 });

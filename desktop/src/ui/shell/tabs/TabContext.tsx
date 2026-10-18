@@ -14,7 +14,7 @@ import {
 } from "./tabState";
 import type { ToolDefinition } from "../../tools/defineTool";
 import { TOOL_REGISTRY } from "../../tools/registry";
-import { TabProviderContext } from "./TabProviderContext";
+import { TabProviderContext, type OpenToolOptions } from "./TabProviderContext";
 
 type TabAction =
   | {
@@ -62,7 +62,7 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
     initialTabState,
   );
 
-  const openTool = (toolId: string) => {
+  const openTool = (toolId: string, options?: OpenToolOptions) => {
     const def = TOOL_REGISTRY[toolId];
     if (!def) {
       console.warn(`openTool: unknown toolId "${toolId}"`);
@@ -70,11 +70,17 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const { name, loaded } = getActiveConnectionSnapshot();
+    const connectionName =
+      options?.connectionName !== undefined
+        ? options.connectionName
+        : loaded
+          ? name
+          : null;
     dispatch({
       type: "open-tool",
       tool: def,
       timestamp: Date.now(),
-      connectionName: loaded ? name : null,
+      connectionName,
     });
   };
 
