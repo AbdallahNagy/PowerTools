@@ -10,10 +10,10 @@ import { DEFAULT_SORT, nextSort, sortAttributes, type SortKey, type SortState } 
 
 /** Selection, searches, queries, and the refresh flow for one Attribute Explorer tab. */
 export function useAttributeExplorer() {
-  const { connectionName } = useTabConnection();
+  const { connectionId } = useTabConnection();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
-  const connection = connectionName || null;
+  const connection = connectionId || null;
 
   const [tableQuery, setTableQuery] = useState("");
   const [fieldQuery, setFieldQuery] = useState("");
@@ -163,7 +163,7 @@ export function useAttributeExplorer() {
   }, [connection, queryClient, refetchAttributes, refetchTables, showToast]);
 
   return {
-    connectionName: connection,
+    connectionId: connection,
     status,
     busy,
     tables,

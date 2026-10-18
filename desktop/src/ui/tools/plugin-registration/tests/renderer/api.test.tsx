@@ -38,7 +38,7 @@ describe("Plugin Registration API", () => {
         getConnection: async (name) =>
           name === "Dev Org"
             ? {
-                name,
+                id: name,
                 envUrl: "https://dev.example.test",
                 crmType: "online",
                 token: "dev-token",
@@ -73,7 +73,7 @@ describe("Plugin Registration API", () => {
     installDesktopBridge(
       createFakeDesktopBridge({
         getConnection: async (name) => ({
-          name,
+          id: name,
           envUrl: "https://dev.example.test",
           crmType: "online",
           token: "dev-token",
@@ -106,7 +106,7 @@ describe("Plugin Registration API", () => {
     installDesktopBridge(
       createFakeDesktopBridge({
         getConnection: async (name) => ({
-          name,
+          id: name,
           envUrl: "https://dev.example.test",
           crmType: "online",
           token: "dev-token",
@@ -137,7 +137,7 @@ describe("Plugin Registration API", () => {
     installDesktopBridge(
       createFakeDesktopBridge({
         getConnection: async (name) => ({
-          name,
+          id: name,
           envUrl: "https://dev.example.test",
           crmType: "online",
           token: "dev-token",

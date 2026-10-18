@@ -2,6 +2,7 @@ import { File as NodeFile } from "node:buffer";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ToastProvider } from "../../../../shared/ui";
 import { AssemblyDialog } from "../../components/dialogs/AssemblyDialog";
@@ -17,11 +18,7 @@ function deferred() {
   return { promise, resolve };
 }
 
-const connection = {
-  name: "Dev Org",
-  envUrl: "https://dev.example.test",
-  crmType: "online" as const,
-};
+const connection = legacyConnection("Dev Org", "https://dev.example.test", "online");
 
 const inspection = {
   fileName: "Contoso.Plugins.dll",
@@ -69,7 +66,7 @@ describe("AssemblyDialog", () => {
 
     renderWithProviders(
       <ToastProvider>
-        <AssemblyDialog open connectionName={connection.name} onClose={() => undefined} />
+        <AssemblyDialog open connectionId={connection.id} onClose={() => undefined} />
       </ToastProvider>,
       {
         bridgeOverrides: {
@@ -119,7 +116,7 @@ describe("AssemblyDialog", () => {
 
     renderWithProviders(
       <ToastProvider>
-        <AssemblyDialog open connectionName={connection.name} onClose={() => undefined} />
+        <AssemblyDialog open connectionId={connection.id} onClose={() => undefined} />
       </ToastProvider>,
       {
         bridgeOverrides: {
@@ -166,7 +163,7 @@ describe("AssemblyDialog", () => {
 
     renderWithProviders(
       <ToastProvider>
-        <AssemblyDialog open connectionName={connection.name} onClose={() => undefined} />
+        <AssemblyDialog open connectionId={connection.id} onClose={() => undefined} />
       </ToastProvider>,
       {
         bridgeOverrides: {
@@ -200,7 +197,7 @@ describe("AssemblyDialog", () => {
 
     renderWithProviders(
       <ToastProvider>
-        <AssemblyDialog open connectionName={connection.name} onClose={() => undefined} />
+        <AssemblyDialog open connectionId={connection.id} onClose={() => undefined} />
       </ToastProvider>,
       {
         bridgeOverrides: {
@@ -234,7 +231,7 @@ describe("AssemblyDialog", () => {
       <ToastProvider>
         <AssemblyDialog
           open
-          connectionName={connection.name}
+          connectionId={connection.id}
           assembly={catalogFixture.assemblies[0]}
           onClose={() => undefined}
         />

@@ -2,14 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "../../../shared/api/client";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 
-export function useTables(connectionName: string | null) {
+export function useTables(connectionId: string | null) {
   return useQuery({
-    queryKey: ["metadata", "entities", connectionName],
+    queryKey: ["metadata", "entities", connectionId],
     queryFn: () =>
       apiGet<EntityInfo[]>("/api/metadata/entities", {
-        meta: { connectionName: connectionName ?? undefined },
+        meta: { connectionId: connectionId ?? undefined },
       }),
-    enabled: !!connectionName,
+    enabled: !!connectionId,
     staleTime: 10 * 60 * 1000,
   });
 }

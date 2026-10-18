@@ -23,6 +23,7 @@ import {
   useToolStatus,
 } from "../../src/ui/shared/status";
 import { renderWithProviders } from "../support/render";
+import { legacyConnection } from "../support/desktopBridge";
 
 class TestResizeObserver {
   observe() {}
@@ -428,18 +429,10 @@ describe("renderer shell", () => {
 
   it("pins the connection switcher to the sidebar footer", async () => {
     const listConnections = vi.fn(async () => [
-      {
-        name: "Primary",
-        envUrl: "https://primary.example.test",
-        crmType: "online" as const,
-      },
-      {
-        name: "Secondary",
-        envUrl: "https://secondary.example.test",
-        crmType: "online" as const,
-      },
+      legacyConnection("Primary", "https://primary.example.test", "online"),
+      legacyConnection("Secondary", "https://secondary.example.test", "online"),
     ]);
-    const getActiveConnectionName = vi.fn(async () => "Primary");
+    const getActiveConnectionId = vi.fn(async () => "Primary");
     const createConnectionWindow = vi.fn(async () => undefined);
     const setActiveConnection = vi.fn(async () => ({ success: true as const }));
     const { bridge } = renderWithProviders(
@@ -454,7 +447,7 @@ describe("renderer shell", () => {
       </ConnectionsProvider>,
       {
         bridgeOverrides: {
-          getActiveConnectionName,
+          getActiveConnectionId,
           listConnections,
           createConnectionWindow,
           setActiveConnection,
@@ -467,7 +460,7 @@ describe("renderer shell", () => {
     expect(screen.queryByText("connected to: Primary")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "connected to: Primary" })).not.toBeInTheDocument();
     expect(listConnections).toHaveBeenCalledTimes(1);
-    expect(getActiveConnectionName).toHaveBeenCalledTimes(1);
+    expect(getActiveConnectionId).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", {
       name: "Build, run, and refine FetchXML queries",
@@ -501,18 +494,10 @@ describe("renderer shell", () => {
   });
   it("opens a tool with the active or another connection from the sidebar menu", async () => {
     const listConnections = vi.fn(async () => [
-      {
-        name: "Primary",
-        envUrl: "https://primary.example.test",
-        crmType: "online" as const,
-      },
-      {
-        name: "Secondary",
-        envUrl: "https://secondary.example.test",
-        crmType: "online" as const,
-      },
+      legacyConnection("Primary", "https://primary.example.test", "online"),
+      legacyConnection("Secondary", "https://secondary.example.test", "online"),
     ]);
-    const getActiveConnectionName = vi.fn(async () => "Primary");
+    const getActiveConnectionId = vi.fn(async () => "Primary");
     const setActiveConnection = vi.fn(async () => ({ success: true as const }));
     renderWithProviders(
       <ConnectionsProvider>
@@ -523,7 +508,7 @@ describe("renderer shell", () => {
       </ConnectionsProvider>,
       {
         bridgeOverrides: {
-          getActiveConnectionName,
+          getActiveConnectionId,
           listConnections,
           setActiveConnection,
         },

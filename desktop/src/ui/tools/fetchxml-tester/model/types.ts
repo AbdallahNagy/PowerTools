@@ -20,7 +20,7 @@ export interface SavedQuery {
   table: string;
   description: string;
   environment: string;
-  connectionName: string;
+  connectionId: string;
   fetchXml: string;
   savedAt: string;
 }

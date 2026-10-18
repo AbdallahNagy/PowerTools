@@ -3,30 +3,30 @@ import { apiGet } from "../../../shared/api/client";
 import type { ActivityProcessesResponse, WorkflowActivitiesResponse } from "../model/types";
 import { workflowActivityKeys } from "./queryKeys";
 
-function connection(connectionName: string) {
-  return { meta: { connectionName } };
+function connection(connectionId: string) {
+  return { meta: { connectionId } };
 }
 
-export function useWorkflowActivities(connectionName: string | null) {
+export function useWorkflowActivities(connectionId: string | null) {
   return useQuery({
-    queryKey: workflowActivityKeys.activities(connectionName ?? ""),
+    queryKey: workflowActivityKeys.activities(connectionId ?? ""),
     queryFn: () =>
-      apiGet<WorkflowActivitiesResponse>("/api/workflow-activities", connection(connectionName ?? "")),
-    enabled: !!connectionName,
+      apiGet<WorkflowActivitiesResponse>("/api/workflow-activities", connection(connectionId ?? "")),
+    enabled: !!connectionId,
   });
 }
 
-export function fetchActivityProcesses(connectionName: string, pluginTypeId: string) {
+export function fetchActivityProcesses(connectionId: string, pluginTypeId: string) {
   return apiGet<ActivityProcessesResponse>(
     `/api/workflow-activities/${encodeURIComponent(pluginTypeId)}/processes`,
-    connection(connectionName),
+    connection(connectionId),
   );
 }
 
-export function useActivityProcesses(connectionName: string | null, pluginTypeId: string | null) {
+export function useActivityProcesses(connectionId: string | null, pluginTypeId: string | null) {
   return useQuery({
-    queryKey: workflowActivityKeys.processes(connectionName ?? "", pluginTypeId ?? ""),
-    queryFn: () => fetchActivityProcesses(connectionName ?? "", pluginTypeId ?? ""),
-    enabled: !!connectionName && !!pluginTypeId,
+    queryKey: workflowActivityKeys.processes(connectionId ?? "", pluginTypeId ?? ""),
+    queryFn: () => fetchActivityProcesses(connectionId ?? "", pluginTypeId ?? ""),
+    enabled: !!connectionId && !!pluginTypeId,
   });
 }

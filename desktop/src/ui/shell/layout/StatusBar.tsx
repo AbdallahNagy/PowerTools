@@ -1,6 +1,7 @@
 import { useContext, useEffect, useState } from "react";
 import { desktopBridge } from "../../platform/desktopBridge";
 import { TabProviderContext } from "../tabs/TabProviderContext";
+import { useConnection } from "../../shared/connections";
 import { isStatusVisibleForTab, useStatusItems } from "../../shared/status";
 import { formatAppVersion } from "./updateStatus";
 
@@ -8,7 +9,7 @@ const StatusBar = () => {
   const [appVersion, setAppVersion] = useState("");
   const tabs = useContext(TabProviderContext);
   const activeTab = tabs?.tabs.find((tab) => tab.id === tabs.activeTabId);
-  const connectionName = activeTab?.connectionName || null;
+  const connection = useConnection(activeTab?.connectionId || null);
   const allItems = useStatusItems();
   // Background tabs stay mounted, so only the active tab's tool status shows.
   const items = tabs
@@ -21,7 +22,7 @@ const StatusBar = () => {
 
   return (
     <div className="h-6 bg-accent flex items-center justify-between px-2 text-accent-fg text-xs select-none">
-      <span>{connectionName ? `connected to: ${connectionName}` : ""}</span>
+      <span>{connection ? `connected to: ${connection.displayName}` : ""}</span>
       <div className="flex items-center space-x-4">
         {items.map((item) => (
           <div key={item.id} className="flex items-center">

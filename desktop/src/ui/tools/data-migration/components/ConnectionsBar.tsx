@@ -64,8 +64,8 @@ function ConnectionSelect({
       >
         <option value="">— select —</option>
         {connections.map((c) => (
-          <option key={c.name} value={c.name} disabled={c.name === exclude}>
-            {c.name}
+          <option key={c.id} value={c.id} disabled={c.id === exclude}>
+            {c.displayName}
           </option>
         ))}
       </Select>

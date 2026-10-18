@@ -1,11 +1,12 @@
 import { Alert, Badge, Button, DataTable, Modal, ProgressBar } from "../../../shared/ui";
+import { useConnection } from "../../../shared/connections";
 import type { ComponentRow, RemovalEntry, RemovalResult } from "../model/types";
 import { REMOVAL_WARNING } from "./RemoveActiveDialog";
 
 export type BulkPhase = "confirm" | "running" | "done";
 
 interface BulkRemoveDialogProps {
-  connectionName: string;
+  connectionId: string;
   components: ComponentRow[];
   phase: BulkPhase;
   entries: RemovalEntry[];
@@ -33,7 +34,7 @@ const resultColumns = [
 ];
 
 export function BulkRemoveDialog({
-  connectionName,
+  connectionId,
   components,
   phase,
   entries,
@@ -44,13 +45,14 @@ export function BulkRemoveDialog({
   onDone,
 }: BulkRemoveDialogProps) {
   const total = components.length;
+  const environment = useConnection(connectionId)?.displayName ?? "";
   const close = phase === "confirm" ? onCancel : phase === "done" ? onDone : () => {};
 
   return (
     <Modal
       open
       title="Remove Active layers"
-      description={`Environment: ${connectionName}`}
+      description={`Environment: ${environment}`}
       onClose={close}
       widthClass="max-w-2xl"
     >

@@ -175,6 +175,33 @@ describe("window chrome", () => {
     expect(onRequestTool).toHaveBeenCalledOnce();
   });
 
+  it("puts connection commands in the File menu", async () => {
+    const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
+    const handlers = {
+      onAddConnection: vi.fn(),
+      onManageConnections: vi.fn(),
+      onImportConnections: vi.fn(),
+      onExportConnections: vi.fn(),
+    };
+    const template = createApplicationMenuTemplate(undefined, undefined, undefined, undefined, handlers);
+    const file = template.find((item) => item.label === "File");
+    const items = file?.submenu as Electron.MenuItemConstructorOptions[];
+
+    expect(items.map((item) => item.label ?? item.role ?? item.type)).toEqual([
+      "Add Connection…",
+      "Manage Connections…",
+      "separator",
+      "Import Connections…",
+      "Export Connections…",
+      "separator",
+      process.platform === "darwin" ? "close" : "quit",
+    ]);
+    for (const item of items.filter((entry) => entry.click)) {
+      (item.click as () => void)();
+    }
+    expect(Object.values(handlers).every((handler) => handler.mock.calls.length === 1)).toBe(true);
+  });
+
   it("leaves Ctrl+W free so the shell can close the active tab", async () => {
     const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
     const template = createApplicationMenuTemplate();

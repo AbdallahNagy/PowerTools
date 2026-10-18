@@ -23,8 +23,8 @@ import { translatorKeys } from "./queryKeys";
 export const READ_TIMEOUT_MS = 120_000;
 export const LABELS_TIMEOUT_MS = 300_000;
 
-function read(connectionName: string, signal?: AbortSignal, timeout = READ_TIMEOUT_MS) {
-  return { meta: { connectionName }, signal, timeout };
+function read(connectionId: string, signal?: AbortSignal, timeout = READ_TIMEOUT_MS) {
+  return { meta: { connectionId }, signal, timeout };
 }
 
 /**
@@ -33,54 +33,54 @@ function read(connectionName: string, signal?: AbortSignal, timeout = READ_TIMEO
  * The query's AbortSignal is passed on, so Reload, a connection change, or closing the tab
  * cancels the HTTP request (and the sidecar's Dataverse call) instead of leaving it running.
  */
-export function useLanguages(connectionName: string | null) {
+export function useLanguages(connectionId: string | null) {
   return useQuery({
-    queryKey: translatorKeys.languages(connectionName ?? ""),
-    queryFn: ({ signal }) => apiGet<LanguagesResponse>("/api/translator/languages", read(connectionName ?? "", signal)),
-    enabled: !!connectionName,
+    queryKey: translatorKeys.languages(connectionId ?? ""),
+    queryFn: ({ signal }) => apiGet<LanguagesResponse>("/api/translator/languages", read(connectionId ?? "", signal)),
+    enabled: !!connectionId,
     staleTime: Infinity,
     retry: false,
   });
 }
 
 /** Tables for the scope list. With a solution id, only tables that have components in that solution. */
-export function useTables(connectionName: string | null, solutionId: string | null) {
+export function useTables(connectionId: string | null, solutionId: string | null) {
   return useQuery({
-    queryKey: translatorKeys.tables(connectionName ?? "", solutionId ?? ""),
+    queryKey: translatorKeys.tables(connectionId ?? "", solutionId ?? ""),
     queryFn: ({ signal }) =>
       apiGet<TablesResponse>("/api/translator/tables", {
-        ...read(connectionName ?? "", signal),
+        ...read(connectionId ?? "", signal),
         params: solutionId ? { solutionId } : undefined,
       }),
-    enabled: !!connectionName,
+    enabled: !!connectionId,
     staleTime: Infinity,
     retry: false,
   });
 }
 
-export function useSolutions(connectionName: string | null) {
+export function useSolutions(connectionId: string | null) {
   return useQuery({
-    queryKey: translatorKeys.solutions(connectionName ?? ""),
-    queryFn: ({ signal }) => apiGet<SolutionsResponse>("/api/translator/solutions", read(connectionName ?? "", signal)),
-    enabled: !!connectionName,
+    queryKey: translatorKeys.solutions(connectionId ?? ""),
+    queryFn: ({ signal }) => apiGet<SolutionsResponse>("/api/translator/solutions", read(connectionId ?? "", signal)),
+    enabled: !!connectionId,
     staleTime: Infinity,
     retry: false,
   });
 }
 
 /** Loaded only when the user chooses to create a new solution. */
-export function usePublishers(connectionName: string | null, enabled: boolean) {
+export function usePublishers(connectionId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: translatorKeys.publishers(connectionName ?? ""),
-    queryFn: ({ signal }) => apiGet<PublishersResponse>("/api/translator/publishers", read(connectionName ?? "", signal)),
-    enabled: !!connectionName && enabled,
+    queryKey: translatorKeys.publishers(connectionId ?? ""),
+    queryFn: ({ signal }) => apiGet<PublishersResponse>("/api/translator/publishers", read(connectionId ?? "", signal)),
+    enabled: !!connectionId && enabled,
     staleTime: Infinity,
     retry: false,
   });
 }
 
 export function fetchLabels(
-  connectionName: string,
+  connectionId: string,
   solutionId: string | null,
   scope: string,
   tab: ComponentTab,
@@ -97,37 +97,37 @@ export function fetchLabels(
   return apiPost<LabelQueryResponse>(
     "/api/translator/labels/query",
     body,
-    read(connectionName, signal, LABELS_TIMEOUT_MS),
+    read(connectionId, signal, LABELS_TIMEOUT_MS),
   );
 }
 
 export function useLabels(
-  connectionName: string | null,
+  connectionId: string | null,
   solutionId: string | null,
   scope: string | null,
   tab: ComponentTab,
   lcids: readonly number[],
 ) {
   return useQuery({
-    queryKey: translatorKeys.labels(connectionName ?? "", solutionId ?? "", scope ?? "", tab, lcids),
-    queryFn: ({ signal }) => fetchLabels(connectionName ?? "", solutionId, scope ?? "", tab, lcids, signal),
-    enabled: !!connectionName && !!scope && lcids.length > 0,
+    queryKey: translatorKeys.labels(connectionId ?? "", solutionId ?? "", scope ?? "", tab, lcids),
+    queryFn: ({ signal }) => fetchLabels(connectionId ?? "", solutionId, scope ?? "", tab, lcids, signal),
+    enabled: !!connectionId && !!scope && lcids.length > 0,
     staleTime: Infinity,
     retry: false,
   });
 }
 
-export function startApply(connectionName: string, body: ApplyRequest) {
+export function startApply(connectionId: string, body: ApplyRequest) {
   return apiPost<ApplyStarted>("/api/translator/labels/apply", body, {
-    meta: { connectionName, noAuthRetry: true },
+    meta: { connectionId, noAuthRetry: true },
     timeout: READ_TIMEOUT_MS,
   });
 }
 
-export function fetchApplyJob(connectionName: string, jobId: string) {
-  return apiGet<ApplyJob>(`/api/translator/jobs/${encodeURIComponent(jobId)}`, read(connectionName));
+export function fetchApplyJob(connectionId: string, jobId: string) {
+  return apiGet<ApplyJob>(`/api/translator/jobs/${encodeURIComponent(jobId)}`, read(connectionId));
 }
 
-export function publishAgain(connectionName: string, targets: PublishTargets) {
-  return apiPost<PublishResponse>("/api/translator/publish", targets, read(connectionName));
+export function publishAgain(connectionId: string, targets: PublishTargets) {
+  return apiPost<PublishResponse>("/api/translator/publish", targets, read(connectionId));
 }

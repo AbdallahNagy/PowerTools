@@ -47,7 +47,7 @@ export default function WorkflowActivitiesViewer() {
 }
 
 function WorkflowActivitiesPage() {
-  const { connectionName } = useTabConnection();
+  const { connectionId } = useTabConnection();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState("");
@@ -60,16 +60,16 @@ function WorkflowActivitiesPage() {
     setFilter("");
     setExpanded(new Set());
     setSelectedId(null);
-  }, [connectionName]);
+  }, [connectionId]);
 
-  const activitiesQuery = useWorkflowActivities(connectionName || null);
+  const activitiesQuery = useWorkflowActivities(connectionId || null);
   const assemblies = activitiesQuery.data?.assemblies ?? [];
   const selected = useMemo(
     () => (activitiesQuery.isError ? null : findActivity(activitiesQuery.data?.assemblies ?? [], selectedId)),
     [activitiesQuery.data, activitiesQuery.isError, selectedId],
   );
   const processesQuery = useActivityProcesses(
-    connectionName || null,
+    connectionId || null,
     selected?.pluginTypeId ?? null,
   );
 
@@ -84,7 +84,7 @@ function WorkflowActivitiesPage() {
   }, [processesQuery.error, processesQuery.isError, showToast]);
 
   const status = useMemo(() => {
-    if (!connectionName) return "No environment selected";
+    if (!connectionId) return "No environment selected";
     if (activitiesQuery.isFetching) return "Loading workflow activities…";
     if (activitiesQuery.isError) return "Could not load workflow activities";
     if (selected && processesQuery.isFetching) return "Loading processes…";
@@ -106,7 +106,7 @@ function WorkflowActivitiesPage() {
     activitiesQuery.data,
     activitiesQuery.isError,
     activitiesQuery.isFetching,
-    connectionName,
+    connectionId,
     processesQuery.data,
     processesQuery.isError,
     processesQuery.isFetching,
@@ -135,15 +135,15 @@ function WorkflowActivitiesPage() {
   const refresh = async () => {
     const id = selectedIdRef.current;
     const result = await activitiesQuery.refetch();
-    if (result.isError || !result.data || !connectionName) return;
+    if (result.isError || !result.data || !connectionId) return;
     if (!id) return;
     if (!findActivity(result.data.assemblies, id)) {
       setSelectedId(null);
       return;
     }
     await queryClient.fetchQuery({
-      queryKey: workflowActivityKeys.processes(connectionName, id),
-      queryFn: () => fetchActivityProcesses(connectionName, id),
+      queryKey: workflowActivityKeys.processes(connectionId, id),
+      queryFn: () => fetchActivityProcesses(connectionId, id),
     });
   };
 
@@ -151,20 +151,20 @@ function WorkflowActivitiesPage() {
     <Group orientation="horizontal" className="flex min-h-0 flex-1 bg-canvas">
       <Panel defaultSize="50%" minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-surface">
         <div className="flex shrink-0 items-center gap-2 border-b border-line p-3">
-          <fieldset disabled={!connectionName} className="m-0 min-w-0 flex-1 border-0 p-0">
+          <fieldset disabled={!connectionId} className="m-0 min-w-0 flex-1 border-0 p-0">
             <SearchInput
               value={filter}
               onChange={onFilterChange}
               placeholder="Filter by activity name"
             />
           </fieldset>
-          <Button type="button" variant="secondary" onClick={() => void refresh()} disabled={!connectionName || busy}>
+          <Button type="button" variant="secondary" onClick={() => void refresh()} disabled={!connectionId || busy}>
             Refresh
           </Button>
         </div>
         <div className="min-h-0 flex-1 overflow-auto p-3">
           <AssemblyList
-            connectionName={connectionName ?? ""}
+            connectionId={connectionId ?? ""}
             loading={activitiesQuery.isFetching}
             errorText={activitiesQuery.isError ? toWorkflowActivitiesError(activitiesQuery.error) : null}
             assemblies={visible}
@@ -184,7 +184,7 @@ function WorkflowActivitiesPage() {
       />
       <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-surface">
         <div className="min-h-0 flex-1 overflow-auto p-3">
-          {!connectionName ? (
+          {!connectionId ? (
             <p className="text-fg-muted">{noEnvironmentMessage}</p>
           ) : !selected ? (
             <p className="text-fg-muted">Select an activity.</p>
@@ -205,7 +205,7 @@ function WorkflowActivitiesPage() {
 }
 
 function AssemblyList({
-  connectionName,
+  connectionId,
   loading,
   errorText,
   assemblies,
@@ -217,7 +217,7 @@ function AssemblyList({
   onSelect,
   onRetry,
 }: {
-  connectionName: string;
+  connectionId: string;
   loading: boolean;
   errorText: string | null;
   assemblies: ReturnType<typeof filterAssemblies>;
@@ -229,7 +229,7 @@ function AssemblyList({
   onSelect: (pluginTypeId: string) => void;
   onRetry: () => void;
 }) {
-  if (!connectionName) {
+  if (!connectionId) {
     return <p className="text-fg-muted">{noEnvironmentMessage}</p>;
   }
   if (loading) {

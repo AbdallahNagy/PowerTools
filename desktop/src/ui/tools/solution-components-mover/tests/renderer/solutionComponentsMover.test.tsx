@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import { StatusBarProvider, useStatusItems } from "../../../../shared/status";
@@ -19,14 +20,10 @@ import type { DesktopBridgeOverrides } from "../../../../../../test/support/desk
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
-const connection = {
-  name: "Dev Org",
-  envUrl: "https://dev.example.test",
-  crmType: "online" as const,
-};
+const connection = legacyConnection("Dev Org", "https://dev.example.test", "online");
 
 const toolBridge = {
-  getActiveConnectionName: async () => connection.name,
+  getActiveConnectionId: async () => connection.id,
   getActiveConnection: async () => ({
     ...connection,
     token: "dev-token",
@@ -53,7 +50,7 @@ function StatusItemsProbe() {
 
 function renderTool(
   bridgeOverrides: DesktopBridgeOverrides = toolBridge,
-  connectionName: string | null = connection.name,
+  connectionId: string | null = connection.id,
 ) {
   return renderWithProviders(
     <ConnectionsProvider>
@@ -63,7 +60,7 @@ function renderTool(
             id: "solution-components-mover-test",
             toolId: "solution-components-mover",
             title: "Solution Components Mover",
-            connectionName,
+            connectionId,
           }}
           definition={solutionComponentsMoverTool}
         />
@@ -109,7 +106,7 @@ describe("Solution Components Mover", () => {
     }));
     renderTool({
       ...toolBridge,
-      getActiveConnectionName: async () => null,
+      getActiveConnectionId: async () => null,
     }, null);
 
     expect(await screen.findAllByText(
@@ -316,14 +313,21 @@ describe("Solution Components Mover", () => {
     expect(posts).toBe(0);
   });
 
-  it("opens a solution in the browser on double-click", async () => {
-    const openExternalUrl = vi.fn(async () => undefined);
-    renderTool({ ...toolBridge, openExternalUrl });
+  it("opens a solution in the connection's browser on double-click", async () => {
+    const openUrlForConnection = vi.fn(async () => ({ fallback: false }));
+    renderTool({ ...toolBridge, openUrlForConnection });
     fireEvent.doubleClick(await screen.findByText("Alpha Widgets"));
-    await waitFor(() => expect(openExternalUrl).toHaveBeenCalledWith(
+    await waitFor(() => expect(openUrlForConnection).toHaveBeenCalledWith(
+      connection.id,
       `https://dev.example.test/tools/solution/edit.aspx?id=${alphaId}`,
     ));
     expect(screen.queryByRole("button", { name: "Open in browser" })).not.toBeInTheDocument();
     expect(document.querySelector("[data-toast-type]")).toBeNull();
+  });
+
+  it("says so when the chosen browser is missing", async () => {
+    renderTool({ ...toolBridge, openUrlForConnection: async () => ({ fallback: true }) });
+    fireEvent.doubleClick(await screen.findByText("Alpha Widgets"));
+    expect(await screen.findByText(/default browser opened/)).toBeInTheDocument();
   });
 });

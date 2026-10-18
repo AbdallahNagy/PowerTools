@@ -2,6 +2,7 @@ import { useState } from "react";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import { StatusBarProvider, useStatusItems } from "../../../../shared/status";
@@ -22,14 +23,10 @@ import { codeEditorValue } from "../../../../../../test/support/codeEditor";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
-const connection = {
-  name: "Dev Org",
-  envUrl: "https://dev.example.test",
-  crmType: "online" as const,
-};
+const connection = legacyConnection("Dev Org", "https://dev.example.test", "online");
 
 const toolBridge = {
-  getActiveConnectionName: async () => connection.name,
+  getActiveConnectionId: async () => connection.id,
   getActiveConnection: async () => ({
     ...connection,
     token: "dev-token",
@@ -37,7 +34,7 @@ const toolBridge = {
   }),
   listConnections: async () => [connection],
   getConnection: async (name: string) => ({
-    name,
+    id: name,
     envUrl: name === "Other Org" ? "https://other.example.test" : connection.envUrl,
     crmType: "online" as const,
     token: "dev-token",
@@ -56,25 +53,25 @@ function StatusItemsProbe() {
   );
 }
 
-function Tool({ connectionName }: { connectionName: string | null }) {
+function Tool({ connectionId }: { connectionId: string | null }) {
   return (
     <ToolHost
       tab={{
         id: "solution-layers-explorer-test",
         toolId: "solution-layers-explorer",
         title: "Solution Layers Explorer",
-        connectionName,
+        connectionId,
       }}
       definition={solutionLayersExplorerTool}
     />
   );
 }
 
-function renderTool(bridgeOverrides: DesktopBridgeOverrides = toolBridge, connectionName: string | null = connection.name) {
+function renderTool(bridgeOverrides: DesktopBridgeOverrides = toolBridge, connectionId: string | null = connection.id) {
   return renderWithProviders(
     <ConnectionsProvider>
       <StatusBarProvider>
-        <Tool connectionName={connectionName} />
+        <Tool connectionId={connectionId} />
         <StatusItemsProbe />
       </StatusBarProvider>
     </ConnectionsProvider>,
@@ -137,7 +134,7 @@ describe("Solution Layers Explorer", () => {
       calls += 1;
       return HttpResponse.json(componentTypesFixture);
     }));
-    renderTool({ ...toolBridge, getActiveConnectionName: async () => null }, null);
+    renderTool({ ...toolBridge, getActiveConnectionId: async () => null }, null);
 
     expect(await screen.findAllByText("Select an environment")).toHaveLength(2);
     expect(
@@ -409,7 +406,7 @@ describe("Solution Layers Explorer", () => {
             <button type="button" onClick={() => setName("Other Org")}>
               Switch tab connection
             </button>
-            <Tool connectionName={name} />
+            <Tool connectionId={name} />
             <StatusItemsProbe />
           </StatusBarProvider>
         </ConnectionsProvider>

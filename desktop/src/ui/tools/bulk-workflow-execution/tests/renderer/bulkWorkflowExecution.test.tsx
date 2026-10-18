@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import { StatusBarProvider, useStatusItems } from "../../../../shared/status";
@@ -32,14 +33,10 @@ afterAll(() => vi.unstubAllGlobals());
 
 const base = "http://localhost/api/bulk-workflow-execution";
 
-const connection = {
-  name: "Dev Org",
-  envUrl: "https://dev.example.test",
-  crmType: "online" as const,
-};
+const connection = legacyConnection("Dev Org", "https://dev.example.test", "online");
 
 const toolBridge = {
-  getActiveConnectionName: async () => connection.name,
+  getActiveConnectionId: async () => connection.id,
   getActiveConnection: async () => ({
     ...connection,
     token: "dev-token",
@@ -73,7 +70,7 @@ function renderTool() {
             id: "bulk-workflow-execution-1",
             toolId: "bulk-workflow-execution",
             title: "Bulk Workflow Execution",
-            connectionName: connection.name,
+            connectionId: connection.id,
           }}
           definition={bulkWorkflowExecutionTool}
         />

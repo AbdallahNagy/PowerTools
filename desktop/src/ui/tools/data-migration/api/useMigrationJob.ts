@@ -15,15 +15,15 @@ export interface RunMigrationArgs {
   attributes: string[];
   fetchXmlFilter?: string;
   mode: "create" | "update" | "upsert";
-  sourceConnectionName: string;
-  targetConnectionName: string;
+  sourceConnectionId: string;
+  targetConnectionId: string;
 }
 
 export function useStartMigration() {
   return useMutation({
-    mutationFn: ({ sourceConnectionName, targetConnectionName, ...body }: RunMigrationArgs) =>
+    mutationFn: ({ sourceConnectionId, targetConnectionId, ...body }: RunMigrationArgs) =>
       apiPost<{ jobId: string }>("/api/migration/run", body, {
-        meta: { connectionName: sourceConnectionName, targetConnectionName },
+        meta: { connectionId: sourceConnectionId, targetConnectionId },
       }),
   });
 }

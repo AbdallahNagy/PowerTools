@@ -18,7 +18,7 @@ import { FormField, fieldControlClass } from "./FormField";
 
 interface ImageDialogProps {
   open: boolean;
-  connectionName: string;
+  connectionId: string;
   step: StepDto;
   image?: ImageDto;
   onClose: () => void;
@@ -26,19 +26,19 @@ interface ImageDialogProps {
 
 export function ImageDialog({
   open,
-  connectionName,
+  connectionId,
   step,
   image,
   onClose,
 }: ImageDialogProps) {
   const { showToast } = useToast();
-  const mutations = useImageMutations(connectionName);
+  const mutations = useImageMutations(connectionId);
   const [form, setForm] = useState<ImageFormState>(() => createImageForm(image, step));
   const [problems, setProblems] = useState<RegistrationProblem[]>([]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const availability = imageTypeAvailability(step.messageName, step.stage);
   const attributesQuery = useEntityAttributes(
-    open ? connectionName : null,
+    open ? connectionId : null,
     step.primaryEntity,
   );
   const attributeChoices = useMemo(

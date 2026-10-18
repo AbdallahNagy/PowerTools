@@ -14,7 +14,7 @@ interface ToolContextMenuProps {
   /** Open the tool with the active connection. */
   onOpen: () => void;
   /** Open the tool bound to the chosen connection. */
-  onOpenWithConnection: (connectionName: string) => void;
+  onOpenWithConnection: (connectionId: string) => void;
   onClose: () => void;
 }
 
@@ -26,15 +26,17 @@ export default function ToolContextMenu({
   onOpenWithConnection,
   onClose,
 }: ToolContextMenuProps) {
-  const { activeConnectionName, isActiveConnectionLoaded } = useConnections();
+  const { activeConnectionId, connections, isActiveConnectionLoaded } = useConnections();
   const [listing, setListing] = useState(false);
-  const activeName = isActiveConnectionLoaded ? activeConnectionName : null;
+  const activeName = isActiveConnectionLoaded
+    ? connections.find((connection) => connection.id === activeConnectionId)?.displayName ?? null
+    : null;
 
   return (
     <ContextMenu x={x} y={y} label={toolTitle} onClose={onClose}>
       {listing ? (
         <ConnectionMenuItems
-          selectedName={null}
+          selectedId={null}
           onSelect={onOpenWithConnection}
           onClose={onClose}
         />

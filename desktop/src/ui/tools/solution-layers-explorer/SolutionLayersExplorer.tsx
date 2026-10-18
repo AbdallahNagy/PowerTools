@@ -61,7 +61,7 @@ function tableModeFor(componentType: number | null): TableMode {
 }
 
 interface BulkRun {
-  connectionName: string;
+  connectionId: string;
   components: ComponentRow[];
   phase: BulkPhase;
   entries: RemovalEntry[];
@@ -70,7 +70,7 @@ interface BulkRun {
 
 interface BulkFinished {
   version: number;
-  connectionName: string;
+  connectionId: string;
   componentIds: ReadonlySet<string>;
 }
 
@@ -88,20 +88,20 @@ export default function SolutionLayersExplorer() {
  * tab's environment changes.
  */
 function SolutionLayersTool() {
-  const { connectionName } = useTabConnection();
+  const { connectionId } = useTabConnection();
   const { showToast } = useToast();
   const queryClient = useQueryClient();
   const [bulk, setBulk] = useState<BulkRun | null>(null);
   const [finished, setFinished] = useState<BulkFinished>({
     version: 0,
-    connectionName: "",
+    connectionId: "",
     componentIds: new Set(),
   });
   const stopRequested = useRef(false);
 
   const startBulk = (components: ComponentRow[]) => {
-    if (!connectionName || components.length === 0) return;
-    setBulk({ connectionName, components, phase: "confirm", entries: [], stopping: false });
+    if (!connectionId || components.length === 0) return;
+    setBulk({ connectionId, components, phase: "confirm", entries: [], stopping: false });
   };
 
   const runBulk = async () => {
@@ -114,9 +114,9 @@ function SolutionLayersTool() {
       if (stopRequested.current) break;
       const name = component.name || component.logicalName;
       try {
-        const refreshed = await removeActiveLayer(run.connectionName, component.componentType, component.componentId);
+        const refreshed = await removeActiveLayer(run.connectionId, component.componentType, component.componentId);
         queryClient.setQueryData(
-          solutionLayersKeys.layers(run.connectionName, component.componentType, component.componentId),
+          solutionLayersKeys.layers(run.connectionId, component.componentType, component.componentId),
           refreshed,
         );
         entries.push({ componentId: component.componentId, name, result: "Removed", detail: "" });
@@ -141,12 +141,12 @@ function SolutionLayersTool() {
     if (!bulk) return;
     for (const component of bulk.components) {
       void queryClient.invalidateQueries({
-        queryKey: solutionLayersKeys.layers(bulk.connectionName, component.componentType, component.componentId),
+        queryKey: solutionLayersKeys.layers(bulk.connectionId, component.componentType, component.componentId),
       });
     }
     setFinished((current) => ({
       version: current.version + 1,
-      connectionName: bulk.connectionName,
+      connectionId: bulk.connectionId,
       componentIds: new Set(bulk.components.map((component) => component.componentId)),
     }));
     setBulk(null);
@@ -159,15 +159,15 @@ function SolutionLayersTool() {
   return (
     <>
       <ExplorerPage
-        key={connectionName ?? ""}
-        connectionName={connectionName || null}
+        key={connectionId ?? ""}
+        connectionId={connectionId || null}
         bulkStatus={bulkStatus}
-        bulkFinished={finished.connectionName === connectionName ? finished : null}
+        bulkFinished={finished.connectionId === connectionId ? finished : null}
         onBulkRemove={startBulk}
       />
       {bulk ? (
         <BulkRemoveDialog
-          connectionName={bulk.connectionName}
+          connectionId={bulk.connectionId}
           components={bulk.components}
           phase={bulk.phase}
           entries={bulk.entries}
@@ -186,13 +186,13 @@ function SolutionLayersTool() {
 }
 
 interface ExplorerPageProps {
-  connectionName: string | null;
+  connectionId: string | null;
   bulkStatus: string | null;
   bulkFinished: BulkFinished | null;
   onBulkRemove: (components: ComponentRow[]) => void;
 }
 
-function ExplorerPage({ connectionName, bulkStatus, bulkFinished, onBulkRemove }: ExplorerPageProps) {
+function ExplorerPage({ connectionId, bulkStatus, bulkFinished, onBulkRemove }: ExplorerPageProps) {
   const { showToast } = useToast();
   const queryClient = useQueryClient();
 
@@ -236,19 +236,19 @@ function ExplorerPage({ connectionName, bulkStatus, bulkFinished, onBulkRemove }
     if (selected && bulkFinished.componentIds.has(selected.componentId)) resetLayerView();
   }, [bulkFinished, selected]);
 
-  const typesQuery = useComponentTypes(connectionName);
+  const typesQuery = useComponentTypes(connectionId);
   const types = useMemo(() => typesQuery.data?.componentTypes ?? [], [typesQuery.data]);
   const componentType = typeChoice
     ?? types.find((type) => type.componentType === TABLE_TYPE)?.componentType
     ?? types[0]?.componentType
     ?? null;
   const tableMode = tableModeFor(componentType);
-  const tablesQuery = useTables(connectionName, tableMode !== "none");
+  const tablesQuery = useTables(connectionId, tableMode !== "none");
   const searchEnabled = tableMode !== "required" || entity !== "";
-  const searchQuery = useComponentSearch(connectionName, componentType, debouncedSearch, entity, searchEnabled);
+  const searchQuery = useComponentSearch(connectionId, componentType, debouncedSearch, entity, searchEnabled);
   const rows = useMemo(() => sortComponents(searchQuery.data?.components ?? [], sort), [searchQuery.data, sort]);
 
-  const layersQuery = useLayers(connectionName, selected?.componentType ?? null, selected?.componentId ?? null);
+  const layersQuery = useLayers(connectionId, selected?.componentType ?? null, selected?.componentId ?? null);
   const layersData = layersQuery.data;
   const layers = useMemo(() => layersData?.layers ?? [], [layersData]);
   const selectedLayer = layers.find((layer) => layer.id === layerId) ?? layers[0] ?? null;
@@ -265,7 +265,7 @@ function ExplorerPage({ connectionName, bulkStatus, bulkFinished, onBulkRemove }
       : null;
 
   const status = (() => {
-    if (!connectionName) return "No environment selected";
+    if (!connectionId) return "No environment selected";
     if (bulkStatus) return bulkStatus;
     if (removeBusy) return "Removing Active layer…";
     if (pickerError) return "Could not search components";
@@ -328,13 +328,13 @@ function ExplorerPage({ connectionName, bulkStatus, bulkFinished, onBulkRemove }
   };
 
   const confirmRemove = async () => {
-    if (!connectionName || !selected) return;
+    if (!connectionId || !selected) return;
     setRemoveBusy(true);
     setRemoveError(null);
     try {
-      const refreshed = await removeActiveLayer(connectionName, selected.componentType, selected.componentId);
+      const refreshed = await removeActiveLayer(connectionId, selected.componentType, selected.componentId);
       queryClient.setQueryData(
-        solutionLayersKeys.layers(connectionName, selected.componentType, selected.componentId),
+        solutionLayersKeys.layers(connectionId, selected.componentType, selected.componentId),
         refreshed,
       );
       resetLayerView();
@@ -354,7 +354,7 @@ function ExplorerPage({ connectionName, bulkStatus, bulkFinished, onBulkRemove }
   const fallbackLayer = layers.find((layer) => !layer.isActive) ?? null;
 
   let rightPanel;
-  if (!connectionName) {
+  if (!connectionId) {
     rightPanel = <NoEnvironment />;
   } else if (!selected) {
     rightPanel = <EmptyState title="Select a component to see its solution layers." />;
@@ -460,8 +460,8 @@ function ExplorerPage({ connectionName, bulkStatus, bulkFinished, onBulkRemove }
     <Group orientation="horizontal" className="flex min-h-0 flex-1 bg-canvas">
       <Panel id="sle-components" defaultSize="32%" minSize="22%" className="flex min-h-0 min-w-0 flex-col bg-surface">
         <ComponentPicker
-          disabled={!connectionName}
-          placeholder={connectionName ? null : <NoEnvironment />}
+          disabled={!connectionId}
+          placeholder={connectionId ? null : <NoEnvironment />}
           types={types}
           componentType={componentType}
           onComponentTypeChange={changeType}

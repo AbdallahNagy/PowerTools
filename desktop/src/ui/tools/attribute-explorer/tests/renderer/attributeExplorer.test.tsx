@@ -2,6 +2,7 @@ import { useState } from "react";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import { StatusBarProvider, useStatusItems } from "../../../../shared/status";
@@ -17,14 +18,10 @@ import type { DesktopBridgeOverrides } from "../../../../../../test/support/desk
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
-const connection = {
-  name: "Dev Org",
-  envUrl: "https://dev.example.test",
-  crmType: "online" as const,
-};
+const connection = legacyConnection("Dev Org", "https://dev.example.test", "online");
 
 const toolBridge = {
-  getActiveConnectionName: async () => connection.name,
+  getActiveConnectionId: async () => connection.id,
   getActiveConnection: async () => ({
     ...connection,
     token: "dev-token",
@@ -32,7 +29,7 @@ const toolBridge = {
   }),
   listConnections: async () => [connection],
   getConnection: async (name: string) => ({
-    name,
+    id: name,
     envUrl: name === "Other Org" ? "https://other.example.test" : connection.envUrl,
     crmType: "online" as const,
     token: "dev-token",
@@ -51,23 +48,23 @@ function StatusItemsProbe() {
   );
 }
 
-function tab(connectionName: string | null) {
+function tab(connectionId: string | null) {
   return {
     id: "attribute-explorer-test",
     toolId: "attribute-explorer",
     title: "Attribute Explorer",
-    connectionName,
+    connectionId,
   };
 }
 
 function renderTool(
   bridgeOverrides: DesktopBridgeOverrides = toolBridge,
-  connectionName: string | null = connection.name,
+  connectionId: string | null = connection.id,
 ) {
   return renderWithProviders(
     <ConnectionsProvider>
       <StatusBarProvider>
-        <ToolHost tab={tab(connectionName)} definition={attributeExplorerTool} />
+        <ToolHost tab={tab(connectionId)} definition={attributeExplorerTool} />
         <StatusItemsProbe />
       </StatusBarProvider>
     </ConnectionsProvider>,
@@ -134,7 +131,7 @@ describe("Attribute Explorer", () => {
         return HttpResponse.json(tablesFixture);
       }),
     );
-    renderTool({ ...toolBridge, getActiveConnectionName: async () => null }, null);
+    renderTool({ ...toolBridge, getActiveConnectionId: async () => null }, null);
 
     expect(
       await screen.findAllByText("Right-click this tab and choose Change connection."),
@@ -596,7 +593,7 @@ describe("Attribute Explorer", () => {
 
   it("resets selection, searches, and modal when the environment changes", async () => {
     function SwitchableTool() {
-      const [name, setName] = useState(connection.name);
+      const [name, setName] = useState(connection.id);
       return (
         <ConnectionsProvider>
           <StatusBarProvider>

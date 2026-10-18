@@ -12,46 +12,46 @@ import type {
 
 const base = "/api/bulk-workflow-execution";
 
-function connection(connectionName: string) {
-  return { meta: { connectionName } };
+function connection(connectionId: string) {
+  return { meta: { connectionId } };
 }
 
 /** Non-idempotent calls must not be replayed by the 401 refresh. */
-function mutation(connectionName: string) {
-  return { meta: { connectionName, noAuthRetry: true } };
+function mutation(connectionId: string) {
+  return { meta: { connectionId, noAuthRetry: true } };
 }
 
-export function fetchWorkflows(connectionName: string) {
-  return apiGet<WorkflowsResponse>(`${base}/workflows`, connection(connectionName));
+export function fetchWorkflows(connectionId: string) {
+  return apiGet<WorkflowsResponse>(`${base}/workflows`, connection(connectionId));
 }
 
-export function fetchViews(connectionName: string, entity: string) {
+export function fetchViews(connectionId: string, entity: string) {
   return apiGet<ViewsResponse>(
     `${base}/views?entity=${encodeURIComponent(entity)}`,
-    connection(connectionName),
+    connection(connectionId),
   );
 }
 
-export function fetchEntities(connectionName: string) {
-  return apiGet<EntitySummary[]>("/api/metadata/entities", connection(connectionName));
+export function fetchEntities(connectionId: string) {
+  return apiGet<EntitySummary[]>("/api/metadata/entities", connection(connectionId));
 }
 
-export function countRecords(connectionName: string, body: CountRequest) {
-  return apiPost<CountResponse>(`${base}/count`, body, connection(connectionName));
+export function countRecords(connectionId: string, body: CountRequest) {
+  return apiPost<CountResponse>(`${base}/count`, body, connection(connectionId));
 }
 
-export function startRun(connectionName: string, body: StartRunRequest) {
-  return apiPost<StartRunResponse>(`${base}/runs`, body, mutation(connectionName));
+export function startRun(connectionId: string, body: StartRunRequest) {
+  return apiPost<StartRunResponse>(`${base}/runs`, body, mutation(connectionId));
 }
 
-export function fetchRun(connectionName: string, jobId: string) {
-  return apiGet<RunState>(`${base}/runs/${encodeURIComponent(jobId)}`, connection(connectionName));
+export function fetchRun(connectionId: string, jobId: string) {
+  return apiGet<RunState>(`${base}/runs/${encodeURIComponent(jobId)}`, connection(connectionId));
 }
 
-export function cancelRun(connectionName: string, jobId: string) {
+export function cancelRun(connectionId: string, jobId: string) {
   return apiPost<RunState>(
     `${base}/runs/${encodeURIComponent(jobId)}/cancel`,
     undefined,
-    connection(connectionName),
+    connection(connectionId),
   );
 }

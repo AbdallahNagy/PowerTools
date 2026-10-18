@@ -8,12 +8,54 @@ import { openToolRequest } from "../../shared/links/openToolRequest";
 import { StatusBarProvider } from "../../shared/status";
 import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
 import ActivityBar from "./ActivityBar";
-import CommandPalette from "./CommandPalette";
+import CommandPalette, { type PaletteSection } from "./CommandPalette";
+import { useConnectionCommands } from "./useConnectionCommands";
 import TabBar from "../tabs/TabBar";
 import StatusBar from "./StatusBar";
 import TitleBar from "./TitleBar";
 import { UpdateDialog } from "./UpdateDialog";
 import { UpdateProvider } from "./UpdateProvider";
+
+/** The command palette with tools and connection commands. Needs ConnectionsProvider. */
+function ShellCommandPalette({
+  open,
+  onClose,
+  onOpenTool,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onOpenTool: (toolId: string) => void;
+}) {
+  const connectionSections = useConnectionCommands();
+  // Running a command closes the palette first, so windows it opens get focus.
+  const sections: PaletteSection[] = connectionSections.map((section) => ({
+    ...section,
+    commands: section.commands.map((command) => ({
+      ...command,
+      onRun: () => {
+        onClose();
+        command.onRun();
+      },
+    })),
+  }));
+
+  return (
+    <CommandPalette
+      open={open}
+      tools={ACTIVITY_BAR_TOOLS}
+      sections={sections}
+      onClose={onClose}
+      onOpen={(toolId) => {
+        onOpenTool(toolId);
+        onClose();
+      }}
+      onRequestTool={(name) => {
+        onClose();
+        void openToolRequest(name);
+      }}
+    />
+  );
+}
 
 const Layout = () => {
   const [sidebarVisible, setSidebarVisible] = useState(true);
@@ -70,18 +112,10 @@ const Layout = () => {
               </Group>
             </div>
             <StatusBar />
-            <CommandPalette
+            <ShellCommandPalette
               open={quickOpen}
-              tools={ACTIVITY_BAR_TOOLS}
               onClose={() => setQuickOpen(false)}
-              onOpen={(toolId) => {
-                openTool(toolId);
-                setQuickOpen(false);
-              }}
-              onRequestTool={(name) => {
-                setQuickOpen(false);
-                void openToolRequest(name);
-              }}
+              onOpenTool={openTool}
             />
             <UpdateDialog />
           </div>

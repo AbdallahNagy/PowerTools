@@ -26,7 +26,7 @@ function AttributeExplorerPage() {
           type="button"
           variant="secondary"
           className="inline-flex items-center gap-2"
-          disabled={!explorer.connectionName || explorer.busy}
+          disabled={!explorer.connectionId || explorer.busy}
           onClick={() => void explorer.refresh()}
         >
           {explorer.busy ? <Spinner size={14} /> : <RefreshIcon />}
@@ -40,7 +40,7 @@ function AttributeExplorerPage() {
           className="flex min-h-0 min-w-0 flex-col bg-surface"
         >
           <TablesPane
-            hasConnection={!!explorer.connectionName}
+            hasConnection={!!explorer.connectionId}
             tables={explorer.tables}
             loading={explorer.tablesLoading}
             errorText={explorer.tablesError}
@@ -57,7 +57,7 @@ function AttributeExplorerPage() {
         />
         <Panel minSize="30%" className="flex min-h-0 min-w-0 flex-col bg-surface">
           <FieldsPane
-            hasConnection={!!explorer.connectionName}
+            hasConnection={!!explorer.connectionId}
             table={explorer.selectedTable}
             fields={explorer.fields}
             totalFields={explorer.totalFields}

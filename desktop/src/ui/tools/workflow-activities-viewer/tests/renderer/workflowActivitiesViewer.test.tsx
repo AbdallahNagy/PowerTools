@@ -2,6 +2,7 @@ import { useState } from "react";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
+import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 
 import { ConnectionsProvider } from "../../../../shared/connections";
 import { StatusBarProvider, useStatusItems } from "../../../../shared/status";
@@ -18,14 +19,10 @@ import type { DesktopBridgeOverrides } from "../../../../../../test/support/desk
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
-const connection = {
-  name: "Dev Org",
-  envUrl: "https://dev.example.test",
-  crmType: "online" as const,
-};
+const connection = legacyConnection("Dev Org", "https://dev.example.test", "online");
 
 const toolBridge = {
-  getActiveConnectionName: async () => connection.name,
+  getActiveConnectionId: async () => connection.id,
   getActiveConnection: async () => ({
     ...connection,
     token: "dev-token",
@@ -33,7 +30,7 @@ const toolBridge = {
   }),
   listConnections: async () => [connection],
   getConnection: async (name: string) => ({
-    name,
+    id: name,
     envUrl: name === "Other Org" ? "https://other.example.test" : connection.envUrl,
     crmType: "online" as const,
     token: "dev-token",
@@ -54,7 +51,7 @@ function StatusItemsProbe() {
 
 function renderTool(
   bridgeOverrides: DesktopBridgeOverrides = toolBridge,
-  connectionName: string | null = connection.name,
+  connectionId: string | null = connection.id,
 ) {
   return renderWithProviders(
     <ConnectionsProvider>
@@ -64,7 +61,7 @@ function renderTool(
             id: "workflow-activities-viewer-test",
             toolId: "workflow-activities-viewer",
             title: "Workflow Activities Viewer",
-            connectionName,
+            connectionId,
           }}
           definition={workflowActivitiesTool}
         />
@@ -116,7 +113,7 @@ describe("Workflow Activities Viewer", () => {
     }));
     renderTool({
       ...toolBridge,
-      getActiveConnectionName: async () => null,
+      getActiveConnectionId: async () => null,
     }, null);
 
     expect(await screen.findAllByText(
@@ -290,7 +287,7 @@ describe("Workflow Activities Viewer", () => {
 
   it("reloads when the selected environment changes", async () => {
     function SwitchableTool() {
-      const [name, setName] = useState(connection.name);
+      const [name, setName] = useState(connection.id);
       return (
         <ConnectionsProvider>
           <StatusBarProvider>
@@ -302,7 +299,7 @@ describe("Workflow Activities Viewer", () => {
                 id: "workflow-activities-viewer-test",
                 toolId: "workflow-activities-viewer",
                 title: "Workflow Activities Viewer",
-                connectionName: name,
+                connectionId: name,
               }}
               definition={workflowActivitiesTool}
             />

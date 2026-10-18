@@ -69,8 +69,8 @@ const ActivityBar = () => {
           y={menu.y}
           toolTitle={menuTool.title}
           onOpen={() => openTool(menuTool.id)}
-          onOpenWithConnection={(connectionName) =>
-            openTool(menuTool.id, { connectionName })
+          onOpenWithConnection={(connectionId) =>
+            openTool(menuTool.id, { connectionId })
           }
           onClose={() => setMenu(null)}
         />

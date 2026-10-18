@@ -12,7 +12,7 @@ export interface LookupRecord {
 }
 
 export function useLookupRecords(
-  connectionName: string | null,
+  connectionId: string | null,
   entity: EntityInfo | null,
   search: string,
 ) {
@@ -22,14 +22,14 @@ export function useLookupRecords(
   );
 
   return useQuery({
-    queryKey: ["lookup-records", connectionName, entity?.logicalName, search],
+    queryKey: ["lookup-records", connectionId, entity?.logicalName, search],
     queryFn: async () => {
       if (!entity) return [];
 
       const result = await apiPost<FetchResult>(
         "/api/fetch/execute",
         { fetchXml, page: 1, pageSize: 50 },
-        { meta: { connectionName: connectionName ?? undefined } },
+        { meta: { connectionId: connectionId ?? undefined } },
       );
 
       return result.records.map((row) => {
@@ -41,7 +41,7 @@ export function useLookupRecords(
         };
       }).filter((record) => record.id);
     },
-    enabled: !!connectionName && !!entity,
+    enabled: !!connectionId && !!entity,
     staleTime: 30 * 1000,
   });
 }

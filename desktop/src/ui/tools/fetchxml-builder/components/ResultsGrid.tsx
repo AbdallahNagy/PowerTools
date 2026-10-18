@@ -2,8 +2,7 @@ import { ArrowDown, ArrowUp } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FetchResult, FieldMetadata } from "../model/types";
 import { Button, Spinner } from "../../../shared/ui";
-import { desktopBridge } from "../../../platform/desktopBridge";
-import { buildDynamicsRecordUrl } from "../model/dynamicsRecordUrl";
+import { buildDynamicsRecordUrl, useOpenInBrowser } from "../../../shared/connections";
 import { formatFetchResultSummary } from "../model/resultSummary";
 
 const PAGE_SIZE = 50;
@@ -31,6 +30,7 @@ export function ResultsGrid({
 }: ResultsGridProps) {
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDesc, setSortDesc] = useState(false);
+  const openInBrowser = useOpenInBrowser();
 
   const displayNames = useMemo(() => {
     const map: Record<string, string> = {};
@@ -81,7 +81,7 @@ export function ResultsGrid({
   const handleOpenRecord = (row: Record<string, unknown>) => {
     if (!envUrl || !entityLogicalName || typeof row.id !== "string" || row.id.length === 0) return;
 
-    void desktopBridge.openExternalUrl(
+    void openInBrowser(
       buildDynamicsRecordUrl({
         envUrl,
         entityLogicalName,

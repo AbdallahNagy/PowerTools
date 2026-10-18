@@ -1,8 +1,16 @@
-import type { ConnectionInfo } from "../shared/connections/types";
+import type {
+  BrowserChoice,
+  ConnectionDescription,
+  ConnectionSummary,
+  ConnectionUpdate,
+  ImportPreview,
+  InstalledBrowser,
+} from "../shared/connections/types";
 
-export type { ConnectionInfo } from "../shared/connections/types";
-
-export interface ActiveConnection extends ConnectionInfo {
+export interface ActiveConnection {
+  id: string;
+  envUrl: string;
+  crmType: "online" | "onpremise";
   token?: string;
   expiresOn?: string | null;
 }
@@ -50,19 +58,59 @@ export interface DesktopOperationResult {
   error?: string;
 }
 
+export interface SaveConnectionResult extends DesktopOperationResult {
+  id?: string;
+}
+
+export type ConnectionManagerAction = "import";
+
+export interface ConnectionManagerRequest {
+  selectId: string | null;
+  action: ConnectionManagerAction | null;
+}
+
+export interface OpenUrlResult {
+  /** The chosen browser or profile was not found, so the system default browser opened the link. */
+  fallback: boolean;
+}
+
+export interface ExportConnectionsResult extends DesktopOperationResult {
+  cancelled?: boolean;
+  count?: number;
+}
+
+export interface ImportConnectionsResult extends DesktopOperationResult {
+  imported?: number;
+}
+
 export interface DesktopBridge {
   createConnectionWindow(): Promise<void>;
   saveConnectionData(data: ConnectionInput): Promise<DesktopOperationResult>;
-  saveConnectionName(name: string): Promise<void>;
-  onConnectionStatusUpdate(callback: (name: string | null) => void): void;
-  onConnectionsUpdated(callback: (connections: ConnectionInfo[]) => void): () => void;
-  listConnections(): Promise<ConnectionInfo[]>;
-  getConnection(name: string): Promise<ConnectionResult>;
-  setActiveConnection(name: string): Promise<DesktopOperationResult>;
-  deleteConnection(name: string): Promise<DesktopOperationResult>;
-  getActiveConnectionName(): Promise<string | null>;
+  getPendingConnection(): Promise<{ envUrl: string; crmType: "online" | "onpremise" } | null>;
+  saveConnectionDetails(description: ConnectionDescription): Promise<SaveConnectionResult>;
+  onConnectionStatusUpdate(callback: (id: string | null) => void): void;
+  onConnectionsUpdated(callback: (connections: ConnectionSummary[]) => void): () => void;
+  listConnections(): Promise<ConnectionSummary[]>;
+  getConnection(id: string): Promise<ConnectionResult>;
+  setActiveConnection(id: string): Promise<DesktopOperationResult>;
+  deleteConnection(id: string): Promise<DesktopOperationResult>;
+  updateConnection(id: string, update: ConnectionUpdate): Promise<DesktopOperationResult>;
+  getActiveConnectionId(): Promise<string | null>;
   getActiveConnection(): Promise<ConnectionResult>;
   refreshToken(): Promise<ConnectionResult>;
+  /** Opens Manage connections, optionally selecting a connection or starting an import. */
+  openConnectionManager(id?: string | null, action?: ConnectionManagerAction): Promise<void>;
+  /** What the manager window was opened for; each request is handed out once. */
+  takeConnectionManagerRequest(): Promise<ConnectionManagerRequest | null>;
+  onConnectionManagerRequest(callback: (request: ConnectionManagerRequest) => void): () => void;
+  listBrowsers(): Promise<InstalledBrowser[]>;
+  /** Opens a URL with the connection's browser and profile. `null` uses the active connection. */
+  openUrlForConnection(id: string | null, url: string): Promise<OpenUrlResult>;
+  openUrlInBrowser(browser: BrowserChoice | null, url: string): Promise<OpenUrlResult>;
+  exportConnections(ids?: string[]): Promise<ExportConnectionsResult>;
+  /** Asks for a file and reads it. `null` when the user cancels. */
+  previewConnectionImport(): Promise<ImportPreview | null>;
+  commitConnectionImport(keys: string[]): Promise<ImportConnectionsResult>;
   getApiBaseUrl(): Promise<string>;
   getLocalSecret(): Promise<string>;
   getAppVersion(): Promise<string>;
@@ -97,16 +145,27 @@ function bridge(): DesktopBridge {
 export const desktopBridge: DesktopBridge = {
   createConnectionWindow: () => bridge().createConnectionWindow(),
   saveConnectionData: (data) => bridge().saveConnectionData(data),
-  saveConnectionName: (name) => bridge().saveConnectionName(name),
+  getPendingConnection: () => bridge().getPendingConnection(),
+  saveConnectionDetails: (description) => bridge().saveConnectionDetails(description),
   onConnectionStatusUpdate: (callback) => bridge().onConnectionStatusUpdate(callback),
   onConnectionsUpdated: (callback) => bridge().onConnectionsUpdated(callback),
   listConnections: () => bridge().listConnections(),
-  getConnection: (name) => bridge().getConnection(name),
-  setActiveConnection: (name) => bridge().setActiveConnection(name),
-  deleteConnection: (name) => bridge().deleteConnection(name),
-  getActiveConnectionName: () => bridge().getActiveConnectionName(),
+  getConnection: (id) => bridge().getConnection(id),
+  setActiveConnection: (id) => bridge().setActiveConnection(id),
+  deleteConnection: (id) => bridge().deleteConnection(id),
+  updateConnection: (id, update) => bridge().updateConnection(id, update),
+  getActiveConnectionId: () => bridge().getActiveConnectionId(),
   getActiveConnection: () => bridge().getActiveConnection(),
   refreshToken: () => bridge().refreshToken(),
+  openConnectionManager: (id, action) => bridge().openConnectionManager(id, action),
+  takeConnectionManagerRequest: () => bridge().takeConnectionManagerRequest(),
+  onConnectionManagerRequest: (callback) => bridge().onConnectionManagerRequest(callback),
+  listBrowsers: () => bridge().listBrowsers(),
+  openUrlForConnection: (id, url) => bridge().openUrlForConnection(id, url),
+  openUrlInBrowser: (browser, url) => bridge().openUrlInBrowser(browser, url),
+  exportConnections: (ids) => bridge().exportConnections(ids),
+  previewConnectionImport: () => bridge().previewConnectionImport(),
+  commitConnectionImport: (keys) => bridge().commitConnectionImport(keys),
   getApiBaseUrl: () => bridge().getApiBaseUrl(),
   getLocalSecret: () => bridge().getLocalSecret(),
   getAppVersion: () => bridge().getAppVersion(),

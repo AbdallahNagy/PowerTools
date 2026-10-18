@@ -48,8 +48,8 @@ export default function BulkWorkflowExecution() {
 }
 
 function BulkWorkflowExecutionPage() {
-  const { connectionName: tabConnectionName } = useTabConnection();
-  const connectionName = tabConnectionName ?? "";
+  const { connectionId: tabConnectionId } = useTabConnection();
+  const connectionId = tabConnectionId ?? "";
   const { showToast } = useToast();
 
   const [workflowFilter, setWorkflowFilter] = useState("");
@@ -81,17 +81,17 @@ function BulkWorkflowExecutionPage() {
     setCount(null);
     setCountError(null);
     setStartOpen(false);
-  }, [connectionName]);
+  }, [connectionId]);
 
   const workflowsQuery = useQuery({
-    queryKey: bulkWorkflowKeys.workflows(connectionName),
-    queryFn: () => fetchWorkflows(connectionName),
-    enabled: !!connectionName,
+    queryKey: bulkWorkflowKeys.workflows(connectionId),
+    queryFn: () => fetchWorkflows(connectionId),
+    enabled: !!connectionId,
   });
   const entitiesQuery = useQuery({
-    queryKey: bulkWorkflowKeys.entities(connectionName),
-    queryFn: () => fetchEntities(connectionName),
-    enabled: !!connectionName,
+    queryKey: bulkWorkflowKeys.entities(connectionId),
+    queryFn: () => fetchEntities(connectionId),
+    enabled: !!connectionId,
     staleTime: Infinity,
   });
   const displayNames = useMemo(
@@ -104,18 +104,18 @@ function BulkWorkflowExecutionPage() {
   const entityName = workflow ? entityLabel(workflow.primaryEntity, displayNames) : "";
 
   const viewsQuery = useQuery({
-    queryKey: bulkWorkflowKeys.views(connectionName, workflow?.primaryEntity ?? ""),
-    queryFn: () => fetchViews(connectionName, workflow!.primaryEntity),
-    enabled: !!connectionName && !!workflow,
+    queryKey: bulkWorkflowKeys.views(connectionId, workflow?.primaryEntity ?? ""),
+    queryFn: () => fetchViews(connectionId, workflow!.primaryEntity),
+    enabled: !!connectionId && !!workflow,
   });
 
   const countMutation = useMutation({
-    mutationFn: (body: { connectionName: string; workflowId: string; fetchXml: string }) =>
-      countRecords(body.connectionName, { workflowId: body.workflowId, fetchXml: body.fetchXml }),
+    mutationFn: (body: { connectionId: string; workflowId: string; fetchXml: string }) =>
+      countRecords(body.connectionId, { workflowId: body.workflowId, fetchXml: body.fetchXml }),
   });
   const startMutation = useMutation({
-    mutationFn: (body: { connectionName: string; batchSize: number; delaySeconds: number; workflowId: string; fetchXml: string }) =>
-      startRun(body.connectionName, {
+    mutationFn: (body: { connectionId: string; batchSize: number; delaySeconds: number; workflowId: string; fetchXml: string }) =>
+      startRun(body.connectionId, {
         workflowId: body.workflowId,
         fetchXml: body.fetchXml,
         batchSize: body.batchSize,
@@ -124,8 +124,8 @@ function BulkWorkflowExecutionPage() {
   });
 
   const runQuery = useQuery({
-    queryKey: bulkWorkflowKeys.run(runInfo?.connectionName ?? "", runInfo?.jobId ?? ""),
-    queryFn: () => fetchRun(runInfo!.connectionName, runInfo!.jobId),
+    queryKey: bulkWorkflowKeys.run(runInfo?.connectionId ?? "", runInfo?.jobId ?? ""),
+    queryFn: () => fetchRun(runInfo!.connectionId, runInfo!.jobId),
     enabled: !!runInfo,
     retry: false,
     refetchInterval: (query) => (isEndStatus(query.state.data?.status) ? false : POLL_INTERVAL_MS),
@@ -143,14 +143,14 @@ function BulkWorkflowExecutionPage() {
   }, [run, runInfo, showToast]);
 
   // A closed tab cannot show its run, so it stops the run instead of leaving it unseen.
-  const activeRun = useRef<{ connectionName: string; jobId: string; active: boolean } | null>(null);
+  const activeRun = useRef<{ connectionId: string; jobId: string; active: boolean } | null>(null);
   activeRun.current = runInfo
-    ? { connectionName: runInfo.connectionName, jobId: runInfo.jobId, active: !run || isActiveStatus(run.status) }
+    ? { connectionId: runInfo.connectionId, jobId: runInfo.jobId, active: !run || isActiveStatus(run.status) }
     : null;
   useEffect(
     () => () => {
       const current = activeRun.current;
-      if (current?.active) void cancelRun(current.connectionName, current.jobId).catch(() => undefined);
+      if (current?.active) void cancelRun(current.connectionId, current.jobId).catch(() => undefined);
     },
     [],
   );
@@ -158,12 +158,12 @@ function BulkWorkflowExecutionPage() {
   const workflowCount = workflows.length;
   const status = useMemo(() => {
     if (runInfo) return runStatusText(run);
-    if (!connectionName) return "No environment selected";
+    if (!connectionId) return "No environment selected";
     if (countMutation.isPending) return "Counting records…";
     if (workflowsQuery.isLoading) return "Loading workflows…";
     if (workflowsQuery.isError) return "Could not load workflows";
     return `${formatCount(workflowCount)} on-demand workflows`;
-  }, [connectionName, countMutation.isPending, run, runInfo, workflowCount, workflowsQuery.isError, workflowsQuery.isLoading]);
+  }, [connectionId, countMutation.isPending, run, runInfo, workflowCount, workflowsQuery.isError, workflowsQuery.isLoading]);
   useToolStatus(status);
 
   const clearCount = () => {
@@ -196,7 +196,7 @@ function BulkWorkflowExecutionPage() {
 
   const runCount = () => {
     if (!workflow || !fetchXml.trim()) return;
-    const body = { connectionName, workflowId: workflow.id, fetchXml };
+    const body = { connectionId, workflowId: workflow.id, fetchXml };
     setCountError(null);
     countMutation.mutate(body, {
       onSuccess: (result) => setCount({ workflowId: body.workflowId, fetchXml: body.fetchXml, count: result.count }),
@@ -215,10 +215,10 @@ function BulkWorkflowExecutionPage() {
 
   const confirmStart = () => {
     if (!workflow || !count) return;
-    const info = { workflow, entityName, batchSize, delaySeconds, connectionName };
+    const info = { workflow, entityName, batchSize, delaySeconds, connectionId };
     setStartError(null);
     startMutation.mutate(
-      { connectionName, workflowId: workflow.id, fetchXml, batchSize, delaySeconds },
+      { connectionId, workflowId: workflow.id, fetchXml, batchSize, delaySeconds },
       {
         onSuccess: (result) => {
           setStartOpen(false);
@@ -233,7 +233,7 @@ function BulkWorkflowExecutionPage() {
   const stop = () => {
     if (!runInfo) return;
     setStopping(true);
-    cancelRun(runInfo.connectionName, runInfo.jobId).catch((error: unknown) => {
+    cancelRun(runInfo.connectionId, runInfo.jobId).catch((error: unknown) => {
       setStopping(false);
       showToast(toBulkWorkflowError(error), "error");
     });
@@ -258,7 +258,7 @@ function BulkWorkflowExecutionPage() {
     );
   }
 
-  if (!connectionName) {
+  if (!connectionId) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center bg-canvas p-6">
         <p className="text-sm text-fg-muted">

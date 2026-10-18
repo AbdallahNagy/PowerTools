@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState, type Dispatch, type SetStateActio
 import { RotateCw } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { desktopBridge } from "../../platform/desktopBridge";
-import { useConnections, useTabConnection } from "../../shared/connections";
+import { solutionEditorUrl, useConnections, useOpenInBrowser, useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { Button, Checkbox, DataTable, SearchInput, Spinner, ToastProvider, useToast, type ToastType } from "../../shared/ui";
 import { fetchComponentTypes, fetchCopyJob, fetchSolutions, startCopy } from "./api/solutionComponentsApi";
@@ -17,7 +16,6 @@ import {
   defaultSort,
   filterSolutions,
   managedLabel,
-  solutionEditorUrl,
   solutionLabel,
   sortSolutions,
   toggleSort,
@@ -38,9 +36,10 @@ export default function SolutionComponentsMover() {
 
 function SolutionComponentsMoverPage() {
   const { showToast } = useToast();
+  const openInBrowser = useOpenInBrowser();
   const { connections } = useConnections();
-  const { connectionName: tabConnectionName } = useTabConnection();
-  const connectionName = tabConnectionName ?? "";
+  const { connectionId: tabConnectionId } = useTabConnection();
+  const connectionId = tabConnectionId ?? "";
   const [filter, setFilter] = useState("");
   const [sort, setSort] = useState<SortState>(defaultSort);
   const [sources, setSources] = useState<Set<string>>(() => new Set());
@@ -55,7 +54,7 @@ function SolutionComponentsMoverPage() {
   const [total, setTotal] = useState(0);
   const [succeeded, setSucceeded] = useState(0);
   const [failed, setFailed] = useState(0);
-  const [activeJob, setActiveJob] = useState<{ jobId: string; connectionName: string } | null>(null);
+  const [activeJob, setActiveJob] = useState<{ jobId: string; connectionId: string } | null>(null);
   const phaseRef = useRef(phase);
   phaseRef.current = phase;
   const toastedJob = useRef<string | null>(null);
@@ -67,17 +66,17 @@ function SolutionComponentsMoverPage() {
     setTargets(new Set());
     setFocusedId(null);
     if (phaseRef.current !== "running") setPhase("idle");
-  }, [connectionName]);
+  }, [connectionId]);
 
   const solutionsQuery = useQuery({
-    queryKey: solutionComponentKeys.solutions(connectionName),
-    queryFn: () => fetchSolutions(connectionName),
-    enabled: !!connectionName,
+    queryKey: solutionComponentKeys.solutions(connectionId),
+    queryFn: () => fetchSolutions(connectionId),
+    enabled: !!connectionId,
   });
   const typesQuery = useQuery({
-    queryKey: solutionComponentKeys.types(connectionName),
-    queryFn: () => fetchComponentTypes(connectionName),
-    enabled: modalOpen && !!connectionName,
+    queryKey: solutionComponentKeys.types(connectionId),
+    queryFn: () => fetchComponentTypes(connectionId),
+    enabled: modalOpen && !!connectionId,
   });
 
   useEffect(() => {
@@ -96,7 +95,7 @@ function SolutionComponentsMoverPage() {
     const run = async () => {
       while (!cancelled) {
         try {
-          const next = await fetchCopyJob(activeJob.connectionName, activeJob.jobId);
+          const next = await fetchCopyJob(activeJob.connectionId, activeJob.jobId);
           if (cancelled) return;
           setProcessed(next.processed);
           setTotal(next.total);
@@ -135,19 +134,19 @@ function SolutionComponentsMoverPage() {
     () => sortSolutions(filterSolutions(solutions, filter), sort.column, sort.direction),
     [filter, solutions, sort.column, sort.direction],
   );
-  const environment = connections.find((item) => item.name === connectionName);
+  const environment = connections.find((item) => item.id === connectionId);
   const copyRunning = phase === "running";
-  const solutionsLoading = !!connectionName && solutionsQuery.isLoading;
-  const canCopy = !!connectionName
+  const solutionsLoading = !!connectionId && solutionsQuery.isLoading;
+  const canCopy = !!connectionId
     && !solutionsLoading
     && !solutionsQuery.isError
     && sources.size > 0
     && targets.size > 0
     && !copyRunning;
-  const canRefresh = !!connectionName && !solutionsQuery.isFetching;
+  const canRefresh = !!connectionId && !solutionsQuery.isFetching;
 
   const status = useMemo(() => {
-    if (!connectionName) return "No environment selected";
+    if (!connectionId) return "No environment selected";
     if (copyRunning) return "Copying components…";
     if (phase === "refused") return "Copy refused";
     if (phase === "finished") return `Copy finished: ${succeeded} succeeded, ${failed} failed`;
@@ -158,7 +157,7 @@ function SolutionComponentsMoverPage() {
     if (solutionsQuery.data) return `${solutionsQuery.data.solutions.length} solutions`;
     return "No environment selected";
   }, [
-    connectionName,
+    connectionId,
     copyRunning,
     failed,
     modalOpen,
@@ -191,31 +190,27 @@ function SolutionComponentsMoverPage() {
       showToast("The environment address is not available.", "error");
       return;
     }
-    try {
-      await desktopBridge.openExternalUrl(solutionEditorUrl(environment.envUrl, solution.id));
-    } catch (error) {
-      showToast(toSolutionComponentsError(error), "error");
-    }
+    await openInBrowser(solutionEditorUrl(environment.envUrl, solution.id));
   };
 
   const confirmCopy = async (componentTypes: number[], allComponents: boolean) => {
     setModalOpen(false);
     setLog([]);
-    setLogEnvironmentName(connectionName);
+    setLogEnvironmentName(connectionId);
     setProcessed(0);
     setTotal(0);
     setSucceeded(0);
     setFailed(0);
     setPhase("running");
     try {
-      const started = await startCopy(connectionName, {
+      const started = await startCopy(connectionId, {
         sourceSolutionIds: [...sources],
         targetSolutionIds: [...targets],
         componentTypes,
         allComponents,
         checkBestPractice,
       });
-      setActiveJob({ jobId: started.jobId, connectionName });
+      setActiveJob({ jobId: started.jobId, connectionId });
     } catch (error) {
       setPhase("idle");
       const message = toSolutionComponentsError(error);
@@ -257,12 +252,12 @@ function SolutionComponentsMoverPage() {
       <Group orientation="vertical" className="min-h-0 flex-1">
         <Panel minSize="30%" className="flex min-h-0 min-w-0 flex-col bg-surface">
           <div className="flex shrink-0 flex-col gap-2 p-3">
-            <fieldset disabled={!connectionName} className="m-0 border-0 p-0">
+            <fieldset disabled={!connectionId} className="m-0 border-0 p-0">
               <SearchInput value={filter} onChange={setFilter} placeholder="Filter solutions" />
             </fieldset>
           </div>
           <div className="min-h-0 flex-1 overflow-auto p-3">
-            {!connectionName ? (
+            {!connectionId ? (
               <p className="text-fg-muted">{noEnvironmentMessage}</p>
             ) : solutionsLoading ? (
               <div role="status" aria-label="Loading solutions">
@@ -363,7 +358,7 @@ function SolutionComponentsMoverPage() {
           className="h-1 cursor-row-resize bg-raised hover:bg-accent active:bg-accent"
         />
         <Panel minSize="20%" className="flex min-h-0 min-w-0 flex-col bg-surface">
-          {!connectionName ? (
+          {!connectionId ? (
             <p className="p-3 text-fg-muted">{noEnvironmentMessage}</p>
           ) : (
             <CopyLog

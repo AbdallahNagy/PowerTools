@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 
 import { useConnections } from "../../shared/connections";
+import { ConnectionGroupList, ProductionBadge } from "../connections/ConnectionGroupList";
 
 export const contextMenuItemClassName =
   "w-full px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong disabled:text-fg-muted disabled:hover:bg-transparent";
@@ -43,14 +44,14 @@ export function ContextMenu({ x, y, label, onClose, children }: ContextMenuProps
 
 interface ConnectionMenuItemsProps {
   /** Connection to show as checked, if any. */
-  selectedName: string | null;
-  onSelect: (connectionName: string) => void;
+  selectedId: string | null;
+  onSelect: (connectionId: string) => void;
   onClose: () => void;
 }
 
-/** Saved connections as menu items, followed by "Add connection". */
+/** Saved connections as menu items, grouped by organization, followed by "Add connection". */
 export function ConnectionMenuItems({
-  selectedName,
+  selectedId,
   onSelect,
   onClose,
 }: ConnectionMenuItemsProps) {
@@ -61,25 +62,30 @@ export function ConnectionMenuItems({
       {connections.length === 0 && (
         <div className="px-3 py-1.5 text-fg-muted">No connections</div>
       )}
-      {connections.map((connection) => {
-        const selected = connection.name === selectedName;
-        return (
-          <button
-            key={connection.name}
-            type="button"
-            role="menuitemradio"
-            aria-checked={selected}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong"
-            onClick={() => {
-              onSelect(connection.name);
-              onClose();
-            }}
-          >
-            <span className="inline-block w-3">{selected ? "✓" : ""}</span>
-            <span className="truncate">{connection.name}</span>
-          </button>
-        );
-      })}
+      <ConnectionGroupList
+        connections={connections}
+        renderRow={(connection, label) => {
+          const selected = connection.id === selectedId;
+          return (
+            <button
+              key={connection.id}
+              type="button"
+              role="menuitemradio"
+              aria-checked={selected}
+              aria-label={connection.displayName}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-hover hover:text-fg-strong"
+              onClick={() => {
+                onSelect(connection.id);
+                onClose();
+              }}
+            >
+              <span className="inline-block w-3">{selected ? "✓" : ""}</span>
+              <span className="truncate">{label}</span>
+              <ProductionBadge connection={connection} />
+            </button>
+          );
+        }}
+      />
       <div className="mt-1 border-t border-line pt-1">
         <button
           type="button"

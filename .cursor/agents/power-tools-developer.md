@@ -34,7 +34,8 @@ Shape:
 - Private components, model, API hooks, state, fixtures, and tests inside that folder
 - Sidecar endpoints under `api/PowerTools/PowerTools.API/Tools/<Tool>/`, registered from `api/PowerTools/PowerTools.API/Program.cs`
 - `DataverseContextFilter` on those routes, and `DataverseClientFactory` for the organization service
-- Renderer calls through `desktop/src/ui/shared/api/client.ts` with `meta.connectionName` and, when the brief requires a second environment, `meta.targetConnectionName`
+- Renderer calls through `desktop/src/ui/shared/api/client.ts` with `meta.connectionId` and, when the brief requires a second environment, `meta.targetConnectionId`
+- Links to Dataverse pages (a record, a solution) open with `useOpenInBrowser` from `desktop/src/ui/shared/connections`, so they use the browser profile the user chose for the connection. Never `openExternalUrl` for environment pages
 
 Reuse endpoints and shared contracts the brief names before adding new ones. Promote a type to `desktop/src/ui/shared/contracts` only when more than one tool needs it.
 

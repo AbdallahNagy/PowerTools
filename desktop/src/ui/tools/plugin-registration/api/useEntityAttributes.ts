@@ -4,17 +4,17 @@ import type { EntityAttributeDto } from "../model/contracts";
 import { registrationKeys } from "./queryKeys";
 
 export function useEntityAttributes(
-  connectionName: string | null,
+  connectionId: string | null,
   logicalName: string | null,
 ) {
   return useQuery({
-    queryKey: registrationKeys.entityAttributes(connectionName ?? "", logicalName ?? ""),
+    queryKey: registrationKeys.entityAttributes(connectionId ?? "", logicalName ?? ""),
     queryFn: () =>
       apiGet<EntityAttributeDto[]>(
         `/api/metadata/entities/${logicalName}/attributes`,
-        { meta: { connectionName: connectionName ?? undefined } },
+        { meta: { connectionId: connectionId ?? undefined } },
       ),
-    enabled: !!connectionName && !!logicalName && logicalName !== "none",
+    enabled: !!connectionId && !!logicalName && logicalName !== "none",
     staleTime: 5 * 60 * 1000,
   });
 }

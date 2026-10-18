@@ -14,16 +14,16 @@ export interface AttributeInfo {
 
 export function useEntityAttributes(
   logicalName: string | null,
-  connectionName: string | null
+  connectionId: string | null
 ) {
   return useQuery({
-    queryKey: ["migration", "attributes", connectionName, logicalName],
+    queryKey: ["migration", "attributes", connectionId, logicalName],
     queryFn: () =>
       apiGet<AttributeInfo[]>(
         `/api/metadata/entities/${logicalName}/attributes`,
-        { meta: { connectionName: connectionName ?? undefined } }
+        { meta: { connectionId: connectionId ?? undefined } }
       ),
-    enabled: !!logicalName && !!connectionName,
+    enabled: !!logicalName && !!connectionId,
     staleTime: 5 * 60 * 1000,
   });
 }

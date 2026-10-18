@@ -15,20 +15,20 @@ import { FormField, fieldControlClass } from "./FormField";
 
 interface AssemblyDialogProps {
   open: boolean;
-  connectionName: string;
+  connectionId: string;
   assembly?: AssemblyDto;
   onClose: () => void;
 }
 
 export function AssemblyDialog({
   open,
-  connectionName,
+  connectionId,
   assembly,
   onClose,
 }: AssemblyDialogProps) {
   const { showToast } = useToast();
-  const capabilities = useCapabilities(open ? connectionName : null);
-  const mutations = useAssemblyMutations(connectionName);
+  const capabilities = useCapabilities(open ? connectionId : null);
+  const mutations = useAssemblyMutations(connectionId);
   const [file, setFile] = useState<File | null>(null);
   const [inspection, setInspection] = useState<AssemblyInspectionDto | null>(null);
   const [isolationMode, setIsolationMode] = useState(2);

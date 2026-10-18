@@ -3,34 +3,34 @@ import { apiGet } from "../../../shared/api/client";
 import type { TableAttributesResponse, TablesResponse } from "../model/types";
 import { attributeExplorerKeys } from "./queryKeys";
 
-function connection(connectionName: string) {
-  return { meta: { connectionName } };
+function connection(connectionId: string) {
+  return { meta: { connectionId } };
 }
 
 /**
  * Metadata is cached for the tab session. Only Refresh metadata refetches.
  * No automatic retry: a throttled or missing table should surface at once.
  */
-export function useTables(connectionName: string | null) {
+export function useTables(connectionId: string | null) {
   return useQuery({
-    queryKey: attributeExplorerKeys.tables(connectionName ?? ""),
+    queryKey: attributeExplorerKeys.tables(connectionId ?? ""),
     queryFn: () =>
-      apiGet<TablesResponse>("/api/attribute-explorer/tables", connection(connectionName ?? "")),
-    enabled: !!connectionName,
+      apiGet<TablesResponse>("/api/attribute-explorer/tables", connection(connectionId ?? "")),
+    enabled: !!connectionId,
     staleTime: Infinity,
     retry: false,
   });
 }
 
-export function useTableAttributes(connectionName: string | null, logicalName: string | null) {
+export function useTableAttributes(connectionId: string | null, logicalName: string | null) {
   return useQuery({
-    queryKey: attributeExplorerKeys.attributes(connectionName ?? "", logicalName ?? ""),
+    queryKey: attributeExplorerKeys.attributes(connectionId ?? "", logicalName ?? ""),
     queryFn: () =>
       apiGet<TableAttributesResponse>(
         `/api/attribute-explorer/tables/${encodeURIComponent(logicalName ?? "")}/attributes`,
-        connection(connectionName ?? ""),
+        connection(connectionId ?? ""),
       ),
-    enabled: !!connectionName && !!logicalName,
+    enabled: !!connectionId && !!logicalName,
     staleTime: Infinity,
     retry: false,
   });

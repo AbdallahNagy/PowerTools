@@ -11,7 +11,7 @@ interface FilterTreeProps {
   root: FilterGroup;
   fields: FieldMetadata[];
   rootEntity: EntityInfo;
-  connectionName: string | null;
+  connectionId: string | null;
   tables: EntityInfo[];
   relationships: RelationshipMetadata[];
   errors: ValidationError[];
@@ -22,7 +22,7 @@ export function FilterTree({
   root,
   fields,
   rootEntity,
-  connectionName,
+  connectionId,
   tables,
   relationships,
   errors,
@@ -35,7 +35,7 @@ export function FilterTree({
           group={root}
           fields={fields}
           rootEntity={rootEntity}
-          connectionName={connectionName}
+          connectionId={connectionId}
           tables={tables}
           relationships={relationships}
           errors={errors}

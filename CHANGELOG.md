@@ -12,10 +12,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Close actions in the tab menu.
 - Right-click a tool in the sidebar to open it with the active connection or pick another connection for the new tab.
 - Crash reporting. Errors and crashes are reported so they can be fixed. Reports leave out request data, headers, and local variables. Turn it off from **Help > Send Crash Reports**.
+- **Manage connections.** Edit a connection's organization, environment, browser, and profile from **File > Manage Connections…**, the connection menu, or the command palette.
+- Each connection can open links in a chosen browser and profile (Edge, Chrome, Brave, or Firefox). Records and solutions that tools open use it.
+- Import and export connections from **File**. Imports accept Power Tools exports and XrmToolBox connection files, show a preview first, and never include passwords.
+- Connections in the command palette: switch connection, open the current environment in its browser, and manage, import, or export connections.
 - Anonymous usage stats. Once a day the app sends a random install ID, the app version, the OS, and the CPU architecture, with no user names, connection details, or Dataverse data. Turn it off from **Help > Send Anonymous Usage Stats**.
 
 ### Changed
 
+- Connections are named by organization and environment, such as "Contoso · Dev", and grouped by organization. The name is unique. Connections added before this version keep their name under **Other** until you add an organization and environment.
+- Production environments show a red **prod** badge, and tabs working against production have a red header.
 - Only the tab strip scrolls when many tabs are open, so the rest of the title bar stays in place.
 - The status bar shows the status of the active tab's tool only.
 

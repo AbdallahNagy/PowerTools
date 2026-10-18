@@ -3,7 +3,7 @@ import { createContext } from "react";
 import type { EntityInfo } from "../../../shared/contracts/dataverse";
 
 export interface FetchXmlBuilderContextValue {
-  connectionName: string | null;
+  connectionId: string | null;
   tables: EntityInfo[];
 }
 

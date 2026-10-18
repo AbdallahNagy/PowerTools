@@ -11,12 +11,14 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       ipcRenderer.invoke("create-connection-window"),
     saveConnectionData: (data: any) =>
       ipcRenderer.invoke("save-connection-data", data),
-    saveConnectionName: (name: string) =>
-      ipcRenderer.invoke("save-connection-name", name),
-    onConnectionStatusUpdate: (callback: (name: string | null) => void) => {
+    getPendingConnection: () =>
+      ipcRenderer.invoke("get-pending-connection"),
+    saveConnectionDetails: (description: any) =>
+      ipcRenderer.invoke("save-connection-details", description),
+    onConnectionStatusUpdate: (callback: (id: string | null) => void) => {
       ipcRenderer.on(
         "connection-status-update",
-        (_: unknown, name: string | null) => callback(name),
+        (_: unknown, id: string | null) => callback(id),
       );
     },
     onConnectionsUpdated: (callback: (connections: any[]) => void) => {
@@ -26,18 +28,40 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
     },
     listConnections: () =>
       ipcRenderer.invoke("list-connections"),
-    getConnection: (name: string) =>
-      ipcRenderer.invoke("get-connection", name),
-    setActiveConnection: (name: string) =>
-      ipcRenderer.invoke("set-active-connection", name),
-    deleteConnection: (name: string) =>
-      ipcRenderer.invoke("delete-connection", name),
-    getActiveConnectionName: () =>
-      ipcRenderer.invoke("get-active-connection-name"),
+    getConnection: (id: string) =>
+      ipcRenderer.invoke("get-connection", id),
+    setActiveConnection: (id: string) =>
+      ipcRenderer.invoke("set-active-connection", id),
+    deleteConnection: (id: string) =>
+      ipcRenderer.invoke("delete-connection", id),
+    updateConnection: (id: string, update: any) =>
+      ipcRenderer.invoke("update-connection", id, update),
+    getActiveConnectionId: () =>
+      ipcRenderer.invoke("get-active-connection-id"),
     // Back-compat
     getActiveConnection: () =>
       ipcRenderer.invoke("get-active-connection"),
     refreshToken: () => ipcRenderer.invoke("refresh-token"),
+    openConnectionManager: (id?: string | null, action?: string) =>
+      ipcRenderer.invoke("open-connection-manager", id ?? null, action ?? null),
+    takeConnectionManagerRequest: () =>
+      ipcRenderer.invoke("take-connection-manager-request"),
+    onConnectionManagerRequest: (callback: (request: any) => void) => {
+      const listener = (_: unknown, request: any) => callback(request);
+      ipcRenderer.on("connection-manager-request", listener);
+      return () => ipcRenderer.removeListener("connection-manager-request", listener);
+    },
+    listBrowsers: () => ipcRenderer.invoke("list-browsers"),
+    openUrlForConnection: (id: string | null, url: string) =>
+      ipcRenderer.invoke("open-url-for-connection", id, url),
+    openUrlInBrowser: (browser: any, url: string) =>
+      ipcRenderer.invoke("open-url-in-browser", browser, url),
+    exportConnections: (ids?: string[]) =>
+      ipcRenderer.invoke("export-connections", ids ?? null),
+    previewConnectionImport: () =>
+      ipcRenderer.invoke("preview-connection-import"),
+    commitConnectionImport: (keys: string[]) =>
+      ipcRenderer.invoke("commit-connection-import", keys),
 
     // Local sidecar API bootstrap. Both values are resolved once per renderer
     // load and cached in the api/client module.

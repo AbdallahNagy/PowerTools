@@ -7,30 +7,30 @@ import type {
 } from "../model/types";
 import { polymorphicKeys } from "./queryKeys";
 
-function connection(connectionName: string) {
-  return { meta: { connectionName } };
+function connection(connectionId: string) {
+  return { meta: { connectionId } };
 }
 
-export function useUnmanagedSolutions(connectionName: string | null) {
+export function useUnmanagedSolutions(connectionId: string | null) {
   return useQuery({
-    queryKey: polymorphicKeys.solutions(connectionName ?? ""),
+    queryKey: polymorphicKeys.solutions(connectionId ?? ""),
     queryFn: () =>
-      apiGet<UnmanagedSolution[]>("/api/polymorphic-lookups/solutions", connection(connectionName ?? "")),
-    enabled: !!connectionName,
+      apiGet<UnmanagedSolution[]>("/api/polymorphic-lookups/solutions", connection(connectionId ?? "")),
+    enabled: !!connectionId,
   });
 }
 
-export function usePolymorphicMetadata(connectionName: string | null, enabled: boolean) {
+export function usePolymorphicMetadata(connectionId: string | null, enabled: boolean) {
   return useQuery({
-    queryKey: polymorphicKeys.metadata(connectionName ?? ""),
+    queryKey: polymorphicKeys.metadata(connectionId ?? ""),
     queryFn: () =>
-      apiGet<PolymorphicMetadata>("/api/polymorphic-lookups/metadata", connection(connectionName ?? "")),
-    enabled: !!connectionName && enabled,
+      apiGet<PolymorphicMetadata>("/api/polymorphic-lookups/metadata", connection(connectionId ?? "")),
+    enabled: !!connectionId && enabled,
   });
 }
 
 export function createLookup(
-  connectionName: string,
+  connectionId: string,
   body: {
     solutionUniqueName: string;
     referencingEntityLogicalName: string;
@@ -39,11 +39,11 @@ export function createLookup(
     relationships: RelationshipPayload[];
   },
 ) {
-  return apiPost<{ attributeId: string }>("/api/polymorphic-lookups", body, connection(connectionName));
+  return apiPost<{ attributeId: string }>("/api/polymorphic-lookups", body, connection(connectionId));
 }
 
 export function addRelationship(
-  connectionName: string,
+  connectionId: string,
   body: {
     solutionUniqueName: string;
     referencingEntityLogicalName: string;
@@ -54,12 +54,12 @@ export function addRelationship(
   return apiPost<{ schemaName: string }>(
     "/api/polymorphic-lookups/relationships",
     body,
-    connection(connectionName),
+    connection(connectionId),
   );
 }
 
 export function updateRelationship(
-  connectionName: string,
+  connectionId: string,
   schemaName: string,
   body: {
     referencingEntityLogicalName: string;
@@ -74,29 +74,29 @@ export function updateRelationship(
   return apiPut<{ schemaName: string }>(
     `/api/polymorphic-lookups/relationships/${encodeURIComponent(schemaName)}`,
     body,
-    connection(connectionName),
+    connection(connectionId),
   );
 }
 
 export function deleteRelationship(
-  connectionName: string,
+  connectionId: string,
   schemaName: string,
   referencingEntityLogicalName: string,
 ) {
   const query = new URLSearchParams({ referencingEntityLogicalName });
   return apiDelete<{ schemaName: string }>(
     `/api/polymorphic-lookups/relationships/${encodeURIComponent(schemaName)}?${query.toString()}`,
-    connection(connectionName),
+    connection(connectionId),
   );
 }
 
 export function deleteLookupColumn(
-  connectionName: string,
+  connectionId: string,
   entityLogicalName: string,
   attributeLogicalName: string,
 ) {
   return apiDelete<{ schemaName: string }>(
     `/api/polymorphic-lookups/${encodeURIComponent(entityLogicalName)}/${encodeURIComponent(attributeLogicalName)}`,
-    connection(connectionName),
+    connection(connectionId),
   );
 }

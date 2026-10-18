@@ -3,13 +3,13 @@ import { apiGet } from "../../../shared/api/client";
 import type { CatalogDto } from "../model/contracts";
 import { registrationKeys } from "./queryKeys";
 
-export function useCatalog(connectionName: string | null) {
+export function useCatalog(connectionId: string | null) {
   return useQuery({
-    queryKey: registrationKeys.catalog(connectionName ?? ""),
+    queryKey: registrationKeys.catalog(connectionId ?? ""),
     queryFn: () =>
       apiGet<CatalogDto>("/api/plugin-registration/catalog", {
-        meta: { connectionName: connectionName ?? undefined },
+        meta: { connectionId: connectionId ?? undefined },
       }),
-    enabled: !!connectionName,
+    enabled: !!connectionId,
   });
 }

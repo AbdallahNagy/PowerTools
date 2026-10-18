@@ -6,7 +6,7 @@ import { ToolErrorBoundary } from "./ToolErrorBoundary";
 import { ToolRuntimeContext } from "./ToolRuntimeContext";
 
 interface ToolHostProps {
-  tab: Pick<TabData, "id" | "toolId" | "title" | "connectionName">;
+  tab: Pick<TabData, "id" | "toolId" | "title" | "connectionId">;
   definition: ToolDefinition;
 }
 
@@ -15,9 +15,9 @@ export default function ToolHost({ tab, definition }: ToolHostProps) {
     () => ({
       toolId: tab.toolId,
       instanceId: tab.id,
-      connectionName: tab.connectionName ?? null,
+      connectionId: tab.connectionId ?? null,
     }),
-    [tab.connectionName, tab.id, tab.toolId],
+    [tab.connectionId, tab.id, tab.toolId],
   );
   const Tool = definition.component;
 

@@ -7,7 +7,7 @@ Activity-bar tool for browsing and managing Dataverse plug-in assemblies, types,
 - `tool.ts` — activity-bar manifest
 - `PluginRegistration.tsx` — layout, context menu, dialogs
 - `model/` — contracts, catalog tree, forms, node actions
-- `api/` — react-query hooks (`meta.connectionName`; mutations set `noAuthRetry`)
+- `api/` — react-query hooks (`meta.connectionId`; mutations set `noAuthRetry`)
 - `components/` — tree, details, dialogs
 - Sidecar: `api/PowerTools/PowerTools.API/Tools/PluginRegistration/`
 

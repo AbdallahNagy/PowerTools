@@ -1,14 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { handlers, loadStateMock } = vi.hoisted(() => ({
+const { handlers, loadStateMock, saveStateMock } = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),
   loadStateMock: vi.fn(),
+  saveStateMock: vi.fn(),
 }));
 
 vi.mock("electron", () => {
   class BrowserWindow {
     static fromWebContents() {
       return null;
+    }
+
+    static getAllWindows() {
+      return [];
     }
 
     webContents = { send: vi.fn() };
@@ -103,7 +108,7 @@ vi.mock("../../src/electron/startupSplash.js", () => ({
 }));
 vi.mock("../../src/electron/storage.js", () => ({
   loadState: loadStateMock,
-  saveState: vi.fn(),
+  saveState: saveStateMock,
 }));
 vi.mock("../../src/electron/utils.js", () => ({ isDev: () => false }));
 vi.mock("../../src/electron/theme.js", async (importOriginal) => ({
@@ -116,10 +121,32 @@ describe("desktop connection restoration", () => {
   beforeEach(() => {
     handlers.clear();
     loadStateMock.mockReset();
+    saveStateMock.mockReset();
     vi.resetModules();
   });
 
   it("restores the persisted active connection for renderer tools", async () => {
+    loadStateMock.mockReturnValue({
+      connections: [{
+        id: "conn-1",
+        organization: "Contoso",
+        environment: "Production",
+        browser: null,
+        envUrl: "https://contoso.crm.dynamics.com",
+        crmType: "online",
+        homeAccountId: "home-1",
+      }],
+      activeConnectionId: "conn-1",
+    });
+
+    await import("../../src/electron/main.ts");
+    await vi.waitFor(() => expect(handlers.has("get-active-connection-id")).toBe(true));
+
+    expect(handlers.get("get-active-connection-id")?.()).toBe("conn-1");
+    expect(saveStateMock).not.toHaveBeenCalled();
+  });
+
+  it("moves connections saved by name to ids and keeps the active one", async () => {
     loadStateMock.mockReturnValue({
       connections: [{
         name: "Contoso Prod",
@@ -131,24 +158,28 @@ describe("desktop connection restoration", () => {
     });
 
     await import("../../src/electron/main.ts");
-    await vi.waitFor(() => expect(handlers.has("get-active-connection-name")).toBe(true));
+    await vi.waitFor(() => expect(handlers.has("get-active-connection-id")).toBe(true));
 
-    expect(handlers.get("get-active-connection-name")?.()).toBe("Contoso Prod");
+    const [summary] = handlers.get("list-connections")?.() as Array<{ id: string; legacyName: string }>;
+    expect(summary.legacyName).toBe("Contoso Prod");
+    expect(handlers.get("get-active-connection-id")?.()).toBe(summary.id);
+    expect(saveStateMock).toHaveBeenCalledWith(expect.objectContaining({ activeConnectionId: summary.id }));
   });
 
   it.each([
     ["no active connection", null],
     ["a missing connection", "Missing"],
     ["an inherited object property", "constructor"],
-  ])("does not restore %s", async (_scenario, activeConnectionName) => {
+  ])("does not restore %s", async (_scenario, activeConnectionId) => {
     loadStateMock.mockReturnValue({
       connections: [],
-      activeConnectionName,
+      activeConnectionId,
+      activeConnectionName: activeConnectionId,
     });
 
     await import("../../src/electron/main.ts");
-    await vi.waitFor(() => expect(handlers.has("get-active-connection-name")).toBe(true));
+    await vi.waitFor(() => expect(handlers.has("get-active-connection-id")).toBe(true));
 
-    expect(handlers.get("get-active-connection-name")?.()).toBeNull();
+    expect(handlers.get("get-active-connection-id")?.()).toBeNull();
   });
 });

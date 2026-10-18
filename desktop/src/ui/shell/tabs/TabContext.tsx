@@ -21,14 +21,14 @@ type TabAction =
       type: "open-tool";
       tool: ToolDefinition;
       timestamp: number;
-      connectionName: string | null;
+      connectionId: string | null;
     }
   | { type: "add-tab"; tab: TabData }
   | { type: "close-tab"; tabId: string }
   | { type: "close-other-tabs"; tabId: string }
   | { type: "close-all-tabs" }
   | { type: "activate-tab"; tabId: string }
-  | { type: "set-connection"; tabId: string; connectionName: string | null };
+  | { type: "set-connection"; tabId: string; connectionId: string | null };
 
 const initialTabState = createInitialTabState(TOOL_REGISTRY.welcome);
 
@@ -39,7 +39,7 @@ function tabReducer(state: TabState, action: TabAction): TabState {
         state,
         action.tool,
         action.timestamp,
-        action.connectionName,
+        action.connectionId,
       );
     case "add-tab":
       return addTabToState(state, action.tab);
@@ -52,7 +52,7 @@ function tabReducer(state: TabState, action: TabAction): TabState {
     case "activate-tab":
       return activateTab(state, action.tabId);
     case "set-connection":
-      return setTabConnectionInState(state, action.tabId, action.connectionName);
+      return setTabConnectionInState(state, action.tabId, action.connectionId);
   }
 }
 
@@ -69,23 +69,23 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    const { name, loaded } = getActiveConnectionSnapshot();
-    const connectionName =
-      options?.connectionName !== undefined
-        ? options.connectionName
+    const { id, loaded } = getActiveConnectionSnapshot();
+    const connectionId =
+      options?.connectionId !== undefined
+        ? options.connectionId
         : loaded
-          ? name
+          ? id
           : null;
     dispatch({
       type: "open-tool",
       tool: def,
       timestamp: Date.now(),
-      connectionName,
+      connectionId,
     });
   };
 
-  const setTabConnection = (tabId: string, connectionName: string | null) => {
-    dispatch({ type: "set-connection", tabId, connectionName });
+  const setTabConnection = (tabId: string, connectionId: string | null) => {
+    dispatch({ type: "set-connection", tabId, connectionId });
   };
 
   const addTab = (tab: TabData) => {

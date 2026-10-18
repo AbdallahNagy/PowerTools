@@ -63,13 +63,13 @@ describe("tab state", () => {
           id: "fetchxml-builder-101",
           toolId: "fetchxml-builder",
           title: "FetchXML Builder",
-          connectionName: null,
+          connectionId: null,
         },
         {
           id: "fetchxml-builder-202",
           toolId: "fetchxml-builder",
           title: "FetchXML Builder 2",
-          connectionName: null,
+          connectionId: null,
         },
       ],
       activeTabId: "fetchxml-builder-202",
@@ -100,19 +100,19 @@ describe("tab state", () => {
         id: "fetchxml-builder-111",
         toolId: "fetchxml-builder",
         title: "FetchXML Builder",
-        connectionName: "Primary",
+        connectionId: "Primary",
       },
       {
         id: "fetchxml-builder-112",
         toolId: "fetchxml-builder",
         title: "FetchXML Builder",
-        connectionName: "Secondary",
+        connectionId: "Secondary",
       },
       {
         id: "fetchxml-builder-113",
         toolId: "fetchxml-builder",
         title: "FetchXML Builder 2",
-        connectionName: "Primary",
+        connectionId: "Primary",
       },
     ]);
   });
@@ -127,7 +127,7 @@ describe("tab state", () => {
       id: "fetchxml-builder-121",
       toolId: "fetchxml-builder",
       title: "FetchXML Builder",
-      connectionName: "Secondary",
+      connectionId: "Secondary",
     });
     expect(rebound.tabs[2]).toBe(second.tabs[2]);
     expect(setTabConnection(rebound, "fetchxml-builder-121", "Secondary")).toBe(rebound);

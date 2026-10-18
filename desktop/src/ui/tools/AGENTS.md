@@ -5,6 +5,8 @@
 - Keep tool-specific components, models, API calls, state, fixtures, and tests private.
 - Use shared contracts, UI, connections, API helpers, and desktop capabilities through public modules.
 - Publish status-bar content through `useToolStatus`; never manage status IDs manually.
+- Key connections by `id` and show `displayName` ("Organization · Environment"). Never show a connection id to the user.
+- Open Dataverse pages, such as a record or a solution, with `useOpenInBrowser` from `shared/connections`. It uses the browser and profile the user chose for the connection. Keep `openExternalUrl` for pages that do not belong to an environment.
 - Do not access raw Electron APIs, shell contexts, or another tool's internals.
 - Promote code to `shared/` only when it is a shared domain contract or a proven reusable capability.
 - Preserve visible behavior while migrating an existing tool.

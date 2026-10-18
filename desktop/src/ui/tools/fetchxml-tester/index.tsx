@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { useTabConnection } from "../../shared/connections";
+import { useConnection, useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { usePrimaryAction } from "../../shared/keyboard";
 import { Button, Checkbox, Spinner, ToastProvider, useToast } from "../../shared/ui";
@@ -27,7 +27,8 @@ export default function FetchXmlTester() {
 }
 
 function FetchXmlTesterPage() {
-  const { connectionName } = useTabConnection();
+  const { connectionId } = useTabConnection();
+  const connection = useConnection(connectionId);
   const { showToast } = useToast();
   const library = useQueryLibrary();
   const [fetchXml, setFetchXml] = useState(SAMPLE_FETCH_XML);
@@ -37,16 +38,17 @@ function FetchXmlTesterPage() {
   const [saveOpen, setSaveOpen] = useState(false);
   const [showQueryLibrary, setShowQueryLibrary] = useState(true);
   const [result, setResult] = useState<FetchResult | null>(null);
-  const { mutate: runFetch, isPending } = useRunFetch(connectionName || null);
+  const { mutate: runFetch, isPending } = useRunFetch(connectionId || null);
 
   const hasQuery = fetchXml.trim().length > 0;
   const visibleQueries = useMemo(
     () => filterQueries(library.queries, {
-      connectionName: connectionName ?? "",
+      connectionId: connectionId ?? "",
+      legacyName: connection?.legacyName,
       allEnvironments,
       search,
     }),
-    [allEnvironments, connectionName, library.queries, search],
+    [allEnvironments, connection?.legacyName, connectionId, library.queries, search],
   );
 
   const statusContent = isPending
@@ -59,7 +61,7 @@ function FetchXmlTesterPage() {
   const handleExecute = () => {
     const emptyMessage = emptyFetchMessage(fetchXml);
     if (emptyMessage || isPending) return;
-    if (!connectionName) {
+    if (!connectionId) {
       showToast("Select a connection before running the query.", "error");
       return;
     }
@@ -90,7 +92,7 @@ function FetchXmlTesterPage() {
   };
 
   const handleSave = (description: string) => {
-    if (!connectionName) {
+    if (!connectionId) {
       showToast("Select a connection before saving the query.", "error");
       return;
     }
@@ -98,8 +100,8 @@ function FetchXmlTesterPage() {
     const saved = library.save({
       fetchXml,
       description,
-      connectionName,
-      environment: connectionName,
+      connectionId,
+      environment: connection?.displayName ?? connectionId,
     });
     if (!saved.ok) {
       showToast(saved.error, "error");

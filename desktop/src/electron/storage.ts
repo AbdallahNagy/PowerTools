@@ -1,50 +1,47 @@
 import { app } from "electron";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
+import type { StoredConnection } from "./connectionTypes.js";
 
-export type PersistedConnection =
-  | {
-      name: string;
-      envUrl: string;
-      crmType: "online";
-      homeAccountId: string | null;
-    }
-  | {
-      name: string;
-      envUrl: string;
-      crmType: "onpremise";
-      authMode: "ad" | "ifd";
-      username: string;
-      domain: string;
-      encryptedPassword: string;
-    };
+/** A connection as written to connections.json. The MSAL account is rehydrated from its cache. */
+export type PersistedConnection = StoredConnection extends infer C
+  ? C extends { crmType: "online" }
+    ? Omit<C, "account">
+    : C
+  : never;
 
 export interface PersistedState {
   connections: PersistedConnection[];
-  activeConnectionName: string | null;
+  activeConnectionId: string | null;
 }
 
-const EMPTY_STATE: PersistedState = {
-  connections: [],
-  activeConnectionName: null,
-};
+/**
+ * What connections.json may hold: the current shape, or the shape from before
+ * connections had ids (keyed by `name`, with `activeConnectionName`).
+ */
+export interface RawPersistedState {
+  connections: unknown[];
+  activeConnectionId?: string | null;
+  activeConnectionName?: string | null;
+}
 
 function stateFilePath(): string {
   return join(app.getPath("userData"), "connections.json");
 }
 
-export function loadState(): PersistedState {
+export function loadState(): RawPersistedState {
   const path = stateFilePath();
-  if (!existsSync(path)) return { ...EMPTY_STATE };
+  if (!existsSync(path)) return { connections: [] };
   try {
     const raw = readFileSync(path, "utf-8");
-    const parsed = JSON.parse(raw) as Partial<PersistedState>;
+    const parsed = JSON.parse(raw) as Partial<RawPersistedState>;
     return {
       connections: Array.isArray(parsed.connections) ? parsed.connections : [],
+      activeConnectionId: parsed.activeConnectionId ?? null,
       activeConnectionName: parsed.activeConnectionName ?? null,
     };
   } catch {
-    return { ...EMPTY_STATE };
+    return { connections: [] };
   }
 }
 

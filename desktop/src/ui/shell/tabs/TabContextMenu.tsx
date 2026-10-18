@@ -9,11 +9,11 @@ import {
 interface TabContextMenuProps {
   x: number;
   y: number;
-  connectionName: string | null;
+  connectionId: string | null;
   /** Show "Change connection". Off for tabs that do not use a connection. */
   canChangeConnection: boolean;
   canCloseOthers: boolean;
-  onSelect: (connectionName: string) => void;
+  onSelect: (connectionId: string) => void;
   onCloseTab: () => void;
   onCloseOthers: () => void;
   onCloseAll: () => void;
@@ -23,7 +23,7 @@ interface TabContextMenuProps {
 export default function TabContextMenu({
   x,
   y,
-  connectionName,
+  connectionId,
   canChangeConnection,
   canCloseOthers,
   onSelect,
@@ -38,7 +38,7 @@ export default function TabContextMenu({
     <ContextMenu x={x} y={y} onClose={onClose}>
       {listing ? (
         <ConnectionMenuItems
-          selectedName={connectionName}
+          selectedId={connectionId}
           onSelect={onSelect}
           onClose={onClose}
         />

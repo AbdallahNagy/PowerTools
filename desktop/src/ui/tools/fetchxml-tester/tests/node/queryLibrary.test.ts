@@ -5,6 +5,7 @@ import {
   deleteQuery,
   filterQueries,
   loadQueries,
+  QUERY_LIBRARY_STORAGE_KEY,
   saveQuery,
   writeQueries,
   type QueryStore,
@@ -33,7 +34,7 @@ describe("query library", () => {
     const created = saveQuery([], {
       fetchXml: accountQuery,
       description: "Active accounts",
-      connectionName: "Dev",
+      connectionId: "Dev",
       environment: "Dev",
     }, { id: "query-1", savedAt: "2026-09-01T00:00:00.000Z" });
 
@@ -43,14 +44,14 @@ describe("query library", () => {
       id: "query-1",
       table: "account",
       description: "Active accounts",
-      connectionName: "Dev",
+      connectionId: "Dev",
     });
     expect(created.queries[0]?.fetchXml).toContain("<entity name=\"account\">");
 
     const replaced = saveQuery(created.queries, {
       fetchXml: "  <fetch> <entity name=\"account\"> <attribute name=\"name\" /> </entity> </fetch> ",
       description: "Renamed",
-      connectionName: "Dev",
+      connectionId: "Dev",
       environment: "Dev",
     }, { id: "query-2", savedAt: "2026-09-02T00:00:00.000Z" });
 
@@ -65,7 +66,7 @@ describe("query library", () => {
     const saved = saveQuery([], {
       fetchXml: "<fetch><entity name=\"new_widget\"><attribute name=\"new_name\" /></entity></fetch>",
       description: "",
-      connectionName: "Dev",
+      connectionId: "Dev",
       environment: "Dev",
     }, { id: "custom", savedAt: "2026-09-01T00:00:00.000Z" });
 
@@ -77,7 +78,7 @@ describe("query library", () => {
     const missing = saveQuery([], {
       fetchXml: "<fetch></fetch>",
       description: "Broken",
-      connectionName: "Dev",
+      connectionId: "Dev",
       environment: "Dev",
     });
     expect(missing).toEqual({
@@ -90,26 +91,26 @@ describe("query library", () => {
     const first = saveQuery([], {
       fetchXml: accountQuery,
       description: "Accounts",
-      connectionName: "Dev",
+      connectionId: "Dev",
       environment: "Dev",
     }, { id: "dev", savedAt: "2026-09-01T00:00:00.000Z" });
     if (!first.ok) throw new Error(first.error);
     const second = saveQuery(first.queries, {
       fetchXml: contactQuery,
       description: "People",
-      connectionName: "Prod",
+      connectionId: "Prod",
       environment: "Prod",
     }, { id: "prod", savedAt: "2026-09-03T00:00:00.000Z" });
     if (!second.ok) throw new Error(second.error);
 
     expect(filterQueries(second.queries, {
-      connectionName: "Dev",
+      connectionId: "Dev",
       allEnvironments: false,
       search: "",
     }).map((query) => query.id)).toEqual(["dev"]);
 
     expect(filterQueries(second.queries, {
-      connectionName: "Dev",
+      connectionId: "Dev",
       allEnvironments: true,
       search: "fullname",
     }).map((query) => query.table)).toEqual(["contact"]);
@@ -120,6 +121,31 @@ describe("query library", () => {
     store.setItem("ignored", "{");
     expect(loadQueries(store)).toEqual([]);
     expect(deleteQuery(second.queries, "dev").map((query) => query.id)).toEqual(["prod"]);
+  });
+});
+
+describe("queries saved before connection ids", () => {
+  it("still load and match the connection by its old name", () => {
+    const store = memoryStore();
+    store.setItem(QUERY_LIBRARY_STORAGE_KEY, JSON.stringify([{
+      id: "old",
+      table: "account",
+      description: "Old query",
+      environment: "Contoso Dev",
+      connectionName: "Contoso Dev",
+      fetchXml: accountQuery,
+      savedAt: "2026-01-01T00:00:00.000Z",
+    }]));
+
+    const queries = loadQueries(store);
+    expect(queries.map((query) => query.connectionId)).toEqual(["Contoso Dev"]);
+    expect(filterQueries(queries, {
+      connectionId: "conn-1",
+      legacyName: "Contoso Dev",
+      allEnvironments: false,
+      search: "",
+    })).toHaveLength(1);
+    expect(filterQueries(queries, { connectionId: "conn-1", allEnvironments: false, search: "" })).toEqual([]);
   });
 });
 

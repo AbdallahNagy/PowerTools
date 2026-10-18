@@ -3,15 +3,15 @@ import { apiPost } from "../../../shared/api/client";
 import type { AssemblyInspectionDto, MutationResultDto } from "../model/contracts";
 import { registrationKeys } from "./queryKeys";
 
-export function useAssemblyMutations(connectionName: string | null) {
+export function useAssemblyMutations(connectionId: string | null) {
   const queryClient = useQueryClient();
   const meta = {
-    connectionName: connectionName ?? undefined,
+    connectionId: connectionId ?? undefined,
     noAuthRetry: true as const,
   };
   const invalidate = () =>
     queryClient.invalidateQueries({
-      queryKey: registrationKeys.catalog(connectionName ?? ""),
+      queryKey: registrationKeys.catalog(connectionId ?? ""),
     });
 
   const analyze = useMutation({

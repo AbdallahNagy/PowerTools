@@ -6,14 +6,14 @@ import { registrationKeys } from "./queryKeys";
 /** Messages, filters, and users barely change; Refresh still refetches. */
 export const STEP_OPTIONS_STALE_TIME = Number.POSITIVE_INFINITY;
 
-export function useStepOptions(connectionName: string | null) {
+export function useStepOptions(connectionId: string | null) {
   return useQuery({
-    queryKey: registrationKeys.stepOptions(connectionName ?? ""),
+    queryKey: registrationKeys.stepOptions(connectionId ?? ""),
     queryFn: () =>
       apiGet<StepOptionsDto>("/api/plugin-registration/step-options", {
-        meta: { connectionName: connectionName ?? undefined },
+        meta: { connectionId: connectionId ?? undefined },
       }),
-    enabled: !!connectionName,
+    enabled: !!connectionId,
     staleTime: STEP_OPTIONS_STALE_TIME,
     gcTime: STEP_OPTIONS_STALE_TIME,
   });

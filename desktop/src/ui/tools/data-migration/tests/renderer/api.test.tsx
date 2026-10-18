@@ -44,7 +44,7 @@ describe("Data Migration API", () => {
         getConnection: async (name) =>
           name === "Preview Source"
             ? {
-                name,
+                id: name,
                 envUrl: "https://preview.example.test",
                 crmType: "online",
                 token: "preview-token",
@@ -58,7 +58,7 @@ describe("Data Migration API", () => {
     const { result } = renderHook(
       () =>
         usePreviewRecords({
-          connectionName: "Preview Source",
+          connectionId: "Preview Source",
           entityLogicalName: "account",
           attributes: ["accountid", "name"],
           pageSize: 25,
@@ -102,7 +102,7 @@ describe("Data Migration API", () => {
         getConnection: async (name) =>
           name === "Metadata Source"
             ? {
-                name,
+                id: name,
                 envUrl: "https://metadata.example.test",
                 crmType: "online",
                 token: "metadata-token",
@@ -199,14 +199,14 @@ describe("Data Migration API", () => {
     installDesktopBridge(
       createFakeDesktopBridge({
         getActiveConnection: async () => ({
-          name: "Polling Source",
+          id: "Polling Source",
           envUrl: "https://polling-source.example.test",
           crmType: "online",
           token: "polling-source-token",
           expiresOn: "2099-01-01T00:00:00.000Z",
         }),
         getConnection: async (name) => ({
-          name,
+          id: name,
           envUrl:
             name === "Polling Source"
               ? "https://polling-source.example.test"
@@ -226,8 +226,8 @@ describe("Data Migration API", () => {
         entityLogicalName: "account",
         attributes: ["accountid"],
         mode: "update",
-        sourceConnectionName: "Polling Source",
-        targetConnectionName: "Polling Target",
+        sourceConnectionId: "Polling Source",
+        targetConnectionId: "Polling Target",
       });
     });
 
