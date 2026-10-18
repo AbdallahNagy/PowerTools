@@ -18,7 +18,7 @@ export interface PaletteCommand {
   /** Second line of text; searched together with the title. */
   tooltip?: string;
   icon: ReactNode;
-  /** Short label on the right, such as PROD. */
+  /** Short label on the right, such as prod. */
   badge?: ReactNode;
   onRun: () => void;
 }

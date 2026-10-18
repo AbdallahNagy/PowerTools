@@ -33,7 +33,7 @@ function TabBar() {
   const menuTab = tabs.find((tab) => tab.id === menu?.tabId);
   // The tab strip also renders in tests and screens without connections.
   const connections = useContext(ConnectionsContext)?.connections ?? [];
-  const connectionLabels = new Map(connections.map((connection) => [connection.id, connection.displayName]));
+  const connectionsById = new Map(connections.map((connection) => [connection.id, connection]));
 
   useEffect(() => {
     const strip = stripRef.current;
@@ -65,7 +65,8 @@ function TabBar() {
           <Tab
             key={tab.id}
             title={tab.title}
-            connectionLabel={tab.connectionId ? connectionLabels.get(tab.connectionId) ?? null : null}
+            connectionLabel={tab.connectionId ? connectionsById.get(tab.connectionId)?.displayName ?? null : null}
+            production={tab.connectionId ? connectionsById.get(tab.connectionId)?.environmentKind === "production" : false}
             active={tab.id === activeTabId}
             onClick={() => setActiveTab(tab.id)}
             onClose={() => closeTab(tab.id)}

@@ -34,6 +34,20 @@ type PendingConnection =
 
 export type ConnectionWindowRoute = "connection" | "connection-details" | "connections";
 
+export interface WindowSize {
+  width: number;
+  height: number;
+  /** Smallest size the layout still works at. */
+  minWidth: number;
+  minHeight: number;
+  resizable?: boolean;
+}
+
+// The manager has a list and a form side by side; below this they overlap.
+const MANAGER_WINDOW: WindowSize = { width: 960, height: 640, minWidth: 720, minHeight: 480 };
+const ADD_WINDOW: WindowSize = { width: 500, height: 600, minWidth: 420, minHeight: 480 };
+const DETAILS_WINDOW: WindowSize = { width: 480, height: 600, minWidth: 420, minHeight: 520 };
+
 export interface ConnectionIpcDeps {
   ipcMain: IpcMain;
   store: ConnectionStore;
@@ -48,7 +62,7 @@ export interface ConnectionIpcDeps {
     writeFile: (path: string, content: string) => Promise<void>;
   };
   /** Opens a renderer route in its own window. */
-  openWindow: (route: ConnectionWindowRoute, options: { width: number; height: number; resizable?: boolean }) => BrowserWindow;
+  openWindow: (route: ConnectionWindowRoute, options: WindowSize) => BrowserWindow;
 }
 
 export function normalizeEnvUrl(serverUrl: string) {
@@ -90,7 +104,7 @@ export function registerConnectionIpc({
 
   function showWindow(
     route: ConnectionWindowRoute,
-    options: { width: number; height: number; resizable?: boolean },
+    options: WindowSize,
   ) {
     const existing = windows[route];
     if (existing && !existing.isDestroyed()) {
@@ -213,7 +227,7 @@ export function registerConnectionIpc({
   }
 
   function openManager(selectId?: string | null, action?: "import" | null) {
-    const window = showWindow("connections", { width: 900, height: 620 });
+    const window = showWindow("connections", MANAGER_WINDOW);
     if (selectId || action) {
       // A window that is still loading asks for the request itself.
       pendingManagerRequest = { selectId: selectId ?? null, action: action ?? null };
@@ -222,7 +236,7 @@ export function registerConnectionIpc({
   }
 
   ipcMain.handle("create-connection-window", () => {
-    showWindow("connection", { width: 500, height: 600 });
+    showWindow("connection", ADD_WINDOW);
   });
 
   ipcMain.handle("save-connection-data", async (event: IpcMainInvokeEvent, data: ConnectionInput) => {
@@ -267,7 +281,7 @@ export function registerConnectionIpc({
     }
 
     BrowserWindow.fromWebContents(event.sender)?.close();
-    showWindow("connection-details", { width: 480, height: 560 });
+    showWindow("connection-details", DETAILS_WINDOW);
     return { success: true };
   });
 
@@ -454,7 +468,7 @@ export function registerConnectionIpc({
   return {
     registerRestoredOnPremises,
     openManager,
-    openAddConnection: () => showWindow("connection", { width: 500, height: 600 }),
+    openAddConnection: () => showWindow("connection", ADD_WINDOW),
     exportToFile,
     broadcastConnections,
     broadcastActive,

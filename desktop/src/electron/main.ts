@@ -108,13 +108,15 @@ app.whenReady().then(async () => {
       writeFile: (path, content) => writeFile(path, content, "utf-8"),
     },
     getMainWindow: () => mainWindow,
-    openWindow: (route, { width, height, resizable }) => {
+    openWindow: (route, { width, height, minWidth, minHeight, resizable }) => {
       const window = new BrowserWindow({
         webPreferences: {
           preload: getPreloadPath(),
         },
         width,
         height,
+        minWidth,
+        minHeight,
         resizable: resizable ?? true,
         icon: getAppIconPath(),
         autoHideMenuBar: true,

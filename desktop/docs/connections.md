@@ -7,9 +7,9 @@ A connection is one Dataverse environment the user signed in to. This page cover
 A connection has no free-text name. It is described by:
 
 - **Organization**: free text, such as "Contoso". Connections are grouped by it.
-- **Environment**: free text with presets (Dev, Test, QC, UAT, Staging, Production). An organization can have several environments of one kind, such as "Dev" and "Dev 2". Picking a preset the organization already has fills in the next free number.
+- **Environment**: free text with presets (dev, qc, stg, prod). An organization can have several environments of one kind, such as "dev" and "dev 2". Picking a preset the organization already has fills in the next free number.
 
-The app shows "Organization · Environment" everywhere. That pair is unique, ignoring case. `environmentKind()` in `src/ui/shared/connections/connectionNaming.ts` reads the kind from the first word ("Prod EU" is production). It is used to sort environments and to show the PROD badge.
+The app shows "Organization · Environment" everywhere. That pair is unique, ignoring case. `environmentKind()` in `src/ui/shared/connections/connectionNaming.ts` reads the kind from the first word ("Prod EU" is production). It is used to sort environments, to show the prod badge, and to give production tabs a red header.
 
 Connections saved before organizations existed keep their old name as `legacyName` and appear under **Other** until the user sets an organization and environment.
 

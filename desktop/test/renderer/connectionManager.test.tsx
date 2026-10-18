@@ -1,13 +1,24 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ConnectionsProvider } from "../../src/ui/shared/connections";
 import ConnectionDetailsWindow from "../../src/ui/shell/connection-windows/ConnectionDetailsWindow";
 import ConnectionManagerWindow from "../../src/ui/shell/connection-windows/ConnectionManagerWindow";
 import ConnectionFooter from "../../src/ui/shell/layout/ConnectionFooter";
+import Tab from "../../src/ui/shell/tabs/TabHeader";
 import { useConnectionCommands } from "../../src/ui/shell/layout/useConnectionCommands";
 import { describedConnection, legacyConnection } from "../support/desktopBridge";
 import { renderWithProviders } from "../support/render";
+
+// The resizable panes in Manage connections measure themselves.
+class TestResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+beforeAll(() => vi.stubGlobal("ResizeObserver", TestResizeObserver));
+afterAll(() => vi.unstubAllGlobals());
 
 const connections = [
   describedConnection("p", "Contoso", "Production", "https://contoso.crm.dynamics.com"),
@@ -32,13 +43,16 @@ describe("connection footer", () => {
     );
 
     const button = await screen.findByRole("button", { name: "Connection: Contoso · Production" });
-    expect(within(button).getByText("PROD")).toBeInTheDocument();
+    expect(within(button).getByText("prod")).toBeInTheDocument();
     fireEvent.click(button);
 
     const contoso = screen.getByRole("group", { name: "Contoso" });
-    expect(within(contoso).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Dev", "✓ProductionPROD"]);
+    expect(within(contoso).getAllByRole("menuitem").map((item) => item.textContent)).toEqual(["Dev", "✓Productionprod"]);
     const other = screen.getByRole("group", { name: "Other" });
     expect(within(other).getByRole("menuitem", { name: "old" })).toBeInTheDocument();
+
+    expect(screen.getByRole("button", { name: "Delete Contoso · Dev" })).toHaveClass("invisible", "group-hover:visible");
+    expect(screen.getByRole("button", { name: "Edit Contoso · Dev" })).toHaveClass("invisible", "group-hover:visible");
 
     fireEvent.click(screen.getByRole("button", { name: "Update these to group them" }));
     expect(openConnectionManager).toHaveBeenCalledWith("old", undefined);
@@ -58,13 +72,13 @@ describe("describe this connection", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Use “contoso-dev2” from the address" }));
     fireEvent.change(screen.getByLabelText("Organization"), { target: { value: "Contoso" } });
-    fireEvent.click(await screen.findByRole("button", { name: "Dev 2" }));
-    expect(screen.getByLabelText("Environment")).toHaveValue("Dev 2");
-    expect(screen.getByText("Contoso · Dev 2")).toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "dev 2" }));
+    expect(screen.getByLabelText("Environment")).toHaveValue("dev 2");
+    expect(screen.getByText("Contoso · dev 2")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() =>
-      expect(saveConnectionDetails).toHaveBeenCalledWith({ organization: "Contoso", environment: "Dev 2", browser: null }),
+      expect(saveConnectionDetails).toHaveBeenCalledWith({ organization: "Contoso", environment: "dev 2", browser: null }),
     );
   });
 
@@ -110,7 +124,7 @@ describe("manage connections", () => {
 
     expect(await screen.findByText("Was named", { exact: false })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Organization"), { target: { value: "Fabrikam" } });
-    fireEvent.click(screen.getByRole("button", { name: "Test" }));
+    fireEvent.click(screen.getByRole("button", { name: "qc" }));
     fireEvent.change(screen.getByLabelText("Open links in"), { target: { value: "edge" } });
     fireEvent.change(await screen.findByLabelText("Profile"), { target: { value: "Profile 1" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -118,7 +132,7 @@ describe("manage connections", () => {
     await waitFor(() =>
       expect(updateConnection).toHaveBeenCalledWith("old", {
         organization: "Fabrikam",
-        environment: "Test",
+        environment: "qc",
         browser: { id: "edge", profile: "Profile 1" },
       }),
     );
@@ -199,5 +213,21 @@ describe("connection commands", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Import connections" }));
     expect(openConnectionManager).toHaveBeenLastCalledWith(null, "import");
+  });
+});
+
+describe("tab header", () => {
+  it("turns red and says so when the tab works against production", () => {
+    renderWithProviders(
+      <>
+        <Tab title="FetchXML Builder" connectionLabel="Contoso · prod" production active />
+        <Tab title="Plugin Registration" connectionLabel="Contoso · dev" />
+      </>,
+    );
+
+    const prod = screen.getByLabelText("FetchXML Builder, Contoso · prod (production)");
+    expect(prod).toHaveAttribute("data-production", "true");
+    expect(prod).toHaveClass("border-danger", "bg-danger-soft");
+    expect(screen.getByLabelText("Plugin Registration, Contoso · dev")).not.toHaveAttribute("data-production");
   });
 });

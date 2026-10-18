@@ -4,6 +4,8 @@ interface TabProps {
   title: string;
   /** Display name of the tab's connection. */
   connectionLabel?: string | null;
+  /** The tab works against production; the header turns red so it is hard to miss. */
+  production?: boolean;
   content?: React.ReactNode;
   active?: boolean;
   onClick?: () => void;
@@ -14,32 +16,40 @@ interface TabProps {
 function Tab({
   title,
   connectionLabel,
+  production = false,
   active = false,
   onClick,
   onClose,
   onContextMenu,
 }: TabProps) {
-  const label = connectionLabel ? `${title}, ${connectionLabel}` : title;
+  const label = connectionLabel
+    ? `${title}, ${connectionLabel}${production ? " (production)" : ""}`
+    : title;
 
   return (
     <div
       aria-label={label}
       title={label}
       data-active={active}
+      data-production={production || undefined}
       onClick={onClick}
       onContextMenu={onContextMenu}
       className={`
-        group flex shrink-0 items-center h-9 max-w-64 px-4 border-t-2 border-transparent cursor-pointer select-none
+        group flex shrink-0 items-center h-9 max-w-64 px-4 border-t-2 cursor-pointer select-none
         ${
-          active
-            ? "bg-canvas text-fg-strong"
-            : "bg-raised text-fg hover:text-fg-strong"
+          production
+            ? active
+              ? "border-danger bg-danger-soft text-fg-strong"
+              : "border-danger/50 bg-danger-soft/60 text-fg hover:text-fg-strong"
+            : active
+              ? "border-transparent bg-canvas text-fg-strong"
+              : "border-transparent bg-raised text-fg hover:text-fg-strong"
         }
       `}
     >
       <span className="mr-2 truncate">{title}</span>
       {connectionLabel ? (
-        <span className="mr-2 max-w-32 truncate text-xs text-fg-muted">
+        <span className={`mr-2 max-w-32 truncate text-xs ${production ? "text-danger" : "text-fg-muted"}`}>
           {connectionLabel}
         </span>
       ) : null}

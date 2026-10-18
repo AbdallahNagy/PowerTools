@@ -1,7 +1,7 @@
 import type { ConnectionInfo, ConnectionSummary, EnvironmentKind } from "./types";
 
 /** Environment names offered as one-click choices, in the order they are listed. */
-export const ENVIRONMENT_PRESETS = ["Dev", "Test", "QC", "UAT", "Staging", "Production"] as const;
+export const ENVIRONMENT_PRESETS = ["dev", "qc", "stg", "prod"] as const;
 
 const KIND_ORDER: readonly EnvironmentKind[] = ["dev", "test", "uat", "staging", "production", "other"];
 
@@ -13,7 +13,7 @@ const KIND_WORDS: ReadonlyArray<[EnvironmentKind, readonly string[]]> = [
   ["production", ["prod", "production", "prd", "live"]],
 ];
 
-/** Reads the kind of an environment from its first word: "Dev 2" is dev, "QC Team A" is test. */
+/** Reads the kind of an environment from its first word: "dev 2" is dev, "qc team a" is test. */
 export function environmentKind(environment: string | null): EnvironmentKind {
   const firstWord = environment?.trim().toLowerCase().split(/\s+/)[0] ?? "";
   // "Pre-Prod" reads as one word; "Dev-Integration" reads by its first part.
@@ -79,7 +79,7 @@ export function findEnvironmentClash<T extends Pick<ConnectionSummary, "id" | "o
 
 /**
  * The environment name to fill in when the user picks `preset`: the preset itself,
- * or "Dev 2", "Dev 3"… when the organization already has it.
+ * or "dev 2", "dev 3"… when the organization already has it.
  */
 export function nextFreeEnvironment(
   connections: readonly Pick<ConnectionSummary, "id" | "organization" | "environment">[],

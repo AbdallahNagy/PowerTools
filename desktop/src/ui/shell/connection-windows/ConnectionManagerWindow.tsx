@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Plus, Upload } from "lucide-react";
+import { Group, Panel, Separator } from "react-resizable-panels";
 
 import { desktopBridge, type ConnectionManagerRequest } from "../../platform/desktopBridge";
 import {
@@ -102,75 +103,90 @@ const ConnectionManagerWindow = () => {
   };
 
   return (
-    <div className="box-border flex h-screen w-screen bg-canvas text-sm text-fg">
-      <aside className="flex w-80 shrink-0 flex-col border-r border-line bg-surface">
-        <div className="flex items-center gap-1 border-b border-line p-2">
-          <Button size="sm" onClick={() => void desktopBridge.createConnectionWindow()}>
-            <Plus size={14} aria-hidden="true" /> Add
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => void startImport()}>
-            <Download size={14} aria-hidden="true" /> Import
-          </Button>
-          <Button size="sm" variant="ghost" disabled={connections.length === 0} onClick={() => void exportAll()}>
-            <Upload size={14} aria-hidden="true" /> Export
-          </Button>
-        </div>
-        <div className="p-2">
-          <SearchInput value={query} onChange={setQuery} placeholder="Search connections" aria-label="Search connections" />
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto pb-2" role="listbox" aria-label="Connections">
-          {connections.length === 0 ? (
-            <p className="px-3 py-2 text-fg-muted">No connections yet. Add one or import a file.</p>
-          ) : visible.length === 0 ? (
-            <p className="px-3 py-2 text-fg-muted">No matching connections</p>
-          ) : (
-            <ConnectionGroupList
-              connections={visible}
-              ungroupedHint={<span className="truncate">· Update these to group them</span>}
-              renderRow={(connection, label) => {
-                const active = connection.id === selectedId;
-                return (
-                  <button
-                    key={connection.id}
-                    type="button"
-                    role="option"
-                    aria-selected={active}
-                    aria-label={connection.displayName}
-                    className={`flex w-full items-center gap-2 px-5 py-1.5 text-left ${
-                      active ? "bg-accent-soft text-fg-strong" : "hover:bg-hover"
-                    }`}
-                    onClick={() => {
-                      setSelectedId(connection.id);
-                      setNotice(null);
-                    }}
-                  >
-                    <span className="min-w-0 flex-1 truncate">{label}</span>
-                    {connection.needsPassword ? <Badge tone="warn">Password</Badge> : null}
-                    <ProductionBadge connection={connection} />
-                  </button>
-                );
-              }}
-            />
-          )}
-        </div>
-      </aside>
-
-      <main className="min-w-0 flex-1 overflow-y-auto p-6">
-        {notice ? (
-          <Alert tone={notice.tone} className="mb-4">{notice.text}</Alert>
-        ) : null}
-        {selected ? (
-          <ConnectionEditor
-            key={selected.id}
-            connection={selected}
-            connections={summaries}
-            browsers={browsers}
-            onNotice={setNotice}
-          />
-        ) : (
-          <p className="text-fg-muted">Select a connection to edit it.</p>
-        )}
-      </main>
+    <div className="box-border h-screen w-screen bg-canvas text-sm text-fg">
+      <Group orientation="horizontal" className="flex h-full w-full">
+        <Panel
+          id="connections-list"
+          defaultSize="300px"
+          minSize="220px"
+          maxSize="55%"
+          className="flex min-h-0 min-w-0 flex-col bg-surface"
+          // The panel sets an inline overflow; only the list below should scroll.
+          style={{ overflow: "hidden" }}
+        >
+          <div className="flex flex-wrap items-center gap-1 border-b border-line p-2">
+            <Button size="sm" onClick={() => void desktopBridge.createConnectionWindow()}>
+              <Plus size={14} aria-hidden="true" /> Add
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => void startImport()}>
+              <Download size={14} aria-hidden="true" /> Import
+            </Button>
+            <Button size="sm" variant="ghost" disabled={connections.length === 0} onClick={() => void exportAll()}>
+              <Upload size={14} aria-hidden="true" /> Export
+            </Button>
+          </div>
+          <div className="p-2">
+            <SearchInput value={query} onChange={setQuery} placeholder="Search connections" aria-label="Search connections" />
+          </div>
+          <div className="min-h-0 flex-1 overflow-y-auto pb-2" role="listbox" aria-label="Connections">
+            {connections.length === 0 ? (
+              <p className="px-3 py-2 text-fg-muted">No connections yet. Add one or import a file.</p>
+            ) : visible.length === 0 ? (
+              <p className="px-3 py-2 text-fg-muted">No matching connections</p>
+            ) : (
+              <ConnectionGroupList
+                connections={visible}
+                ungroupedHint={<span className="truncate">· Update these to group them</span>}
+                renderRow={(connection, label) => {
+                  const active = connection.id === selectedId;
+                  return (
+                    <button
+                      key={connection.id}
+                      type="button"
+                      role="option"
+                      aria-selected={active}
+                      aria-label={connection.displayName}
+                      className={`flex w-full items-center gap-2 px-5 py-1.5 text-left ${
+                        active ? "bg-accent-soft text-fg-strong" : "hover:bg-hover"
+                      }`}
+                      onClick={() => {
+                        setSelectedId(connection.id);
+                        setNotice(null);
+                      }}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{label}</span>
+                      {connection.needsPassword ? <Badge tone="warn">Password</Badge> : null}
+                      <ProductionBadge connection={connection} />
+                    </button>
+                  );
+                }}
+              />
+            )}
+          </div>
+        </Panel>
+        <Separator
+          aria-label="Resize connection list"
+          className="w-1 cursor-col-resize bg-line hover:bg-accent active:bg-accent"
+        />
+        <Panel id="connection-editor" minSize="380px" className="min-h-0 min-w-0">
+          <main className="h-full min-w-0 overflow-y-auto p-6">
+            {notice ? (
+              <Alert tone={notice.tone} className="mb-4">{notice.text}</Alert>
+            ) : null}
+            {selected ? (
+              <ConnectionEditor
+                key={selected.id}
+                connection={selected}
+                connections={summaries}
+                browsers={browsers}
+                onNotice={setNotice}
+              />
+            ) : (
+              <p className="text-fg-muted">Select a connection to edit it.</p>
+            )}
+          </main>
+        </Panel>
+      </Group>
 
       {importPreview ? (
         <ImportDialog
@@ -250,7 +266,7 @@ function ConnectionEditor({ connection, connections, browsers, onNotice }: Conne
   };
 
   return (
-    <form onSubmit={save} className="flex max-w-xl flex-col gap-5">
+    <form onSubmit={save} className="flex w-full max-w-2xl flex-col gap-5">
       <div>
         <h2 className="flex items-center gap-2 text-base font-semibold text-fg-strong">
           <span className="truncate">{connection.displayName}</span>
@@ -303,7 +319,7 @@ function ConnectionEditor({ connection, connections, browsers, onNotice }: Conne
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
 
-      <div className="flex items-center gap-2 border-t border-line pt-4">
+      <div className="flex flex-wrap items-center gap-2 border-t border-line pt-4">
         <Button type="submit" disabled={saving || !dirty}>
           {saving ? "Saving…" : "Save"}
         </Button>

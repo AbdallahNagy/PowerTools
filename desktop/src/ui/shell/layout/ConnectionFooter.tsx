@@ -156,7 +156,7 @@ const ConnectionFooter = () => {
                         type="button"
                         title="Delete connection"
                         aria-label={`Delete ${connection.displayName}`}
-                        className="px-2 text-fg-muted hover:text-fg-strong"
+                        className="invisible px-2 text-fg-muted hover:text-fg-strong group-hover:visible group-focus-within:visible"
                         onClick={() => setConfirmingDelete(connection.id)}
                       >
                         Delete

@@ -5,7 +5,7 @@ import { groupConnections, type ConnectionInfo } from "../../shared/connections"
 
 export function ProductionBadge({ connection }: { connection: ConnectionInfo }) {
   return connection.environmentKind === "production" ? (
-    <Badge tone="danger" className="shrink-0">PROD</Badge>
+    <Badge tone="danger" className="shrink-0">prod</Badge>
   ) : null;
 }
 

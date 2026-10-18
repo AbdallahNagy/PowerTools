@@ -95,7 +95,7 @@ export function ConnectionDescriptionFields({
         <Input
           type="text"
           value={draft.environment}
-          placeholder="Dev, Test, Production…"
+          placeholder="dev, qc, stg, prod…"
           className="bg-raised"
           onChange={(event) => set({ environment: event.target.value })}
         />
@@ -123,8 +123,8 @@ export function ConnectionDescriptionFields({
         })}
       </div>
 
-      <div className="flex gap-2">
-        <Field label="Open links in" className="flex-1">
+      <div className="flex flex-wrap gap-x-2 gap-y-4">
+        <Field label="Open links in" className="min-w-48 flex-1">
           <Select
             value={draft.browser?.id ?? ""}
             onChange={(event) => {
@@ -149,7 +149,7 @@ export function ConnectionDescriptionFields({
           </Select>
         </Field>
         {selectedBrowser && selectedBrowser.profiles.length > 1 ? (
-          <Field label="Profile" className="flex-1">
+          <Field label="Profile" className="min-w-48 flex-1">
             <Select
               value={draft.browser?.profile ?? ""}
               onChange={(event) =>

@@ -20,7 +20,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - Connections are named by organization and environment, such as "Contoso · Dev", and grouped by organization. The name is unique. Connections added before this version keep their name under **Other** until you add an organization and environment.
-- Production environments show a **PROD** badge.
+- Production environments show a red **prod** badge, and tabs working against production have a red header.
 - Only the tab strip scrolls when many tabs are open, so the rest of the title bar stays in place.
 - The status bar shows the status of the active tab's tool only.
 
