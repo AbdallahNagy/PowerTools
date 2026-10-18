@@ -11,6 +11,7 @@ export type ShellShortcut =
 
 export interface ShortcutKeyState {
   key: string;
+  code?: string;
   ctrlKey: boolean;
   metaKey: boolean;
   altKey: boolean;
@@ -27,13 +28,23 @@ export function matchShellShortcut(event: ShortcutKeyState): ShellShortcut | nul
 
   if (event.shiftKey) return null;
 
-  const key = event.key.toLowerCase();
+  const key = shortcutLetter(event);
   if (command && key === "w") return "close-tab";
   if (command && key === "p") return "toggle-quick-open";
   if (command && key === "b") return "toggle-sidebar";
   if (command && event.key === "Enter") return "primary-action-from-field";
   if (!command && event.key === "Enter") return "primary-action";
   return null;
+}
+
+// Keyboard layouts that do not type Latin letters (Arabic, Hebrew, Russian, ...)
+// report the typed character in `key`, so fall back to the physical key in
+// `code`. Latin layouts keep using `key` so AZERTY and Dvorak stay correct.
+function shortcutLetter(event: ShortcutKeyState): string {
+  const key = event.key.toLowerCase();
+  if (/^[a-z]$/.test(key)) return key;
+  const physical = /^Key([A-Z])$/.exec(event.code ?? "");
+  return physical ? physical[1].toLowerCase() : key;
 }
 
 export function cycleTabId(

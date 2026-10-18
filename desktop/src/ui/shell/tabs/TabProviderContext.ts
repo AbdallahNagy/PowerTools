@@ -2,15 +2,21 @@ import { createContext } from "react";
 
 import type { TabData } from "./types";
 
+export interface OpenToolOptions {
+  /** Bind the new tab to this connection instead of the active one. */
+  connectionId?: string | null;
+}
+
 export interface TabContextValue {
   tabs: TabData[];
   activeTabId: string;
   /**
    * Open a tool from the registry as a new tab. Honors
    * `allowMultipleInstances`: when false, activates the existing tab
-   * instead of creating another.
+   * instead of creating another. The new tab binds to the active
+   * connection unless `options.connectionId` names another one.
    */
-  openTool: (toolId: string) => void;
+  openTool: (toolId: string, options?: OpenToolOptions) => void;
   /** Add a pre-built tab (used for static tabs like Welcome). */
   addTab: (tab: TabData) => void;
   closeTab: (tabId: string) => void;

@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **Solution Layers Explorer.** See every solution layer of a Dataverse component, compare any two layers side by side, and remove the unmanaged Active layer.
 - Close actions in the tab menu.
+- Right-click a tool in the sidebar to open it with the active connection or pick another connection for the new tab.
 - Crash reporting. Errors and crashes are reported so they can be fixed. Reports leave out request data, headers, and local variables. Turn it off from **Help > Send Crash Reports**.
 - **Manage connections.** Edit a connection's organization, environment, browser, and profile from **File > Manage Connections…**, the connection menu, or the command palette.
 - Each connection can open links in a chosen browser and profile (Edge, Chrome, Brave, or Firefox). Records and solutions that tools open use it.
