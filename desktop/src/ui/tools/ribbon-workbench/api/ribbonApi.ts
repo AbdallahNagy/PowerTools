@@ -35,6 +35,8 @@ export function useSolutions(connectionId: string | null) {
     queryFn: ({ signal }) => apiGet<SolutionsResponse>(`${BASE}/solutions`, read(connectionId ?? "", signal)),
     enabled: !!connectionId,
     staleTime: Infinity,
+    // A new tab reads the list again, so a solution created since the last tab shows up.
+    refetchOnMount: "always",
     retry: false,
   });
 }

@@ -139,6 +139,21 @@ describe("Ribbon Editor", () => {
     expect(await screen.findByText(/No unmanaged solutions in this environment/)).toBeInTheDocument();
   });
 
+  it("shows a solution created after the list was read when Refresh is clicked", async () => {
+    const user = userEvent.setup();
+    let solutions = solutionsFixture.solutions;
+    httpServer.use(http.get(`${API}/solutions`, () => HttpResponse.json({ solutions })));
+    renderTool();
+    const select = await screen.findByLabelText("Solution");
+    await waitFor(() => expect(within(select).getByRole("option", { name: "Ribbon edits (new_RibbonEdits)" })).toBeInTheDocument());
+    expect(within(select).queryByRole("option", { name: "Brand new (new_BrandNew)" })).not.toBeInTheDocument();
+
+    solutions = [...solutions, { id: "s3", uniqueName: "new_BrandNew", friendlyName: "Brand new", publisherPrefix: "new", version: "1.0.0.0" }];
+    await user.click(screen.getByRole("button", { name: "Refresh solutions" }));
+
+    expect(await within(select).findByRole("option", { name: "Brand new (new_BrandNew)" })).toBeInTheDocument();
+  });
+
   it("loads a solution and lists the application ribbon first, then its tables", async () => {
     renderTool();
     expect(await screen.findByText("Choose an unmanaged solution, then Load, to see its tables and command bars.")).toBeInTheDocument();

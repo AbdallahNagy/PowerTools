@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
-import { X } from "lucide-react";
+import { RotateCw, X } from "lucide-react";
 import { useToolStatus } from "../../shared/status";
 import {
   Alert,
@@ -85,6 +85,17 @@ function RibbonWorkbenchPage() {
           </Select>
         </Field>
         {state.solutionsLoading ? <Spinner /> : null}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="px-1"
+          aria-label="Refresh solutions"
+          title="Refresh solutions"
+          disabled={!hasConnection || state.solutionsRefreshing || busy || load.status === "loading"}
+          onClick={state.refreshSolutions}
+        >
+          <RotateCw size={16} strokeWidth={1.8} aria-hidden="true" />
+        </Button>
         <Button
           variant="secondary"
           size="sm"
@@ -179,7 +190,7 @@ function Body({ state }: { state: RibbonWorkbenchState }) {
         <Alert
           tone="danger"
           action={
-            <Button variant="secondary" size="sm" onClick={state.retrySolutions}>
+            <Button variant="secondary" size="sm" onClick={state.refreshSolutions}>
               Retry
             </Button>
           }
@@ -194,6 +205,11 @@ function Body({ state }: { state: RibbonWorkbenchState }) {
       <EmptyState
         className="flex-1"
         title="No unmanaged solutions in this environment. Create one that contains the tables whose command bars you want to edit."
+        action={
+          <Button variant="secondary" size="sm" disabled={state.solutionsRefreshing} onClick={state.refreshSolutions}>
+            Refresh
+          </Button>
+        }
       />
     );
   }
