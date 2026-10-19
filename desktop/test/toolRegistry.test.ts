@@ -16,6 +16,7 @@ import { attributeExplorerTool } from "../src/ui/tools/attribute-explorer/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
+import { ribbonWorkbenchTool } from "../src/ui/tools/ribbon-workbench/tool";
 import { solutionComponentsMoverTool } from "../src/ui/tools/solution-components-mover/tool";
 import { solutionLayersExplorerTool } from "../src/ui/tools/solution-layers-explorer/tool";
 import { translatorTool } from "../src/ui/tools/translator/tool";
@@ -86,6 +87,7 @@ describe("tool registry", () => {
       "fetchxml-tester",
       "plugin-registration",
       "polymorphic-lookup-creator",
+      "ribbon-workbench",
       "solution-components-mover",
       "solution-layers-explorer",
       "translator",
@@ -99,6 +101,7 @@ describe("tool registry", () => {
       "fetchxml-tester",
       "plugin-registration",
       "polymorphic-lookup-creator",
+      "ribbon-workbench",
       "solution-components-mover",
       "solution-layers-explorer",
       "translator",
@@ -124,6 +127,10 @@ describe("tool registry", () => {
     expect(TOOL_REGISTRY["fetchxml-tester"]).toBe(fetchXmlTesterTool);
     expect(TOOL_REGISTRY["plugin-registration"]).toBe(pluginRegistrationTool);
     expect(TOOL_REGISTRY["polymorphic-lookup-creator"]).toBe(polymorphicLookupTool);
+    expect(TOOL_REGISTRY["ribbon-workbench"]).toBe(ribbonWorkbenchTool);
+    expect(TOOL_REGISTRY["ribbon-workbench"].title).toBe("Ribbon Editor");
+    expect(TOOL_REGISTRY["ribbon-workbench"].allowMultipleInstances).toBe(true);
+    expect(TOOL_REGISTRY["ribbon-workbench"].showInActivityBar).toBe(true);
     expect(TOOL_REGISTRY["solution-components-mover"].allowMultipleInstances).toBe(true);
     expect(TOOL_REGISTRY["solution-components-mover"].title).toBe("Solution Components Mover");
     expect(TOOL_REGISTRY["solution-components-mover"].tooltip).toBe(
