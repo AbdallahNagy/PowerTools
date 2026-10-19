@@ -124,6 +124,9 @@ export async function acquireTokenInteractive(
 ): Promise<{ accessToken: string; account: AccountInfo | null; expiresOn: Date | null }> {
   const result = await getPca().acquireTokenInteractive({
     scopes: scopesFor(envUrl),
+    // The sign-in window keeps Microsoft cookies; without the picker it signs in
+    // as the last account, which may have no access to this environment.
+    prompt: "select_account",
     openBrowser: openAuthBrowserWindow,
     successTemplate: `
       <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#14171c;color:#d3d8df">

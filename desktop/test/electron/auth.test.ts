@@ -94,6 +94,21 @@ describe("acquireTokenSilentOrInteractive", () => {
     expect(acquireTokenInteractiveMock).toHaveBeenCalledOnce();
   });
 
+  it("asks the user to pick an account on interactive sign-in", async () => {
+    acquireTokenInteractiveMock.mockResolvedValue({
+      accessToken: "interactive-token",
+      account,
+      expiresOn: null,
+    });
+
+    const { acquireTokenInteractive } = await importAuth();
+    await acquireTokenInteractive("https://org.crm.dynamics.com");
+
+    expect(acquireTokenInteractiveMock).toHaveBeenCalledWith(
+      expect.objectContaining({ prompt: "select_account" }),
+    );
+  });
+
   it("propagates transient errors instead of forcing an interactive prompt", async () => {
     acquireTokenSilentMock.mockRejectedValue(new Error("ENETUNREACH"));
 
