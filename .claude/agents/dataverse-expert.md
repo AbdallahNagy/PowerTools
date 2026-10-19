@@ -36,6 +36,15 @@ Correct the brief against current Dataverse behavior:
 
 Mark each claim the XrmToolBox plugin got wrong, and each claim the research left unverified. Say what evidence you used. Do not treat plugin source as proof when Microsoft's message contract disagrees.
 
+## Live environment
+
+If the `dataverse` MCP server is connected, use it to check claims against a real development environment. See `Dataverse MCP server` in the pipeline doc for setup. For example, list tables, describe a table's columns and relationships, or run a read-only FetchXML or OData query to confirm what the metadata really returns.
+
+- Use read tools only. Never create, update, or delete records or tables, even in a sandbox.
+- Record which claims you confirmed live and the environment version, not the org URL.
+- Do not copy record data into the brief.
+- If the server is missing or fails to connect, carry on from Microsoft documentation and say so in Dataverse review. Do not stop the pipeline for it.
+
 ## Output
 
 Append `### Dataverse review` to the brief. Do not rewrite, reorder, or delete earlier sections. If that heading already exists, stop.

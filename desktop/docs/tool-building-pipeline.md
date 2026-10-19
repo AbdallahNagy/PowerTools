@@ -20,6 +20,20 @@ The agents are defined once in `.cursor/agents/`. `.claude/agents/` holds genera
 
 In Claude Code, `/build-tool <tool name>` runs every stage below in order and stops at the same user decisions.
 
+## Dataverse MCP server
+
+The repository registers Microsoft's Dataverse MCP server as `dataverse` in `.mcp.json` (Claude Code) and `.cursor/mcp.json` (Cursor). The Dataverse expert uses it to confirm metadata and query behavior against a live environment instead of documentation alone. It is optional. Without it, the pipeline runs as before.
+
+To turn it on:
+
+1. Use a development or sandbox environment, never production.
+2. Complete the prerequisites in the [`@microsoft/dataverse` README](https://www.npmjs.com/package/@microsoft/dataverse): tenant admin consent, enable the Dataverse MCP server for the environment, and allow the "Dataverse MCP CLI tool" client app.
+3. Set `POWERTOOLS_DEV_DATAVERSE_URL` to the environment URL, for example `https://contoso-dev.crm.dynamics.com`. Do not commit the URL.
+4. Sign in once with `npx @microsoft/dataverse@1.0.82 auth create --environment <url>`, then check with `npx @microsoft/dataverse@1.0.82 mcp <url> --validate`.
+5. Restart Claude Code or Cursor and approve the `dataverse` server when asked.
+
+The server can also write data. `.claude/settings.json` denies its create, update, and delete tools in Claude Code, and the Dataverse expert is told to use read tools only. Cursor has no project-level deny list, so keep the environment disposable.
+
 ## Roles
 
 | Order | Agent file | Writes |

@@ -10,5 +10,15 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "deny": [
+      "mcp__dataverse__create_record",
+      "mcp__dataverse__update_record",
+      "mcp__dataverse__delete_record",
+      "mcp__dataverse__create_table",
+      "mcp__dataverse__update_table",
+      "mcp__dataverse__delete_table"
+    ]
   }
 }
