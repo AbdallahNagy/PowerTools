@@ -1,4 +1,6 @@
-// Must load first so Sentry hooks the app before anything else runs.
+// Must load first: Sentry writes into userData, so dev runs switch folders before it starts.
+import "./devUserData.js";
+// Must load next so Sentry hooks the app before anything else runs.
 import "./sentry.js";
 import { spawn } from "child_process";
 import { readFile, writeFile } from "fs/promises";
