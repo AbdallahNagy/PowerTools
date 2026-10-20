@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-20
+
 ### Added
 
 - **Solution Layers Explorer.** See every solution layer of a Dataverse component, compare any two layers side by side, and remove the unmanaged Active layer.
@@ -89,7 +91,8 @@ The first public beta, built for Windows.
 - **Data Migration.** Move data between Dataverse environments with a guided workflow.
 - **FetchXML Builder.** Build, run, and refine FetchXML queries.
 
-[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.5...v1.0.0
 [0.1.0-beta.5]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.4...v0.1.0-beta.5
