@@ -3,11 +3,13 @@ import type { MigrationJobStatus } from "../api/useMigrationJob";
 
 interface MigrationStatusItemProps {
   entityLogicalName: string;
+  targetName: string;
   job: MigrationJobStatus;
 }
 
 export function MigrationStatusItem({
   entityLogicalName,
+  targetName,
   job,
 }: MigrationStatusItemProps) {
   const [open, setOpen] = useState(false);
@@ -24,11 +26,12 @@ export function MigrationStatusItem({
   }, [open]);
 
   const running = job.status === "queued" || job.status === "running";
+  const subject = `${entityLogicalName} → ${targetName}`;
   const label = running
-    ? `⟳ ${entityLogicalName} ${job.processed}/${job.total || "?"} ✓${job.succeeded} ✗${job.failed}`
+    ? `⟳ ${subject} ${job.processed}/${job.total || "?"} ✓${job.succeeded} ✗${job.failed}`
     : job.failed > 0
-      ? `⚠ ${entityLogicalName}: ${job.succeeded} ok, ${job.failed} failed`
-      : `✓ ${entityLogicalName}: ${job.succeeded} migrated`;
+      ? `⚠ ${subject}: ${job.succeeded} ok, ${job.failed} failed`
+      : `✓ ${subject}: ${job.succeeded} migrated`;
 
   return (
     <div className="relative" ref={ref}>

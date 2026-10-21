@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Data Migration: several targets.** Add more than one target environment, such as QC, UAT, and production. After each migration, Data Migration shows where the data went and offers the next target in one click, with the same table, columns, filter, and options. Each target shows whether it is migrated, has errors, or is still to do, and you can migrate any target again.
+
 ## [1.1.0] - 2026-10-20
 
 ### Added

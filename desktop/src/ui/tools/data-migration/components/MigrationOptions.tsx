@@ -12,6 +12,7 @@ interface MigrationOptionsProps {
   onOpenFilter: () => void;
   previewDisabled: boolean;
   onOpenPreview: () => void;
+  startLabel: string;
   startDisabled: boolean;
   isStarting: boolean;
   onStart: () => void;
@@ -27,6 +28,7 @@ export function MigrationOptions({
   onOpenFilter,
   previewDisabled,
   onOpenPreview,
+  startLabel,
   startDisabled,
   isStarting,
   onStart,
@@ -62,14 +64,14 @@ export function MigrationOptions({
         >
           Preview
         </Button>
-        <Button onClick={onStart} disabled={startDisabled}>
+        <Button onClick={onStart} disabled={startDisabled} className="max-w-80">
           {isStarting ? (
             <>
               <Spinner size={14} />
               &nbsp;Starting…
             </>
           ) : (
-            "▶ Start Migration"
+            <>▶ {startLabel}</>
           )}
         </Button>
       </div>
