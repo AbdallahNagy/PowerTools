@@ -19,7 +19,7 @@ import { loadState, saveState } from "./storage.js";
 import * as sidecar from "./sidecar.js";
 import { createConnectionStore } from "./connectionStore.js";
 import { registerConnectionIpc } from "./connectionIpc.js";
-import { listInstalledBrowsers, windowsBrowserEnvironment } from "./browserProfiles.js";
+import { listInstalledBrowsers, systemBrowserEnvironment } from "./browserProfiles.js";
 import { createBrowserLauncher, parseWebUrl } from "./browserLauncher.js";
 import {
   configureMainWindowChrome,
@@ -72,7 +72,7 @@ app.whenReady().then(async () => {
   registerWindowChromeIpc(ipcMain, theme);
 
   const store = createConnectionStore({ initial: loadState(), save: saveState });
-  const browserEnvironment = windowsBrowserEnvironment();
+  const browserEnvironment = systemBrowserEnvironment();
   const launcher = createBrowserLauncher({
     listBrowsers: async () => (browserEnvironment ? listInstalledBrowsers(browserEnvironment) : []),
     spawn: (executable, args) =>

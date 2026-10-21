@@ -84,4 +84,30 @@ describe("title bar", () => {
     });
     expect(screen.getByRole("button", { name: "Maximize" })).toBeInTheDocument();
   });
+
+  it("leaves room for the macOS traffic lights instead of drawing window buttons", async () => {
+    const onToggleSidebar = vi.fn();
+    renderWithProviders(<TitleBar sidebarVisible onToggleSidebar={onToggleSidebar} />, {
+      bridgeOverrides: { platform: "darwin" },
+    });
+
+    const titleBar = await screen.findByTestId("title-bar");
+    expect(titleBar).toContainElement(screen.getByTestId("traffic-light-space"));
+    for (const name of ["File", "Edit", "View", "Help", "Minimize", "Maximize", "Close"]) {
+      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide sidebar" }));
+    expect(onToggleSidebar).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws its own window buttons on Linux", async () => {
+    renderWithProviders(<TitleBar sidebarVisible onToggleSidebar={() => undefined} />, {
+      bridgeOverrides: { platform: "linux" },
+    });
+
+    expect(await screen.findByRole("button", { name: "Close" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "File" })).toBeInTheDocument();
+    expect(screen.queryByTestId("traffic-light-space")).not.toBeInTheDocument();
+  });
 });

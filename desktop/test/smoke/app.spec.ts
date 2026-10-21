@@ -43,8 +43,14 @@ test("launches the desktop app with an isolated profile and opens FetchXML Build
     if (!mainWindow) return;
 
     await expect(mainWindow.getByRole("heading", { level: 1, name: "PowerTools" })).toBeVisible();
-    await expect(mainWindow.getByRole("button", { name: "File" })).toBeVisible();
-    await expect(mainWindow.getByRole("button", { name: "Close" })).toBeVisible();
+    if (process.platform === "darwin") {
+      // macOS draws the traffic lights and shows File in the system menu bar.
+      await expect(mainWindow.getByTestId("traffic-light-space")).toBeAttached();
+      await expect(mainWindow.getByRole("button", { name: "Close" })).toHaveCount(0);
+    } else {
+      await expect(mainWindow.getByRole("button", { name: "File" })).toBeVisible();
+      await expect(mainWindow.getByRole("button", { name: "Close" })).toBeVisible();
+    }
     await expect(mainWindow.getByRole("searchbox", { name: "Search tools" })).toBeVisible();
 
     await mainWindow

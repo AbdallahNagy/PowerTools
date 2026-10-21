@@ -68,12 +68,22 @@ export function findApplicationSubmenu(
   return item?.submenu;
 }
 
+// Centers the macOS traffic lights in the 32px title bar (TitleBar.tsx).
+export const MAC_TRAFFIC_LIGHT_POSITION = { x: 12, y: 10 };
+
 export function getMainWindowOptions(
   options: Electron.BrowserWindowConstructorOptions,
+  platform: NodeJS.Platform = process.platform,
 ): Electron.BrowserWindowConstructorOptions {
+  // macOS keeps its own traffic lights over the custom title bar. Windows and
+  // Linux get a frameless window and the title bar draws its own buttons.
+  const chrome: Electron.BrowserWindowConstructorOptions =
+    platform === "darwin"
+      ? { titleBarStyle: "hidden", trafficLightPosition: MAC_TRAFFIC_LIGHT_POSITION }
+      : { frame: false };
   return {
     ...options,
-    frame: false,
+    ...chrome,
     autoHideMenuBar: true,
     // Matches --color-surface (theme.css) so the frameless chrome has no flash.
     backgroundColor: windowBackgroundColor(),
@@ -152,8 +162,12 @@ export function createApplicationMenuTemplate(
   crashReportsMenu: CrashReportsMenuOptions = DEFAULT_CRASH_REPORTS_MENU,
   toolRequestMenu: ToolRequestMenuOptions = DEFAULT_TOOL_REQUEST_MENU,
   connectionsMenu: ConnectionsMenuOptions = DEFAULT_CONNECTIONS_MENU,
+  platform: NodeJS.Platform = process.platform,
 ): Electron.MenuItemConstructorOptions[] {
+  const isMac = platform === "darwin";
   return [
+    // macOS shows the first menu under the app name, with About, Hide, and Quit.
+    ...(isMac ? [{ role: "appMenu" } as const] : []),
     {
       label: "File",
       submenu: [
@@ -162,9 +176,12 @@ export function createApplicationMenuTemplate(
         { type: "separator" },
         { label: "Import Connections…", click: () => connectionsMenu.onImportConnections() },
         { label: "Export Connections…", click: () => connectionsMenu.onExportConnections() },
-        { type: "separator" },
-        // The rest matches Electron's default fileMenu role.
-        process.platform === "darwin" ? { role: "close" } : { role: "quit" },
+        // Electron's default fileMenu ends with Close (Cmd+W) on macOS, which
+        // would close the window instead of the tab. Quit lives in the app menu
+        // there, and Window > Close still closes the window.
+        ...(isMac
+          ? []
+          : [{ type: "separator" } as const, { role: "quit" } as const]),
       ],
     },
     { role: "editMenu" },
@@ -190,7 +207,8 @@ export function createApplicationMenuTemplate(
       submenu: [
         { role: "minimize" },
         // The Close role defaults to CmdOrCtrl+W. An empty accelerator keeps
-        // that shortcut for closing the active tab. Alt+F4 still closes the window.
+        // that shortcut for closing the active tab. Alt+F4 (Windows, Linux) and
+        // the red traffic light (macOS) still close the window.
         { role: "close", accelerator: "" },
       ],
     },

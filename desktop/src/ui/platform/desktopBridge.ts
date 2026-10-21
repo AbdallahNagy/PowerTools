@@ -39,6 +39,9 @@ export type UpdateStatus =
 
 export type OnPremisesAuthMode = "ad" | "ifd";
 
+/** The operating system the desktop app runs on, as Node.js names it. */
+export type DesktopPlatform = "win32" | "darwin" | "linux";
+
 export type ConnectionInput =
   | {
       crmType: "online";
@@ -126,6 +129,7 @@ export interface DesktopBridge {
   closeWindow(): Promise<void>;
   isWindowMaximized(): Promise<boolean>;
   onWindowMaximizedChanged(callback: (maximized: boolean) => void): () => void;
+  readonly platform: DesktopPlatform;
 }
 
 declare global {
@@ -181,4 +185,9 @@ export const desktopBridge: DesktopBridge = {
   closeWindow: () => bridge().closeWindow(),
   isWindowMaximized: () => bridge().isWindowMaximized(),
   onWindowMaximizedChanged: (callback) => bridge().onWindowMaximizedChanged(callback),
+  // Read on use, so a bridge installed later is seen. Browser-only runs have no
+  // bridge and keep the Windows layout.
+  get platform() {
+    return getDesktopBridge()?.platform ?? "win32";
+  },
 };

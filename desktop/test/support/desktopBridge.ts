@@ -117,6 +117,7 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
       windowMaximizedChangedListeners.add(callback);
       return () => windowMaximizedChangedListeners.delete(callback);
     },
+    platform: "win32",
     ...overrides,
   };
 

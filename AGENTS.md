@@ -1,6 +1,6 @@
 # Power Tools repository rules
 
-- `desktop/`: production Windows Electron client.
+- `desktop/`: production Electron client for Windows, macOS, and Linux.
 - `api/`: local ASP.NET Core API; out of scope for the current client refactor.
 - `website/`: product website; out of scope for the current client refactor.
 - Read the closest nested `AGENTS.md` before modifying a subsystem.

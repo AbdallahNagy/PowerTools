@@ -5,7 +5,10 @@ export type PreloadIpcRenderer = Pick<
   "invoke" | "on" | "removeListener"
 >;
 
-export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
+export function createPreloadApi(
+  ipcRenderer: PreloadIpcRenderer,
+  platform: NodeJS.Platform = process.platform,
+) {
   return {
     createConnectionWindow: () =>
       ipcRenderer.invoke("create-connection-window"),
@@ -90,6 +93,9 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       ipcRenderer.on("window-maximized-changed", listener);
       return () => ipcRenderer.removeListener("window-maximized-changed", listener);
     },
+    // The operating system, so the renderer can match its window chrome and
+    // shortcut labels (Ctrl or Cmd) to it.
+    platform,
   };
 }
 

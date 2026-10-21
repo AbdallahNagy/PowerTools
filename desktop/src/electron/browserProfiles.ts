@@ -1,6 +1,7 @@
 import { execFile } from "child_process";
 import { existsSync, readFileSync } from "fs";
-import { join } from "path";
+import { homedir } from "os";
+import { delimiter, join } from "path";
 import type { BrowserChoice, BrowserId } from "./connectionTypes.js";
 
 export interface BrowserProfile {
@@ -16,56 +17,130 @@ export interface InstalledBrowser {
   profiles: BrowserProfile[];
 }
 
+export type BrowserPlatform = "win32" | "darwin" | "linux";
+
 /** Where to look for browsers. Injected so tests can point at fixture folders. */
 export interface BrowserEnvironment {
+  platform: BrowserPlatform;
+  /** Windows: %LOCALAPPDATA%. */
   localAppData: string;
+  /** Windows: %APPDATA%. */
   appData: string;
+  /** Windows: the Program Files folders. */
   programFiles: string[];
-  /** Reads the default value of an App Paths registry key, e.g. "chrome.exe". */
+  /** macOS and Linux: the user's home folder. */
+  home: string;
+  /** Linux: the folders on PATH. */
+  pathDirs: string[];
+  /** Windows: reads the default value of an App Paths registry key, e.g. "chrome.exe". */
   readAppPath: (exeName: string) => Promise<string | null>;
   fileExists: (path: string) => boolean;
   readFile: (path: string) => string;
 }
 
-interface ChromiumSpec {
-  id: Exclude<BrowserId, "firefox">;
+interface BrowserSpec {
+  id: BrowserId;
   name: string;
-  exeName: string;
-  /** Path segments under %LOCALAPPDATA% to the "User Data" folder. */
-  userData: string[];
-  /** Path segments under Program Files to the executable. */
-  installPath: string[];
+  windows: {
+    exeName: string;
+    /** Path segments under Program Files (or %LOCALAPPDATA%) to the executable. */
+    installPath: string[];
+    /** Path segments to the profile list: under %LOCALAPPDATA% for Chromium, %APPDATA% for Firefox. */
+    profilesFile: string[];
+  };
+  mac: {
+    /** The bundle in /Applications and the executable inside Contents/MacOS. */
+    app: string;
+    binary: string;
+    /** Path segments under ~/Library/Application Support to the profile list. */
+    profilesFile: string[];
+  };
+  linux: {
+    /** Command names looked up on PATH. */
+    commands: string[];
+    /** Path segments under the home folder to the profile list, most likely first. */
+    profilesFiles: string[][];
+  };
 }
 
-const CHROMIUM: ChromiumSpec[] = [
+const BROWSERS: BrowserSpec[] = [
   {
     id: "edge",
     name: "Microsoft Edge",
-    exeName: "msedge.exe",
-    userData: ["Microsoft", "Edge", "User Data"],
-    installPath: ["Microsoft", "Edge", "Application", "msedge.exe"],
+    windows: {
+      exeName: "msedge.exe",
+      installPath: ["Microsoft", "Edge", "Application", "msedge.exe"],
+      profilesFile: ["Microsoft", "Edge", "User Data", "Local State"],
+    },
+    mac: {
+      app: "Microsoft Edge.app",
+      binary: "Microsoft Edge",
+      profilesFile: ["Microsoft Edge", "Local State"],
+    },
+    linux: {
+      commands: ["microsoft-edge", "microsoft-edge-stable"],
+      profilesFiles: [[".config", "microsoft-edge", "Local State"]],
+    },
   },
   {
     id: "chrome",
     name: "Google Chrome",
-    exeName: "chrome.exe",
-    userData: ["Google", "Chrome", "User Data"],
-    installPath: ["Google", "Chrome", "Application", "chrome.exe"],
+    windows: {
+      exeName: "chrome.exe",
+      installPath: ["Google", "Chrome", "Application", "chrome.exe"],
+      profilesFile: ["Google", "Chrome", "User Data", "Local State"],
+    },
+    mac: {
+      app: "Google Chrome.app",
+      binary: "Google Chrome",
+      profilesFile: ["Google", "Chrome", "Local State"],
+    },
+    linux: {
+      commands: ["google-chrome", "google-chrome-stable"],
+      profilesFiles: [[".config", "google-chrome", "Local State"]],
+    },
   },
   {
     id: "brave",
     name: "Brave",
-    exeName: "brave.exe",
-    userData: ["BraveSoftware", "Brave-Browser", "User Data"],
-    installPath: ["BraveSoftware", "Brave-Browser", "Application", "brave.exe"],
+    windows: {
+      exeName: "brave.exe",
+      installPath: ["BraveSoftware", "Brave-Browser", "Application", "brave.exe"],
+      profilesFile: ["BraveSoftware", "Brave-Browser", "User Data", "Local State"],
+    },
+    mac: {
+      app: "Brave Browser.app",
+      binary: "Brave Browser",
+      profilesFile: ["BraveSoftware", "Brave-Browser", "Local State"],
+    },
+    linux: {
+      commands: ["brave-browser", "brave"],
+      profilesFiles: [[".config", "BraveSoftware", "Brave-Browser", "Local State"]],
+    },
+  },
+  {
+    id: "firefox",
+    name: "Mozilla Firefox",
+    windows: {
+      exeName: "firefox.exe",
+      installPath: ["Mozilla Firefox", "firefox.exe"],
+      profilesFile: ["Mozilla", "Firefox", "profiles.ini"],
+    },
+    mac: {
+      app: "Firefox.app",
+      binary: "firefox",
+      profilesFile: ["Firefox", "profiles.ini"],
+    },
+    linux: {
+      commands: ["firefox"],
+      // The Ubuntu snap keeps its profiles inside the snap's own folder.
+      profilesFiles: [
+        [".mozilla", "firefox", "profiles.ini"],
+        ["snap", "firefox", "common", ".mozilla", "firefox", "profiles.ini"],
+      ],
+    },
   },
 ];
-
-const FIREFOX = {
-  name: "Mozilla Firefox",
-  exeName: "firefox.exe",
-  installPath: ["Mozilla Firefox", "firefox.exe"],
-};
 
 /** Reads Chromium's "Local State" file: profile directory → profile name. */
 export function parseChromiumProfiles(localState: string): BrowserProfile[] {
@@ -106,10 +181,9 @@ export function parseFirefoxProfiles(ini: string): BrowserProfile[] {
   return profiles;
 }
 
-async function findExecutable(
+async function findWindowsExecutable(
   env: BrowserEnvironment,
-  exeName: string,
-  installPath: string[],
+  { exeName, installPath }: BrowserSpec["windows"],
 ): Promise<string | null> {
   const registered = await env.readAppPath(exeName).catch(() => null);
   if (registered && env.fileExists(registered)) return registered;
@@ -122,7 +196,46 @@ async function findExecutable(
   return env.fileExists(perUser) ? perUser : null;
 }
 
-function readOr(env: BrowserEnvironment, path: string): string | null {
+function firstExisting(env: BrowserEnvironment, candidates: string[]): string | null {
+  return candidates.find((candidate) => env.fileExists(candidate)) ?? null;
+}
+
+/** The executable and profile list of one browser on this platform, if it is installed. */
+async function locate(
+  env: BrowserEnvironment,
+  spec: BrowserSpec,
+): Promise<{ executable: string; profilesFile: string | null } | null> {
+  if (env.platform === "win32") {
+    const executable = await findWindowsExecutable(env, spec.windows);
+    const root = spec.id === "firefox" ? env.appData : env.localAppData;
+    return executable ? { executable, profilesFile: join(root, ...spec.windows.profilesFile) } : null;
+  }
+
+  if (env.platform === "darwin") {
+    // System-wide installs go to /Applications, per-user ones to ~/Applications.
+    const executable = firstExisting(
+      env,
+      ["/Applications", join(env.home, "Applications")].map((folder) =>
+        join(folder, spec.mac.app, "Contents", "MacOS", spec.mac.binary)),
+    );
+    const support = join(env.home, "Library", "Application Support");
+    return executable ? { executable, profilesFile: join(support, ...spec.mac.profilesFile) } : null;
+  }
+
+  const executable = firstExisting(
+    env,
+    spec.linux.commands.flatMap((command) => env.pathDirs.map((folder) => join(folder, command))),
+  );
+  if (!executable) return null;
+  const profilesFile = firstExisting(
+    env,
+    spec.linux.profilesFiles.map((segments) => join(env.home, ...segments)),
+  );
+  return { executable, profilesFile };
+}
+
+function readOr(env: BrowserEnvironment, path: string | null): string | null {
+  if (!path) return null;
   try {
     return env.fileExists(path) ? env.readFile(path) : null;
   } catch {
@@ -134,26 +247,19 @@ function readOr(env: BrowserEnvironment, path: string): string | null {
 export async function listInstalledBrowsers(env: BrowserEnvironment): Promise<InstalledBrowser[]> {
   const browsers: InstalledBrowser[] = [];
 
-  for (const spec of CHROMIUM) {
-    const executable = await findExecutable(env, spec.exeName, spec.installPath);
-    if (!executable) continue;
-    const localState = readOr(env, join(env.localAppData, ...spec.userData, "Local State"));
+  for (const spec of BROWSERS) {
+    const found = await locate(env, spec);
+    if (!found) continue;
+    const profiles = readOr(env, found.profilesFile);
     browsers.push({
       id: spec.id,
       name: spec.name,
-      executable,
-      profiles: localState ? parseChromiumProfiles(localState) : [],
-    });
-  }
-
-  const firefox = await findExecutable(env, FIREFOX.exeName, FIREFOX.installPath);
-  if (firefox) {
-    const ini = readOr(env, join(env.appData, "Mozilla", "Firefox", "profiles.ini"));
-    browsers.push({
-      id: "firefox",
-      name: FIREFOX.name,
-      executable: firefox,
-      profiles: ini ? parseFirefoxProfiles(ini) : [],
+      executable: found.executable,
+      profiles: !profiles
+        ? []
+        : spec.id === "firefox"
+          ? parseFirefoxProfiles(profiles)
+          : parseChromiumProfiles(profiles),
     });
   }
 
@@ -191,17 +297,23 @@ function readAppPathFromRegistry(exeName: string): Promise<string | null> {
   );
 }
 
-/** The real Windows locations. Other platforms find no browsers and use the system default. */
-export function windowsBrowserEnvironment(): BrowserEnvironment | null {
-  if (process.platform !== "win32") return null;
-  const programFiles = [process.env.ProgramFiles, process.env["ProgramFiles(x86)"]].filter(
+/** The real browser locations on this computer, or null on a platform Power Tools does not support. */
+export function systemBrowserEnvironment(
+  platform: NodeJS.Platform = process.platform,
+  vars: NodeJS.ProcessEnv = process.env,
+): BrowserEnvironment | null {
+  if (platform !== "win32" && platform !== "darwin" && platform !== "linux") return null;
+  const programFiles = [vars.ProgramFiles, vars["ProgramFiles(x86)"]].filter(
     (value): value is string => Boolean(value),
   );
   return {
-    localAppData: process.env.LOCALAPPDATA ?? "",
-    appData: process.env.APPDATA ?? "",
+    platform,
+    localAppData: vars.LOCALAPPDATA ?? "",
+    appData: vars.APPDATA ?? "",
     programFiles,
-    readAppPath: readAppPathFromRegistry,
+    home: homedir(),
+    pathDirs: (vars.PATH ?? "").split(delimiter).filter(Boolean),
+    readAppPath: platform === "win32" ? readAppPathFromRegistry : async () => null,
     fileExists: existsSync,
     readFile: (path) => readFileSync(path, "utf-8"),
   };

@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import TabBar from "../../src/ui/shell/tabs/TabBar";
 import { TabProvider } from "../../src/ui/shell/tabs/TabContext";
 import { useTabs } from "../../src/ui/shell/tabs/useTabs";
+import { createFakeDesktopBridge, installDesktopBridge } from "../support/desktopBridge";
 
 function CloseAllTabs() {
   const { closeTab, tabs } = useTabs();
@@ -16,6 +17,10 @@ function CloseAllTabs() {
 }
 
 describe("empty workspace", () => {
+  afterEach(() => {
+    Reflect.deleteProperty(window, "electron");
+  });
+
   it("lists keyboard shortcuts when every tab is closed", () => {
     render(
       <TabProvider>
@@ -39,5 +44,25 @@ describe("empty workspace", () => {
       "Ctrl+B",
     );
     expect(screen.queryByRole("heading", { name: "PowerTools" })).not.toBeInTheDocument();
+  });
+
+  it("shows Cmd shortcuts on macOS", () => {
+    installDesktopBridge(createFakeDesktopBridge({ platform: "darwin" }));
+    render(
+      <TabProvider>
+        <CloseAllTabs />
+        <TabBar />
+      </TabProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Close all tabs" }));
+
+    expect(screen.getByText("to search tools").nextElementSibling).toHaveTextContent("⌘P");
+    expect(screen.getByText("to perform main tool action").nextElementSibling).toHaveTextContent(
+      "⌘Enter",
+    );
+    expect(screen.getByText("to show or hide the sidebar").nextElementSibling).toHaveTextContent(
+      "⌘B",
+    );
   });
 });

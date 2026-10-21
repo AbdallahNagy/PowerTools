@@ -22,7 +22,7 @@ function cacheFilePath(): string {
 }
 
 // Persists the MSAL token cache to disk, encrypted with the OS keychain
-// (DPAPI on Windows) when available, plaintext otherwise (dev fallback).
+// (DPAPI on Windows, Keychain on macOS, the system keyring on Linux) when available, plaintext otherwise (dev fallback).
 const cachePlugin: ICachePlugin = {
   async beforeCacheAccess(ctx: TokenCacheContext) {
     const path = cacheFilePath();

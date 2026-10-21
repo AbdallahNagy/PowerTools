@@ -21,10 +21,13 @@ Each connection has a hidden UUID `id`. Tabs, the API client (`meta.connectionId
 
 ## Browser and profile
 
-A connection can name a browser and profile. `src/electron/browserProfiles.ts` finds installed browsers on Windows and reads their profiles:
+A connection can name a browser and profile. `src/electron/browserProfiles.ts` finds installed browsers and reads their profiles. Edge, Chrome, and Brave keep profiles in `Local State` (`profile.info_cache`); the saved profile is the profile directory, such as `Profile 1`. Firefox keeps them in `profiles.ini`; the saved profile is the profile name.
 
-- Edge, Chrome, Brave: `Local State` under `%LOCALAPPDATA%`, `profile.info_cache`. The saved profile is the profile directory, such as `Profile 1`.
-- Firefox: `%APPDATA%\Mozilla\Firefox\profiles.ini`. The saved profile is the profile name.
+| | Windows | macOS | Linux |
+|---|---|---|---|
+| Executable | App Paths registry key, Program Files, or `%LOCALAPPDATA%` | `/Applications` or `~/Applications` | `PATH` (`microsoft-edge`, `google-chrome`, `brave-browser`, `firefox`) |
+| Chromium profiles | `%LOCALAPPDATA%\<browser>\User Data\Local State` | `~/Library/Application Support/<browser>/Local State` | `~/.config/<browser>/Local State` |
+| Firefox profiles | `%APPDATA%\Mozilla\Firefox\profiles.ini` | `~/Library/Application Support/Firefox/profiles.ini` | `~/.mozilla/firefox/profiles.ini`, or the snap's copy under `~/snap/firefox` |
 
 `src/electron/browserLauncher.ts` starts the browser with `--profile-directory=<dir>` (Chromium) or `-P <name> -new-tab` (Firefox). If the browser or profile is gone, it opens the system default browser and reports a fallback, which the renderer shows as a notice.
 

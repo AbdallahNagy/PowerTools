@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 type CreatePreloadApi = (
   ipcRenderer: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
+  platform?: string,
 ) => Window["electron"];
 
 const require = createRequire(import.meta.url);
@@ -188,6 +189,14 @@ describe("createPreloadApi", () => {
       "closeWindow",
       "isWindowMaximized",
       "onWindowMaximizedChanged",
+      "platform",
     ]);
+  });
+
+  it.each(["win32", "darwin", "linux"])("reports the %s platform", (platform) => {
+    const { ipcRenderer } = createIpcRendererFake();
+    const api = createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">, platform);
+
+    expect(api.platform).toBe(platform);
   });
 });

@@ -83,23 +83,37 @@ describe("window chrome", () => {
     vi.resetModules();
   });
 
-  it("creates a frameless main window without a native menu row", async () => {
-    const { getMainWindowOptions } = await import("../../src/electron/windowChrome.ts");
+  it.each(["win32", "linux"] as const)(
+    "creates a frameless main window without a native menu row on %s",
+    async (platform) => {
+      const { getMainWindowOptions } = await import("../../src/electron/windowChrome.ts");
 
-    expect(
-      getMainWindowOptions({
+      const options = getMainWindowOptions({ width: 800, height: 600, show: false }, platform);
+      expect(options).toMatchObject({
         width: 800,
         height: 600,
         show: false,
-      }),
-    ).toMatchObject({
+        frame: false,
+        autoHideMenuBar: true,
+        backgroundColor: "#1b1f26",
+      });
+      expect(options.titleBarStyle).toBeUndefined();
+    },
+  );
+
+  it("keeps the native traffic lights over the title bar on macOS", async () => {
+    const { getMainWindowOptions, MAC_TRAFFIC_LIGHT_POSITION } = await import(
+      "../../src/electron/windowChrome.ts"
+    );
+
+    const options = getMainWindowOptions({ width: 800 }, "darwin");
+    expect(options).toMatchObject({
       width: 800,
-      height: 600,
-      show: false,
-      frame: false,
-      autoHideMenuBar: true,
+      titleBarStyle: "hidden",
+      trafficLightPosition: MAC_TRAFFIC_LIGHT_POSITION,
       backgroundColor: "#1b1f26",
     });
+    expect(options.frame).toBeUndefined();
   });
 
   it("paints the main window with the light surface in the light theme", async () => {
@@ -183,7 +197,7 @@ describe("window chrome", () => {
       onImportConnections: vi.fn(),
       onExportConnections: vi.fn(),
     };
-    const template = createApplicationMenuTemplate(undefined, undefined, undefined, undefined, handlers);
+    const template = createApplicationMenuTemplate(undefined, undefined, undefined, undefined, handlers, "win32");
     const file = template.find((item) => item.label === "File");
     const items = file?.submenu as Electron.MenuItemConstructorOptions[];
 
@@ -194,12 +208,47 @@ describe("window chrome", () => {
       "Import Connections…",
       "Export Connections…",
       "separator",
-      process.platform === "darwin" ? "close" : "quit",
+      "quit",
     ]);
     for (const item of items.filter((entry) => entry.click)) {
       (item.click as () => void)();
     }
     expect(Object.values(handlers).every((handler) => handler.mock.calls.length === 1)).toBe(true);
+  });
+
+  it("adds the macOS app menu and keeps Cmd+W out of the File menu", async () => {
+    const { createApplicationMenuTemplate, findApplicationSubmenu } = await import(
+      "../../src/electron/windowChrome.ts"
+    );
+    const template = createApplicationMenuTemplate(
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      "darwin",
+    );
+    const file = template.find((item) => item.label === "File");
+    const fileItems = file?.submenu as Electron.MenuItemConstructorOptions[];
+
+    expect(template[0]).toEqual({ role: "appMenu" });
+    expect(fileItems.map((item) => item.label ?? item.role ?? item.type)).toEqual([
+      "Add Connection…",
+      "Manage Connections…",
+      "separator",
+      "Import Connections…",
+      "Export Connections…",
+    ]);
+    expect(template.find((item) => item.label === "Window")?.submenu).toEqual([
+      { role: "minimize" },
+      { role: "close", accelerator: "" },
+    ]);
+    const items = template.map((item) => ({
+      label: item.label,
+      role: item.role,
+      submenu: { popup: vi.fn(), id: item.label ?? item.role },
+    }));
+    expect(findApplicationSubmenu(items, "file")).toMatchObject({ id: "File" });
   });
 
   it("leaves Ctrl+W free so the shell can close the active tab", async () => {

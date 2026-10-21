@@ -7,5 +7,6 @@
 - Expose one typed preload method per operation; never expose raw `ipcRenderer`.
 - Keep credentials, tokens, and secrets out of the renderer.
 - Preserve existing IPC channel names and result shapes during behavior-preserving refactors.
-- Unit-test services and handlers with fakes; keep real Electron coverage in the Windows smoke suite.
+- Unit-test services and handlers with fakes; keep real Electron coverage in the smoke suite, which CI runs on Windows, macOS, and Linux.
+- Pass the platform into functions that branch on it (defaulting to `process.platform`) so tests can cover every platform from any machine.
 - Treat these as target boundaries; extract existing code only in the approved migration phase.

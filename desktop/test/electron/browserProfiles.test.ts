@@ -9,6 +9,7 @@ import {
   listInstalledBrowsers,
   parseChromiumProfiles,
   parseFirefoxProfiles,
+  systemBrowserEnvironment,
   type BrowserEnvironment,
   type InstalledBrowser,
 } from "../../src/electron/browserProfiles";
@@ -16,6 +17,7 @@ import {
 const LOCAL = join("C:", "Users", "jo", "AppData", "Local");
 const ROAMING = join("C:", "Users", "jo", "AppData", "Roaming");
 const PROGRAM_FILES = join("C:", "Program Files");
+const HOME = join("/", "home", "jo");
 
 const edgeLocalState = JSON.stringify({
   profile: {
@@ -46,10 +48,33 @@ const firefoxIni = [
 
 function environment(files: Record<string, string>, appPaths: Record<string, string> = {}): BrowserEnvironment {
   return {
+    platform: "win32",
     localAppData: LOCAL,
     appData: ROAMING,
     programFiles: [PROGRAM_FILES],
+    home: "",
+    pathDirs: [],
     readAppPath: async (exe) => appPaths[exe] ?? null,
+    fileExists: (path) => path in files,
+    readFile: (path) => files[path],
+  };
+}
+
+function unixEnvironment(
+  platform: "darwin" | "linux",
+  files: Record<string, string>,
+  pathDirs: string[] = [],
+): BrowserEnvironment {
+  return {
+    platform,
+    localAppData: "",
+    appData: "",
+    programFiles: [],
+    home: HOME,
+    pathDirs,
+    readAppPath: async () => {
+      throw new Error("The registry exists only on Windows.");
+    },
     fileExists: (path) => path in files,
     readFile: (path) => files[path],
   };
@@ -89,6 +114,70 @@ describe("browser profiles", () => {
       ["edge", edgeExe, 3],
       ["firefox", firefoxExe, 2],
     ]);
+  });
+
+  it("finds browsers in /Applications or ~/Applications on macOS", async () => {
+    const chromeExe = join("/Applications", "Google Chrome.app", "Contents", "MacOS", "Google Chrome");
+    const firefoxExe = join(HOME, "Applications", "Firefox.app", "Contents", "MacOS", "firefox");
+    const support = join(HOME, "Library", "Application Support");
+    const browsers = await listInstalledBrowsers(unixEnvironment("darwin", {
+      [chromeExe]: "",
+      [join(support, "Google", "Chrome", "Local State")]: edgeLocalState,
+      [firefoxExe]: "",
+      [join(support, "Firefox", "profiles.ini")]: firefoxIni,
+    }));
+
+    expect(browsers.map(({ id, name, executable, profiles }) => [id, name, executable, profiles.length])).toEqual([
+      ["chrome", "Google Chrome", chromeExe, 3],
+      ["firefox", "Mozilla Firefox", firefoxExe, 2],
+    ]);
+  });
+
+  it("finds browsers on PATH and their profiles under the home folder on Linux", async () => {
+    const usrBin = join("/", "usr", "bin");
+    const snapBin = join("/", "snap", "bin");
+    const edgeExe = join(usrBin, "microsoft-edge-stable");
+    const braveExe = join(usrBin, "brave-browser");
+    const firefoxExe = join(snapBin, "firefox");
+    const browsers = await listInstalledBrowsers(unixEnvironment(
+      "linux",
+      {
+        [edgeExe]: "",
+        [join(HOME, ".config", "microsoft-edge", "Local State")]: edgeLocalState,
+        [braveExe]: "",
+        [firefoxExe]: "",
+        [join(HOME, "snap", "firefox", "common", ".mozilla", "firefox", "profiles.ini")]: firefoxIni,
+      },
+      [usrBin, snapBin],
+    ));
+
+    expect(browsers.map(({ id, executable, profiles }) => [id, executable, profiles.length])).toEqual([
+      ["edge", edgeExe, 3],
+      ["brave", braveExe, 0],
+      ["firefox", firefoxExe, 2],
+    ]);
+  });
+
+  it("reads the real locations for each supported platform", () => {
+    const vars = {
+      LOCALAPPDATA: LOCAL,
+      APPDATA: ROAMING,
+      ProgramFiles: PROGRAM_FILES,
+      PATH: ["/usr/local/bin", "/usr/bin"].join(process.platform === "win32" ? ";" : ":"),
+    };
+
+    expect(systemBrowserEnvironment("win32", vars)).toMatchObject({
+      platform: "win32",
+      localAppData: LOCAL,
+      appData: ROAMING,
+      programFiles: [PROGRAM_FILES],
+    });
+    expect(systemBrowserEnvironment("darwin", vars)?.platform).toBe("darwin");
+    expect(systemBrowserEnvironment("linux", vars)).toMatchObject({
+      platform: "linux",
+      pathDirs: ["/usr/local/bin", "/usr/bin"],
+    });
+    expect(systemBrowserEnvironment("freebsd", vars)).toBeNull();
   });
 
   it("builds the command line for each browser", () => {

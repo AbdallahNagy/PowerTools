@@ -2,7 +2,7 @@
 
 ## Scope
 
-- Windows is the production target.
+- Windows, macOS, and Linux are production targets. Keep platform differences in `src/electron/` and `src/ui/platform/`, and cover each platform's branch in tests.
 - The desktop client includes the React renderer, preload bridge, Electron main process, sidecar lifecycle, packaging, and desktop tests.
 - Refactors are behavior-preserving unless explicitly approved otherwise.
 

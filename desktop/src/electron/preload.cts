@@ -5,5 +5,5 @@ const { createPreloadApi } = require("./preloadApi.cjs");
 
 electron.contextBridge.exposeInMainWorld(
   "electron",
-  createPreloadApi(electron.ipcRenderer),
+  createPreloadApi(electron.ipcRenderer, process.platform),
 );

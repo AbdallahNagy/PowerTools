@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **macOS and Linux.** Power Tools now runs on macOS (Apple silicon and Intel) and Linux (AppImage and `.deb`). On macOS the window uses the standard traffic-light buttons and the system menu bar, and shortcuts show as ⌘. Connections can open links in Edge, Chrome, Brave, or Firefox profiles on every platform.
+
 ## [1.1.0] - 2026-10-20
 
 ### Added
