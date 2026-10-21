@@ -4,6 +4,7 @@ seoDescription: "Build FetchXML queries visually: pick a table and columns, add 
 xrmToolBoxEquivalent: "FetchXML Builder"
 features:
   - Pick a table and the columns to return
+  - Start from any system or personal view, with its columns and filters ready to edit
   - Build filters with the right operators for each column type
   - Filter on related tables with link-entity joins
   - See the generated FetchXML update as you build
@@ -19,7 +20,7 @@ Filters offer the operators that fit each column type, so you do not have to rem
 
 ## See it and run it
 
-The generated FetchXML stays visible as you build, with a button to copy it into a plug-in, a Power Automate flow, a view, or a report. Run the query to see the results in a grid, and open any row as a record in Dynamics 365.
+The generated FetchXML stays visible as you build, with a button to copy it into a plug-in, a Power Automate flow, a view, or a report. Run the query to see the results in a grid, add or remove columns right from the grid header, and open any row as a record in Dynamics 365.
 
 ## When to use it
 

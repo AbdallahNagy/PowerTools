@@ -18,6 +18,7 @@ type Action =
   | { type: "remove"; id: string }
   | { type: "duplicate"; id: string }
   | { type: "move"; id: string; targetParentId: string; targetIndex: number }
+  | { type: "load"; root: FilterGroup }
   | { type: "reset" };
 
 function uid(): string {
@@ -289,6 +290,9 @@ function reducer(state: FilterGroup, action: Action): FilterGroup {
     case "move":
       return moveNode(state, action.id, action.targetParentId, action.targetIndex);
 
+    case "load":
+      return action.root;
+
     case "reset":
       return makeInitialRoot();
 
@@ -330,6 +334,7 @@ export function useFilterTree() {
     [],
   );
   const reset = useCallback(() => dispatch({ type: "reset" }), []);
+  const load = useCallback((root: FilterGroup) => dispatch({ type: "load", root }), []);
 
   return {
     root,
@@ -342,5 +347,6 @@ export function useFilterTree() {
     duplicate,
     move,
     reset,
+    load,
   };
 }

@@ -69,7 +69,61 @@ export type Operator =
   | "not-in"
   | "on"
   | "on-or-before"
-  | "on-or-after";
+  | "on-or-after"
+  | UserOperator
+  | RelativeDateOperator
+  | RelativeCountOperator;
+
+/** Operators that compare a lookup with the signed-in user or their teams. Take no value. */
+export type UserOperator =
+  | "eq-userid"
+  | "ne-userid"
+  | "eq-userteams"
+  | "eq-useroruserteams"
+  | "eq-useroruserhierarchy"
+  | "eq-useroruserhierarchyandteams"
+  | "eq-businessid"
+  | "ne-businessid";
+
+/** Date operators relative to today. Take no value. */
+export type RelativeDateOperator =
+  | "today"
+  | "yesterday"
+  | "tomorrow"
+  | "this-week"
+  | "last-week"
+  | "next-week"
+  | "this-month"
+  | "last-month"
+  | "next-month"
+  | "this-year"
+  | "last-year"
+  | "next-year"
+  | "last-seven-days"
+  | "next-seven-days"
+  | "this-fiscal-year"
+  | "last-fiscal-year"
+  | "next-fiscal-year"
+  | "this-fiscal-period"
+  | "last-fiscal-period"
+  | "next-fiscal-period";
+
+/** Date operators that take a whole number, such as "last 7 days". */
+export type RelativeCountOperator =
+  | "last-x-hours"
+  | "next-x-hours"
+  | "last-x-days"
+  | "next-x-days"
+  | "last-x-weeks"
+  | "next-x-weeks"
+  | "last-x-months"
+  | "next-x-months"
+  | "last-x-years"
+  | "next-x-years"
+  | "olderthan-x-days"
+  | "olderthan-x-weeks"
+  | "olderthan-x-months"
+  | "olderthan-x-years";
 
 export type FieldReference =
   | {
@@ -122,6 +176,15 @@ export interface FilterRelationship {
 }
 
 export type FilterNode = FilterCondition | FilterGroup | FilterRelationship;
+
+export interface EntityView {
+  id: string;
+  name: string;
+  kind: "system" | "personal";
+  isDefault: boolean;
+  columns: string[];
+  fetchXml: string;
+}
 
 export interface FetchResult {
   records: Record<string, unknown>[];
