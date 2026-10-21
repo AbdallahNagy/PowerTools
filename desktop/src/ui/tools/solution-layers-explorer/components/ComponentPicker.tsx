@@ -3,6 +3,7 @@ import {
   Alert,
   Button,
   Checkbox,
+  Combobox,
   DataTable,
   EmptyState,
   Field,
@@ -179,18 +180,21 @@ export function ComponentPicker({
           </Field>
           {tableMode !== "none" ? (
             <Field label="Table">
-              <Select
+              <Combobox
                 value={entity}
+                options={[
+                  ...(tableMode === "required" ? [] : [{ value: "", label: "All tables" }]),
+                  ...tables.map((table) => ({
+                    value: table.logicalName,
+                    label: table.displayName,
+                    description: table.logicalName,
+                  })),
+                ]}
+                placeholder="Choose a table"
+                emptyMessage="No tables match."
                 disabled={disabled}
-                onChange={(event) => onEntityChange(event.target.value)}
-              >
-                <option value="">{tableMode === "required" ? "Choose a table" : "All tables"}</option>
-                {tables.map((table) => (
-                  <option key={table.logicalName} value={table.logicalName}>
-                    {table.displayName} ({table.logicalName})
-                  </option>
-                ))}
-              </Select>
+                onChange={onEntityChange}
+              />
             </Field>
           ) : null}
           <fieldset disabled={searchDisabled} className="m-0 min-w-0 border-0 p-0 disabled:opacity-50">

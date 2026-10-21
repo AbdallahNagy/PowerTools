@@ -3,6 +3,8 @@ export { Badge } from "./Badge";
 export { Button } from "./Button";
 export { Checkbox } from "./Checkbox";
 export { cn } from "./cn";
+export { Combobox } from "./Combobox";
+export { filterComboboxOptions, type ComboboxOption } from "./comboboxFilter";
 export { DataTable } from "./DataTable";
 export { EmptyState } from "./EmptyState";
 export { Field } from "./Field";
