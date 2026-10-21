@@ -14,13 +14,22 @@ Add a line under `## [Unreleased]` for every change a desktop user would notice.
 
 1. In **Actions**, run **Prepare Release** and pick the bump: `patch` for fixes only, `minor` for new tools or features, `major` for breaking changes. You can type an exact version instead.
 2. The workflow opens a `Release x.y.z` pull request. It moves the `[Unreleased]` notes into `## [x.y.z] - <today>`, updates the compare links, and bumps `desktop/package.json`. The pull request body shows the release notes. Edit `CHANGELOG.md` on that branch if they need work.
-3. Merge it. **Release Desktop** starts on its own, builds the installer, and publishes the GitHub release with those notes. Installed apps then offer the update.
+3. Merge it. **Release Desktop** starts on its own, builds the Windows, macOS, and Linux installers on their own runners, and publishes one GitHub release with all of them and those notes. Installed apps then offer the update.
+
+| Platform | Files on the release | Update feed |
+|---|---|---|
+| Windows | `PowerTools-Setup.exe` | `latest.yml` |
+| macOS | `PowerTools-mac-arm64.dmg`, `PowerTools-mac-x64.dmg`, and a `.zip` of each for updates | `latest-mac.yml` |
+| Linux | `PowerTools-linux-x86_64.AppImage`, `PowerTools-linux-amd64.deb` | `latest-linux.yml` |
+
+The release is published only when all three builds succeed.
 
 Prepare Release fails if `[Unreleased]` is empty, so a release always has notes.
 
 ### One-time setup
 
 - Turn on **Settings → Actions → General → Allow GitHub Actions to create and approve pull requests**, or Prepare Release cannot open the pull request.
+- Optional, macOS signing: without these secrets the macOS app is ad-hoc signed. Users then allow it once under **System Settings → Privacy & Security → Open Anyway**, and the app still sees new versions, but macOS refuses to install updates into an unsigned app, so users download each new version from the release page. To sign and notarize, add `MAC_CERTIFICATE` (a base64 Developer ID Application `.p12`), `MAC_CERTIFICATE_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, and `APPLE_TEAM_ID`.
 - Optional: GitHub does not start other workflows for pull requests opened with the default token, so Desktop CI runs only after the merge. To run it on the release pull request too, add a fine-grained personal access token with **Contents** and **Pull requests** write access to this repository as the `RELEASE_PR_TOKEN` secret.
 
 ## Without the workflow

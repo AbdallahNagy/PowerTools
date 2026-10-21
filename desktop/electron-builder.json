@@ -2,6 +2,7 @@
     "appId": "com.abdalla-nagy.power-tools",
     "files": ["dist-electron", "dist-react"],
     "icon": "./power-tools.ico",
+    "afterPack": "./packaging/afterPack.cjs",
     "publish": [
         {
             "provider": "github",
@@ -18,22 +19,37 @@
         }
     ],
     "mac": {
-        "target": "dmg",
+        "target": [
+            { "target": "dmg", "arch": ["arm64", "x64"] },
+            { "target": "zip", "arch": ["arm64", "x64"] }
+        ],
+        "artifactName": "PowerTools-mac-${arch}.${ext}",
+        "category": "public.app-category.developer-tools",
         "icon": "./power-tools.icns",
+        "hardenedRuntime": true,
+        "entitlements": "./packaging/entitlements.mac.plist",
+        "entitlementsInherit": "./packaging/entitlements.mac.plist",
         "extraResources": [
             {
-                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/osx-arm64/publish",
+                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/osx-${arch}/publish",
                 "to": "api"
             }
         ]
     },
     "linux": {
-        "target": "AppImage",
-        "category": "Utility",
+        "target": [
+            { "target": "AppImage", "arch": ["x64"] },
+            { "target": "deb", "arch": ["x64"] }
+        ],
+        "artifactName": "PowerTools-linux-${arch}.${ext}",
+        "executableName": "power-tools",
+        "category": "Development",
+        "synopsis": "Desktop toolkit for Dataverse and Dynamics 365 developers",
+        "maintainer": "Abdallah Nagy <abdallah@abdallahnagy.com>",
         "icon": "./power-tools.png",
         "extraResources": [
             {
-                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/linux-x64/publish",
+                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/linux-${arch}/publish",
                 "to": "api"
             }
         ]

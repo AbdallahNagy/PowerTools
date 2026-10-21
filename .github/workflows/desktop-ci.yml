@@ -27,11 +27,17 @@ permissions:
 
 jobs:
   check:
-    runs-on: windows-latest
+    name: check (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     defaults:
       run:
         working-directory: desktop
+        shell: bash
 
     steps:
       - name: Check out repository
@@ -64,14 +70,26 @@ jobs:
       - name: Build sidecar
         run: dotnet build ../api/PowerTools/PowerTools.API/PowerTools.API.csproj
 
+      # Ubuntu 24.04 blocks the unprivileged user namespaces Electron's sandbox
+      # needs, so the smoke test's Electron would exit at launch.
+      - name: Allow the Electron sandbox
+        if: runner.os == 'Linux'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Run desktop checks
+        if: runner.os != 'Linux'
         run: npm run check
+
+      # Linux runners have no display, so the smoke test runs in a virtual one.
+      - name: Run desktop checks
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run check
 
       - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.os }}
           path: desktop/playwright-report
           if-no-files-found: ignore
           retention-days: 7

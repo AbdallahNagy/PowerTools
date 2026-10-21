@@ -1,13 +1,15 @@
 # Power Tools
 
-A modern open-source desktop toolkit for everyday Dataverse, Dynamics 365, and Power Platform work, with a friendly UI, secure local workflow, and tools that are easy to figure out and use. A free, modern XrmToolBox alternative for Windows.
+A modern open-source desktop toolkit for everyday Dataverse, Dynamics 365, and Power Platform work, with a friendly UI, secure local workflow, and tools that are easy to figure out and use. A free, modern XrmToolBox alternative for Windows, macOS, and Linux.
 
 [![Website](https://img.shields.io/badge/website-powertools.abdallahnagy.com-1f6feb)](https://powertools.abdallahnagy.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea043)](LICENSE)
 
-**[Download for Windows](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe)** · **[Website](https://powertools.abdallahnagy.com/)** · **[Changelog](CHANGELOG.md)** · **[Issues](https://github.com/AbdallahNagy/PowerTools/issues)**
+**Download:** [Windows](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe) · [macOS (Apple silicon)](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-mac-arm64.dmg) · [macOS (Intel)](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-mac-x64.dmg) · [Linux](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-linux-x86_64.AppImage)
 
-Power Tools is a Windows desktop app for Dataverse and Dynamics 365 developers. Migration, FetchXML, plug-in registration, and related metadata work live in one workspace. The app runs on your machine and connects directly to your environments.
+**[Website](https://powertools.abdallahnagy.com/)** · **[Changelog](CHANGELOG.md)** · **[Issues](https://github.com/AbdallahNagy/PowerTools/issues)**
+
+Power Tools is a desktop app for Dataverse and Dynamics 365 developers on Windows, macOS, and Linux. Migration, FetchXML, plug-in registration, and related metadata work live in one workspace. The app runs on your machine and connects directly to your environments.
 
 ## Tools
 
@@ -33,12 +35,20 @@ Each tool opens in its own tab. The activity-bar tools can stay open in more tha
 
 ## Download
 
-The published installer is for Windows.
+Every release has installers for Windows, macOS, and Linux. Start from the [download page](https://powertools.abdallahnagy.com/download) or the [latest release](https://github.com/AbdallahNagy/PowerTools/releases/latest).
 
-1. Download [PowerTools-Setup.exe](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe), or start from the [download page](https://powertools.abdallahnagy.com/download).
-2. Run the installer on your machine.
-3. Open Power Tools and add a connection.
-4. The installed app checks for later releases.
+| Platform | Download | Notes |
+| --- | --- | --- |
+| Windows 10 and 11 (x64) | [PowerTools-Setup.exe](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe) | Run the installer. |
+| macOS (Apple silicon) | [PowerTools-mac-arm64.dmg](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-mac-arm64.dmg) | Drag Power Tools to Applications. |
+| macOS (Intel) | [PowerTools-mac-x64.dmg](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-mac-x64.dmg) | Drag Power Tools to Applications. |
+| Linux (x64) | [PowerTools-linux-x86_64.AppImage](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-linux-x86_64.AppImage) or [PowerTools-linux-amd64.deb](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-linux-amd64.deb) | Make the AppImage executable (`chmod +x`), or install the `.deb` with `sudo apt install ./PowerTools-linux-amd64.deb`. |
+
+Then open Power Tools and add a connection. The app checks for later releases.
+
+- **macOS.** If macOS says the app cannot be checked for malicious software, open **System Settings → Privacy & Security** and choose **Open Anyway** once.
+- **Linux.** The AppImage needs FUSE 2 (`sudo apt install libfuse2t64` on Ubuntu 24.04). The `.deb` sets up Electron's sandbox, so prefer it on Ubuntu 24.04 and later. Saved on-premises passwords use the system keyring (GNOME Keyring or KWallet).
+- **On-premises with Active Directory** on macOS and Linux uses Kerberos or NTLM through GSSAPI. On Linux, install `gss-ntlmssp` for NTLM.
 
 ### Connections
 
@@ -63,7 +73,7 @@ flowchart LR
 
 | Path | What it is |
 | --- | --- |
-| [`desktop/`](desktop/) | Electron and React client. Windows is the production target. |
+| [`desktop/`](desktop/) | Electron and React client for Windows, macOS, and Linux. |
 | [`api/PowerTools/`](api/PowerTools/) | Local ASP.NET Core API the desktop app starts. |
 | [`website/`](website/) | Product website, deployed to Cloudflare Workers. |
 
@@ -77,7 +87,7 @@ npm ci
 npm run dev
 ```
 
-Desktop CI runs this check on Windows:
+Desktop CI runs this check on Windows, macOS, and Linux:
 
 ```bash
 cd desktop
@@ -100,11 +110,13 @@ pnpm install
 pnpm dev
 ```
 
-Build a Windows installer from source:
+Build installers from source on the platform they are for. Each command publishes the .NET sidecar for that platform first and writes the installers to `desktop/dist/`:
 
 ```bash
 cd desktop
-npm run dist:win
+npm run dist:win     # Windows: PowerTools-Setup.exe
+npm run dist:mac     # macOS: arm64 and x64 .dmg and .zip
+npm run dist:linux   # Linux: x64 .AppImage and .deb
 ```
 
 ## Contributing

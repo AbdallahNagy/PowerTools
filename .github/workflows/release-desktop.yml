@@ -1,8 +1,9 @@
 name: Release Desktop
 
-# Builds the Windows installer and publishes it as a GitHub release for the
-# version in desktop/package.json. The release body is that version's section
-# of CHANGELOG.md, which the in-app update dialog shows. See docs/releasing.md.
+# Builds the Windows, macOS, and Linux installers and publishes them as one
+# GitHub release for the version in desktop/package.json. The release body is
+# that version's section of CHANGELOG.md, which the in-app update dialog shows.
+# See docs/releasing.md.
 #
 # It runs when a version bump lands on main (usually by merging the pull
 # request from Prepare Release), and can also be run by hand.
@@ -58,15 +59,27 @@ jobs:
             echo "publish=true" >> "$GITHUB_OUTPUT"
           fi
 
-  release:
+  # Each platform builds on its own runner: the .NET sidecar and the installers
+  # are native to it. Nothing is published until all three succeed.
+  build:
     needs: decide
-    if: needs.decide.outputs.publish == 'true'
-    runs-on: windows-latest
+    if: needs.decide.outputs.publish == 'true' && !inputs.notes_only
+    name: build (${{ matrix.platform }})
+    strategy:
+      matrix:
+        include:
+          - platform: win
+            os: windows-latest
+          - platform: mac
+            os: macos-latest
+          - platform: linux
+            os: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 45
     defaults:
       run:
         working-directory: desktop
-        shell: pwsh
+        shell: bash
 
     steps:
       - name: Check out repository
@@ -84,36 +97,88 @@ jobs:
         with:
           dotnet-version: 9.0.x
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build installers
+        env:
+          # Uploads renderer source maps to Sentry. See desktop/vite.config.ts.
+          # The renderer is the same on every platform, so only one build uploads.
+          SENTRY_AUTH_TOKEN: ${{ matrix.platform == 'win' && secrets.SENTRY_AUTH_TOKEN || '' }}
+          # macOS signing and notarization. Without these secrets the app is
+          # built unsigned: it runs after the user allows it in System Settings,
+          # but macOS cannot install its updates automatically.
+          CSC_LINK: ${{ matrix.platform == 'mac' && secrets.MAC_CERTIFICATE || '' }}
+          CSC_KEY_PASSWORD: ${{ matrix.platform == 'mac' && secrets.MAC_CERTIFICATE_PASSWORD || '' }}
+          APPLE_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_ID || '' }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ matrix.platform == 'mac' && secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
+          APPLE_TEAM_ID: ${{ matrix.platform == 'mac' && secrets.APPLE_TEAM_ID || '' }}
+        run: npm run dist:${{ matrix.platform }}
+
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.platform }}
+          # Installers, their blockmaps, and the latest*.yml update feeds.
+          path: |
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+            desktop/dist/*.AppImage
+            desktop/dist/*.deb
+            desktop/dist/*.blockmap
+            desktop/dist/latest*.yml
+          if-no-files-found: error
+          retention-days: 7
+
+  release:
+    needs: [decide, build]
+    # Runs after a successful build, or alone to update the notes only.
+    if: always() && needs.decide.outputs.publish == 'true' && (needs.build.result == 'success' || (inputs.notes_only && needs.build.result == 'skipped'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Read version and release notes
         id: meta
         run: |
-          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
-          $notes = Join-Path $env:RUNNER_TEMP "release-notes.md"
-          node ../scripts/changelog.mjs extract $version --out $notes
-          if ($LASTEXITCODE -ne 0) { throw "Missing release notes: add a [$version] section to CHANGELOG.md" }
-          "version=$version" >> $env:GITHUB_OUTPUT
-          "notes=$notes" >> $env:GITHUB_OUTPUT
+          version=$(node -p "require('./desktop/package.json').version")
+          notes="$RUNNER_TEMP/release-notes.md"
+          if ! node scripts/changelog.mjs extract "$version" --out "$notes"; then
+            echo "::error::Missing release notes: add a [$version] section to CHANGELOG.md"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "notes=$notes" >> "$GITHUB_OUTPUT"
 
-      - name: Install dependencies
+      - name: Download installers
         if: ${{ !inputs.notes_only }}
-        run: npm ci
+        uses: actions/download-artifact@v4
+        with:
+          pattern: installers-*
+          path: installers
+          merge-multiple: true
 
-      - name: Build and publish
+      - name: Publish release
         if: ${{ !inputs.notes_only }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Uploads renderer source maps to Sentry. See desktop/vite.config.ts.
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-          # Overrides releaseType in electron-builder.json.
-          EP_DRAFT: ${{ inputs.draft }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          NOTES: ${{ steps.meta.outputs.notes }}
+          # Hidden from users and the auto-updater until it is published by hand.
+          DRAFT: ${{ inputs.draft && '--draft' || '' }}
         run: |
-          npm run publish:api:win
-          npm run transpile:electron
-          npm run build
-          npx electron-builder --win --x64 --publish always
+          ls -la installers
+          tag="v$VERSION"
+          if gh release view "$tag" > /dev/null 2>&1; then
+            gh release upload "$tag" installers/* --clobber
+          else
+            gh release create "$tag" installers/* --target "$GITHUB_SHA" --title "$VERSION" --notes-file "$NOTES" $DRAFT
+          fi
 
-      # electron-builder does not reliably set the release body, so set it here.
       - name: Set release notes
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release edit "v${{ steps.meta.outputs.version }}" --notes-file "${{ steps.meta.outputs.notes }}"
