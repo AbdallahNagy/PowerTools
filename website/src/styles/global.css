@@ -564,6 +564,21 @@ h3 {
   gap: 16px;
 }
 
+.platform-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.platform-card {
+  display: flex;
+  flex-direction: column;
+}
+
+.platform-card .platform-actions {
+  margin: 4px 0 16px;
+}
+
 .download-info-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
@@ -971,7 +986,8 @@ h3 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .tool-grid {
+  .tool-grid,
+  .platform-grid {
     grid-template-columns: 1fr;
   }
 

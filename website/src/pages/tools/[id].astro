@@ -58,7 +58,7 @@ const structuredData = [
       name: `PowerTools ${tool.title}`,
       description: tool.description,
       applicationCategory: "DeveloperApplication",
-      operatingSystem: "Windows",
+      operatingSystem: "Windows, macOS, Linux",
       isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
       isPartOf: { "@type": "SoftwareApplication", name: "PowerTools", url: absoluteUrl("/") }
@@ -92,7 +92,7 @@ const structuredData = [
       )
     }
     <div class="hero-actions centered-actions">
-      <a class="button primary" href={localPath("/download")}>Download for Windows</a>
+      <a class="button primary" href={localPath("/download")}>Download PowerTools</a>
       <a class="button secondary" href={githubUrl}>View on GitHub</a>
     </div>
   </section>

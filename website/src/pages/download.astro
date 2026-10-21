@@ -3,19 +3,77 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import Icon from "../components/Icon.astro";
 
 const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
-const windowsDownloadUrl = `${githubUrl}/releases/latest/download/PowerTools-Setup.exe`;
+const latestDownload = `${githubUrl}/releases/latest/download`;
+
+const platforms = [
+  {
+    id: "windows",
+    name: "Windows",
+    requirement: "Windows 10 or 11, x64",
+    downloads: [{ label: "Download installer", file: "PowerTools-Setup.exe" }],
+    note: "Run the installer. It installs for your user only and needs no admin rights.",
+  },
+  {
+    id: "mac",
+    name: "macOS",
+    requirement: "Apple silicon or Intel",
+    downloads: [
+      { label: "Apple silicon", file: "PowerTools-mac-arm64.dmg" },
+      { label: "Intel", file: "PowerTools-mac-x64.dmg" },
+    ],
+    note: "Open the disk image and drag Power Tools to Applications. If macOS cannot check the app, choose Open Anyway in System Settings > Privacy & Security.",
+  },
+  {
+    id: "linux",
+    name: "Linux",
+    requirement: "x64",
+    downloads: [
+      { label: "AppImage", file: "PowerTools-linux-x86_64.AppImage" },
+      { label: ".deb", file: "PowerTools-linux-amd64.deb" },
+    ],
+    note: "Install the .deb with apt, or make the AppImage executable and run it. The AppImage needs FUSE 2.",
+  },
+];
 ---
 
 <BaseLayout
-  title="Download PowerTools: Free Dataverse Tools for Windows"
-  description="Download PowerTools, the free open-source Windows toolkit for Dataverse, Dynamics 365, and Power Platform developers."
+  title="Download PowerTools: Free Dataverse Tools for Windows, macOS, and Linux"
+  description="Download PowerTools, the free open-source desktop toolkit for Dataverse, Dynamics 365, and Power Platform developers on Windows, macOS, and Linux."
 >
   <section class="page-hero">
     <p class="eyebrow">Download</p>
     <h1>Download <br /> <span class="gradient-text">PowerTools</span></h1>
-    <p class="lead">Get the latest Windows build of the open-source Dataverse developer toolkit.</p>
+    <p class="lead">Get the latest build of the open-source Dataverse developer toolkit for Windows, macOS, or Linux.</p>
     <div class="hero-actions centered-actions">
-      <a class="button primary" href={windowsDownloadUrl}>Download for Windows</a>
+      <a
+        class="button primary"
+        id="primary-download"
+        href={`${latestDownload}/PowerTools-Setup.exe`}
+      >
+        Download for Windows
+      </a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="platform-grid">
+      {platforms.map((platform) => (
+        <article class="download-card platform-card" id={platform.id}>
+          <span class="meta-label">{platform.requirement}</span>
+          <h3>{platform.name}</h3>
+          <div class="action-row platform-actions">
+            {platform.downloads.map((download, index) => (
+              <a
+                class={`button ${index === 0 ? "primary" : "secondary"}`}
+                href={`${latestDownload}/${download.file}`}
+              >
+                {download.label}
+              </a>
+            ))}
+          </div>
+          <p>{platform.note}</p>
+        </article>
+      ))}
     </div>
   </section>
 
@@ -27,11 +85,11 @@ const windowsDownloadUrl = `${githubUrl}/releases/latest/download/PowerTools-Set
         <ol class="install-steps">
           <li>
             <span>1</span>
-            <p>Click <strong>Download for Windows</strong>.</p>
+            <p>Download the build for your operating system.</p>
           </li>
           <li>
             <span>2</span>
-            <p>Run the installer locally on your machine.</p>
+            <p>Install it locally on your machine.</p>
           </li>
           <li>
             <span>3</span>
@@ -58,3 +116,20 @@ const windowsDownloadUrl = `${githubUrl}/releases/latest/download/PowerTools-Set
     </div>
   </section>
 </BaseLayout>
+
+<script>
+  // Points the main button at the visitor's operating system. Without
+  // JavaScript it stays on Windows, and every build is listed below it.
+  const button = document.getElementById("primary-download");
+  const agent = navigator.userAgent;
+  const base = "https://github.com/AbdallahNagy/PowerTools/releases/latest/download";
+  const target = /Macintosh/.test(agent)
+    ? { name: "macOS (Apple silicon)", file: "PowerTools-mac-arm64.dmg" }
+    : /Linux|X11/.test(agent) && !/Android/.test(agent)
+      ? { name: "Linux", file: "PowerTools-linux-x86_64.AppImage" }
+      : null;
+  if (button && target) {
+    button.textContent = `Download for ${target.name}`;
+    button.setAttribute("href", `${base}/${target.file}`);
+  }
+</script>
