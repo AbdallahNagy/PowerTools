@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
 import { legacyConnection } from "../../../../../../test/support/desktopBridge";
@@ -6,6 +6,7 @@ import { legacyConnection } from "../../../../../../test/support/desktopBridge";
 import { ToastProvider } from "../../../../shared/ui";
 import { StepDialog } from "../../components/dialogs/StepDialog";
 import { catalogFixture } from "../catalogFixture";
+import { chooseComboboxOption } from "../../../../../../test/support/combobox";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import { renderWithProviders } from "../../../../../../test/support/render";
 
@@ -111,9 +112,9 @@ describe("StepDialog", () => {
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "AccountPlugin: Update of account" },
     });
-    expect(within(primary).queryByRole("option", { name: "none" })).not.toBeInTheDocument();
-    expect(within(primary).getByRole("option", { name: "account" })).toBeInTheDocument();
-    fireEvent.change(primary, { target: { value: "account" } });
+    fireEvent.click(primary);
+    expect(screen.queryByRole("option", { name: "none" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("option", { name: "account" }));
     fireEvent.click(await screen.findByRole("button", { name: "None selected" }));
     fireEvent.change(screen.getByPlaceholderText("Search attributes…"), {
       target: { value: "Account" },
@@ -168,7 +169,7 @@ describe("StepDialog", () => {
       expect(field).toBeEnabled();
       return field;
     });
-    fireEvent.change(primary, { target: { value: "account" } });
+    chooseComboboxOption(primary, "account");
     expect(screen.getByLabelText("Name")).toHaveValue("");
     fireEvent.click(screen.getByRole("button", { name: "Register" }));
 
@@ -278,7 +279,7 @@ describe("StepDialog", () => {
     renderDialog();
     await screen.findByLabelText("Name");
     await waitFor(() => expect(screen.getByLabelText("Primary entity")).toBeEnabled());
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: associateId } });
+    chooseComboboxOption(screen.getByLabelText("Message"), "Associate", "assoc");
     expect(screen.getByLabelText("Primary entity")).toBeDisabled();
     expect(screen.getByLabelText("Secondary entity")).toBeDisabled();
   });
@@ -314,14 +315,15 @@ describe("StepDialog", () => {
     await screen.findByLabelText("Name");
     expect(screen.getByLabelText("Primary entity")).toBeDisabled();
     expect(screen.getByLabelText("Secondary entity")).toBeDisabled();
-    fireEvent.change(screen.getByLabelText("Message"), { target: { value: setRelatedId } });
+    chooseComboboxOption(screen.getByLabelText("Message"), "SetRelated");
     const primary = screen.getByLabelText("Primary entity");
     expect(primary).toBeEnabled();
     expect(screen.getByLabelText("Secondary entity")).toBeDisabled();
-    fireEvent.change(primary, { target: { value: "invoice" } });
+    chooseComboboxOption(primary, "invoice");
     const secondary = screen.getByLabelText("Secondary entity");
     expect(secondary).toBeEnabled();
-    expect(within(secondary).getByRole("option", { name: "contact" })).toBeInTheDocument();
+    fireEvent.click(secondary);
+    expect(screen.getByRole("option", { name: "contact" })).toBeInTheDocument();
   });
 });
 

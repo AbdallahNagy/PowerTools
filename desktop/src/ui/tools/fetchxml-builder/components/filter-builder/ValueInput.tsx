@@ -2,7 +2,7 @@ import { Search, X } from "lucide-react";
 import { useState } from "react";
 import type { FieldMetadata, FilterCondition, Operator } from "../../model/types";
 import { COUNT_VALUE_OPERATORS, NO_VALUE_OPERATORS, MULTI_VALUE_OPERATORS } from "../../model/operators";
-import { Input, Select } from "../../../../shared/ui";
+import { Combobox, Input } from "../../../../shared/ui";
 import { LookupPickerModal, type SelectedLookupRecord } from "./LookupPickerModal";
 
 interface ValueInputProps {
@@ -234,18 +234,13 @@ export function ValueInput({
   // Choice / boolean: render a select
   if (field.optionSet) {
     return (
-      <Select
+      <Combobox
         value={strValue}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-40 shrink-0 [&>select]:py-1"
-      >
-        <option value="" disabled>Select…</option>
-        {field.optionSet.map((o) => (
-          <option key={o.value} value={String(o.value)}>
-            {o.label}
-          </option>
-        ))}
-      </Select>
+        options={field.optionSet.map((o) => ({ value: String(o.value), label: o.label }))}
+        onChange={onChange}
+        placeholder="Select…"
+        className="w-40 shrink-0 [&>input]:py-1"
+      />
     );
   }
 

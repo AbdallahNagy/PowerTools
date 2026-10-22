@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Checkbox, Input, Modal, Select, Spinner, Textarea, useToast } from "../../../../shared/ui";
+import { Button, Checkbox, Combobox, Input, Modal, Spinner, Textarea, useToast } from "../../../../shared/ui";
 import { useEntityAttributes } from "../../api/useEntityAttributes";
 import { useStepMutations } from "../../api/useStepMutations";
 import { useStepOptions } from "../../api/useStepOptions";
@@ -177,23 +177,22 @@ export function StepDialog({
             <div className="grid grid-cols-2 gap-6 min-h-0">
               <div className="flex flex-col gap-3">
                 <FormField label="Message" htmlFor="step-message" problem={problemFor(problems, "messageId")}>
-                  <Select
+                  <Combobox
                     id="step-message"
-                    className="[&>select]:bg-raised"
+                    className="[&>input]:bg-raised"
                     value={form.messageId}
-                    onChange={(event) =>
+                    options={(optionsQuery.data?.messages ?? []).map((message) => ({
+                      value: message.id,
+                      label: message.name,
+                    }))}
+                    placeholder="— select —"
+                    emptyMessage="No messages match."
+                    onChange={(messageId) =>
                       setForm((current) =>
-                        selectMessage(current, event.target.value, optionsQuery.data, currentFilter),
+                        selectMessage(current, messageId, optionsQuery.data, currentFilter),
                       )
                     }
-                  >
-                    <option value="">— select —</option>
-                    {optionsQuery.data?.messages.map((message) => (
-                      <option key={message.id} value={message.id}>
-                        {message.name}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                 </FormField>
                 <FormField
                   label="Primary entity"
@@ -201,58 +200,40 @@ export function StepDialog({
                   problem={problemFor(problems, "filterId")}
                   disabled={!primaryEnabled}
                 >
-                  <Select
+                  <Combobox
                     id="step-primary-entity"
-                    className="[&>select]:bg-raised"
+                    className="[&>input]:bg-raised"
                     value={form.primaryEntity}
+                    options={primaryEntities.map((name) => ({ value: name, label: name }))}
+                    placeholder="— select —"
+                    emptyMessage="No tables match."
                     disabled={!primaryEnabled}
-                    onChange={(event) =>
+                    onChange={(entity) =>
                       setForm((current) =>
-                        selectPrimaryEntity(
-                          current,
-                          event.target.value,
-                          optionsQuery.data,
-                          currentFilter,
-                        ),
+                        selectPrimaryEntity(current, entity, optionsQuery.data, currentFilter),
                       )
                     }
-                  >
-                    <option value="">— select —</option>
-                    {primaryEntities.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                 </FormField>
                 <FormField
                   label="Secondary entity"
                   htmlFor="step-secondary-entity"
                   disabled={!secondaryEnabled}
                 >
-                  <Select
+                  <Combobox
                     id="step-secondary-entity"
-                    className="[&>select]:bg-raised"
+                    className="[&>input]:bg-raised"
                     value={form.secondaryEntity}
+                    options={secondaryEntities.map((name) => ({ value: name, label: name }))}
+                    placeholder="— select —"
+                    emptyMessage="No tables match."
                     disabled={!secondaryEnabled}
-                    onChange={(event) =>
+                    onChange={(entity) =>
                       setForm((current) =>
-                        selectSecondaryEntity(
-                          current,
-                          event.target.value,
-                          optionsQuery.data,
-                          currentFilter,
-                        ),
+                        selectSecondaryEntity(current, entity, optionsQuery.data, currentFilter),
                       )
                     }
-                  >
-                    <option value="">— select —</option>
-                    {secondaryEntities.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                 </FormField>
                 <FormField
                   label="Filtering attributes"
@@ -271,25 +252,22 @@ export function StepDialog({
                   </button>
                 </FormField>
                 <FormField label="Impersonating user" htmlFor="step-user">
-                  <Select
+                  <Combobox
                     id="step-user"
-                    className="[&>select]:bg-raised"
+                    className="[&>input]:bg-raised"
                     value={form.impersonatingUserId}
-                    onChange={(event) =>
-                      setForm((current) => ({
-                        ...current,
-                        impersonatingUserId: event.target.value,
-                      }))
+                    options={[
+                      { value: "", label: "Calling user" },
+                      ...users.map((user) => ({
+                        value: user.id,
+                        label: `${user.fullName}${user.unavailable ? " (unavailable)" : ""}`,
+                      })),
+                    ]}
+                    emptyMessage="No users match."
+                    onChange={(impersonatingUserId) =>
+                      setForm((current) => ({ ...current, impersonatingUserId }))
                     }
-                  >
-                    <option value="">Calling user</option>
-                    {users.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.fullName}
-                        {user.unavailable ? " (unavailable)" : ""}
-                      </option>
-                    ))}
-                  </Select>
+                  />
                 </FormField>
                 <FormField label="Execution order" htmlFor="step-rank" problem={problemFor(problems, "rank")}>
                   <Input

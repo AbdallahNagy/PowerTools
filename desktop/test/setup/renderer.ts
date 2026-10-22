@@ -5,6 +5,15 @@ import { afterAll, afterEach, beforeAll } from "vitest";
 import { preloadCodeEditor } from "../../src/ui/shared/ui/loadCodeEditor";
 import { httpServer } from "../support/httpServer";
 
+// Radix popovers, such as the Combobox list, measure their anchor; jsdom has no ResizeObserver.
+if (!("ResizeObserver" in globalThis)) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 beforeAll(async () => {
   httpServer.listen({ onUnhandledRequest: "error" });
   // The app loads the code editor on first use; load it up front so tests can

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { usePrimaryAction } from "../../shared/keyboard";
-import { Button, Field, Select, Spinner, ToastProvider, useToast } from "../../shared/ui";
+import { Button, Combobox, Field, Spinner, ToastProvider, useToast, type ComboboxOption } from "../../shared/ui";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
 import { useConnections, useTabConnection } from "../../shared/connections";
 import type { EntityView, FetchResult } from "./model/types";
@@ -69,6 +69,15 @@ function FetchXmlBuilderPage() {
   const sortedTables = useMemo(
     () => [...(tables ?? [])].sort((a, b) => a.displayName.localeCompare(b.displayName)),
     [tables],
+  );
+  const tableOptions = useMemo<ComboboxOption[]>(
+    () =>
+      sortedTables.map((table) => ({
+        value: table.logicalName,
+        label: table.displayName,
+        description: table.logicalName,
+      })),
+    [sortedTables],
   );
 
   const defaultViewFields = useMemo(
@@ -212,25 +221,21 @@ function FetchXmlBuilderPage() {
           {/* Entity selection */}
           <Field label="Table" className="shrink-0 min-w-0">
             <div className="flex items-center gap-2 min-w-0">
-              <Select
+              <Combobox
                 value={selectedEntity?.logicalName ?? ""}
-                onChange={(e) => handleEntityChange(e.target.value)}
+                options={tableOptions}
+                onChange={handleEntityChange}
                 disabled={!connectionId || tablesLoading}
-                className="w-72 shrink-0 [&>select]:truncate [&>select]:bg-raised"
-              >
-                <option value="">
-                  {!connectionId
+                placeholder={
+                  !connectionId
                     ? "— select a connection first —"
                     : tablesLoading
                       ? "Loading tables…"
-                      : "— select a table —"}
-                </option>
-                {sortedTables.map((e) => (
-                  <option key={e.logicalName} value={e.logicalName}>
-                    {e.displayName} ({e.logicalName})
-                  </option>
-                ))}
-              </Select>
+                      : "— select a table —"
+                }
+                emptyMessage="No tables match."
+                className="w-72 shrink-0 [&>input]:bg-raised"
+              />
               {tablesLoading && <Spinner size={14} />}
               <Button variant="ghost" onClick={handleClearAll} className="text-xs py-1 px-2 shrink-0 ml-auto">
                 Clear all

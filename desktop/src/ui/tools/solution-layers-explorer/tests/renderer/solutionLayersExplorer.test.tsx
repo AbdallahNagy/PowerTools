@@ -180,6 +180,9 @@ describe("Solution Layers Explorer", () => {
 
     expect(await screen.findByText("Choose a table to search its columns.")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Search by name")).toBeDisabled();
+    const table = screen.getByRole("combobox", { name: "Table" });
+    await waitFor(() => expect(table).toBeEnabled());
+    fireEvent.change(table, { target: { value: "acc" } });
     expect(await screen.findByRole("option", { name: "Account (account)" })).toBeInTheDocument();
   });
 
