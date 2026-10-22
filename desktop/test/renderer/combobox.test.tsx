@@ -134,5 +134,22 @@ describe("Combobox", () => {
       expect(rendered[0]).toHaveAttribute("aria-setsize", "500");
       expect(rendered[0]).toHaveAttribute("aria-posinset", "1");
     });
+
+    it("sizes the list to the widest option, not only the rows in view", () => {
+      vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(400);
+      vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(300);
+      const many: ComboboxOption[] = [
+        ...Array.from({ length: 200 }, (_, index) => ({ value: `t${index}`, label: `Table ${index}` })),
+        { value: "msdyn_flow_approvalresponse", label: "Approval Response", description: "msdyn_flow_approvalresponse" },
+      ];
+      render(<Harness options={many} />);
+      const combobox = screen.getByRole("combobox", { name: "Table" });
+
+      fireEvent.change(combobox, { target: { value: "table 1" } });
+
+      const sizer = document.querySelector("[data-combobox-sizer]");
+      expect(sizer).toHaveTextContent("Approval Responsemsdyn_flow_approvalresponse");
+      expect(sizer).toHaveAttribute("aria-hidden", "true");
+    });
   });
 });
