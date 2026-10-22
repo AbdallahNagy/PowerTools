@@ -60,7 +60,6 @@ export function Combobox({
   const selectedText = selected ? comboboxOptionText(selected) : "";
   const matches = useMemo(() => filterComboboxOptions(options, query ?? ""), [options, query]);
   const rows = useMemo(() => toRows(matches), [matches]);
-  const widest = useMemo(() => widestOption(options), [options]);
   const rowIndexByOption = useMemo(() => {
     const indexes: number[] = [];
     rows.forEach((row, rowIndex) => {
@@ -198,7 +197,7 @@ export function Combobox({
           // Keep focus in the input while the pointer works the list.
           onMouseDown={(event) => event.preventDefault()}
           className={cn(
-            "z-[100] min-w-[var(--radix-popover-trigger-width)] max-w-[min(40rem,calc(100vw-16px))]",
+            "z-[100] w-[max(var(--radix-popover-trigger-width),22rem)] max-w-[calc(100vw-16px)]",
             "rounded-sm border border-line bg-raised text-sm text-fg shadow-lg",
           )}
         >
@@ -213,26 +212,11 @@ export function Combobox({
             emptyMessage={emptyMessage}
             onHighlight={setHighlighted}
             onChoose={(index) => choose(matches[index])}
-            widest={widest}
           />
         </Popover.Content>
       </Popover.Portal>
     </Popover.Root>
   );
-}
-
-/** The option with the most text, used to size the list so names are not cut while scrolling or typing. */
-function widestOption(options: ComboboxOption[]): ComboboxOption | null {
-  let widest: ComboboxOption | null = null;
-  let widestLength = -1;
-  for (const option of options) {
-    const length = option.label.length + (option.description?.length ?? 0);
-    if (length > widestLength) {
-      widest = option;
-      widestLength = length;
-    }
-  }
-  return widest;
 }
 
 function toRows(options: ComboboxOption[]): Row[] {
@@ -257,7 +241,6 @@ function ComboboxList({
   emptyMessage,
   onHighlight,
   onChoose,
-  widest,
 }: {
   listId: string;
   optionIdPrefix: string;
@@ -269,7 +252,6 @@ function ComboboxList({
   emptyMessage: string;
   onHighlight: (index: number) => void;
   onChoose: (index: number) => void;
-  widest: ComboboxOption | null;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const virtualize = rows.length > VIRTUALIZE_AFTER;
@@ -278,8 +260,11 @@ function ComboboxList({
     count: virtualize ? rows.length : 0,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
+    // Long names wrap, so rows are measured rather than a fixed height.
+    indexAttribute: "data-row",
     overscan: 10,
   });
+  const measureRow = virtualize ? virtualizer.measureElement : undefined;
 
   useEffect(() => {
     if (highlightedRow < 0) return;
@@ -299,6 +284,7 @@ function ComboboxList({
           key={`group-${rowIndex}`}
           role="presentation"
           data-row={rowIndex}
+          ref={measureRow}
           style={style}
           className="flex items-end px-2 pb-1 pt-2 text-xs font-medium text-fg-muted"
         >
@@ -319,21 +305,22 @@ function ComboboxList({
         aria-setsize={virtualize ? optionCount : undefined}
         aria-posinset={virtualize ? index + 1 : undefined}
         data-row={rowIndex}
+        ref={measureRow}
         style={style}
         onMouseMove={() => {
           if (!option.disabled && index !== highlighted) onHighlight(index);
         }}
         onClick={() => onChoose(index)}
         className={cn(
-          "flex cursor-pointer select-none items-center gap-2 rounded-sm px-2 py-1",
+          "flex cursor-pointer select-none flex-wrap items-baseline gap-x-2 rounded-sm px-2 py-1",
           index === highlighted && "bg-hover",
           isSelected && "text-accent-text font-medium",
           option.disabled && "cursor-not-allowed opacity-50",
         )}
       >
-        <span className="truncate">{option.label}</span>
+        <span className="min-w-0 break-words">{option.label}</span>
         {option.description ? (
-          <span className="ml-auto shrink-0 pl-2 font-mono text-xs text-fg-muted">{option.description}</span>
+          <span className="ml-auto min-w-0 break-all font-mono text-xs text-fg-muted">{option.description}</span>
         ) : null}
       </div>
     );
@@ -347,19 +334,6 @@ function ComboboxList({
       aria-label={label}
       className="max-h-72 overflow-auto p-1"
     >
-      {widest ? (
-        // Virtualized rows are absolutely positioned and add no width, so an
-        // invisible copy of the widest option sizes the list. The extra right
-        // padding leaves room for a classic Windows scrollbar.
-        <div
-          aria-hidden="true"
-          data-combobox-sizer=""
-          className="invisible flex h-0 items-center gap-2 overflow-hidden whitespace-nowrap pl-2 pr-6"
-        >
-          <span>{widest.label}</span>
-          {widest.description ? <span className="ml-auto pl-2 font-mono text-xs">{widest.description}</span> : null}
-        </div>
-      ) : null}
       {rows.length === 0 ? (
         <p className="px-2 py-1.5 text-xs text-fg-muted">{emptyMessage}</p>
       ) : virtualize ? (
@@ -370,7 +344,6 @@ function ComboboxList({
               top: 0,
               left: 0,
               width: "100%",
-              height: ROW_HEIGHT,
               transform: `translateY(${item.start}px)`,
             }),
           )}

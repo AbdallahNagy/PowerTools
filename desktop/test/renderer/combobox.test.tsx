@@ -135,21 +135,22 @@ describe("Combobox", () => {
       expect(rendered[0]).toHaveAttribute("aria-posinset", "1");
     });
 
-    it("sizes the list to the widest option, not only the rows in view", () => {
+    it("wraps long names instead of cutting them", () => {
       vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(400);
       vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(300);
       const many: ComboboxOption[] = [
-        ...Array.from({ length: 200 }, (_, index) => ({ value: `t${index}`, label: `Table ${index}` })),
         { value: "msdyn_flow_approvalresponse", label: "Approval Response", description: "msdyn_flow_approvalresponse" },
+        ...Array.from({ length: 200 }, (_, index) => ({ value: `t${index}`, label: `Table ${index}` })),
       ];
       render(<Harness options={many} />);
-      const combobox = screen.getByRole("combobox", { name: "Table" });
 
-      fireEvent.change(combobox, { target: { value: "table 1" } });
+      fireEvent.click(screen.getByRole("combobox", { name: "Table" }));
 
-      const sizer = document.querySelector("[data-combobox-sizer]");
-      expect(sizer).toHaveTextContent("Approval Responsemsdyn_flow_approvalresponse");
-      expect(sizer).toHaveAttribute("aria-hidden", "true");
+      const option = screen.getByRole("option", { name: "Approval Response (msdyn_flow_approvalresponse)" });
+      expect(option).toHaveClass("flex-wrap");
+      expect(option.querySelector(".truncate")).toBeNull();
+      // Rows are measured, not forced to one line's height.
+      expect(option.style.height).toBe("");
     });
   });
 });
