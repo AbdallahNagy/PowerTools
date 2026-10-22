@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { legacyConnection } from "../../../../../../test/support/desktopBridge";
@@ -188,7 +188,8 @@ describe("Data Migration", () => {
       "Targets · 1 of 2 migrated",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /^Migrate to Migration UAT/ }));
+    expect(within(banner.closest("[data-tone]") as HTMLElement).queryByRole("button")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "▶ Migrate to Migration UAT" }));
 
     await screen.findByText("account migrated to Migration UAT");
     expect(screen.getByText(/1 failed\. Open Migration UAT above to see why\./)).toBeVisible();

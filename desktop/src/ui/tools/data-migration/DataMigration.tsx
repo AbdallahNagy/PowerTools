@@ -243,8 +243,7 @@ function DataMigrationPage() {
           job={bannerJob}
           next={next ? { id: next, name: nameOf(next) } : null}
           targetCount={targets.length}
-          canMigrateNext={!!next && canMigrateTo(next)}
-          onMigrate={migrateTo}
+          canRetry={canMigrateTo(lastJob.targetId)}
           onRetry={() => migrateTo(lastJob.targetId)}
           onStartOver={() => setRun(null)}
         />

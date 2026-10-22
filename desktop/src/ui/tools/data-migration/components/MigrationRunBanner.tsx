@@ -1,4 +1,4 @@
-import { ArrowRight, RotateCcw } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import type { MigrationJobStatus } from "../api/useMigrationJob";
 import { isJobActive } from "../model/targetRun";
 import { Alert, Button, ProgressBar } from "../../../shared/ui";
@@ -9,21 +9,19 @@ interface MigrationRunBannerProps {
   job: MigrationJobStatus;
   next: { id: string; name: string } | null;
   targetCount: number;
-  canMigrateNext: boolean;
-  onMigrate: (id: string) => void;
+  canRetry: boolean;
   onRetry: () => void;
   onStartOver: () => void;
 }
 
-/** Says where the last run went and offers the next target in one click. */
+/** Says where the last run went and which target is next. */
 export function MigrationRunBanner({
   entityLogicalName,
   targetName,
   job,
   next,
   targetCount,
-  canMigrateNext,
-  onMigrate,
+  canRetry,
   onRetry,
   onStartOver,
 }: MigrationRunBannerProps) {
@@ -48,7 +46,7 @@ export function MigrationRunBanner({
         tone="danger"
         title={`Migration to ${targetName} failed`}
         action={
-          <Button variant="secondary" size="sm" disabled={!canMigrateNext} onClick={onRetry}>
+          <Button variant="secondary" size="sm" disabled={!canRetry} onClick={onRetry}>
             <RotateCcw size={14} aria-hidden="true" />
             Retry {targetName}
           </Button>
@@ -68,12 +66,7 @@ export function MigrationRunBanner({
       tone={job.failed > 0 ? "warn" : "ok"}
       title={`${entityLogicalName} migrated to ${targetName}`}
       action={
-        next ? (
-          <Button size="sm" disabled={!canMigrateNext} onClick={() => onMigrate(next.id)}>
-            Migrate to {next.name}
-            <ArrowRight size={14} aria-hidden="true" />
-          </Button>
-        ) : (
+        next ? null : (
           <Button variant="secondary" size="sm" onClick={onStartOver}>
             <RotateCcw size={14} aria-hidden="true" />
             Start over
