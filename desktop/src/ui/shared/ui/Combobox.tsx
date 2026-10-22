@@ -197,7 +197,7 @@ export function Combobox({
           // Keep focus in the input while the pointer works the list.
           onMouseDown={(event) => event.preventDefault()}
           className={cn(
-            "z-[100] w-[max(var(--radix-popover-trigger-width),22rem)] max-w-[calc(100vw-16px)]",
+            "z-[100] w-[max(var(--radix-popover-trigger-width),26rem)] max-w-[calc(100vw-16px)]",
             "rounded-sm border border-line bg-raised text-sm text-fg shadow-lg",
           )}
         >
@@ -260,7 +260,7 @@ function ComboboxList({
     count: virtualize ? rows.length : 0,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => ROW_HEIGHT,
-    // Long names wrap, so rows are measured rather than a fixed height.
+    // A display name wider than the list wraps, so rows are measured.
     indexAttribute: "data-row",
     overscan: 10,
   });
@@ -312,15 +312,17 @@ function ComboboxList({
         }}
         onClick={() => onChoose(index)}
         className={cn(
-          "flex cursor-pointer select-none flex-wrap items-baseline gap-x-2 rounded-sm px-2 py-1",
+          "flex cursor-pointer select-none items-baseline gap-2 rounded-sm px-2 py-1",
           index === highlighted && "bg-hover",
           isSelected && "text-accent-text font-medium",
           option.disabled && "cursor-not-allowed opacity-50",
         )}
       >
-        <span className="min-w-0 break-words">{option.label}</span>
+        <span className="max-w-full shrink-0 break-words">{option.label}</span>
         {option.description ? (
-          <span className="ml-auto min-w-0 break-all font-mono text-xs text-fg-muted">{option.description}</span>
+          <span title={option.description} className="min-w-0 flex-1 truncate text-right font-mono text-xs text-fg-muted">
+            {option.description}
+          </span>
         ) : null}
       </div>
     );

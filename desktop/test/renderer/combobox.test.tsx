@@ -135,7 +135,7 @@ describe("Combobox", () => {
       expect(rendered[0]).toHaveAttribute("aria-posinset", "1");
     });
 
-    it("wraps long names instead of cutting them", () => {
+    it("keeps the display name whole and trims only the logical name", () => {
       vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(400);
       vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(300);
       const many: ComboboxOption[] = [
@@ -147,10 +147,10 @@ describe("Combobox", () => {
       fireEvent.click(screen.getByRole("combobox", { name: "Table" }));
 
       const option = screen.getByRole("option", { name: "Approval Response (msdyn_flow_approvalresponse)" });
-      expect(option).toHaveClass("flex-wrap");
-      expect(option.querySelector(".truncate")).toBeNull();
-      // Rows are measured, not forced to one line's height.
-      expect(option.style.height).toBe("");
+      expect(screen.getByText("Approval Response")).toHaveClass("shrink-0");
+      expect(screen.getByText("Approval Response")).not.toHaveClass("truncate");
+      expect(screen.getByText("msdyn_flow_approvalresponse")).toHaveClass("truncate");
+      expect(option).not.toHaveClass("flex-wrap");
     });
   });
 });
