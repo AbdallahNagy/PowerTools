@@ -8,7 +8,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **Data Migration: several targets.** Add more than one target environment, such as QC, UAT, and production. After each migration, Data Migration shows where the data went, and the main button moves on to the next target with the same table, columns, filter, and options. Each target shows whether it is migrated, has errors, or is still to do, and you can migrate any target again.
+
+### Changed
+
+- Table, column, message, and user pickers filter as you type. Type any words from the display name or logical name, in any order, to narrow the list. This applies to the table, field, and choice value pickers in **FetchXML Builder**, the message, entity, and impersonating user pickers when registering a plugin step, and the table picker in **Solution Layers Explorer**.
+
+## [1.1.0] - 2026-10-20
+
+### Added
+
 - **Solution Layers Explorer.** See every solution layer of a Dataverse component, compare any two layers side by side, and remove the unmanaged Active layer.
+- FetchXML Builder: choose the columns to return, add or remove a column from the results grid, and start from any system or personal view of the table: its columns and its filters load into the builder, where you can edit them.
 - Close actions in the tab menu.
 - Right-click a tool in the sidebar to open it with the active connection or pick another connection for the new tab.
 - Crash reporting. Errors and crashes are reported so they can be fixed. Reports leave out request data, headers, and local variables. Turn it off from **Help > Send Crash Reports**.
@@ -89,7 +100,8 @@ The first public beta, built for Windows.
 - **Data Migration.** Move data between Dataverse environments with a guided workflow.
 - **FetchXML Builder.** Build, run, and refine FetchXML queries.
 
-[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.5...v1.0.0
 [0.1.0-beta.5]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.4...v0.1.0-beta.5

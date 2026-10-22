@@ -85,6 +85,23 @@ public static class MetadataEndpoints
             }
         });
 
+        group.MapGet("/entities/{logicalName}/views", async (
+            string logicalName,
+            HttpContext ctx,
+            DataverseClientFactory factory) =>
+        {
+            var svc = ctx.CreateDataverseClient(factory);
+
+            try
+            {
+                return Results.Ok(await EntityViews.RetrieveAsync(svc, logicalName));
+            }
+            catch (Exception ex)
+            {
+                return Results.BadRequest(DataverseErrorFormatter.Format(ex));
+            }
+        });
+
         group.MapGet("/entities/{logicalName}/relationships", async (
             string logicalName,
             HttpContext ctx,

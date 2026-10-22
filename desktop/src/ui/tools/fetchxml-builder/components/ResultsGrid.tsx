@@ -1,11 +1,13 @@
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FetchResult, FieldMetadata } from "../model/types";
 import { Button, Spinner } from "../../../shared/ui";
 import { buildDynamicsRecordUrl, useOpenInBrowser } from "../../../shared/connections";
 import { formatFetchResultSummary } from "../model/resultSummary";
+import { orderResultColumns } from "../model/columns";
 
 const PAGE_SIZE = 50;
+const EMPTY_COLUMNS: string[] = [];
 
 interface ResultsGridProps {
   result: FetchResult | null;
@@ -16,6 +18,10 @@ interface ResultsGridProps {
   fieldMeta?: FieldMetadata[];
   entityLogicalName?: string | null;
   envUrl?: string | null;
+  /** Columns the last run asked for, shown first and in this order. */
+  requestedColumns?: string[];
+  onAddColumn?: () => void;
+  onRemoveColumn?: (column: string) => void;
 }
 
 export function ResultsGrid({
@@ -27,6 +33,9 @@ export function ResultsGrid({
   fieldMeta,
   entityLogicalName,
   envUrl,
+  requestedColumns = EMPTY_COLUMNS,
+  onAddColumn,
+  onRemoveColumn,
 }: ResultsGridProps) {
   const [sortCol, setSortCol] = useState<string | null>(null);
   const [sortDesc, setSortDesc] = useState(false);
@@ -62,7 +71,8 @@ export function ResultsGrid({
     );
   }
 
-  const columns = result.columns;
+  const columns = orderResultColumns(requestedColumns, result.columns);
+  const requestedSet = new Set(requestedColumns);
 
   let rows = result.records;
   if (sortCol) {
@@ -110,7 +120,7 @@ export function ResultsGrid({
                 <th
                   key={col}
                   onClick={() => handleSort(col)}
-                  className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line cursor-pointer hover:text-fg whitespace-nowrap select-none"
+                  className="group text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line cursor-pointer hover:text-fg whitespace-nowrap select-none"
                 >
                   {displayNames[col] ?? col}
                   {sortCol === col && (
@@ -118,14 +128,41 @@ export function ResultsGrid({
                       {sortDesc ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
                     </span>
                   )}
+                  {onRemoveColumn && requestedSet.has(col) && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onRemoveColumn(col);
+                      }}
+                      aria-label={`Remove column ${displayNames[col] ?? col}`}
+                      title="Remove column"
+                      className="ml-1 inline-flex align-middle rounded-sm p-0.5 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:bg-hover hover:text-fg-strong"
+                    >
+                      <X size={12} aria-hidden="true" />
+                    </button>
+                  )}
                 </th>
               ))}
+              {onAddColumn && (
+                <th className="px-2 py-1 border-b border-line w-8 text-right">
+                  <button
+                    type="button"
+                    onClick={onAddColumn}
+                    aria-label="Add column"
+                    title="Add column"
+                    className="inline-flex rounded-sm p-1 text-fg-muted hover:text-fg-strong hover:bg-hover"
+                  >
+                    <Plus size={14} aria-hidden="true" />
+                  </button>
+                </th>
+              )}
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={columns.length || 1} className="px-3 py-6 text-center text-fg-muted text-xs">
+                <td colSpan={columns.length + (onAddColumn ? 1 : 0) || 1} className="px-3 py-6 text-center text-fg-muted text-xs">
                   No records found.
                 </td>
               </tr>
@@ -146,6 +183,7 @@ export function ResultsGrid({
                       {formatCell(row[col], result.columnTypes[col])}
                     </td>
                   ))}
+                  {onAddColumn && <td />}
                 </tr>
                 );
               })

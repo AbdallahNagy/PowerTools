@@ -1,5 +1,5 @@
 import type { FieldType, Operator } from "../../model/types";
-import { getOperatorsForType } from "../../model/operators";
+import { ALL_OPERATORS, getOperatorsForType } from "../../model/operators";
 import { Select } from "../../../../shared/ui";
 
 interface OperatorPickerProps {
@@ -10,6 +10,10 @@ interface OperatorPickerProps {
 
 export function OperatorPicker({ value, fieldType, onChange }: OperatorPickerProps) {
   const options = fieldType ? getOperatorsForType(fieldType) : [];
+  // A view can use an operator this field type does not offer; keep it visible.
+  const current = value && !options.some((o) => o.value === value)
+    ? ALL_OPERATORS.find((o) => o.value === value)
+    : undefined;
 
   return (
     <Select
@@ -21,6 +25,7 @@ export function OperatorPicker({ value, fieldType, onChange }: OperatorPickerPro
       <option value="" disabled>
         Operator…
       </option>
+      {current && <option value={current.value}>{current.label}</option>}
       {options.map((o) => (
         <option key={o.value} value={o.value}>
           {o.label}

@@ -9,6 +9,7 @@ describe("MigrationStatusItem", () => {
       <div style={{ userSelect: "none" }}>
         <MigrationStatusItem
           entityLogicalName="account"
+          targetName="Contoso · QC"
           job={{
             status: "completed",
             processed: 1,
@@ -26,7 +27,7 @@ describe("MigrationStatusItem", () => {
       </div>,
     );
 
-    const statusButton = screen.getByRole("button", { name: /account.*1 failed/i });
+    const statusButton = screen.getByRole("button", { name: /account → Contoso · QC.*1 failed/i });
     fireEvent.click(statusButton);
 
     expect(statusButton.nextElementSibling).toHaveStyle({ userSelect: "text" });

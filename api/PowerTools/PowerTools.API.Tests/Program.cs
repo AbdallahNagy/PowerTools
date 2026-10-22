@@ -125,6 +125,19 @@ var defaultViewColumns = DefaultViewColumns.ParseLayoutXml(
 AssertSetContains("name", defaultViewColumns);
 AssertSetContains("telephone1", defaultViewColumns);
 
+var viewRootColumns = DefaultViewColumns.ParseRootColumns(
+    "<grid><row name=\"result\" id=\"accountid\">" +
+    "<cell name=\"telephone1\" width=\"100\" />" +
+    "<cell name=\"name\" width=\"300\" />" +
+    "<cell name=\"a_contact.fullname\" width=\"150\" />" +
+    "<cell name=\"Name\" width=\"300\" />" +
+    "</row></grid>");
+
+AssertEqualInt(2, viewRootColumns.Count);
+AssertEquals("telephone1", viewRootColumns[0]);
+AssertEquals("name", viewRootColumns[1]);
+AssertEqualInt(0, DefaultViewColumns.ParseRootColumns("<grid><row>").Count);
+
 var onPremiseServiceUrl = DataverseClientFactory.NormalizeOnPremisesServiceUrl("https://crm.contoso.com/org");
 AssertEquals("https://crm.contoso.com/org/XRMServices/2011/Organization.svc", onPremiseServiceUrl);
 
