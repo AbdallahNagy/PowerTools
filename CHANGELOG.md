@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
+- **Ribbon Editor.** Edit the classic command bar of the tables in an unmanaged solution: add or hide buttons, change commands and their enable and display rules, check for problems, then publish only the changed tables.
 - **Solution Layers Explorer.** See every solution layer of a Dataverse component, compare any two layers side by side, and remove the unmanaged Active layer.
 - FetchXML Builder: choose the columns to return, add or remove a column from the results grid, and start from any system or personal view of the table: its columns and its filters load into the builder, where you can edit them.
 - Close actions in the tab menu.

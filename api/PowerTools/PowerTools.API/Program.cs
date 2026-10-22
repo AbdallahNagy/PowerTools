@@ -10,6 +10,7 @@ using PowerTools.API.Tools.Metadata;
 using PowerTools.API.Tools.PluginRegistration;
 using PowerTools.API.Tools.PluginRegistration.Gateway;
 using PowerTools.API.Tools.PolymorphicLookup;
+using PowerTools.API.Tools.RibbonWorkbench;
 using PowerTools.API.Tools.SolutionComponentsMover;
 using PowerTools.API.Tools.SolutionLayers;
 using PowerTools.API.Tools.Translator;
@@ -52,6 +53,9 @@ builder.Services.AddHostedService<BulkWorkflowJobRunner>();
 builder.Services.AddSingleton<ITranslatorJobStore, InMemoryTranslatorJobStore>();
 builder.Services.AddSingleton<ITranslatorDelay, TranslatorDelay>();
 builder.Services.AddHostedService<TranslatorJobRunner>();
+builder.Services.AddSingleton<IRibbonPublishJobStore, InMemoryRibbonPublishJobStore>();
+builder.Services.AddSingleton<IRibbonDelay, RibbonDelay>();
+builder.Services.AddHostedService<RibbonPublishJobRunner>();
 builder.Services.AddScoped<IPluginRegistrationGateway, DataversePluginRegistrationGateway>();
 builder.Services.AddScoped<CapabilitiesService>();
 builder.Services.AddScoped<CatalogService>();
@@ -113,6 +117,7 @@ app.MapSolutionComponentsMoverEndpoints();
 app.MapBulkWorkflowExecutionEndpoints();
 app.MapTranslatorEndpoints();
 app.MapSolutionLayersEndpoints();
+app.MapRibbonWorkbenchEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would

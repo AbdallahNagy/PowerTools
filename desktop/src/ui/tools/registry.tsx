@@ -5,6 +5,7 @@ import { fetchXmlBuilderTool } from "./fetchxml-builder/tool";
 import { fetchXmlTesterTool } from "./fetchxml-tester/tool";
 import { pluginRegistrationTool } from "./plugin-registration/tool";
 import { polymorphicLookupTool } from "./polymorphic-lookup-creator/tool";
+import { ribbonWorkbenchTool } from "./ribbon-workbench/tool";
 import { solutionComponentsMoverTool } from "./solution-components-mover/tool";
 import { solutionLayersExplorerTool } from "./solution-layers-explorer/tool";
 import { translatorTool } from "./translator/tool";
@@ -21,6 +22,7 @@ export const BUILT_IN_TOOLS = [
   fetchXmlTesterTool,
   pluginRegistrationTool,
   polymorphicLookupTool,
+  ribbonWorkbenchTool,
   solutionComponentsMoverTool,
   solutionLayersExplorerTool,
   translatorTool,

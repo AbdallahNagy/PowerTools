@@ -53,6 +53,12 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
       "Create, update, and delete polymorphic lookups in the selected environment.",
   },
   {
+    id: "ribbon-workbench",
+    title: "Ribbon Editor",
+    description:
+      "Edit the classic command bar of the tables in an unmanaged solution: add or hide buttons, change commands and their enable and display rules, then publish.",
+  },
+  {
     id: "solution-components-mover",
     title: "Solution Components Mover",
     description:

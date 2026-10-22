@@ -22,6 +22,7 @@ Power Tools is a Windows desktop app for Dataverse and Dynamics 365 developers. 
 | [FetchXML Tester](desktop/src/ui/tools/fetchxml-tester/) | Paste a FetchXML query, run it as written, and keep a local library of the queries you use. |
 | [Plugin Registration](desktop/src/ui/tools/plugin-registration/) | Browse and manage plug-in assemblies, types, steps, and images. |
 | [Polymorphic Lookup Creator](desktop/src/ui/tools/polymorphic-lookup-creator/) | Create, update, and delete polymorphic lookups in the selected environment. |
+| [Ribbon Editor](desktop/src/ui/tools/ribbon-workbench/) | Edit the classic command bar of the tables in an unmanaged solution: add or hide buttons, change commands and their enable and display rules, then publish. |
 | [Solution Components Mover](desktop/src/ui/tools/solution-components-mover/) | Copy solution components from selected solutions into unmanaged solutions in the same environment. |
 | [Solution Layers Explorer](desktop/src/ui/tools/solution-layers-explorer/) | See every solution layer of a Dataverse component, compare any two layers side by side, and remove the unmanaged Active layer. |
 | [Translator](desktop/src/ui/tools/translator/) | Edit the display names and descriptions of tables, columns, choices, views, and charts side by side in every language installed in an environment. |
