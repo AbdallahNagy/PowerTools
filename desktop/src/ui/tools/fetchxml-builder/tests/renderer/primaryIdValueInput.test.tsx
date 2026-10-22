@@ -66,6 +66,7 @@ function renderCondition(
     duplicate: vi.fn(),
     move: vi.fn(),
     reset: vi.fn(),
+    load: vi.fn(),
   };
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },

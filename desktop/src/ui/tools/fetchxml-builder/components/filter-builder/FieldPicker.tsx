@@ -7,7 +7,7 @@ import type {
   RelationshipMetadata,
   RelationshipPathSegment,
 } from "../../model/types";
-import { Select } from "../../../../shared/ui";
+import { Combobox, type ComboboxOption } from "../../../../shared/ui";
 
 interface FieldPickerProps {
   value: FieldReference | null | undefined;
@@ -41,6 +41,25 @@ export function FieldPicker({
       ),
     [fields, relationships, tables],
   );
+  const options = useMemo<ComboboxOption[]>(() => {
+    const fieldOptions = sortedFields.map((field) => ({
+      value: `field:${field.logicalName}`,
+      label: field.displayName || field.logicalName,
+      description: field.displayName ? field.logicalName : undefined,
+      group: "Fields",
+    }));
+    const relationshipOptions = allowRelationships
+      ? sortedRelationships.map((relationship, index) => ({
+          value: `relationship:${index}`,
+          label: relationshipLabel(relationship, tables, fields),
+          description: relationship.targetEntity,
+          group: "Related tables",
+        }))
+      : [];
+    const legacy =
+      value?.kind === "related" ? [{ value: "legacy-related", label: legacyFieldLabel(value) }] : [];
+    return [...legacy, ...fieldOptions, ...relationshipOptions];
+  }, [allowRelationships, fields, sortedFields, sortedRelationships, tables, value]);
   const selectedValue =
     value?.kind === "root"
       ? `field:${value.field}`
@@ -49,10 +68,12 @@ export function FieldPicker({
         : "";
 
   return (
-    <Select
+    <Combobox
       value={selectedValue}
-      onChange={(event) => {
-        const next = event.target.value;
+      options={options}
+      placeholder="Select field..."
+      emptyMessage="No fields match."
+      onChange={(next) => {
         if (next.startsWith("field:")) {
           onChange({ kind: "root", field: next.slice("field:".length) });
           return;
@@ -64,34 +85,8 @@ export function FieldPicker({
           onSelectRelationship(createRelationshipPathSegment(relationship, path, label));
         }
       }}
-      className="w-56 shrink-0 [&>select]:py-1"
-    >
-      <option value="" disabled>
-        Select field...
-      </option>
-      {value?.kind === "related" && (
-        <option value="legacy-related">{legacyFieldLabel(value)}</option>
-      )}
-      <optgroup label="Fields">
-        {sortedFields.map((field) => (
-          <option key={field.logicalName} value={`field:${field.logicalName}`}>
-            {field.displayName} ({field.logicalName})
-          </option>
-        ))}
-      </optgroup>
-      {allowRelationships && sortedRelationships.length > 0 && (
-        <optgroup label="Related tables">
-          {sortedRelationships.map((relationship, index) => (
-            <option
-              key={`${relationship.schemaName}:${relationship.targetEntity}:${relationship.sourceAttribute}`}
-              value={`relationship:${index}`}
-            >
-              {relationshipLabel(relationship, tables, fields)}
-            </option>
-          ))}
-        </optgroup>
-      )}
-    </Select>
+      className="w-56 shrink-0 [&>input]:py-1"
+    />
   );
 }
 
