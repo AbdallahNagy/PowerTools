@@ -26,10 +26,23 @@ public static class DefaultViewColumns
         return ParseLayoutXml(layoutXml);
     }
 
-    public static IReadOnlySet<string> ParseLayoutXml(string? layoutXml)
+    public static IReadOnlySet<string> ParseLayoutXml(string? layoutXml) =>
+        ParseLayoutCells(layoutXml).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Columns of the view's own table, in grid order. Cells from linked tables
+    /// ("alias.attribute") are left out.
+    /// </summary>
+    public static IReadOnlyList<string> ParseRootColumns(string? layoutXml) =>
+        ParseLayoutCells(layoutXml)
+            .Where(name => !name.Contains('.'))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+    private static IReadOnlyList<string> ParseLayoutCells(string? layoutXml)
     {
         if (string.IsNullOrWhiteSpace(layoutXml))
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return [];
 
         try
         {
@@ -46,11 +59,11 @@ public static class DefaultViewColumns
                 .Select(cell => cell.Attribute("name")?.Value)
                 .Where(name => !string.IsNullOrWhiteSpace(name))
                 .Select(name => name!)
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                .ToList();
         }
         catch (XmlException)
         {
-            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            return [];
         }
     }
 }

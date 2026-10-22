@@ -1,7 +1,7 @@
 import { Search, X } from "lucide-react";
 import { useState } from "react";
 import type { FieldMetadata, FilterCondition, Operator } from "../../model/types";
-import { NO_VALUE_OPERATORS, MULTI_VALUE_OPERATORS } from "../../model/operators";
+import { COUNT_VALUE_OPERATORS, NO_VALUE_OPERATORS, MULTI_VALUE_OPERATORS } from "../../model/operators";
 import { Input, Select } from "../../../../shared/ui";
 import { LookupPickerModal, type SelectedLookupRecord } from "./LookupPickerModal";
 
@@ -37,6 +37,20 @@ export function ValueInput({
 
   if (NO_VALUE_OPERATORS.includes(operator)) {
     return null;
+  }
+
+  if (COUNT_VALUE_OPERATORS.includes(operator)) {
+    return (
+      <Input
+        type="number"
+        min={1}
+        step={1}
+        value={typeof value === "string" ? value : ""}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="X"
+        className="w-24 shrink-0 py-1"
+      />
+    );
   }
 
   if (MULTI_VALUE_OPERATORS.includes(operator)) {
