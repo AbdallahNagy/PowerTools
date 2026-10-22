@@ -4,16 +4,21 @@ import { usePrimaryAction } from "../../shared/keyboard";
 import { Button, Combobox, Field, Spinner, ToastProvider, useToast, type ComboboxOption } from "../../shared/ui";
 import type { EntityInfo } from "../../shared/contracts/dataverse";
 import { useConnections, useTabConnection } from "../../shared/connections";
-import type { FetchResult } from "./model/types";
+import type { EntityView, FetchResult } from "./model/types";
 import { FilterTree } from "./components/filter-builder/FilterTree";
 import { ResultsGrid } from "./components/ResultsGrid";
 import { FetchXmlView } from "./components/FetchXmlView";
+import { ColumnsBar } from "./components/ColumnsBar";
+import { ColumnPickerModal } from "./components/ColumnPickerModal";
 import { FetchXmlBuilderProvider } from "./context/FetchXmlBuilderProvider";
 import { useFilterTree } from "./hooks/useFilterTree";
 import { useTables } from "./hooks/useTables";
 import { useTableMetadata } from "./hooks/useTableMetadata";
 import { useEntityRelationships } from "./hooks/useEntityRelationships";
 import { useRunFetch } from "./hooks/useRunFetch";
+import { useEntityViews } from "./hooks/useEntityViews";
+import { knownColumns } from "./model/columns";
+import { parseViewFilters } from "./model/viewFilters";
 import { buildFetchXml } from "./model/fetchxml";
 import { validateTree } from "./model/validation";
 
@@ -37,6 +42,11 @@ function FetchXmlBuilderPage() {
   const [lastFetchXml, setLastFetchXml] = useState("");
   const [validationErrors, setValidationErrors] = useState<ReturnType<typeof validateTree>>([]);
   const [rightView, setRightView] = useState<RightView>("results");
+  // null means the table's default view columns.
+  const [chosenColumns, setChosenColumns] = useState<string[] | null>(null);
+  const [selectedViewId, setSelectedViewId] = useState("");
+  const [runColumns, setRunColumns] = useState<string[]>([]);
+  const [columnPickerOpen, setColumnPickerOpen] = useState(false);
   const { showToast } = useToast();
   const { connections } = useConnections();
   const tree = useFilterTree();
@@ -49,6 +59,11 @@ function FetchXmlBuilderPage() {
     selectedEntity?.logicalName ?? null,
     connectionId || null,
   );
+  const {
+    data: views,
+    isLoading: viewsLoading,
+    error: viewsError,
+  } = useEntityViews(selectedEntity?.logicalName ?? null, connectionId || null);
   const { mutate: runFetch, data: result, isPending, reset: resetResult } = useRunFetch(connectionId || null);
 
   const sortedTables = useMemo(
@@ -69,6 +84,7 @@ function FetchXmlBuilderPage() {
     () => (fields ?? []).filter((field) => field.isInDefaultView).map((field) => field.logicalName),
     [fields],
   );
+  const columns = chosenColumns ?? defaultViewFields;
   const selectedConnection = useMemo(
     () => connections.find((connection) => connection.id === connectionId) ?? null,
     [connections, connectionId],
@@ -82,6 +98,9 @@ function FetchXmlBuilderPage() {
     setPagingCookies({});
     setValidationErrors([]);
     setLastFetchXml("");
+    setChosenColumns(null);
+    setSelectedViewId("");
+    setRunColumns([]);
   };
   const resetForConnection = useRef(handleSelectEntity);
   resetForConnection.current = handleSelectEntity;
@@ -98,8 +117,8 @@ function FetchXmlBuilderPage() {
     handleSelectEntity(entity);
   };
 
-  const handleRun = (targetPage = 1) => {
-    const errors = validateTree(tree.root);
+  const handleRun = (targetPage = 1, runWith = columns, filterRoot = tree.root) => {
+    const errors = validateTree(filterRoot);
     setValidationErrors(errors);
     if (errors.length > 0) {
       showToast("Fix validation errors before running.", "error");
@@ -107,8 +126,9 @@ function FetchXmlBuilderPage() {
     }
     if (!selectedEntity) return;
 
-    const fetchXml = buildFetchXml(selectedEntity.logicalName, tree.root, defaultViewFields);
+    const fetchXml = buildFetchXml(selectedEntity.logicalName, filterRoot, runWith);
     setLastFetchXml(fetchXml);
+    setRunColumns(runWith);
     setPage(targetPage);
 
     runFetch(
@@ -135,6 +155,33 @@ function FetchXmlBuilderPage() {
     handleRun(nextPage);
   };
 
+  // Changing columns reruns a query that already has results, so the grid shows them at once.
+  const applyColumns = (next: string[], filterRoot = tree.root) => {
+    setChosenColumns(next);
+    setPagingCookies({});
+    if (result && !isPending) handleRun(1, next, filterRoot);
+  };
+
+  // A view replaces both the columns and the filters; the filters stay editable.
+  const handleSelectView = (view: EntityView) => {
+    const { root, skipped } = parseViewFilters(view.fetchXml, {
+      fields: fields ?? [],
+      relationships: relationships ?? [],
+      tables: tables ?? [],
+    });
+    tree.load(root);
+    setValidationErrors([]);
+    setSelectedViewId(view.id);
+    applyColumns(knownColumns(view.columns, fields ?? []), root);
+    if (skipped.length > 0) {
+      showToast(`Some of the view's filters could not be loaded: ${skipped.join("; ")}.`, "info");
+    }
+  };
+
+  const handleRemoveColumn = (column: string) => {
+    applyColumns(columns.filter((name) => name !== column));
+  };
+
   const handleClearAll = () => {
     tree.reset();
     resetResult();
@@ -142,6 +189,9 @@ function FetchXmlBuilderPage() {
     setPagingCookies({});
     setValidationErrors([]);
     setLastFetchXml("");
+    setChosenColumns(null);
+    setSelectedViewId("");
+    setRunColumns([]);
   };
 
   const canRun = !!selectedEntity && !!connectionId && !fieldsLoading && !isPending;
@@ -195,6 +245,20 @@ function FetchXmlBuilderPage() {
               <p className="text-xs text-danger mt-1">{(tablesError as Error).message}</p>
             )}
           </Field>
+
+          {selectedEntity && (
+            <ColumnsBar
+              columns={columns}
+              fields={fields ?? []}
+              views={views ?? []}
+              viewsLoading={viewsLoading}
+              viewsError={viewsError ? (viewsError as Error).message : null}
+              selectedViewId={selectedViewId}
+              onSelectView={handleSelectView}
+              onRemoveColumn={handleRemoveColumn}
+              onEditColumns={() => setColumnPickerOpen(true)}
+            />
+          )}
 
           {/* Filters */}
           <div className="flex flex-col gap-2 flex-1 min-h-0">
@@ -251,6 +315,9 @@ function FetchXmlBuilderPage() {
                 fieldMeta={fields ?? []}
                 entityLogicalName={selectedEntity?.logicalName ?? null}
                 envUrl={selectedConnection?.envUrl ?? null}
+                requestedColumns={runColumns}
+                onAddColumn={() => setColumnPickerOpen(true)}
+                onRemoveColumn={handleRemoveColumn}
               />
             ) : (
               <FetchXmlView fetchXml={lastFetchXml} />
@@ -259,6 +326,16 @@ function FetchXmlBuilderPage() {
         </Panel>
       </Group>
       </div>
+      <ColumnPickerModal
+        open={columnPickerOpen}
+        fields={fields ?? []}
+        columns={columns}
+        onClose={() => setColumnPickerOpen(false)}
+        onApply={(next) => {
+          setColumnPickerOpen(false);
+          applyColumns(next);
+        }}
+      />
     </FetchXmlBuilderProvider>
   );
 }
