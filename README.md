@@ -67,6 +67,8 @@ flowchart LR
 | [`api/PowerTools/`](api/PowerTools/) | Local ASP.NET Core API the desktop app starts. |
 | [`website/`](website/) | Product website, deployed to Cloudflare Workers. |
 
+[docs/architecture.md](docs/architecture.md) shows how these parts fit together, with diagrams of the processes, request flows, security model, and release pipeline.
+
 ## Develop
 
 Install [Node.js 24](https://nodejs.org/) and the [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0). `npm run dev` starts the React app, Electron, and the local API. The API is launched with `dotnet run`, so `dotnet` has to be on `PATH`.
