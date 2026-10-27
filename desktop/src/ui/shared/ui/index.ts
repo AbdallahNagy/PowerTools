@@ -20,6 +20,8 @@ export { Tabs } from "./Tabs";
 export { ToastProvider } from "./Toast";
 export { Toolbar } from "./Toolbar";
 export { Tooltip } from "./Tooltip";
+export { ColumnResizeHandle } from "./ColumnResizeHandle";
+export { useColumnResize, type ColumnResize } from "./useColumnResize";
 export { useFieldControl } from "./useFieldControl";
 export { useToast } from "./useToast";
 export type { ToastType } from "./ToastContext";

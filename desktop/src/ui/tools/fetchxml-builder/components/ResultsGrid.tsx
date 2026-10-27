@@ -1,13 +1,14 @@
 import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { FetchResult, FieldMetadata } from "../model/types";
-import { Button, Spinner } from "../../../shared/ui";
+import { Button, ColumnResizeHandle, Spinner, useColumnResize } from "../../../shared/ui";
 import { buildDynamicsRecordUrl, useOpenInBrowser } from "../../../shared/connections";
 import { formatFetchResultSummary } from "../model/resultSummary";
 import { orderResultColumns } from "../model/columns";
 
 const PAGE_SIZE = 50;
 const EMPTY_COLUMNS: string[] = [];
+const ADD_COLUMN_KEY = "__add-column";
 
 interface ResultsGridProps {
   result: FetchResult | null;
@@ -47,6 +48,9 @@ export function ResultsGrid({
     return map;
   }, [fieldMeta]);
 
+  const columns = result ? orderResultColumns(requestedColumns, result.columns) : EMPTY_COLUMNS;
+  const resize = useColumnResize(onAddColumn ? [...columns, ADD_COLUMN_KEY] : columns);
+
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-fg-muted text-sm p-4">
@@ -71,7 +75,6 @@ export function ResultsGrid({
     );
   }
 
-  const columns = orderResultColumns(requestedColumns, result.columns);
   const requestedSet = new Set(requestedColumns);
 
   let rows = result.records;
@@ -113,14 +116,15 @@ export function ResultsGrid({
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto border border-line rounded-sm">
-        <table className="w-full text-sm text-fg border-collapse">
+        <table ref={resize.tableRef} className="w-full text-sm text-fg border-collapse" style={resize.tableStyle}>
           <thead className="bg-surface sticky top-0 z-10">
             <tr>
               {columns.map((col) => (
                 <th
                   key={col}
+                  {...resize.headerProps(col)}
                   onClick={() => handleSort(col)}
-                  className="group text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line cursor-pointer hover:text-fg whitespace-nowrap select-none"
+                  className="group relative text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line cursor-pointer hover:text-fg whitespace-nowrap select-none"
                 >
                   {displayNames[col] ?? col}
                   {sortCol === col && (
@@ -142,10 +146,11 @@ export function ResultsGrid({
                       <X size={12} aria-hidden="true" />
                     </button>
                   )}
+                  <ColumnResizeHandle resize={resize} columnKey={col} />
                 </th>
               ))}
               {onAddColumn && (
-                <th className="px-2 py-1 border-b border-line w-8 text-right">
+                <th {...resize.headerProps(ADD_COLUMN_KEY)} className="px-2 py-1 border-b border-line w-8 text-right">
                   <button
                     type="button"
                     onClick={onAddColumn}
@@ -179,7 +184,7 @@ export function ResultsGrid({
                   }`}
                 >
                   {columns.map((col) => (
-                    <td key={col} className="px-3 py-1.5 text-xs max-w-xs truncate" title={formatCell(row[col], result.columnTypes[col])}>
+                    <td key={col} className={`px-3 py-1.5 text-xs truncate ${resize.resized ? "" : "max-w-xs"}`} title={formatCell(row[col], result.columnTypes[col])}>
                       {formatCell(row[col], result.columnTypes[col])}
                     </td>
                   ))}

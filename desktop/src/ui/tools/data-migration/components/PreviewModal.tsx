@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Modal, Spinner } from "../../../shared/ui";
+import { ColumnResizeHandle, Modal, Spinner, useColumnResize } from "../../../shared/ui";
 import { usePreviewRecords } from "../api/usePreviewRecords";
 
 interface PreviewModalProps {
@@ -65,6 +65,7 @@ export function PreviewModal({
   const displayAttrs = attributes
     // .filter((a) => !a.endsWith("id") || a === attributes[0])
     // .slice(0, 8);
+  const resize = useColumnResize(displayAttrs);
 
   return (
     <Modal
@@ -89,15 +90,17 @@ export function PreviewModal({
       )}
 
       <div className="flex-1 min-h-48 overflow-auto border border-line rounded-sm">
-        <table className="w-full text-sm text-fg border-collapse">
+        <table ref={resize.tableRef} className="w-full text-sm text-fg border-collapse" style={resize.tableStyle}>
           <thead className="bg-surface sticky top-0">
             <tr>
               {displayAttrs.map((a) => (
                 <th
                   key={a}
-                  className="text-left px-3 py-2 text-xs font-medium text-fg-muted border-b border-line"
+                  {...resize.headerProps(a)}
+                  className="relative text-left px-3 py-2 text-xs font-medium text-fg-muted border-b border-line"
                 >
                   {a}
+                  <ColumnResizeHandle resize={resize} columnKey={a} />
                 </th>
               ))}
             </tr>
@@ -111,7 +114,7 @@ export function PreviewModal({
                 {displayAttrs.map((a) => (
                   <td
                     key={a}
-                    className="px-3 py-2 text-xs text-fg max-w-[200px] truncate"
+                    className={`px-3 py-2 text-xs text-fg truncate ${resize.resized ? "" : "max-w-[200px]"}`}
                   >
                     {String(row[a] ?? "")}
                   </td>
