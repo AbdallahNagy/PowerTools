@@ -19,8 +19,11 @@ export interface ColumnResize {
   setWidth: (key: string, width: number) => void;
   /** Starts a resize from the current rendered widths and returns them. */
   measure: () => Record<string, number>;
-  /** Goes back to automatic column widths. */
-  reset: () => void;
+  /**
+   * Puts one column back to the width the table gave it before the first
+   * resize. Once no column differs from that, the table sizes columns itself again.
+   */
+  resetColumn: (key: string) => void;
 }
 
 /**
@@ -32,6 +35,8 @@ export interface ColumnResize {
 export function useColumnResize(keys: string[]): ColumnResize {
   const tableRef = useRef<HTMLTableElement>(null);
   const [widths, setWidths] = useState<Record<string, number> | null>(null);
+  // Column widths the table chose itself, taken just before the first resize.
+  const autoWidths = useRef<Record<string, number>>({});
 
   const widthOf = useCallback(
     (key: string) => (widths == null ? undefined : (widths[key] ?? DEFAULT_COLUMN_WIDTH)),
@@ -43,8 +48,10 @@ export function useColumnResize(keys: string[]): ColumnResize {
     const cells = tableRef.current?.querySelectorAll<HTMLElement>("thead th[data-column-key]") ?? [];
     for (const cell of cells) {
       const key = cell.dataset.columnKey!;
-      measured[key] = cell.getBoundingClientRect().width;
+      // Keep widths the user already set; only fill in columns without one.
+      measured[key] ??= cell.getBoundingClientRect().width;
     }
+    if (widths == null) autoWidths.current = { ...measured };
     setWidths(measured);
     return measured;
   }, [widths]);
@@ -53,7 +60,16 @@ export function useColumnResize(keys: string[]): ColumnResize {
     setWidths((current) => ({ ...current, [key]: Math.max(MIN_COLUMN_WIDTH, Math.round(width)) }));
   }, []);
 
-  const reset = useCallback(() => setWidths(null), []);
+  const resetColumn = useCallback((key: string) => {
+    setWidths((current) => {
+      if (current == null) return null;
+      const next = { ...current, [key]: autoWidths.current[key] ?? DEFAULT_COLUMN_WIDTH };
+      const changed = Object.keys(next).some(
+        (k) => Math.abs(next[k]! - (autoWidths.current[k] ?? DEFAULT_COLUMN_WIDTH)) >= 1,
+      );
+      return changed ? next : null;
+    });
+  }, []);
 
   const tableStyle: CSSProperties | undefined =
     widths == null
@@ -76,6 +92,6 @@ export function useColumnResize(keys: string[]): ColumnResize {
     widthOf,
     setWidth,
     measure,
-    reset,
+    resetColumn,
   };
 }

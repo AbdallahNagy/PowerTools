@@ -26,13 +26,21 @@ function renderTable(onSort = vi.fn()) {
   );
   // jsdom has no layout, so give each header cell a rendered width.
   for (const cell of document.querySelectorAll<HTMLElement>("th[data-column-key]")) {
-    vi.spyOn(cell, "getBoundingClientRect").mockReturnValue({ width: 200 } as DOMRect);
+    vi.spyOn(cell, "getBoundingClientRect").mockImplementation(
+      () => ({ width: parseFloat(cell.style.width) || 200 }) as DOMRect,
+    );
   }
   return onSort;
 }
 
 function headerCell(name: string) {
   return screen.getByRole("columnheader", { name });
+}
+
+function drag(handle: HTMLElement, fromX: number, toX: number) {
+  fireEvent.pointerDown(handle, { button: 0, clientX: fromX, pointerId: 1 });
+  fireEvent.pointerMove(handle, { clientX: toX, pointerId: 1 });
+  fireEvent.pointerUp(handle, { clientX: toX, pointerId: 1 });
 }
 
 function resizeHandle(key: string) {
@@ -73,16 +81,25 @@ describe("DataTable column resizing", () => {
     expect(headerCell("Type").style.width).toBe(`${MIN_COLUMN_WIDTH}px`);
   });
 
-  it("resets to automatic widths on double click", () => {
+  it("resets only the double-clicked column", () => {
     renderTable();
-    const handle = resizeHandle("type");
-
-    fireEvent.pointerDown(handle, { button: 0, clientX: 300, pointerId: 1 });
-    fireEvent.pointerMove(handle, { clientX: 350, pointerId: 1 });
-    fireEvent.pointerUp(handle, { clientX: 350, pointerId: 1 });
+    drag(resizeHandle("name"), 100, 150);
+    drag(resizeHandle("type"), 300, 350);
+    expect(headerCell("Name").style.width).toBe("250px");
     expect(headerCell("Type").style.width).toBe("250px");
 
-    fireEvent.doubleClick(handle);
+    fireEvent.doubleClick(resizeHandle("type"));
+    expect(headerCell("Type").style.width).toBe("200px");
+    expect(headerCell("Name").style.width).toBe("250px");
+    expect(screen.getByRole("table").style.tableLayout).toBe("fixed");
+  });
+
+  it("goes back to automatic layout once every column is reset", () => {
+    renderTable();
+    drag(resizeHandle("name"), 100, 150);
+
+    fireEvent.doubleClick(resizeHandle("name"));
+    expect(headerCell("Name").style.width).toBe("");
     expect(headerCell("Type").style.width).toBe("");
     expect(screen.getByRole("table").style.tableLayout).toBe("");
   });
