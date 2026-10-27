@@ -2,6 +2,8 @@ import { useRef, type ReactNode } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { ArrowDown, ArrowUp } from "lucide-react";
 import { cn } from "./cn";
+import { ColumnResizeHandle } from "./ColumnResizeHandle";
+import { useColumnResize } from "./useColumnResize";
 
 /** Above this many rows, only the rows in view are rendered. */
 export const VIRTUALIZE_AFTER = 100;
@@ -27,6 +29,8 @@ interface DataTableProps<T> {
   sortDirection?: "asc" | "desc";
   onSort?: (key: string) => void;
   className?: string;
+  /** Lets the user drag header edges to resize columns. On by default. */
+  resizable?: boolean;
 }
 
 export function DataTable<T>({
@@ -41,8 +45,10 @@ export function DataTable<T>({
   sortDirection = "asc",
   onSort,
   className,
+  resizable = true,
 }: DataTableProps<T>) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const resize = useColumnResize(columns.map((col) => col.key));
   const virtualize = rows.length > VIRTUALIZE_AFTER;
   const virtualizer = useVirtualizer({
     count: virtualize ? rows.length : 0,
@@ -67,7 +73,9 @@ export function DataTable<T>({
       className={cn("w-full max-h-full overflow-auto rounded-sm border border-line", className)}
     >
       <table
+        ref={resize.tableRef}
         className="w-full text-sm text-fg border-collapse"
+        style={resize.tableStyle}
         aria-rowcount={virtualize ? rows.length + 1 : undefined}
       >
         <thead className="bg-surface sticky top-0 z-10">
@@ -75,15 +83,18 @@ export function DataTable<T>({
             {columns.map((col) => {
               const sortable = col.sortable === true && onSort != null;
               const sorted = sortable && sortKey === col.key;
+              const header = resize.headerProps(col.key);
+              const width = header.style?.width ?? col.width;
               const ariaSort = sorted
                 ? (sortDirection === "asc" ? "ascending" : "descending")
                 : (sortable ? "none" : undefined);
               return (
                 <th
                   key={col.key}
+                  data-column-key={header["data-column-key"]}
                   aria-sort={ariaSort}
-                  className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line"
-                  style={col.width ? { width: col.width } : undefined}
+                  className="relative text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line"
+                  style={width != null ? { width } : undefined}
                 >
                   {sortable ? (
                     <button
@@ -101,6 +112,9 @@ export function DataTable<T>({
                   ) : (
                     col.header
                   )}
+                  {resizable ? (
+                    <ColumnResizeHandle resize={resize} columnKey={col.key} />
+                  ) : null}
                 </th>
               );
             })}
@@ -136,7 +150,10 @@ export function DataTable<T>({
                     } ${onRowClick || onRowDoubleClick ? "cursor-pointer hover:bg-hover" : ""}`}
                   >
                     {columns.map((col) => (
-                      <td key={col.key} className="px-3 py-2">
+                      <td
+                        key={col.key}
+                        className={cn("px-3 py-2", resize.resized && "overflow-hidden text-ellipsis")}
+                      >
                         {col.render
                           ? col.render(row)
                           : String((row as Record<string, unknown>)[col.key] ?? "")}
