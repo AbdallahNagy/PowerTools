@@ -7,7 +7,7 @@ import { http, HttpResponse } from "msw";
 import { useEntities } from "../../api/useEntities";
 import { useEntityAttributes } from "../../api/useEntityAttributes";
 import { useMigrationJob, useStartMigration } from "../../api/useMigrationJob";
-import { usePreviewRecords } from "../../api/usePreviewRecords";
+import { usePreviewRecords, useRecordCount } from "../../api/usePreviewRecords";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import {
   createFakeDesktopBridge,
@@ -31,10 +31,9 @@ describe("Data Migration API", () => {
         requestBody = await request.json();
         environmentHeader = request.headers.get("X-Environment-Url");
         return HttpResponse.json({
-          records: [{ accountid: "account-1", name: "Contoso" }],
+          records: [{ id: "account-1", name: "Contoso" }],
           pagingCookie: null,
           moreRecords: false,
-          totalEstimate: 1,
         });
       }),
     );
@@ -60,7 +59,6 @@ describe("Data Migration API", () => {
         usePreviewRecords({
           connectionId: "Preview Source",
           entityLogicalName: "account",
-          attributes: ["accountid", "name"],
           pageSize: 25,
           page: 1,
         }),
@@ -72,17 +70,103 @@ describe("Data Migration API", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(requestBody).toEqual({
       entityLogicalName: "account",
-      attributes: ["accountid", "name"],
       pageSize: 25,
       page: 1,
     });
     expect(environmentHeader).toBe("https://preview.example.test");
     expect(result.current.data).toEqual({
-      records: [{ accountid: "account-1", name: "Contoso" }],
+      records: [{ id: "account-1", name: "Contoso", existsInTarget: null }],
       pagingCookie: null,
       moreRecords: false,
-      totalEstimate: 1,
     });
+  });
+
+  it("checks previewed records against the target", async () => {
+    let existingBody: unknown;
+    let targetHeader: string | null = null;
+    httpServer.use(
+      http.post("http://localhost/api/migration/preview", () =>
+        HttpResponse.json({
+          records: [
+            { id: "AAAA-1", name: "Contoso" },
+            { id: "bbbb-2", name: "Fabrikam" },
+          ],
+          pagingCookie: null,
+          moreRecords: false,
+        }),
+      ),
+      http.post("http://localhost/api/migration/existing", async ({ request }) => {
+        existingBody = await request.json();
+        targetHeader = request.headers.get("X-Target-Environment-Url");
+        return HttpResponse.json({ existingIds: ["aaaa-1"] });
+      }),
+    );
+    installDesktopBridge(
+      createFakeDesktopBridge({
+        getConnection: async (name) => ({
+          id: name,
+          envUrl: `https://${name.toLowerCase()}.example.test`,
+          crmType: "online",
+          token: `${name}-token`,
+          expiresOn: "2099-01-01T00:00:00.000Z",
+        }),
+      }),
+    );
+    const queryClient = createTestQueryClient();
+
+    const { result } = renderHook(
+      () =>
+        usePreviewRecords({
+          connectionId: "Source",
+          targetConnectionId: "Target",
+          entityLogicalName: "account",
+        }),
+      { wrapper: createQueryWrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(existingBody).toEqual({ entityLogicalName: "account", ids: ["AAAA-1", "bbbb-2"] });
+    expect(targetHeader).toBe("https://target.example.test");
+    expect(result.current.data?.records).toEqual([
+      { id: "AAAA-1", name: "Contoso", existsInTarget: true },
+      { id: "bbbb-2", name: "Fabrikam", existsInTarget: false },
+    ]);
+  });
+
+  it("counts the records the migration will send", async () => {
+    let countBody: unknown;
+    httpServer.use(
+      http.post("http://localhost/api/migration/count", async ({ request }) => {
+        countBody = await request.json();
+        return HttpResponse.json({ count: 1234 });
+      }),
+    );
+    installDesktopBridge(
+      createFakeDesktopBridge({
+        getConnection: async (name) => ({
+          id: name,
+          envUrl: "https://count.example.test",
+          crmType: "online",
+          token: "count-token",
+          expiresOn: "2099-01-01T00:00:00.000Z",
+        }),
+      }),
+    );
+    const queryClient = createTestQueryClient();
+
+    const { result } = renderHook(
+      () =>
+        useRecordCount({
+          connectionId: "Count Source",
+          entityLogicalName: "account",
+          fetchXmlFilter: "<filter />",
+        }),
+      { wrapper: createQueryWrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(countBody).toEqual({ entityLogicalName: "account", fetchXmlFilter: "<filter />" });
+    expect(result.current.data).toEqual({ count: 1234 });
   });
 
   it("loads metadata with stable query keys and cache times", async () => {
@@ -191,6 +275,8 @@ describe("Data Migration API", () => {
           processed: 1,
           total: 2,
           succeeded: 1,
+          created: 1,
+          updated: 0,
           failed: 0,
           errors: [],
         }),
@@ -265,6 +351,8 @@ describe("Data Migration API", () => {
       processed: 2,
       total: 2,
       succeeded: 2,
+      created: 1,
+      updated: 1,
       failed: 0,
       errors: [],
     });

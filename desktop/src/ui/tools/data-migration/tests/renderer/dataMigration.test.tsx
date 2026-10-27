@@ -87,10 +87,21 @@ function mockMigrationApi() {
               processed: 1,
               total: 1,
               succeeded: 0,
+              created: 0,
+              updated: 0,
               failed: 1,
               errors: [{ recordId: "record-1", message: "Duplicate name." }],
             }
-          : { status: "completed", processed: 1, total: 1, succeeded: 1, failed: 0, errors: [] },
+          : {
+              status: "completed",
+              processed: 1,
+              total: 1,
+              succeeded: 1,
+              created: 1,
+              updated: 0,
+              failed: 0,
+              errors: [],
+            },
       ),
     ),
   );
@@ -158,7 +169,7 @@ describe("Data Migration", () => {
 
     await waitFor(() =>
       expect(screen.getByRole("status", { name: "tool statuses" })).toHaveTextContent(
-        "✓ account → Migration Target: 1 migrated",
+        "✓ account → Migration Target: 1 created · 0 updated",
       ),
     );
     expect(requests).toEqual([
@@ -221,5 +232,47 @@ describe("Data Migration", () => {
     expect(screen.queryByText("account migrated to Migration Target")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Migration Target, Next" })).toBeVisible();
     expect(screen.getByRole("button", { name: "▶ Migrate to Migration Target" })).toBeEnabled();
+  });
+
+  it("previews action, id, and name for each record with the total to migrate", async () => {
+    mockMigrationApi();
+    httpServer.use(
+      http.post("http://localhost/api/migration/preview", () =>
+        HttpResponse.json({
+          records: [
+            { id: "11111111-1111-1111-1111-111111111111", name: "Contoso" },
+            { id: "22222222-2222-2222-2222-222222222222", name: "Fabrikam" },
+          ],
+          pagingCookie: null,
+          moreRecords: false,
+        }),
+      ),
+      http.post("http://localhost/api/migration/existing", () =>
+        HttpResponse.json({ existingIds: ["22222222-2222-2222-2222-222222222222"] }),
+      ),
+      http.post("http://localhost/api/migration/count", () => HttpResponse.json({ count: 1234 })),
+    );
+    renderMigration();
+
+    await addTarget("Migration Target");
+    await selectAccountName();
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("1,234 records will be migrated")).toBeVisible();
+    expect(within(dialog).getAllByRole("columnheader").map((h) => h.textContent)).toEqual([
+      "Action",
+      "ID",
+      "Name",
+    ]);
+    expect(within(dialog).getByRole("combobox", { name: "Compare with" })).toHaveValue(
+      targetConnection.id,
+    );
+    const contoso = (await within(dialog).findByText("Contoso")).closest("tr") as HTMLElement;
+    await waitFor(() => expect(within(contoso).getByText("Create")).toBeVisible());
+    expect(contoso).toHaveTextContent("11111111-1111-1111-1111-111111111111");
+    const fabrikam = within(dialog).getByText("Fabrikam").closest("tr") as HTMLElement;
+    expect(within(fabrikam).getByText("Update")).toBeVisible();
+    expect(within(dialog).getByText("This page: 1 to create · 1 to update")).toBeVisible();
   });
 });

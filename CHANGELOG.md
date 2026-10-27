@@ -10,8 +10,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **Data Migration: several targets.** Add more than one target environment, such as QC, UAT, and production. After each migration, Data Migration shows where the data went, and the main button moves on to the next target with the same table, columns, filter, and options. Each target shows whether it is migrated, has errors, or is still to do, and you can migrate any target again.
 
+- **Data Migration: record count in Preview.** Preview shows how many records the migration will send.
+- **Data Migration: created and updated counts.** The status bar, the run banner, and each target's details show how many records were created and how many were updated.
+
 ### Changed
 
+- **Data Migration: simpler Preview.** Preview shows three columns: Action, ID, and Name. Action says whether each record will be created or updated in the target you compare with, and flags records that will fail because the Create or Update option does not allow them.
 - Table, column, message, and user pickers filter as you type. Type any words from the display name or logical name, in any order, to narrow the list. This applies to the table, field, and choice value pickers in **FetchXML Builder**, the message, entity, and impersonating user pickers when registering a plugin step, and the table picker in **Solution Layers Explorer**.
 
 ## [1.1.0] - 2026-10-20

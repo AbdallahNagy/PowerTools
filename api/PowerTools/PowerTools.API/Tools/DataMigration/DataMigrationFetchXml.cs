@@ -23,14 +23,55 @@ public static class DataMigrationFetchXml
             entity.Add(new XElement("attribute", new XAttribute("name", attribute)));
         }
 
+        AddFilter(entity, filterFragment, entityLogicalName);
+
+        fetch.Add(entity);
+        return fetch.ToString(SaveOptions.DisableFormatting);
+    }
+
+    public const string CountAlias = "recordcount";
+
+    /// <summary>Aggregate FetchXML that counts the records matching the filter.</summary>
+    public static string BuildCount(string entityLogicalName, string primaryIdAttribute, string? filterFragment)
+    {
+        var entity = new XElement("entity",
+            new XAttribute("name", entityLogicalName),
+            new XElement("attribute",
+                new XAttribute("name", primaryIdAttribute),
+                new XAttribute("alias", CountAlias),
+                new XAttribute("aggregate", "count")));
+        AddFilter(entity, filterFragment, entityLogicalName);
+
+        return new XElement("fetch", new XAttribute("aggregate", "true"), entity)
+            .ToString(SaveOptions.DisableFormatting);
+    }
+
+    /// <summary>FetchXML that returns which of the given ids exist.</summary>
+    public static string BuildIdLookup(string entityLogicalName, string primaryIdAttribute, IEnumerable<Guid> ids)
+    {
+        var condition = new XElement("condition",
+            new XAttribute("attribute", primaryIdAttribute),
+            new XAttribute("operator", "in"));
+        foreach (var id in ids)
+        {
+            condition.Add(new XElement("value", id.ToString()));
+        }
+
+        var entity = new XElement("entity",
+            new XAttribute("name", entityLogicalName),
+            new XElement("attribute", new XAttribute("name", primaryIdAttribute)),
+            new XElement("filter", condition));
+
+        return new XElement("fetch", entity).ToString(SaveOptions.DisableFormatting);
+    }
+
+    private static void AddFilter(XElement entity, string? filterFragment, string entityLogicalName)
+    {
         var normalizedFilter = NormalizeFilterFragment(filterFragment, entityLogicalName);
         if (normalizedFilter is not null)
         {
             entity.Add(XElement.Parse(normalizedFilter));
         }
-
-        fetch.Add(entity);
-        return fetch.ToString(SaveOptions.DisableFormatting);
     }
 
     public static string? NormalizeFilterFragment(string? filterFragment, string entityLogicalName)

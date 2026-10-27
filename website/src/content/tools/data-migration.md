@@ -19,7 +19,7 @@ Choose a source and one or more targets, then pick a table. Only columns that ca
 
 ## Control what moves
 
-Narrow the source records with a FetchXML filter, then open **Preview** to see what will be sent before anything is written to the target.
+Narrow the source records with a FetchXML filter, then open **Preview** to see how many records will be sent and whether each one will be created or updated in the target, before anything is written.
 
 Choose how records are written:
 

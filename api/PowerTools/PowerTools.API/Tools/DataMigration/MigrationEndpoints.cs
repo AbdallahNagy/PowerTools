@@ -46,6 +46,8 @@ public static class MigrationEndpoints
                 processed = job.Processed,
                 total = job.Total,
                 succeeded = job.Succeeded,
+                created = job.Created,
+                updated = job.Updated,
                 failed = job.Failed,
                 errors = job.Errors.Select(e => new { recordId = e.RecordId, message = e.Message })
             });

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { MigrationJobStatus } from "../api/useMigrationJob";
+import { createdUpdatedSummary } from "../model/recordAction";
 
 interface MigrationStatusItemProps {
   entityLogicalName: string;
@@ -27,11 +28,12 @@ export function MigrationStatusItem({
 
   const running = job.status === "queued" || job.status === "running";
   const subject = `${entityLogicalName} → ${targetName}`;
+  const counts = createdUpdatedSummary(job);
   const label = running
-    ? `⟳ ${subject} ${job.processed}/${job.total || "?"} ✓${job.succeeded} ✗${job.failed}`
+    ? `⟳ ${subject} ${job.processed}/${job.total || "?"} · ${counts} · ${job.failed} failed`
     : job.failed > 0
-      ? `⚠ ${subject}: ${job.succeeded} ok, ${job.failed} failed`
-      : `✓ ${subject}: ${job.succeeded} migrated`;
+      ? `⚠ ${subject}: ${counts} · ${job.failed} failed`
+      : `✓ ${subject}: ${counts}`;
 
   return (
     <div className="relative" ref={ref}>
@@ -49,8 +51,8 @@ export function MigrationStatusItem({
           style={{ userSelect: "text" }}
         >
           <div className="px-3 py-1.5 text-xs border-b border-line">
-            {job.processed}/{job.total || "?"} processed · {job.succeeded}{" "}
-            succeeded · {job.failed} failed
+            {job.processed}/{job.total || "?"} processed · {counts} ·{" "}
+            {job.failed} failed
           </div>
           {job.errors.length === 0 ? (
             <div className="px-3 py-2 text-xs text-fg-muted">No errors.</div>

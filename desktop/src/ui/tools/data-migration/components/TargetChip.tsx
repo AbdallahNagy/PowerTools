@@ -2,6 +2,7 @@ import { CircleAlert, CircleCheck, TriangleAlert, X } from "lucide-react";
 import { Popover } from "radix-ui";
 import type { MigrationJobStatus } from "../api/useMigrationJob";
 import { targetStateLabels, type TargetState } from "../model/targetRun";
+import { createdUpdatedSummary } from "../model/recordAction";
 import { Badge, Button, Spinner, cn } from "../../../shared/ui";
 
 export interface TargetItem {
@@ -160,8 +161,8 @@ function JobDetails({ state, job }: { state: TargetState; job?: MigrationJobStat
   return (
     <div style={{ userSelect: "text" }}>
       <p className="px-3 py-2 text-xs">
-        {job.processed}/{job.total || "?"} processed · {job.succeeded} succeeded · {job.failed}{" "}
-        failed
+        {job.processed}/{job.total || "?"} processed · {createdUpdatedSummary(job)} ·{" "}
+        {job.failed} failed
       </p>
       {job.errors.length > 0 && (
         <div className="max-h-48 overflow-auto border-t border-line">

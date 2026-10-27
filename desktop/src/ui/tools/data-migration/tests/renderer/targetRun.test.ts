@@ -7,6 +7,8 @@ const done = (failed = 0, status: MigrationJobStatus["status"] = "completed"): M
   processed: 2,
   total: 2,
   succeeded: 2 - failed,
+  created: 2 - failed,
+  updated: 0,
   failed,
   errors: [],
 });
