@@ -250,6 +250,7 @@ describe("Data Migration", () => {
       http.post("http://localhost/api/migration/existing", () =>
         HttpResponse.json({ existingIds: ["22222222-2222-2222-2222-222222222222"] }),
       ),
+      http.post("http://localhost/api/migration/count", () => HttpResponse.json({ count: 1234 })),
       http.post("http://localhost/api/migration/count/target", () =>
         HttpResponse.json({ count: 1234, existing: 1000 }),
       ),
@@ -277,5 +278,31 @@ describe("Data Migration", () => {
     expect(within(fabrikam).getByText("Update")).toBeVisible();
     expect(within(dialog).getByText("234 to create · 1,000 to update")).toBeVisible();
     expect(within(dialog).queryByText(/This page/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the total and shows the sidecar's reason when the target check fails", async () => {
+    mockMigrationApi();
+    httpServer.use(
+      http.post("http://localhost/api/migration/preview", () =>
+        HttpResponse.json({ records: [], pagingCookie: null, moreRecords: false }),
+      ),
+      http.post("http://localhost/api/migration/count", () => HttpResponse.json({ count: 2 })),
+      http.post("http://localhost/api/migration/count/target", () =>
+        HttpResponse.json({ error: "Entity 'account' was not found in the target." }, { status: 400 }),
+      ),
+    );
+    renderMigration();
+
+    await addTarget("Migration Target");
+    await selectAccountName();
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("2 records will be migrated")).toBeVisible();
+    expect(
+      await within(dialog).findByText(
+        "Could not check the records in Migration Target: Entity 'account' was not found in the target.",
+      ),
+    ).toBeVisible();
   });
 });

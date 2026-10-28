@@ -7,7 +7,7 @@ import { http, HttpResponse } from "msw";
 import { useEntities } from "../../api/useEntities";
 import { useEntityAttributes } from "../../api/useEntityAttributes";
 import { useMigrationJob, useStartMigration } from "../../api/useMigrationJob";
-import { usePreviewRecords, useRecordCount } from "../../api/usePreviewRecords";
+import { usePreviewRecords, useRecordCount, useTargetCount } from "../../api/usePreviewRecords";
 import { httpServer } from "../../../../../../test/support/httpServer";
 import {
   createFakeDesktopBridge,
@@ -166,7 +166,7 @@ describe("Data Migration API", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(countBody).toEqual({ entityLogicalName: "account", fetchXmlFilter: "<filter />" });
-    expect(result.current.data).toEqual({ count: 1234, existing: null });
+    expect(result.current.data).toEqual({ count: 1234 });
   });
 
   it("counts how many of all the records already exist in the target", async () => {
@@ -194,7 +194,7 @@ describe("Data Migration API", () => {
 
     const { result } = renderHook(
       () =>
-        useRecordCount({
+        useTargetCount({
           connectionId: "Source",
           targetConnectionId: "Target",
           entityLogicalName: "account",

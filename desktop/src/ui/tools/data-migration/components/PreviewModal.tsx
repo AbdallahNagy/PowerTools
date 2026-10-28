@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Badge, Field, Modal, Select, Spinner } from "../../../shared/ui";
-import { usePreviewRecords, useRecordCount } from "../api/usePreviewRecords";
+import { Badge, Field, Modal, Select, Spinner, cn } from "../../../shared/ui";
+import { usePreviewRecords, useRecordCount, useTargetCount } from "../api/usePreviewRecords";
 import type { RunMigrationArgs } from "../api/useMigrationJob";
 import { plannedAction, totalActionsSummary, type PlannedAction } from "../model/recordAction";
+import { apiErrorText } from "../model/apiError";
 
 interface PreviewModalProps {
   open: boolean;
@@ -60,14 +61,17 @@ export function PreviewModal({
         }
       : null
   );
-  const count = useRecordCount(
-    open
-      ? {
-          connectionId,
-          targetConnectionId: comparedTarget?.id,
-          entityLogicalName,
-          fetchXmlFilter: fetchXmlFilter || undefined,
-        }
+  const countArgs = open
+    ? {
+        connectionId,
+        entityLogicalName,
+        fetchXmlFilter: fetchXmlFilter || undefined,
+      }
+    : null;
+  const count = useRecordCount(countArgs);
+  const targetCount = useTargetCount(
+    countArgs && comparedTarget
+      ? { ...countArgs, targetConnectionId: comparedTarget.id }
       : null
   );
 
@@ -87,8 +91,8 @@ export function PreviewModal({
     ...r,
     planned: plannedAction(mode, r.existsInTarget),
   }));
-  const totals = count.data
-    ? totalActionsSummary(mode, count.data.count, count.data.existing)
+  const totals = targetCount.data
+    ? totalActionsSummary(mode, targetCount.data.count, targetCount.data.existing)
     : null;
 
   return (
@@ -100,18 +104,27 @@ export function PreviewModal({
     >
       <div className="flex items-end justify-between gap-4 flex-wrap">
         <div className="flex flex-col gap-0.5">
-          <p className="text-sm font-medium text-fg-strong" aria-live="polite">
+          <p
+            className={cn("text-sm font-medium", count.error ? "text-danger" : "text-fg-strong")}
+            aria-live="polite"
+          >
             {count.isLoading
-              ? comparedTarget
-                ? `Counting records and checking them in ${comparedTarget.name}…`
-                : "Counting records…"
+              ? "Counting records…"
               : count.error
-                ? "Could not count the records."
+                ? `Could not count the records: ${apiErrorText(count.error, "The count request failed.")}`
                 : count.data
                   ? `${count.data.count.toLocaleString()} ${count.data.count === 1 ? "record" : "records"} will be migrated`
                   : null}
           </p>
-          {totals && <p className="text-xs text-fg-muted">{totals}</p>}
+          {comparedTarget && (
+            <p className={cn("text-xs", targetCount.error ? "text-danger" : "text-fg-muted")}>
+              {targetCount.isLoading
+                ? `Checking the records in ${comparedTarget.name}…`
+                : targetCount.error
+                  ? `Could not check the records in ${comparedTarget.name}: ${apiErrorText(targetCount.error, "The request failed.")}`
+                  : totals}
+            </p>
+          )}
         </div>
         <div className="flex items-end gap-3">
           {isFetching && <Spinner size={14} />}
@@ -141,7 +154,7 @@ export function PreviewModal({
 
       {error && (
         <p className="text-sm text-danger bg-danger-soft border border-danger rounded-sm px-3 py-2">
-          {(error as Error).message}
+          {apiErrorText(error, "Could not load the preview.")}
         </p>
       )}
 

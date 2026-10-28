@@ -27,16 +27,19 @@ export interface PreviewArgs {
 
 export interface RecordCountArgs {
   connectionId: string;
-  /** When set, also counts how many of the records already exist in this target. */
-  targetConnectionId?: string;
   entityLogicalName: string;
   fetchXmlFilter?: string;
 }
 
-export interface RecordCount {
+export interface TargetCountArgs extends RecordCountArgs {
+  targetConnectionId: string;
+}
+
+export interface TargetCount {
+  /** Source records matching the filter. */
   count: number;
-  /** Records that already exist in the target. Null without a target. */
-  existing: number | null;
+  /** How many of them already exist in the target. */
+  existing: number;
 }
 
 interface PreviewPage {
@@ -44,7 +47,6 @@ interface PreviewPage {
   pagingCookie: string | null;
   moreRecords: boolean;
 }
-
 export function usePreviewRecords(args: PreviewArgs | null) {
   return useQuery({
     queryKey: ["migration", "preview", args],
@@ -81,17 +83,25 @@ export function usePreviewRecords(args: PreviewArgs | null) {
 export function useRecordCount(args: RecordCountArgs | null) {
   return useQuery({
     queryKey: ["migration", "count", args],
-    queryFn: async (): Promise<RecordCount> => {
-      const { connectionId, targetConnectionId, ...body } = args!;
-      if (targetConnectionId) {
-        return apiPost<RecordCount>("/api/migration/count/target", body, {
-          meta: { connectionId, targetConnectionId },
-        });
-      }
-      const { count } = await apiPost<{ count: number }>("/api/migration/count", body, {
+    queryFn: () => {
+      const { connectionId, ...body } = args!;
+      return apiPost<{ count: number }>("/api/migration/count", body, {
         meta: { connectionId },
       });
-      return { count, existing: null };
+    },
+    enabled: !!args,
+  });
+}
+
+/** How many of all the records the migration will send already exist in the target. */
+export function useTargetCount(args: TargetCountArgs | null) {
+  return useQuery({
+    queryKey: ["migration", "count", "target", args],
+    queryFn: () => {
+      const { connectionId, targetConnectionId, ...body } = args!;
+      return apiPost<TargetCount>("/api/migration/count/target", body, {
+        meta: { connectionId, targetConnectionId },
+      });
     },
     enabled: !!args,
   });
