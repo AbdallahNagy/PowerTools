@@ -3,7 +3,6 @@ using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.DataMigration.Dtos;
 using PowerTools.API.Utils;
-using static PowerTools.API.Utils.DataverseValueFormatter;
 
 namespace PowerTools.API.Tools.DataMigration;
 
@@ -14,6 +13,7 @@ public static class PreviewEndpoints
         var group = app.MapGroup("/api/migration")
             .AddEndpointFilter<DataverseContextFilter>();
 
+        // One page of source records, shown by id and primary name.
         group.MapPost("/preview", async (
             PreviewRequest req,
             HttpContext ctx,
@@ -23,23 +23,30 @@ public static class PreviewEndpoints
 
             try
             {
-                var fetchXml = BuildFetchXml(req);
+                var metadata = await DataMigrationRecords.GetEntityMetadataAsync(svc, req.EntityLogicalName);
+                var nameAttribute = metadata.PrimaryNameAttribute;
+                var fetchXml = DataMigrationFetchXml.Build(
+                    req.EntityLogicalName,
+                    [string.IsNullOrEmpty(nameAttribute) ? metadata.PrimaryIdAttribute : nameAttribute],
+                    req.FetchXmlFilter,
+                    req.Page,
+                    req.PageSize,
+                    req.PagingCookie);
                 var result = await svc.RetrieveMultipleAsync(new FetchExpression(fetchXml));
 
-                var records = result.Entities.Select(e =>
+                var records = result.Entities.Select(e => new
                 {
-                    var dict = new Dictionary<string, object?> { ["id"] = e.Id.ToString() };
-                    foreach (var attr in req.Attributes)
-                        dict[attr] = e.Contains(attr) ? Format(e[attr]) : null;
-                    return dict;
+                    id = e.Id.ToString(),
+                    name = string.IsNullOrEmpty(nameAttribute) || !e.Contains(nameAttribute)
+                        ? null
+                        : e[nameAttribute]?.ToString()
                 }).ToList();
 
                 return Results.Ok(new
                 {
                     records,
                     pagingCookie = result.PagingCookie,
-                    moreRecords = result.MoreRecords,
-                    totalEstimate = result.TotalRecordCount >= 0 ? result.TotalRecordCount : (int?)null
+                    moreRecords = result.MoreRecords
                 });
             }
             catch (Exception ex)
@@ -48,19 +55,88 @@ public static class PreviewEndpoints
             }
         });
 
+        // How many source records the migration will send.
+        group.MapPost("/count", async (
+            RecordCountRequest req,
+            HttpContext ctx,
+            DataverseClientFactory factory,
+            CancellationToken ct) =>
+        {
+            var svc = ctx.CreateDataverseClient(factory);
+
+            try
+            {
+                var metadata = await DataMigrationRecords.GetEntityMetadataAsync(svc, req.EntityLogicalName);
+                var count = await DataMigrationRecords.CountAsync(
+                    svc, req.EntityLogicalName, metadata.PrimaryIdAttribute, req.FetchXmlFilter, ct);
+                return Results.Ok(new { count });
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return Results.BadRequest(new { error = DataverseErrorFormatter.Format(ex) });
+            }
+        });
+
+        var targetGroup = app.MapGroup("/api/migration")
+            .AddEndpointFilter<DataverseContextFilter>()
+            .AddEndpointFilter<DataverseTargetContextFilter>();
+
+        // How many source records the migration will send, and how many of them
+        // already exist in the target, across all records rather than one page.
+        targetGroup.MapPost("/count/target", async (
+            RecordCountRequest req,
+            HttpContext ctx,
+            DataverseClientFactory factory,
+            CancellationToken ct) =>
+        {
+            var svc = ctx.CreateDataverseClient(factory);
+            var targetSvc = ctx.CreateTargetDataverseClient(factory)
+                ?? throw new InvalidOperationException("Target connection was not provided.");
+
+            try
+            {
+                var sourceMetadata = await DataMigrationRecords.GetEntityMetadataAsync(svc, req.EntityLogicalName);
+                var targetMetadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, req.EntityLogicalName);
+                var (count, existing) = await DataMigrationRecords.CountInTargetAsync(
+                    svc,
+                    targetSvc,
+                    req.EntityLogicalName,
+                    sourceMetadata.PrimaryIdAttribute,
+                    targetMetadata.PrimaryIdAttribute,
+                    req.FetchXmlFilter,
+                    ct);
+                return Results.Ok(new { count, existing });
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return Results.BadRequest(new { error = DataverseErrorFormatter.Format(ex) });
+            }
+        });
+
+        // Which of the previewed records already exist in the target, so each one
+        // can be shown as a create or an update.
+        targetGroup.MapPost("/existing", async (
+            ExistingRecordsRequest req,
+            HttpContext ctx,
+            DataverseClientFactory factory,
+            CancellationToken ct) =>
+        {
+            var targetSvc = ctx.CreateTargetDataverseClient(factory)
+                ?? throw new InvalidOperationException("Target connection was not provided.");
+
+            try
+            {
+                var metadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, req.EntityLogicalName);
+                var existing = await DataMigrationRecords.FindExistingIdsAsync(
+                    targetSvc, req.EntityLogicalName, metadata.PrimaryIdAttribute, req.Ids, ct);
+                return Results.Ok(new { existingIds = existing.Select(id => id.ToString()) });
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return Results.BadRequest(new { error = DataverseErrorFormatter.Format(ex) });
+            }
+        });
+
         return app;
     }
-
-    private static string BuildFetchXml(PreviewRequest req)
-    {
-        return DataMigrationFetchXml.Build(
-            req.EntityLogicalName,
-            req.Attributes,
-            req.FetchXmlFilter,
-            req.Page,
-            req.PageSize,
-            req.PagingCookie);
-    }
-
-    private static object? FormatValue(object val) => DataverseValueFormatter.Format(val);
 }

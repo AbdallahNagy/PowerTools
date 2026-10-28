@@ -284,8 +284,10 @@ function DataMigrationPage() {
           onClose={() => setPreviewOpen(false)}
           connectionId={sourceName ?? ""}
           entityLogicalName={entity.logicalName}
-          attributes={attributes}
           fetchXmlFilter={fetchFilter}
+          mode={mode}
+          targets={targets.map((id) => ({ id, name: nameOf(id) }))}
+          defaultTargetId={next ?? runningTargetId ?? targets[0] ?? null}
         />
       )}
     </div>

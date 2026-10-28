@@ -1,6 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import type { MigrationJobStatus } from "../api/useMigrationJob";
 import { isJobActive } from "../model/targetRun";
+import { createdUpdatedSummary } from "../model/recordAction";
 import { Alert, Button, ProgressBar } from "../../../shared/ui";
 
 interface MigrationRunBannerProps {
@@ -33,7 +34,7 @@ export function MigrationRunBanner({
             <ProgressBar value={job.processed} max={job.total} />
           </div>
           <span className="text-xs text-fg-muted tabular-nums">
-            {job.processed}/{job.total || "?"} · {job.succeeded} succeeded · {job.failed} failed
+            {job.processed}/{job.total || "?"} · {createdUpdatedSummary(job)} · {job.failed} failed
           </span>
         </div>
       </Alert>
@@ -58,6 +59,7 @@ export function MigrationRunBanner({
   }
 
   const records = `${job.succeeded} ${job.succeeded === 1 ? "record" : "records"}`;
+  const breakdown = job.succeeded > 0 ? ` (${createdUpdatedSummary(job)})` : "";
   const failures =
     job.failed > 0 ? ` ${job.failed} failed. Open ${targetName} above to see why.` : "";
 
@@ -74,7 +76,7 @@ export function MigrationRunBanner({
         )
       }
     >
-      {records} migrated.{failures}{" "}
+      {records} migrated{breakdown}.{failures}{" "}
       {next
         ? `Next up: ${next.name}, with the same fields, filter, and options.`
         : targetCount > 1

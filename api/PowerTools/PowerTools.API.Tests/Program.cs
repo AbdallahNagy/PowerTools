@@ -227,6 +227,22 @@ AssertEquals(
     "<filter type=\"and\"><condition attribute=\"name\" operator=\"like\" value=\"%Tesdt%\" /></filter>",
     normalizedFullFetchFilter!);
 
+var countFetch = DataMigrationFetchXml.BuildCount(
+    "account",
+    "accountid",
+    "<filter><condition attribute=\"statecode\" operator=\"eq\" value=\"0\" /></filter>");
+AssertEquals(
+    "<fetch aggregate=\"true\"><entity name=\"account\"><attribute name=\"accountid\" alias=\"recordcount\" aggregate=\"count\" /><filter><condition attribute=\"statecode\" operator=\"eq\" value=\"0\" /></filter></entity></fetch>",
+    countFetch);
+
+var idLookupFetch = DataMigrationFetchXml.BuildIdLookup(
+    "account",
+    "accountid",
+    [Guid.Parse("83b129f1-7790-4ca5-a0db-bf02fd67c127"), Guid.Parse("0f8fad5b-d9cb-469f-a165-70867728950e")]);
+AssertEquals(
+    "<fetch><entity name=\"account\"><attribute name=\"accountid\" /><filter><condition attribute=\"accountid\" operator=\"in\"><value>83b129f1-7790-4ca5-a0db-bf02fd67c127</value><value>0f8fad5b-d9cb-469f-a165-70867728950e</value></condition></filter></entity></fetch>",
+    idLookupFetch);
+
 await AssertFederatedMetadataPrefersHttpsMixedEndpoint();
 
 static async Task AssertFederatedMetadataPrefersHttpsMixedEndpoint()

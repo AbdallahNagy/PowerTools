@@ -45,6 +45,8 @@ public class MigrationJobRunner(
         var targetSvc = factory.Create(job.TargetConnection);
         try
         {
+            job.Total = await CountRecords(job, sourceSvc, ct);
+
             var fetchXml = BuildFetchXml(job);
             string? pagingCookie = null;
             int page = 1;
@@ -55,9 +57,6 @@ public class MigrationJobRunner(
 
                 var fetch = BuildPagedFetchXml(fetchXml, page, BatchSize, pagingCookie);
                 var result = await sourceSvc.RetrieveMultipleAsync(new FetchExpression(fetch));
-
-                if (job.Total == 0)
-                    job.Total = result.TotalRecordCount > 0 ? result.TotalRecordCount : result.Entities.Count;
 
                 if (result.Entities.Count == 0) break;
 
@@ -138,9 +137,36 @@ public class MigrationJobRunner(
             else
             {
                 job.Succeeded++;
+                if (WasCreated(job.Mode, item.Response))
+                    job.Created++;
+                else
+                    job.Updated++;
             }
         }
     }
+
+    // The total only drives progress, so a failed count must not stop the migration.
+    private async Task<int> CountRecords(MigrationJob job, IOrganizationServiceAsync2 sourceSvc, CancellationToken ct)
+    {
+        try
+        {
+            var metadata = await DataMigrationRecords.GetEntityMetadataAsync(sourceSvc, job.EntityLogicalName);
+            return await DataMigrationRecords.CountAsync(
+                sourceSvc, job.EntityLogicalName, metadata.PrimaryIdAttribute, job.FetchXmlFilter, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            logger.LogWarning(ex, "Could not count records for migration job {JobId}", job.Id);
+            return 0;
+        }
+    }
+
+    private static bool WasCreated(string mode, OrganizationResponse? response) => mode switch
+    {
+        "update" => false,
+        "upsert" => response is UpsertResponse { RecordCreated: true },
+        _ => true
+    };
 
     private static string BuildFetchXml(MigrationJob job)
     {

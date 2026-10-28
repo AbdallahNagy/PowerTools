@@ -6,6 +6,10 @@ export interface MigrationJobStatus {
   processed: number;
   total: number;
   succeeded: number;
+  /** Succeeded records that were new in the target. */
+  created: number;
+  /** Succeeded records that already existed in the target. */
+  updated: number;
   failed: number;
   errors: { recordId: string; message: string }[];
 }
