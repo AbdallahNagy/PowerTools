@@ -1,12 +1,13 @@
 import { Button, Checkbox, Spinner } from "../../../shared/ui";
 
-export type MigrationMode = "create" | "update" | "upsert";
-
 interface MigrationOptionsProps {
   doCreate: boolean;
   doUpdate: boolean;
+  doDelete: boolean;
   onCreateChange: (v: boolean) => void;
   onUpdateChange: (v: boolean) => void;
+  /** Turning Delete on goes through a warning first, so this only asks. */
+  onDeleteChange: (v: boolean) => void;
   hasFilter: boolean;
   filterDisabled: boolean;
   onOpenFilter: () => void;
@@ -21,8 +22,10 @@ interface MigrationOptionsProps {
 export function MigrationOptions({
   doCreate,
   doUpdate,
+  doDelete,
   onCreateChange,
   onUpdateChange,
+  onDeleteChange,
   hasFilter,
   filterDisabled,
   onOpenFilter,
@@ -37,7 +40,7 @@ export function MigrationOptions({
     <div className="flex items-center gap-4 flex-wrap">
       <div
         className="flex items-center gap-4"
-        title="Create: new records are created in the target. Update: records that already exist in the target (same id) are overwritten with source values. Both: upsert."
+        title="Records are matched by ID. Create: source records missing from the target are created. Update: source records already in the target are overwritten with source values. Records an unticked option would cover are skipped. Delete: target records matching the filter that are not in the source are deleted."
       >
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox checked={doCreate} onChange={onCreateChange} />
@@ -46,6 +49,10 @@ export function MigrationOptions({
         <label className="flex items-center gap-2 cursor-pointer">
           <Checkbox checked={doUpdate} onChange={onUpdateChange} />
           <span className="text-sm text-fg">Update</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <Checkbox checked={doDelete} onChange={onDeleteChange} />
+          <span className={`text-sm ${doDelete ? "text-danger font-medium" : "text-fg"}`}>Delete</span>
         </label>
       </div>
 

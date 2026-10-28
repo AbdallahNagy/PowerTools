@@ -96,3 +96,39 @@ export function useRecordCount(args: RecordCountArgs | null) {
     enabled: !!args,
   });
 }
+
+export interface DeletionArgs {
+  connectionId: string;
+  targetConnectionId: string;
+  entityLogicalName: string;
+  fetchXmlFilter?: string;
+}
+
+export interface Deletions {
+  /** Target records the delete option removes, across all pages. */
+  count: number;
+  /** Source records matching the filter. */
+  sourceCount: number;
+  /** The first records to delete, for review. */
+  records: { id: string; name: string | null }[];
+}
+
+/**
+ * Target records that match the filter but are not in the source: what the
+ * delete option removes from that target.
+ */
+export function useDeletions(args: DeletionArgs | null) {
+  return useQuery({
+    queryKey: ["migration", "deletions", args],
+    queryFn: () => {
+      const { connectionId, targetConnectionId, ...body } = args!;
+      return apiPost<Deletions>("/api/migration/deletions", body, {
+        meta: { connectionId, targetConnectionId },
+      });
+    },
+    enabled: !!args,
+    // A delete is confirmed against this list, so never show a stale one.
+    staleTime: 0,
+    gcTime: 0,
+  });
+}

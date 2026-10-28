@@ -1,6 +1,7 @@
 using Microsoft.Xrm.Sdk;
 using Microsoft.PowerPlatform.Dataverse.Client;
 using Microsoft.Xrm.Sdk.Messages;
+using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.DataMigration;
 
@@ -45,26 +46,20 @@ public class MigrationJobRunner(
         var targetSvc = factory.Create(job.TargetConnection);
         try
         {
-            job.Total = await CountRecords(job, sourceSvc, ct);
+            // Progress covers the records sent; deletions are added once they are known.
+            if (job.Options.Create || job.Options.Update)
+                job.Total = await CountRecords(job, sourceSvc, ct);
 
-            var fetchXml = BuildFetchXml(job);
-            string? pagingCookie = null;
-            int page = 1;
+            var targetMetadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, job.EntityLogicalName);
 
-            while (true)
+            if (job.Options.Create || job.Options.Update)
+                await TransferRecords(job, sourceSvc, targetSvc, targetMetadata.PrimaryIdAttribute, ct);
+
+            // Last, so a run that fails while reading or writing records deletes nothing.
+            if (job.Options.Delete)
             {
-                ct.ThrowIfCancellationRequested();
-
-                var fetch = BuildPagedFetchXml(fetchXml, page, BatchSize, pagingCookie);
-                var result = await sourceSvc.RetrieveMultipleAsync(new FetchExpression(fetch));
-
-                if (result.Entities.Count == 0) break;
-
-                await ProcessBatch(job, result.Entities, targetSvc);
-
-                if (!result.MoreRecords) break;
-                pagingCookie = result.PagingCookie;
-                page++;
+                var sourceMetadata = await DataMigrationRecords.GetEntityMetadataAsync(sourceSvc, job.EntityLogicalName);
+                await DeleteMissingRecords(job, sourceSvc, targetSvc, sourceMetadata, targetMetadata, ct);
             }
         }
         finally
@@ -74,9 +69,45 @@ public class MigrationJobRunner(
         }
     }
 
+    private static async Task TransferRecords(
+        MigrationJob job,
+        IOrganizationServiceAsync2 sourceSvc,
+        IOrganizationServiceAsync2 targetSvc,
+        string targetPrimaryIdAttribute,
+        CancellationToken ct)
+    {
+        var fetchXml = DataMigrationFetchXml.Build(
+            job.EntityLogicalName, MigrationPlan.SourceColumns(job.Attributes), job.FetchXmlFilter);
+        string? pagingCookie = null;
+        int page = 1;
+
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var fetch = BuildPagedFetchXml(fetchXml, page, BatchSize, pagingCookie);
+            var result = await sourceSvc.RetrieveMultipleAsync(new FetchExpression(fetch));
+
+            if (result.Entities.Count == 0) break;
+
+            var existing = await DataMigrationRecords.FindExistingIdsAsync(
+                targetSvc,
+                job.EntityLogicalName,
+                targetPrimaryIdAttribute,
+                result.Entities.Select(e => e.Id).ToList(),
+                ct);
+            await ProcessBatch(job, result.Entities, existing, targetSvc);
+
+            if (!result.MoreRecords) break;
+            pagingCookie = result.PagingCookie;
+            page++;
+        }
+    }
+
     private static async Task ProcessBatch(
         MigrationJob job,
         DataCollection<Entity> entities,
+        HashSet<Guid> existing,
         IOrganizationServiceAsync2 targetSvc)
     {
         var request = new ExecuteMultipleRequest
@@ -89,36 +120,52 @@ public class MigrationJobRunner(
             Requests = new OrganizationRequestCollection()
         };
 
-        var recordMap = new Dictionary<int, string>();
+        var sent = new List<(string RecordId, RecordAction Action)>();
 
-        for (int i = 0; i < entities.Count; i++)
+        foreach (var source in entities)
         {
-            var source = entities[i];
-            var target = new Entity(job.EntityLogicalName);
+            var action = MigrationPlan.Decide(job.Options, existing.Contains(source.Id));
+            if (action == RecordAction.Skip)
+            {
+                job.Processed++;
+                job.Skipped++;
+                continue;
+            }
 
+            var target = new Entity(job.EntityLogicalName) { Id = source.Id };
             foreach (var attr in job.Attributes)
             {
                 if (source.Contains(attr))
                     target[attr] = source[attr];
             }
 
-            var recordId = source.Id.ToString();
-            recordMap[i] = recordId;
-
-            if (job.Mode is "update" or "upsert")
+            OrganizationRequest req;
+            if (action == RecordAction.Update)
             {
-                target.Id = source.Id;
+                req = new UpdateRequest { Target = target };
+            }
+            else
+            {
+                // An inactive record is created active and then moved to its state,
+                // in one transaction so a failed state change leaves no record behind.
+                var stateChange = MigrationPlan.SplitStateChange(target, source);
+                req = stateChange is null
+                    ? new CreateRequest { Target = target }
+                    : new ExecuteTransactionRequest
+                    {
+                        Requests = new OrganizationRequestCollection
+                        {
+                            new CreateRequest { Target = target },
+                            new UpdateRequest { Target = stateChange }
+                        }
+                    };
             }
 
-            OrganizationRequest req = job.Mode switch
-            {
-                "update" => new UpdateRequest { Target = target },
-                "upsert" => new UpsertRequest { Target = target },
-                _ => new CreateRequest { Target = target }
-            };
-
+            sent.Add((source.Id.ToString(), action));
             request.Requests.Add(req);
         }
+
+        if (request.Requests.Count == 0) return;
 
         var response = await targetSvc.ExecuteAsync(request) as ExecuteMultipleResponse;
         if (response is null) return;
@@ -126,7 +173,9 @@ public class MigrationJobRunner(
         foreach (var item in response.Responses)
         {
             job.Processed++;
-            var recordId = recordMap.TryGetValue(item.RequestIndex, out var id) ? id : item.RequestIndex.ToString();
+            var (recordId, action) = item.RequestIndex < sent.Count
+                ? sent[item.RequestIndex]
+                : (item.RequestIndex.ToString(), RecordAction.Update);
 
             if (item.Fault is not null)
             {
@@ -137,10 +186,68 @@ public class MigrationJobRunner(
             else
             {
                 job.Succeeded++;
-                if (WasCreated(job.Mode, item.Response))
+                if (action == RecordAction.Create)
                     job.Created++;
                 else
                     job.Updated++;
+            }
+        }
+    }
+
+    private static async Task DeleteMissingRecords(
+        MigrationJob job,
+        IOrganizationServiceAsync2 sourceSvc,
+        IOrganizationServiceAsync2 targetSvc,
+        EntityMetadata sourceMetadata,
+        EntityMetadata targetMetadata,
+        CancellationToken ct)
+    {
+        var (sourceCount, missing) = await DataMigrationRecords.FindTargetRecordsMissingFromSourceAsync(
+            sourceSvc,
+            targetSvc,
+            job.EntityLogicalName,
+            sourceMetadata.PrimaryIdAttribute,
+            targetMetadata,
+            job.FetchXmlFilter,
+            ct);
+
+        var blocked = MigrationPlan.DeleteBlockedReason(job.Options, sourceCount, missing.Count);
+        if (blocked is not null)
+        {
+            job.Errors.Add(new MigrationJobError("N/A", blocked));
+            job.Failed++;
+            return;
+        }
+
+        job.Total += missing.Count;
+        foreach (var chunk in missing.Chunk(BatchSize))
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var request = new ExecuteMultipleRequest
+            {
+                Settings = new ExecuteMultipleSettings { ContinueOnError = true, ReturnResponses = true },
+                Requests = new OrganizationRequestCollection()
+            };
+            foreach (var record in chunk)
+                request.Requests.Add(new DeleteRequest { Target = new EntityReference(job.EntityLogicalName, record.Id) });
+
+            var response = await targetSvc.ExecuteAsync(request) as ExecuteMultipleResponse;
+            if (response is null) continue;
+
+            foreach (var item in response.Responses)
+            {
+                job.Processed++;
+                if (item.Fault is not null)
+                {
+                    job.Failed++;
+                    var recordId = item.RequestIndex < chunk.Length ? chunk[item.RequestIndex].Id.ToString() : item.RequestIndex.ToString();
+                    job.Errors.Add(new MigrationJobError(recordId, item.Fault.InnerFault?.Message ?? item.Fault.Message));
+                }
+                else
+                {
+                    job.Deleted++;
+                }
             }
         }
     }
@@ -159,18 +266,6 @@ public class MigrationJobRunner(
             logger.LogWarning(ex, "Could not count records for migration job {JobId}", job.Id);
             return 0;
         }
-    }
-
-    private static bool WasCreated(string mode, OrganizationResponse? response) => mode switch
-    {
-        "update" => false,
-        "upsert" => response is UpsertResponse { RecordCreated: true },
-        _ => true
-    };
-
-    private static string BuildFetchXml(MigrationJob job)
-    {
-        return DataMigrationFetchXml.Build(job.EntityLogicalName, job.Attributes, job.FetchXmlFilter);
     }
 
     private static string BuildPagedFetchXml(string baseFetch, int page, int count, string? pagingCookie)

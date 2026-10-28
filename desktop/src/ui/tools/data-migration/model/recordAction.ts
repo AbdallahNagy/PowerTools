@@ -1,60 +1,63 @@
 import type { MigrationJobStatus, RunMigrationArgs } from "../api/useMigrationJob";
 
-type MigrationMode = RunMigrationArgs["mode"];
+export type MigrationOptions = Pick<RunMigrationArgs, "create" | "update" | "delete">;
 
-/** What the migration does with one record in the chosen target. */
-export type RecordAction = "create" | "update";
+/** What the migration does with one source record in the chosen target. */
+export type RecordAction = "create" | "update" | "skip";
 
-export interface PlannedAction {
-  /** Null when it depends on a target that is not chosen yet. */
-  action: RecordAction | null;
-  /** Why the request will fail in the target, if it will. */
-  problem: string | null;
+/**
+ * Records are matched by id. Existing records are updated and missing ones
+ * created; a record the options do not cover is skipped, as in Data Transporter.
+ * Null when it depends on a target that is not chosen yet.
+ */
+export function plannedAction(options: MigrationOptions, existsInTarget: boolean | null): RecordAction | null {
+  if (existsInTarget === null) {
+    if (options.create && !options.update) return "create";
+    if (options.update && !options.create) return "update";
+    return options.create || options.update ? null : "skip";
+  }
+  if (existsInTarget) return options.update ? "update" : "skip";
+  return options.create ? "create" : "skip";
 }
 
-export function plannedAction(mode: MigrationMode, existsInTarget: boolean | null): PlannedAction {
-  if (mode === "create") {
-    return {
-      action: "create",
-      problem: existsInTarget ? "Already exists in the target, so create will fail." : null,
-    };
-  }
-  if (mode === "update") {
-    return {
-      action: "update",
-      problem: existsInTarget === false ? "Not in the target, so update will fail." : null,
-    };
-  }
-  if (existsInTarget === null) return { action: null, problem: null };
-  return { action: existsInTarget ? "update" : "create", problem: null };
-}
-
-/** "3 created · 2 updated" for the status bar and run banner. */
-export function createdUpdatedSummary(job: Pick<MigrationJobStatus, "created" | "updated">): string {
-  return `${job.created} created · ${job.updated} updated`;
+/** "3 created · 2 updated", plus skipped and deleted counts when there are any. */
+export function createdUpdatedSummary(
+  job: Pick<MigrationJobStatus, "created" | "updated" | "skipped" | "deleted">,
+): string {
+  const parts = [`${job.created} created`, `${job.updated} updated`];
+  if (job.skipped > 0) parts.push(`${job.skipped} skipped`);
+  if (job.deleted > 0) parts.push(`${job.deleted} deleted`);
+  return parts.join(" · ");
 }
 
 /**
- * What the migration does with all matching records in the target, such as
- * "3 to create · 2 to update". Null until the target has been checked.
+ * What the migration does with all matching source records in the target, such
+ * as "3 to create · 2 to update · 1 skipped". Null until the target has been checked.
  */
 export function totalActionsSummary(
-  mode: MigrationMode,
+  options: MigrationOptions,
   count: number,
   existing: number | null,
 ): string | null {
   if (existing === null) return null;
-  const missing = (count - existing).toLocaleString();
-  const inTarget = existing.toLocaleString();
-  if (mode === "create") {
-    return existing > 0
-      ? `${missing} to create · ${inTarget} already in the target, so create will fail`
-      : `${missing} to create`;
+  const missing = count - existing;
+  const parts: string[] = [];
+  if (options.create) parts.push(`${missing.toLocaleString()} to create`);
+  if (options.update) parts.push(`${existing.toLocaleString()} to update`);
+  const skipped = (options.create ? 0 : missing) + (options.update ? 0 : existing);
+  if (skipped > 0) {
+    const reason = options.create || options.update
+      ? options.create
+        ? "already in the target"
+        : "not in the target"
+      : "Create and Update are off";
+    parts.push(`${skipped.toLocaleString()} skipped (${reason})`);
   }
-  if (mode === "update") {
-    return count > existing
-      ? `${inTarget} to update · ${missing} not in the target, so update will fail`
-      : `${inTarget} to update`;
-  }
-  return `${missing} to create · ${inTarget} to update`;
+  return parts.join(" · ");
 }
+
+/** What ticking Delete does, shown before it is turned on and while it is on. */
+export const DELETE_EXPLANATION =
+  "Delete removes records from the target. In each target, every record of this table that matches " +
+  "the filter but whose ID is not among the matching source records is deleted. With no filter, " +
+  "that is every target record that is not in the source. Deleted records cannot be restored from here.";

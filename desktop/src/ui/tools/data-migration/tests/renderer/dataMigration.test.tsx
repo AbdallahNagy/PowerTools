@@ -89,6 +89,8 @@ function mockMigrationApi() {
               succeeded: 0,
               created: 0,
               updated: 0,
+              skipped: 0,
+              deleted: 0,
               failed: 1,
               errors: [{ recordId: "record-1", message: "Duplicate name." }],
             }
@@ -99,6 +101,8 @@ function mockMigrationApi() {
               succeeded: 1,
               created: 1,
               updated: 0,
+              skipped: 0,
+              deleted: 0,
               failed: 0,
               errors: [],
             },
@@ -174,7 +178,13 @@ describe("Data Migration", () => {
     );
     expect(requests).toEqual([
       {
-        body: { entityLogicalName: "account", attributes: ["accountid", "name"], mode: "upsert" },
+        body: {
+          entityLogicalName: "account",
+          attributes: ["accountid", "name"],
+          create: true,
+          update: true,
+          delete: false,
+        },
         source: sourceConnection.envUrl,
         target: targetConnection.envUrl,
       },
@@ -277,5 +287,153 @@ describe("Data Migration", () => {
     expect(within(fabrikam).getByText("Update")).toBeVisible();
     expect(within(dialog).getByText("234 to create · 1,000 to update")).toBeVisible();
     expect(within(dialog).queryByText(/This page/)).not.toBeInTheDocument();
+  });
+
+  it("shows existing records as skipped when only Create is on", async () => {
+    mockMigrationApi();
+    httpServer.use(
+      http.post("http://localhost/api/migration/preview", () =>
+        HttpResponse.json({
+          records: [
+            { id: "11111111-1111-1111-1111-111111111111", name: "Contoso" },
+            { id: "22222222-2222-2222-2222-222222222222", name: "Fabrikam" },
+          ],
+          pagingCookie: null,
+          moreRecords: false,
+        }),
+      ),
+      http.post("http://localhost/api/migration/existing", () =>
+        HttpResponse.json({ existingIds: ["22222222-2222-2222-2222-222222222222"] }),
+      ),
+      http.post("http://localhost/api/migration/count/target", () =>
+        HttpResponse.json({ count: 10, existing: 4 }),
+      ),
+    );
+    renderMigration();
+
+    await addTarget("Migration Target");
+    await selectAccountName();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Update" }));
+    fireEvent.click(screen.getByRole("button", { name: "Preview" }));
+
+    const dialog = await screen.findByRole("dialog");
+    const fabrikam = (await within(dialog).findByText("Fabrikam")).closest("tr") as HTMLElement;
+    await waitFor(() => expect(within(fabrikam).getByText("Skip")).toBeVisible());
+    const contoso = within(dialog).getByText("Contoso").closest("tr") as HTMLElement;
+    expect(within(contoso).getByText("Create")).toBeVisible();
+    expect(await within(dialog).findByText("6 to create · 4 skipped (already in the target)")).toBeVisible();
+    expect(within(dialog).queryByText(/will fail/)).not.toBeInTheDocument();
+  });
+
+  it("explains Delete before turning it on and keeps it off when the user backs out", async () => {
+    mockMigrationApi();
+    renderMigration();
+    await selectAccountName();
+
+    const deleteBox = screen.getByRole("checkbox", { name: "Delete" });
+    fireEvent.click(deleteBox);
+    const warning = await screen.findByRole("dialog", { name: "Turn on Delete?" });
+    expect(within(warning).getByText(/every account record in the target is considered/)).toBeVisible();
+    fireEvent.click(within(warning).getByRole("button", { name: "Keep Delete off" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(deleteBox).not.toBeChecked();
+    expect(screen.queryByText("Delete is on")).not.toBeInTheDocument();
+
+    fireEvent.click(deleteBox);
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Turn on Delete?" })).getByRole("button", {
+        name: "Turn on Delete",
+      }),
+    );
+    await waitFor(() => expect(deleteBox).toBeChecked());
+    expect(screen.getByText("Delete is on")).toBeVisible();
+
+    fireEvent.click(deleteBox);
+    expect(deleteBox).not.toBeChecked();
+  });
+
+  it("lists the records to delete and starts only after the user confirms that number", async () => {
+    const requests = mockMigrationApi();
+    let deletionTarget: string | null = null;
+    httpServer.use(
+      http.post("http://localhost/api/migration/deletions", ({ request }) => {
+        deletionTarget = request.headers.get("X-Target-Environment-Url");
+        return HttpResponse.json({
+          count: 2,
+          sourceCount: 5,
+          records: [
+            { id: "33333333-3333-3333-3333-333333333333", name: "Old Contoso" },
+            { id: "44444444-4444-4444-4444-444444444444", name: null },
+          ],
+        });
+      }),
+    );
+    renderMigration();
+
+    await addTarget("Migration Target");
+    await selectAccountName();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Delete" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Turn on Delete?" })).getByRole("button", {
+        name: "Turn on Delete",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "▶ Migrate to Migration Target" }));
+
+    const confirm = await screen.findByRole("dialog", { name: "Delete records in Migration Target?" });
+    expect(await within(confirm).findByText("2 records will be deleted")).toBeVisible();
+    expect(within(confirm).getByText("Old Contoso")).toBeVisible();
+    expect(within(confirm).getByText("44444444-4444-4444-4444-444444444444")).toBeVisible();
+    expect(deletionTarget).toBe(targetConnection.envUrl);
+    const go = within(confirm).getByRole("button", { name: "Delete 2 and migrate" });
+    expect(go).toBeDisabled();
+    expect(requests).toHaveLength(0);
+
+    fireEvent.click(within(confirm).getByRole("checkbox"));
+    expect(go).toBeEnabled();
+    fireEvent.click(go);
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].body).toEqual({
+      entityLogicalName: "account",
+      attributes: ["accountid", "name"],
+      create: true,
+      update: true,
+      delete: true,
+      confirmedDeleteCount: 2,
+    });
+  });
+
+  it("does not migrate with Delete when the source returns no records", async () => {
+    const requests = mockMigrationApi();
+    httpServer.use(
+      http.post("http://localhost/api/migration/deletions", () =>
+        HttpResponse.json({
+          count: 3,
+          sourceCount: 0,
+          records: [{ id: "33333333-3333-3333-3333-333333333333", name: "Contoso" }],
+        }),
+      ),
+    );
+    renderMigration();
+
+    await addTarget("Migration Target");
+    await selectAccountName();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Delete" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog", { name: "Turn on Delete?" })).getByRole("button", {
+        name: "Turn on Delete",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "▶ Migrate to Migration Target" }));
+
+    const confirm = await screen.findByRole("dialog", { name: "Delete records in Migration Target?" });
+    expect(await within(confirm).findByText("The source returned no records")).toBeVisible();
+    expect(within(confirm).getByRole("button", { name: "Delete 3 and migrate" })).toBeDisabled();
+    expect(within(confirm).queryByRole("checkbox")).not.toBeInTheDocument();
+    fireEvent.click(within(confirm).getByRole("button", { name: "Cancel" }));
+    expect(requests).toHaveLength(0);
   });
 });

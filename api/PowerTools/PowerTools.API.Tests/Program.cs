@@ -243,6 +243,92 @@ AssertEquals(
     "<fetch><entity name=\"account\"><attribute name=\"accountid\" /><filter><condition attribute=\"accountid\" operator=\"in\"><value>83b129f1-7790-4ca5-a0db-bf02fd67c127</value><value>0f8fad5b-d9cb-469f-a165-70867728950e</value></condition></filter></entity></fetch>",
     idLookupFetch);
 
+// Records the options do not cover are skipped, as in Data Transporter, rather than sent and failed.
+var createOnly = new MigrationOptions(Create: true, Update: false, Delete: false);
+var updateOnly = new MigrationOptions(Create: false, Update: true, Delete: false);
+var createAndUpdate = new MigrationOptions(Create: true, Update: true, Delete: false);
+var deleteOnly = new MigrationOptions(Create: false, Update: false, Delete: true, ConfirmedDeleteCount: 2);
+AssertEquals("Create", MigrationPlan.Decide(createOnly, existsInTarget: false).ToString());
+AssertEquals("Skip", MigrationPlan.Decide(createOnly, existsInTarget: true).ToString());
+AssertEquals("Update", MigrationPlan.Decide(updateOnly, existsInTarget: true).ToString());
+AssertEquals("Skip", MigrationPlan.Decide(updateOnly, existsInTarget: false).ToString());
+AssertEquals("Create", MigrationPlan.Decide(createAndUpdate, existsInTarget: false).ToString());
+AssertEquals("Update", MigrationPlan.Decide(createAndUpdate, existsInTarget: true).ToString());
+AssertEquals("Skip", MigrationPlan.Decide(deleteOnly, existsInTarget: true).ToString());
+AssertEquals("Skip", MigrationPlan.Decide(deleteOnly, existsInTarget: false).ToString());
+
+AssertSequence(MigrationPlan.SourceColumns(["accountid", "statuscode"]), "accountid", "statuscode", "statecode");
+AssertSequence(MigrationPlan.SourceColumns(["accountid", "statecode", "statuscode"]), "accountid", "statecode", "statuscode");
+AssertSequence(MigrationPlan.SourceColumns(["accountid", "name"]), "accountid", "name");
+
+// An inactive record is created without its state, then moved to it.
+var inactiveId = Guid.Parse("33333333-3333-3333-3333-333333333333");
+var inactiveSource = new Entity("account", inactiveId)
+{
+    ["name"] = "Contoso",
+    ["statecode"] = new OptionSetValue(1),
+    ["statuscode"] = new OptionSetValue(2)
+};
+var inactiveCreate = new Entity("account", inactiveId)
+{
+    ["name"] = "Contoso",
+    ["statecode"] = new OptionSetValue(1),
+    ["statuscode"] = new OptionSetValue(2)
+};
+var stateChange = MigrationPlan.SplitStateChange(inactiveCreate, inactiveSource)
+    ?? throw new InvalidOperationException("Expected a state change for an inactive record.");
+AssertFalse(inactiveCreate.Contains("statecode"));
+AssertFalse(inactiveCreate.Contains("statuscode"));
+AssertEquals("Contoso", inactiveCreate.GetAttributeValue<string>("name"));
+AssertEquals(inactiveId.ToString(), stateChange.Id.ToString());
+AssertEqualInt(1, stateChange.GetAttributeValue<OptionSetValue>("statecode").Value);
+AssertEqualInt(2, stateChange.GetAttributeValue<OptionSetValue>("statuscode").Value);
+AssertEqualInt(2, stateChange.Attributes.Count);
+
+// Only the status reason was chosen: the state read alongside it still moves the record.
+var statusOnlySource = new Entity("account", inactiveId)
+{
+    ["statecode"] = new OptionSetValue(1),
+    ["statuscode"] = new OptionSetValue(2)
+};
+var statusOnlyCreate = new Entity("account", inactiveId) { ["statuscode"] = new OptionSetValue(2) };
+var statusOnlyChange = MigrationPlan.SplitStateChange(statusOnlyCreate, statusOnlySource)
+    ?? throw new InvalidOperationException("Expected a state change when only the status reason is migrated.");
+AssertFalse(statusOnlyCreate.Contains("statuscode"));
+AssertEqualInt(1, statusOnlyChange.GetAttributeValue<OptionSetValue>("statecode").Value);
+AssertEqualInt(2, statusOnlyChange.GetAttributeValue<OptionSetValue>("statuscode").Value);
+
+// Only the state was chosen: the status reason is left for Dataverse to default.
+var stateOnlyCreate = new Entity("account", inactiveId) { ["statecode"] = new OptionSetValue(1) };
+var stateOnlyChange = MigrationPlan.SplitStateChange(stateOnlyCreate, inactiveSource)
+    ?? throw new InvalidOperationException("Expected a state change when only the state is migrated.");
+AssertFalse(stateOnlyChange.Contains("statuscode"));
+
+var activeSource = new Entity("account", inactiveId)
+{
+    ["statecode"] = new OptionSetValue(0),
+    ["statuscode"] = new OptionSetValue(1)
+};
+var activeCreate = new Entity("account", inactiveId)
+{
+    ["statecode"] = new OptionSetValue(0),
+    ["statuscode"] = new OptionSetValue(1)
+};
+AssertEqualBool(true, MigrationPlan.SplitStateChange(activeCreate, activeSource) is null);
+AssertEqualBool(true, activeCreate.Contains("statuscode"));
+AssertEqualBool(true, MigrationPlan.SplitStateChange(new Entity("account", inactiveId), new Entity("account", inactiveId)) is null);
+
+// Deleting stops when it was not confirmed, when the source returned nothing, or when it grew.
+AssertNull(MigrationPlan.DeleteBlockedReason(createAndUpdate, sourceCount: 10, toDelete: 5));
+AssertNull(MigrationPlan.DeleteBlockedReason(deleteOnly, sourceCount: 10, toDelete: 0));
+AssertNull(MigrationPlan.DeleteBlockedReason(deleteOnly, sourceCount: 10, toDelete: 2));
+AssertNull(MigrationPlan.DeleteBlockedReason(deleteOnly, sourceCount: 10, toDelete: 1));
+AssertContains("more than the 2 you confirmed", MigrationPlan.DeleteBlockedReason(deleteOnly, sourceCount: 10, toDelete: 3) ?? "");
+AssertContains("No source records match", MigrationPlan.DeleteBlockedReason(deleteOnly, sourceCount: 0, toDelete: 2) ?? "");
+AssertContains(
+    "not confirmed",
+    MigrationPlan.DeleteBlockedReason(deleteOnly with { ConfirmedDeleteCount = null }, sourceCount: 10, toDelete: 1) ?? "");
+
 await AssertFederatedMetadataPrefersHttpsMixedEndpoint();
 
 static async Task AssertFederatedMetadataPrefersHttpsMixedEndpoint()

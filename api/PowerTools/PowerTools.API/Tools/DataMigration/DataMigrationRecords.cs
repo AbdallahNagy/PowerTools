@@ -118,6 +118,57 @@ public static class DataMigrationRecords
         }
     }
 
+    /// <summary>
+    /// Target records matching the filter whose id is not among the source records
+    /// matching the same filter: the records the delete option removes. The filter
+    /// runs in both environments, so records outside it are never touched.
+    /// </summary>
+    public static async Task<(int SourceCount, List<MissingRecord> Records)> FindTargetRecordsMissingFromSourceAsync(
+        IOrganizationServiceAsync2 sourceSvc,
+        IOrganizationServiceAsync2 targetSvc,
+        string entityLogicalName,
+        string sourcePrimaryIdAttribute,
+        EntityMetadata targetMetadata,
+        string? filterFragment,
+        CancellationToken ct = default)
+    {
+        var sourceCount = await CountAsync(sourceSvc, entityLogicalName, sourcePrimaryIdAttribute, filterFragment, ct);
+
+        var nameAttribute = targetMetadata.PrimaryNameAttribute;
+        var columns = string.IsNullOrEmpty(nameAttribute)
+            ? [targetMetadata.PrimaryIdAttribute]
+            : new List<string> { targetMetadata.PrimaryIdAttribute, nameAttribute };
+        var missing = new List<MissingRecord>();
+        var page = 1;
+        string? pagingCookie = null;
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            var fetch = DataMigrationFetchXml.Build(
+                entityLogicalName, columns, filterFragment, page, CountPageSize, pagingCookie);
+            var result = await targetSvc.RetrieveMultipleAsync(new FetchExpression(fetch), ct);
+
+            if (result.Entities.Count > 0)
+            {
+                var inSource = await FindExistingIdsAsync(
+                    sourceSvc,
+                    entityLogicalName,
+                    sourcePrimaryIdAttribute,
+                    result.Entities.Select(e => e.Id).ToList(),
+                    ct);
+                missing.AddRange(result.Entities
+                    .Where(e => !inSource.Contains(e.Id))
+                    .Select(e => new MissingRecord(
+                        e.Id,
+                        string.IsNullOrEmpty(nameAttribute) ? null : e.GetAttributeValue<object>(nameAttribute)?.ToString())));
+            }
+
+            if (!result.MoreRecords) return (sourceCount, missing);
+            pagingCookie = result.PagingCookie;
+            page++;
+        }
+    }
+
     /// <summary>Returns the ids that already exist in the given environment.</summary>
     public static async Task<HashSet<Guid>> FindExistingIdsAsync(
         IOrganizationServiceAsync2 svc,
@@ -136,3 +187,5 @@ public static class DataMigrationRecords
         return existing;
     }
 }
+
+public record MissingRecord(Guid Id, string? Name);

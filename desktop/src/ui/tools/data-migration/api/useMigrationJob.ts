@@ -10,6 +10,10 @@ export interface MigrationJobStatus {
   created: number;
   /** Succeeded records that already existed in the target. */
   updated: number;
+  /** Source records the options did not cover, such as existing records in create-only runs. */
+  skipped: number;
+  /** Target records removed because they are not in the source. */
+  deleted: number;
   failed: number;
   errors: { recordId: string; message: string }[];
 }
@@ -18,7 +22,14 @@ export interface RunMigrationArgs {
   entityLogicalName: string;
   attributes: string[];
   fetchXmlFilter?: string;
-  mode: "create" | "update" | "upsert";
+  /** Create source records missing from the target. */
+  create: boolean;
+  /** Update source records that already exist in the target. */
+  update: boolean;
+  /** Delete target records that match the filter but are not in the source. */
+  delete: boolean;
+  /** Required with delete: the run deletes nothing if it finds more than this. */
+  confirmedDeleteCount?: number;
   sourceConnectionId: string;
   targetConnectionId: string;
 }
