@@ -100,7 +100,7 @@ pnpm install
 pnpm dev
 ```
 
-Claude Code cloud sessions (Ubuntu): set the environment's setup script to `bash PowerTools/scripts/cloud-setup.sh`. It installs the .NET SDK and .NET 9 runtimes, restores the API, and runs `npm ci` in `desktop/`. To launch the whole app headless (renderer, Electron, and API) and save a screenshot:
+Claude Code cloud sessions (Ubuntu): set the environment's setup script to `bash PowerTools/scripts/cloud-setup.sh`. It installs the .NET SDK and .NET 9 runtimes, restores the API, and runs `npm ci` in `desktop/`. Run `npm run dev:cloud` from `desktop/` instead of `npm run dev`: it adds a virtual display, the `--no-sandbox` flag Electron needs as root, and turns off crash reports. To launch the whole app headless (renderer, Electron, and API) and save a screenshot:
 
 ```bash
 xvfb-run -a node scripts/cloud-app.mjs --tool "FetchXML Builder"

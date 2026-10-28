@@ -8,6 +8,7 @@
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "npm-run-all -p dev:react dev:electron",
+    "dev:cloud": "xvfb-run -a cross-env SENTRY_DSN= npm-run-all -p dev:react \"dev:electron -- --no-sandbox\"",
     "dev:react": "vite",
     "dev:electron": "npm run transpile:electron && cross-env NODE_ENV=development electron .",
     "build": "tsc -b && vite build",
