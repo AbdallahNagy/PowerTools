@@ -33,3 +33,28 @@ export function plannedAction(mode: MigrationMode, existsInTarget: boolean | nul
 export function createdUpdatedSummary(job: Pick<MigrationJobStatus, "created" | "updated">): string {
   return `${job.created} created · ${job.updated} updated`;
 }
+
+/**
+ * What the migration does with all matching records in the target, such as
+ * "3 to create · 2 to update". Null until the target has been checked.
+ */
+export function totalActionsSummary(
+  mode: MigrationMode,
+  count: number,
+  existing: number | null,
+): string | null {
+  if (existing === null) return null;
+  const missing = (count - existing).toLocaleString();
+  const inTarget = existing.toLocaleString();
+  if (mode === "create") {
+    return existing > 0
+      ? `${missing} to create · ${inTarget} already in the target, so create will fail`
+      : `${missing} to create`;
+  }
+  if (mode === "update") {
+    return count > existing
+      ? `${inTarget} to update · ${missing} not in the target, so update will fail`
+      : `${inTarget} to update`;
+  }
+  return `${missing} to create · ${inTarget} to update`;
+}

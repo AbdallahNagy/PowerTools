@@ -10,7 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **Data Migration: several targets.** Add more than one target environment, such as QC, UAT, and production. After each migration, Data Migration shows where the data went, and the main button moves on to the next target with the same table, columns, filter, and options. Each target shows whether it is migrated, has errors, or is still to do, and you can migrate any target again.
 
-- **Data Migration: record count in Preview.** Preview shows how many records the migration will send.
+- **Data Migration: record count in Preview.** Preview shows how many records the migration will send and, across all of them, how many will be created and how many updated in the target you compare with.
 - **Data Migration: created and updated counts.** The status bar, the run banner, and each target's details show how many records were created and how many were updated.
 
 ### Changed

@@ -250,7 +250,9 @@ describe("Data Migration", () => {
       http.post("http://localhost/api/migration/existing", () =>
         HttpResponse.json({ existingIds: ["22222222-2222-2222-2222-222222222222"] }),
       ),
-      http.post("http://localhost/api/migration/count", () => HttpResponse.json({ count: 1234 })),
+      http.post("http://localhost/api/migration/count/target", () =>
+        HttpResponse.json({ count: 1234, existing: 1000 }),
+      ),
     );
     renderMigration();
 
@@ -273,6 +275,7 @@ describe("Data Migration", () => {
     expect(contoso).toHaveTextContent("11111111-1111-1111-1111-111111111111");
     const fabrikam = within(dialog).getByText("Fabrikam").closest("tr") as HTMLElement;
     expect(within(fabrikam).getByText("Update")).toBeVisible();
-    expect(within(dialog).getByText("This page: 1 to create · 1 to update")).toBeVisible();
+    expect(within(dialog).getByText("234 to create · 1,000 to update")).toBeVisible();
+    expect(within(dialog).queryByText(/This page/)).not.toBeInTheDocument();
   });
 });

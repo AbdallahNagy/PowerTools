@@ -71,6 +71,53 @@ public static class DataMigrationRecords
         }
     }
 
+    /// <summary>
+    /// Counts the source records matching the filter and how many of them already
+    /// exist in the target, by paging through the source ids.
+    /// </summary>
+    public static async Task<(int Total, int Existing)> CountInTargetAsync(
+        IOrganizationServiceAsync2 sourceSvc,
+        IOrganizationServiceAsync2 targetSvc,
+        string entityLogicalName,
+        string sourcePrimaryIdAttribute,
+        string targetPrimaryIdAttribute,
+        string? filterFragment,
+        CancellationToken ct = default)
+    {
+        var total = 0;
+        var existing = 0;
+        var page = 1;
+        string? pagingCookie = null;
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            var fetch = DataMigrationFetchXml.Build(
+                entityLogicalName,
+                [sourcePrimaryIdAttribute],
+                filterFragment,
+                page,
+                CountPageSize,
+                pagingCookie);
+            var result = await sourceSvc.RetrieveMultipleAsync(new FetchExpression(fetch), ct);
+            total += result.Entities.Count;
+
+            if (result.Entities.Count > 0)
+            {
+                var found = await FindExistingIdsAsync(
+                    targetSvc,
+                    entityLogicalName,
+                    targetPrimaryIdAttribute,
+                    result.Entities.Select(e => e.Id).ToList(),
+                    ct);
+                existing += found.Count;
+            }
+
+            if (!result.MoreRecords) return (total, existing);
+            pagingCookie = result.PagingCookie;
+            page++;
+        }
+    }
+
     /// <summary>Returns the ids that already exist in the given environment.</summary>
     public static async Task<HashSet<Guid>> FindExistingIdsAsync(
         IOrganizationServiceAsync2 svc,

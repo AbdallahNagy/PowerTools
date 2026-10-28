@@ -166,7 +166,46 @@ describe("Data Migration API", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(countBody).toEqual({ entityLogicalName: "account", fetchXmlFilter: "<filter />" });
-    expect(result.current.data).toEqual({ count: 1234 });
+    expect(result.current.data).toEqual({ count: 1234, existing: null });
+  });
+
+  it("counts how many of all the records already exist in the target", async () => {
+    let countBody: unknown;
+    let targetHeader: string | null = null;
+    httpServer.use(
+      http.post("http://localhost/api/migration/count/target", async ({ request }) => {
+        countBody = await request.json();
+        targetHeader = request.headers.get("X-Target-Environment-Url");
+        return HttpResponse.json({ count: 1234, existing: 1000 });
+      }),
+    );
+    installDesktopBridge(
+      createFakeDesktopBridge({
+        getConnection: async (name) => ({
+          id: name,
+          envUrl: `https://${name.toLowerCase()}.example.test`,
+          crmType: "online",
+          token: `${name}-token`,
+          expiresOn: "2099-01-01T00:00:00.000Z",
+        }),
+      }),
+    );
+    const queryClient = createTestQueryClient();
+
+    const { result } = renderHook(
+      () =>
+        useRecordCount({
+          connectionId: "Source",
+          targetConnectionId: "Target",
+          entityLogicalName: "account",
+        }),
+      { wrapper: createQueryWrapper(queryClient) },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(countBody).toEqual({ entityLogicalName: "account" });
+    expect(targetHeader).toBe("https://target.example.test");
+    expect(result.current.data).toEqual({ count: 1234, existing: 1000 });
   });
 
   it("loads metadata with stable query keys and cache times", async () => {

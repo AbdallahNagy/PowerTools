@@ -77,32 +77,65 @@ public static class PreviewEndpoints
             }
         });
 
+        var targetGroup = app.MapGroup("/api/migration")
+            .AddEndpointFilter<DataverseContextFilter>()
+            .AddEndpointFilter<DataverseTargetContextFilter>();
+
+        // How many source records the migration will send, and how many of them
+        // already exist in the target, across all records rather than one page.
+        targetGroup.MapPost("/count/target", async (
+            RecordCountRequest req,
+            HttpContext ctx,
+            DataverseClientFactory factory,
+            CancellationToken ct) =>
+        {
+            var svc = ctx.CreateDataverseClient(factory);
+            var targetSvc = ctx.CreateTargetDataverseClient(factory)
+                ?? throw new InvalidOperationException("Target connection was not provided.");
+
+            try
+            {
+                var sourceMetadata = await DataMigrationRecords.GetEntityMetadataAsync(svc, req.EntityLogicalName);
+                var targetMetadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, req.EntityLogicalName);
+                var (count, existing) = await DataMigrationRecords.CountInTargetAsync(
+                    svc,
+                    targetSvc,
+                    req.EntityLogicalName,
+                    sourceMetadata.PrimaryIdAttribute,
+                    targetMetadata.PrimaryIdAttribute,
+                    req.FetchXmlFilter,
+                    ct);
+                return Results.Ok(new { count, existing });
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return Results.BadRequest(new { error = DataverseErrorFormatter.Format(ex) });
+            }
+        });
+
         // Which of the previewed records already exist in the target, so each one
         // can be shown as a create or an update.
-        app.MapGroup("/api/migration")
-            .AddEndpointFilter<DataverseContextFilter>()
-            .AddEndpointFilter<DataverseTargetContextFilter>()
-            .MapPost("/existing", async (
-                ExistingRecordsRequest req,
-                HttpContext ctx,
-                DataverseClientFactory factory,
-                CancellationToken ct) =>
-            {
-                var targetSvc = ctx.CreateTargetDataverseClient(factory)
-                    ?? throw new InvalidOperationException("Target connection was not provided.");
+        targetGroup.MapPost("/existing", async (
+            ExistingRecordsRequest req,
+            HttpContext ctx,
+            DataverseClientFactory factory,
+            CancellationToken ct) =>
+        {
+            var targetSvc = ctx.CreateTargetDataverseClient(factory)
+                ?? throw new InvalidOperationException("Target connection was not provided.");
 
-                try
-                {
-                    var metadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, req.EntityLogicalName);
-                    var existing = await DataMigrationRecords.FindExistingIdsAsync(
-                        targetSvc, req.EntityLogicalName, metadata.PrimaryIdAttribute, req.Ids, ct);
-                    return Results.Ok(new { existingIds = existing.Select(id => id.ToString()) });
-                }
-                catch (Exception ex) when (ex is not OperationCanceledException)
-                {
-                    return Results.BadRequest(new { error = DataverseErrorFormatter.Format(ex) });
-                }
-            });
+            try
+            {
+                var metadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, req.EntityLogicalName);
+                var existing = await DataMigrationRecords.FindExistingIdsAsync(
+                    targetSvc, req.EntityLogicalName, metadata.PrimaryIdAttribute, req.Ids, ct);
+                return Results.Ok(new { existingIds = existing.Select(id => id.ToString()) });
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return Results.BadRequest(new { error = DataverseErrorFormatter.Format(ex) });
+            }
+        });
 
         return app;
     }

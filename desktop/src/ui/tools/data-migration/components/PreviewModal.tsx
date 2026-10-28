@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Badge, Field, Modal, Select, Spinner } from "../../../shared/ui";
 import { usePreviewRecords, useRecordCount } from "../api/usePreviewRecords";
 import type { RunMigrationArgs } from "../api/useMigrationJob";
-import { plannedAction, type PlannedAction } from "../model/recordAction";
+import { plannedAction, totalActionsSummary, type PlannedAction } from "../model/recordAction";
 
 interface PreviewModalProps {
   open: boolean;
@@ -64,6 +64,7 @@ export function PreviewModal({
     open
       ? {
           connectionId,
+          targetConnectionId: comparedTarget?.id,
           entityLogicalName,
           fetchXmlFilter: fetchXmlFilter || undefined,
         }
@@ -86,8 +87,9 @@ export function PreviewModal({
     ...r,
     planned: plannedAction(mode, r.existsInTarget),
   }));
-  const creates = rows.filter((r) => r.planned.action === "create").length;
-  const updates = rows.filter((r) => r.planned.action === "update").length;
+  const totals = count.data
+    ? totalActionsSummary(mode, count.data.count, count.data.existing)
+    : null;
 
   return (
     <Modal
@@ -100,18 +102,16 @@ export function PreviewModal({
         <div className="flex flex-col gap-0.5">
           <p className="text-sm font-medium text-fg-strong" aria-live="polite">
             {count.isLoading
-              ? "Counting records…"
+              ? comparedTarget
+                ? `Counting records and checking them in ${comparedTarget.name}…`
+                : "Counting records…"
               : count.error
                 ? "Could not count the records."
                 : count.data
                   ? `${count.data.count.toLocaleString()} ${count.data.count === 1 ? "record" : "records"} will be migrated`
                   : null}
           </p>
-          {rows.length > 0 && rows.some((r) => r.planned.action) && (
-            <p className="text-xs text-fg-muted">
-              This page: {creates} to create · {updates} to update
-            </p>
-          )}
+          {totals && <p className="text-xs text-fg-muted">{totals}</p>}
         </div>
         <div className="flex items-end gap-3">
           {isFetching && <Spinner size={14} />}

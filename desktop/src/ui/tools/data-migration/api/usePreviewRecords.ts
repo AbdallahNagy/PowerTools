@@ -27,8 +27,16 @@ export interface PreviewArgs {
 
 export interface RecordCountArgs {
   connectionId: string;
+  /** When set, also counts how many of the records already exist in this target. */
+  targetConnectionId?: string;
   entityLogicalName: string;
   fetchXmlFilter?: string;
+}
+
+export interface RecordCount {
+  count: number;
+  /** Records that already exist in the target. Null without a target. */
+  existing: number | null;
 }
 
 interface PreviewPage {
@@ -69,15 +77,21 @@ export function usePreviewRecords(args: PreviewArgs | null) {
   });
 }
 
-/** Number of source records the migration will send. */
+/** Number of source records the migration will send, across all pages. */
 export function useRecordCount(args: RecordCountArgs | null) {
   return useQuery({
     queryKey: ["migration", "count", args],
-    queryFn: () => {
-      const { connectionId, ...body } = args!;
-      return apiPost<{ count: number }>("/api/migration/count", body, {
+    queryFn: async (): Promise<RecordCount> => {
+      const { connectionId, targetConnectionId, ...body } = args!;
+      if (targetConnectionId) {
+        return apiPost<RecordCount>("/api/migration/count/target", body, {
+          meta: { connectionId, targetConnectionId },
+        });
+      }
+      const { count } = await apiPost<{ count: number }>("/api/migration/count", body, {
         meta: { connectionId },
       });
+      return { count, existing: null };
     },
     enabled: !!args,
   });
