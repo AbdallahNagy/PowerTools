@@ -16,6 +16,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - **Data Migration: simpler Preview.** Preview shows three columns: Action, ID, and Name. Action says whether each record will be created or updated in the target you compare with, and flags records that will fail because the Create or Update option does not allow them.
+- Resize table columns. Drag the right edge of a column header to make the column wider or narrower, and double-click the edge to put that column back to its automatic width. This applies to the tables in every tool, including the FetchXML Builder results grid and the Data Migration field list and preview.
 - Table, column, message, and user pickers filter as you type. Type any words from the display name or logical name, in any order, to narrow the list. This applies to the table, field, and choice value pickers in **FetchXML Builder**, the message, entity, and impersonating user pickers when registering a plugin step, and the table picker in **Solution Layers Explorer**.
 
 ## [1.1.0] - 2026-10-20

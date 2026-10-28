@@ -1,9 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button, Field, Modal, SearchInput, Select, Spinner } from "../../../../shared/ui";
+import {
+  Button,
+  ColumnResizeHandle,
+  Field,
+  Modal,
+  SearchInput,
+  Select,
+  Spinner,
+  useColumnResize,
+} from "../../../../shared/ui";
 import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import type { FieldMetadata } from "../../model/types";
 import { useLookupRecords, type LookupRecord } from "../../hooks/useLookupRecords";
 import { useFetchXmlBuilder } from "../../context/useFetchXmlBuilder";
+
+const LOOKUP_COLUMNS = [
+  { key: "name", label: "Name" },
+  { key: "id", label: "ID" },
+  { key: "createdOn", label: "Created On" },
+];
 
 export type SelectedLookupRecord = LookupRecord & { target: string };
 
@@ -54,6 +69,10 @@ export function LookupPickerModal({
   const selectedEntity = targetTables.find((table) => table.logicalName === selectedTarget) ?? null;
   const { data: records, isLoading, error } = useLookupRecords(connectionId, selectedEntity, search);
   const pendingCount = Object.keys(pendingSelections).length;
+  const resize = useColumnResize([
+    ...(mode === "multiple" ? ["select"] : []),
+    ...LOOKUP_COLUMNS.map((col) => col.key),
+  ]);
 
   function toggleRecord(record: LookupRecord) {
     if (!selectedEntity) return;
@@ -117,21 +136,22 @@ export function LookupPickerModal({
             {(error as Error).message}
           </div>
         ) : records && records.length > 0 ? (
-          <table className="w-full text-sm text-fg border-collapse">
+          <table ref={resize.tableRef} className="w-full text-sm text-fg border-collapse" style={resize.tableStyle}>
             <thead className="bg-surface sticky top-0 z-10">
               <tr>
                 {mode === "multiple" && (
-                  <th className="px-3 py-2 w-8 border-b border-line" />
+                  <th {...resize.headerProps("select")} className="px-3 py-2 w-8 border-b border-line" />
                 )}
-                <th className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line">
-                  Name
-                </th>
-                <th className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line">
-                  ID
-                </th>
-                <th className="text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line">
-                  Created On
-                </th>
+                {LOOKUP_COLUMNS.map((col) => (
+                  <th
+                    key={col.key}
+                    {...resize.headerProps(col.key)}
+                    className="relative text-left px-3 py-2 font-medium text-fg-muted text-xs tracking-wider border-b border-line"
+                  >
+                    {col.label}
+                    <ColumnResizeHandle resize={resize} columnKey={col.key} />
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -160,13 +180,13 @@ export function LookupPickerModal({
                       />
                     </td>
                   )}
-                  <td className="px-3 py-2 text-xs max-w-sm truncate" title={record.name}>
+                  <td className={`px-3 py-2 text-xs truncate ${resize.resized ? "" : "max-w-sm"}`} title={record.name}>
                     {record.name}
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs max-w-xs truncate text-fg-muted" title={record.id}>
+                  <td className={`px-3 py-2 font-mono text-xs truncate text-fg-muted ${resize.resized ? "" : "max-w-xs"}`} title={record.id}>
                     {record.id}
                   </td>
-                  <td className="px-3 py-2 text-xs whitespace-nowrap text-fg-muted" title={record.createdOn ?? ""}>
+                  <td className="px-3 py-2 text-xs truncate text-fg-muted" title={record.createdOn ?? ""}>
                     {formatCreatedOn(record.createdOn)}
                   </td>
                 </tr>

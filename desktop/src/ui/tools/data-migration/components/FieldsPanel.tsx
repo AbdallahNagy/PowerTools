@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Checkbox, SearchInput, Spinner } from "../../../shared/ui";
+import { Checkbox, ColumnResizeHandle, SearchInput, Spinner, useColumnResize } from "../../../shared/ui";
 import { useEntityAttributes } from "../api/useEntityAttributes";
 
 interface FieldsPanelProps {
@@ -8,6 +8,14 @@ interface FieldsPanelProps {
   selected: string[];
   onChange: (attributes: string[]) => void;
 }
+
+const FIELD_COLUMNS = [
+  { key: "select", label: "Select" },
+  { key: "displayName", label: "Display Name" },
+  { key: "logicalName", label: "Logical Name" },
+  { key: "type", label: "Type" },
+  { key: "required", label: "Required" },
+];
 
 const reqColors: Record<string, string> = {
   SystemRequired: "bg-danger-soft text-danger",
@@ -36,6 +44,7 @@ export function FieldsPanel({
   );
 
   const checked = new Set(selected);
+  const resize = useColumnResize(FIELD_COLUMNS.map((col) => col.key));
 
   // Primary id attributes are always part of the selection.
   useEffect(() => {
@@ -106,22 +115,20 @@ export function FieldsPanel({
         </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-auto border border-line rounded-sm">
-          <table className="w-full text-sm">
+          <table ref={resize.tableRef} className="w-full text-sm" style={resize.tableStyle}>
             <thead className="bg-surface sticky top-0">
               <tr>
-                <th className="w-10 px-3 py-2" />
-                <th className="text-left px-3 py-2 text-xs font-medium text-fg-muted uppercase">
-                  Display Name
-                </th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-fg-muted uppercase">
-                  Logical Name
-                </th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-fg-muted uppercase">
-                  Type
-                </th>
-                <th className="text-left px-3 py-2 text-xs font-medium text-fg-muted uppercase">
-                  Required
-                </th>
+                <th {...resize.headerProps("select")} className="w-10 px-3 py-2" />
+                {FIELD_COLUMNS.slice(1).map((col) => (
+                  <th
+                    key={col.key}
+                    {...resize.headerProps(col.key)}
+                    className="relative text-left px-3 py-2 text-xs font-medium text-fg-muted uppercase"
+                  >
+                    {col.label}
+                    <ColumnResizeHandle resize={resize} columnKey={col.key} />
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
@@ -145,10 +152,10 @@ export function FieldsPanel({
                         disabled={isLocked}
                       />
                     </td>
-                    <td className="px-3 py-2 text-fg font-medium">
+                    <td className={`px-3 py-2 text-fg font-medium ${resize.resized ? "truncate" : ""}`}>
                       {attr.displayName}
                     </td>
-                    <td className="px-3 py-2 text-fg-muted font-mono text-xs">
+                    <td className={`px-3 py-2 text-fg-muted font-mono text-xs ${resize.resized ? "truncate" : ""}`}>
                       {attr.logicalName}
                     </td>
                     <td className="px-3 py-2">

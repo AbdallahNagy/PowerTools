@@ -1,5 +1,13 @@
 import { useEffect, useState } from "react";
-import { Badge, Field, Modal, Select, Spinner } from "../../../shared/ui";
+import {
+  Badge,
+  ColumnResizeHandle,
+  Field,
+  Modal,
+  Select,
+  Spinner,
+  useColumnResize,
+} from "../../../shared/ui";
 import { usePreviewRecords, useRecordCount } from "../api/usePreviewRecords";
 import type { RunMigrationArgs } from "../api/useMigrationJob";
 import { plannedAction, totalActionsSummary, type PlannedAction } from "../model/recordAction";
@@ -18,6 +26,7 @@ interface PreviewModalProps {
 }
 
 const PAGE_SIZE = 50;
+const COLUMNS = ["Action", "ID", "Name"];
 
 export function PreviewModal({
   open,
@@ -87,6 +96,7 @@ export function PreviewModal({
     ...r,
     planned: plannedAction(mode, r.existsInTarget),
   }));
+  const resize = useColumnResize(COLUMNS);
   const totals = count.data
     ? totalActionsSummary(mode, count.data.count, count.data.existing)
     : null;
@@ -146,15 +156,17 @@ export function PreviewModal({
       )}
 
       <div className="flex-1 min-h-48 overflow-auto border border-line rounded-sm">
-        <table className="w-full text-sm text-fg border-collapse">
+        <table ref={resize.tableRef} className="w-full text-sm text-fg border-collapse" style={resize.tableStyle}>
           <thead className="bg-surface sticky top-0">
             <tr>
-              {["Action", "ID", "Name"].map((h) => (
+              {COLUMNS.map((h) => (
                 <th
                   key={h}
-                  className="text-left px-3 py-2 text-xs font-medium text-fg-muted border-b border-line"
+                  {...resize.headerProps(h)}
+                  className="relative text-left px-3 py-2 text-xs font-medium text-fg-muted border-b border-line"
                 >
                   {h}
+                  <ColumnResizeHandle resize={resize} columnKey={h} />
                 </th>
               ))}
             </tr>
@@ -165,11 +177,13 @@ export function PreviewModal({
                 key={row.id}
                 className="border-b border-line last:border-0 hover:bg-hover"
               >
-                <td className="px-3 py-2 text-xs w-36">
+                <td className={`px-3 py-2 text-xs ${resize.resized ? "" : "w-36"}`}>
                   <ActionBadge planned={row.planned} />
                 </td>
-                <td className="px-3 py-2 text-xs font-mono text-fg w-80">{row.id}</td>
-                <td className="px-3 py-2 text-xs text-fg max-w-[280px] truncate">
+                <td className={`px-3 py-2 text-xs font-mono text-fg truncate ${resize.resized ? "" : "w-80"}`}>
+                  {row.id}
+                </td>
+                <td className={`px-3 py-2 text-xs text-fg truncate ${resize.resized ? "" : "max-w-[280px]"}`}>
                   {row.name ?? ""}
                 </td>
               </tr>
