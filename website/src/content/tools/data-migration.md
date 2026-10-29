@@ -28,7 +28,7 @@ Choose how records are written:
 - **Create** adds records that do not exist in the target. Records that already exist are skipped.
 - **Update** overwrites records that already exist in the target with the same ID. Records that do not exist are skipped.
 - **Both** creates or updates each record.
-- **Delete** removes target records that match the filter but are not in the source. Turning it on explains exactly what it does, and before each target runs you see the list of records to delete and confirm that number. If more records would be deleted when the run starts, nothing is deleted.
+- **Delete** removes target records that are not among the source records you migrate, as in XrmToolBox Data Transporter. The filter only chooses source records, so target records outside it are deleted too, even when the source has them. Turning it on explains exactly what it does, and before each target runs you see the list of records to delete and confirm that number. If more records would be deleted when the run starts, nothing is deleted.
 
 Inactive records stay inactive: a new record is created and then moved to its status in the same transaction.
 

@@ -78,7 +78,7 @@ public static class MigrationPlan
         if (options.ConfirmedDeleteCount is not int confirmed)
             return "Delete was not confirmed, so no target records were deleted.";
         if (sourceCount == 0)
-            return $"No source records match, so the {toDelete} matching target records were not deleted. " +
+            return $"No source records match, so the {toDelete} target records that are not in the source were not deleted. " +
                    "Check the source connection and filter.";
         if (toDelete > confirmed)
             return $"{toDelete} target records would be deleted, more than the {confirmed} you confirmed, " +

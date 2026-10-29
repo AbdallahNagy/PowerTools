@@ -243,6 +243,16 @@ AssertEquals(
     "<fetch><entity name=\"account\"><attribute name=\"accountid\" /><filter><condition attribute=\"accountid\" operator=\"in\"><value>83b129f1-7790-4ca5-a0db-bf02fd67c127</value><value>0f8fad5b-d9cb-469f-a165-70867728950e</value></condition></filter></entity></fetch>",
     idLookupFetch);
 
+// Delete compares target records with the filtered source, so the source lookup carries the filter.
+var filteredIdLookupFetch = DataMigrationFetchXml.BuildIdLookup(
+    "account",
+    "accountid",
+    [Guid.Parse("83b129f1-7790-4ca5-a0db-bf02fd67c127")],
+    "<filter><condition attribute=\"address1_city\" operator=\"eq\" value=\"Cairo\" /></filter>");
+AssertEquals(
+    "<fetch><entity name=\"account\"><attribute name=\"accountid\" /><filter type=\"and\"><condition attribute=\"accountid\" operator=\"in\"><value>83b129f1-7790-4ca5-a0db-bf02fd67c127</value></condition><filter><condition attribute=\"address1_city\" operator=\"eq\" value=\"Cairo\" /></filter></filter></entity></fetch>",
+    filteredIdLookupFetch);
+
 // Records the options do not cover are skipped, as in Data Transporter, rather than sent and failed.
 var createOnly = new MigrationOptions(Create: true, Update: false, Delete: false);
 var updateOnly = new MigrationOptions(Create: false, Update: true, Delete: false);

@@ -58,6 +58,6 @@ export function totalActionsSummary(
 
 /** What ticking Delete does, shown before it is turned on and while it is on. */
 export const DELETE_EXPLANATION =
-  "Delete removes records from the target. In each target, every record of this table that matches " +
-  "the filter but whose ID is not among the matching source records is deleted. With no filter, " +
-  "that is every target record that is not in the source. Deleted records cannot be restored from here.";
+  "Delete removes records from the target. In each target, every record of this table whose ID is not " +
+  "among the source records you migrate is deleted. The filter only chooses source records: target " +
+  "records outside it are deleted too, even when the source has them. Deleted records cannot be restored from here.";

@@ -46,8 +46,14 @@ public static class DataMigrationFetchXml
             .ToString(SaveOptions.DisableFormatting);
     }
 
-    /// <summary>FetchXML that returns which of the given ids exist.</summary>
-    public static string BuildIdLookup(string entityLogicalName, string primaryIdAttribute, IEnumerable<Guid> ids)
+    /// <summary>
+    /// FetchXML that returns which of the given ids exist, and also match the filter when one is given.
+    /// </summary>
+    public static string BuildIdLookup(
+        string entityLogicalName,
+        string primaryIdAttribute,
+        IEnumerable<Guid> ids,
+        string? filterFragment = null)
     {
         var condition = new XElement("condition",
             new XAttribute("attribute", primaryIdAttribute),
@@ -57,10 +63,18 @@ public static class DataMigrationFetchXml
             condition.Add(new XElement("value", id.ToString()));
         }
 
+        var filter = new XElement("filter", condition);
+        var normalizedFilter = NormalizeFilterFragment(filterFragment, entityLogicalName);
+        if (normalizedFilter is not null)
+        {
+            filter.SetAttributeValue("type", "and");
+            filter.Add(XElement.Parse(normalizedFilter));
+        }
+
         var entity = new XElement("entity",
             new XAttribute("name", entityLogicalName),
             new XElement("attribute", new XAttribute("name", primaryIdAttribute)),
-            new XElement("filter", condition));
+            filter);
 
         return new XElement("fetch", entity).ToString(SaveOptions.DisableFormatting);
     }

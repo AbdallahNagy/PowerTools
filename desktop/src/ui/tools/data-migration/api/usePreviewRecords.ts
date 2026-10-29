@@ -114,7 +114,7 @@ export interface Deletions {
 }
 
 /**
- * Target records that match the filter but are not in the source: what the
+ * Target records that are not among the source records matching the filter: what the
  * delete option removes from that target.
  */
 export function useDeletions(args: DeletionArgs | null) {

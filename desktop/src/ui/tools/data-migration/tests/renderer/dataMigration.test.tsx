@@ -333,7 +333,7 @@ describe("Data Migration", () => {
     const deleteBox = screen.getByRole("checkbox", { name: "Delete" });
     fireEvent.click(deleteBox);
     const warning = await screen.findByRole("dialog", { name: "Turn on Delete?" });
-    expect(within(warning).getByText(/every account record in the target is considered/)).toBeVisible();
+    expect(within(warning).getByText(/every account record in the target that is not in the source is deleted/)).toBeVisible();
     fireEvent.click(within(warning).getByRole("button", { name: "Keep Delete off" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(deleteBox).not.toBeChecked();

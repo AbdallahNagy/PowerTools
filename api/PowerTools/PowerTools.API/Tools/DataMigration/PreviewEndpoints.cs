@@ -140,8 +140,8 @@ public static class PreviewEndpoints
             }
         });
 
-        // The target records the delete option removes: those matching the filter
-        // whose id is not among the matching source records.
+        // The target records the delete option removes: every target record of the
+        // table whose id is not among the source records matching the filter.
         targetGroup.MapPost("/deletions", async (
             RecordCountRequest req,
             HttpContext ctx,

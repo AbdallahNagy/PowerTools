@@ -26,7 +26,7 @@ export interface RunMigrationArgs {
   create: boolean;
   /** Update source records that already exist in the target. */
   update: boolean;
-  /** Delete target records that match the filter but are not in the source. */
+  /** Delete target records that are not among the source records matching the filter. */
   delete: boolean;
   /** Required with delete: the run deletes nothing if it finds more than this. */
   confirmedDeleteCount?: number;

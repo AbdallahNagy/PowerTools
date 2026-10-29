@@ -119,9 +119,11 @@ public static class DataMigrationRecords
     }
 
     /// <summary>
-    /// Target records matching the filter whose id is not among the source records
-    /// matching the same filter: the records the delete option removes. The filter
-    /// runs in both environments, so records outside it are never touched.
+    /// Target records whose id is not among the source records matching the filter:
+    /// the records the delete option removes. As in XrmToolBox Data Transporter, the
+    /// filter only selects source records. Every target record of the table is
+    /// compared, so a target record outside the filter is deleted too, even when the
+    /// source has it.
     /// </summary>
     public static async Task<(int SourceCount, List<MissingRecord> Records)> FindTargetRecordsMissingFromSourceAsync(
         IOrganizationServiceAsync2 sourceSvc,
@@ -145,7 +147,7 @@ public static class DataMigrationRecords
         {
             ct.ThrowIfCancellationRequested();
             var fetch = DataMigrationFetchXml.Build(
-                entityLogicalName, columns, filterFragment, page, CountPageSize, pagingCookie);
+                entityLogicalName, columns, filterFragment: null, page, CountPageSize, pagingCookie);
             var result = await targetSvc.RetrieveMultipleAsync(new FetchExpression(fetch), ct);
 
             if (result.Entities.Count > 0)
@@ -155,7 +157,8 @@ public static class DataMigrationRecords
                     entityLogicalName,
                     sourcePrimaryIdAttribute,
                     result.Entities.Select(e => e.Id).ToList(),
-                    ct);
+                    ct,
+                    filterFragment);
                 missing.AddRange(result.Entities
                     .Where(e => !inSource.Contains(e.Id))
                     .Select(e => new MissingRecord(
@@ -169,18 +172,22 @@ public static class DataMigrationRecords
         }
     }
 
-    /// <summary>Returns the ids that already exist in the given environment.</summary>
+    /// <summary>
+    /// Returns the ids that already exist in the given environment, and also match
+    /// the filter when one is given.
+    /// </summary>
     public static async Task<HashSet<Guid>> FindExistingIdsAsync(
         IOrganizationServiceAsync2 svc,
         string entityLogicalName,
         string primaryIdAttribute,
         IReadOnlyCollection<Guid> ids,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? filterFragment = null)
     {
         var existing = new HashSet<Guid>();
         foreach (var chunk in ids.Distinct().Chunk(IdLookupChunkSize))
         {
-            var fetch = DataMigrationFetchXml.BuildIdLookup(entityLogicalName, primaryIdAttribute, chunk);
+            var fetch = DataMigrationFetchXml.BuildIdLookup(entityLogicalName, primaryIdAttribute, chunk, filterFragment);
             var result = await svc.RetrieveMultipleAsync(new FetchExpression(fetch), ct);
             existing.UnionWith(result.Entities.Select(e => e.Id));
         }

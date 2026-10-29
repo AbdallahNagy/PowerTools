@@ -27,8 +27,8 @@ export function EnableDeleteDialog({
       <ul className="list-disc pl-5 text-sm text-fg flex flex-col gap-1">
         <li>
           {hasFilter
-            ? `Only ${entityLogicalName ?? "target"} records that match your filter in the target are considered.`
-            : `No filter is set, so every ${entityLogicalName ?? "target"} record in the target is considered.`}
+            ? `Your filter is set. Every ${entityLogicalName ?? "target"} record in the target that the filter leaves out of the source records is deleted, including records the source has but the filter excludes.`
+            : `No filter is set, so every ${entityLogicalName ?? "target"} record in the target that is not in the source is deleted.`}
         </li>
         <li>Records are matched by ID, not by name. A record with the same name but another ID is deleted.</li>
         <li>Deleting can cascade to related records, depending on the relationship settings in the target.</li>
@@ -108,14 +108,14 @@ export function ConfirmDeleteDialog({
 
       {data && count === 0 && (
         <Alert tone="ok">
-          No {entityLogicalName} records in {target?.name} would be deleted: every matching target record is in the
-          source.
+          No {entityLogicalName} records in {target?.name} would be deleted: every target record is among the source
+          records you migrate.
         </Alert>
       )}
 
       {noSource && (
         <Alert tone="danger" title="The source returned no records">
-          No source records match, so Delete would remove all {count.toLocaleString()} matching records in{" "}
+          No source records match, so Delete would remove all {count.toLocaleString()} {entityLogicalName} records in{" "}
           {target?.name}. This usually means a wrong source connection, filter, or missing read access, so the run is
           blocked. Turn Delete off to migrate without deleting.
         </Alert>
@@ -124,8 +124,11 @@ export function ConfirmDeleteDialog({
       {data && count > 0 && !noSource && (
         <>
           <Alert tone="danger" title={`${count.toLocaleString()} ${count === 1 ? "record" : "records"} will be deleted`}>
-            These {entityLogicalName} records match the filter in {target?.name} but are not in the source. They are
-            deleted after the create and update step.
+            These {entityLogicalName} records in {target?.name} are not among the source records you migrate. They
+            are deleted after the create and update step.
+            {fetchXmlFilter.trim()
+              ? " Your filter only chooses source records, so target records outside it are listed too, even when the source has them."
+              : null}
           </Alert>
           <div className="max-h-64 overflow-auto border border-line rounded-sm">
             <table className="w-full text-xs text-fg border-collapse">
