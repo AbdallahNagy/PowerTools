@@ -66,11 +66,21 @@ describe("crash reports", () => {
   it("uses the DSN override, and an empty override turns reporting off", async () => {
     const { resolveDsn, DEFAULT_SENTRY_DSN } = await import("../../src/electron/crashReports.ts");
 
-    expect(resolveDsn({})).toBe(DEFAULT_SENTRY_DSN);
-    expect(resolveDsn({ SENTRY_DSN: "https://key@example.ingest.sentry.io/1" })).toBe(
+    expect(resolveDsn({}, true)).toBe(DEFAULT_SENTRY_DSN);
+    expect(resolveDsn({ SENTRY_DSN: "https://key@example.ingest.sentry.io/1" }, true)).toBe(
       "https://key@example.ingest.sentry.io/1",
     );
-    expect(resolveDsn({ SENTRY_DSN: "" })).toBeUndefined();
+    expect(resolveDsn({ SENTRY_DSN: "" }, true)).toBeUndefined();
+  });
+
+  it("sends nothing from development builds unless a DSN is set", async () => {
+    const { resolveDsn } = await import("../../src/electron/crashReports.ts");
+
+    expect(resolveDsn({}, false)).toBeUndefined();
+    expect(resolveDsn({ SENTRY_DSN: "" }, false)).toBeUndefined();
+    expect(resolveDsn({ SENTRY_DSN: "https://key@example.ingest.sentry.io/1" }, false)).toBe(
+      "https://key@example.ingest.sentry.io/1",
+    );
   });
 
   it("builds a Help menu checkbox", async () => {

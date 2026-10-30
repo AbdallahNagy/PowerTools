@@ -7,7 +7,7 @@ import {
 } from "./crashReports.js";
 
 // Imported first by main.ts so errors during startup are captured.
-const dsn = resolveDsn(process.env);
+const dsn = resolveDsn(process.env, app.isPackaged);
 
 if (dsn) {
   Sentry.init({

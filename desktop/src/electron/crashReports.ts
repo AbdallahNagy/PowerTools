@@ -1,15 +1,16 @@
 import { readSettings, writeSettings } from "./settings.js";
 
 // Crash reports go to Sentry (project powertools-desktop). A DSN only allows
-// sending events, so it is safe to ship in the app. Set SENTRY_DSN to point
-// a build at another project, or to an empty string to turn reporting off
-// (automated tests do this).
+// sending events, so it is safe to ship in the app. Only packaged builds
+// report by default; development builds send nothing unless SENTRY_DSN is set.
+// Set SENTRY_DSN to point a build at another project, or to an empty string
+// to turn reporting off (automated tests do this).
 export const DEFAULT_SENTRY_DSN =
   "https://9caf640d2def4a2e6d021c1324e0eda8@o4512262338707456.ingest.de.sentry.io/4512262735724624";
 
-export function resolveDsn(env: NodeJS.ProcessEnv): string | undefined {
+export function resolveDsn(env: NodeJS.ProcessEnv, isPackaged: boolean): string | undefined {
   const override = env.SENTRY_DSN;
-  if (override === undefined) return DEFAULT_SENTRY_DSN;
+  if (override === undefined) return isPackaged ? DEFAULT_SENTRY_DSN : undefined;
   return override || undefined;
 }
 
