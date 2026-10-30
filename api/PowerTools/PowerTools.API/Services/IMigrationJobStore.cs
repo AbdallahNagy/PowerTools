@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using PowerTools.API.Tools.DataMigration;
 
 namespace PowerTools.API.Services;
 
@@ -15,6 +16,9 @@ public class MigrationJob
     public int Succeeded { get; set; }
     public int Created { get; set; }
     public int Updated { get; set; }
+    /// <summary>Source records left alone because the options do not cover them.</summary>
+    public int Skipped { get; set; }
+    public int Deleted { get; set; }
     public int Failed { get; set; }
     public List<MigrationJobError> Errors { get; set; } = [];
 
@@ -26,7 +30,7 @@ public class MigrationJob
     public required string EntityLogicalName { get; init; }
     public required List<string> Attributes { get; init; }
     public string? FetchXmlFilter { get; init; }
-    public required string Mode { get; init; } // "create" | "update" | "upsert"
+    public required MigrationOptions Options { get; init; }
 }
 
 public interface IMigrationJobStore

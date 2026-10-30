@@ -316,6 +316,8 @@ describe("Data Migration API", () => {
           succeeded: 1,
           created: 1,
           updated: 0,
+          skipped: 0,
+          deleted: 0,
           failed: 0,
           errors: [],
         }),
@@ -350,7 +352,9 @@ describe("Data Migration API", () => {
       await start.result.current.mutateAsync({
         entityLogicalName: "account",
         attributes: ["accountid"],
-        mode: "update",
+        create: false,
+        update: true,
+        delete: false,
         sourceConnectionId: "Polling Source",
         targetConnectionId: "Polling Target",
       });
@@ -359,7 +363,9 @@ describe("Data Migration API", () => {
     expect(migrationRequest).toEqual({
       entityLogicalName: "account",
       attributes: ["accountid"],
-      mode: "update",
+      create: false,
+      update: true,
+      delete: false,
     });
     expect(sourceEnvironmentHeader).toBe("https://polling-source.example.test");
     expect(targetEnvironmentHeader).toBe("https://polling-target.example.test");
@@ -392,6 +398,8 @@ describe("Data Migration API", () => {
       succeeded: 2,
       created: 1,
       updated: 1,
+      skipped: 0,
+      deleted: 0,
       failed: 0,
       errors: [],
     });

@@ -18,6 +18,11 @@ public static class MigrationEndpoints
             HttpContext ctx,
             IMigrationJobStore store) =>
         {
+            if (!req.Create && !req.Update && !req.Delete)
+                return Results.BadRequest(new { error = "Choose Create, Update, or Delete." });
+            if (req.Delete && req.ConfirmedDeleteCount is null)
+                return Results.BadRequest(new { error = "Confirm the records to delete before starting." });
+
             var job = new MigrationJob
             {
                 SourceConnection = ctx.GetDataverseConnectionContext(),
@@ -26,7 +31,7 @@ public static class MigrationEndpoints
                 EntityLogicalName = req.EntityLogicalName,
                 Attributes = req.Attributes,
                 FetchXmlFilter = req.FetchXmlFilter,
-                Mode = req.Mode
+                Options = new MigrationOptions(req.Create, req.Update, req.Delete, req.ConfirmedDeleteCount)
             };
 
             store.Enqueue(job);
@@ -48,6 +53,8 @@ public static class MigrationEndpoints
                 succeeded = job.Succeeded,
                 created = job.Created,
                 updated = job.Updated,
+                skipped = job.Skipped,
+                deleted = job.Deleted,
                 failed = job.Failed,
                 errors = job.Errors.Select(e => new { recordId = e.RecordId, message = e.Message })
             });

@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
-import { ToastProvider, useToast } from "../../shared/ui";
+import { Alert, ToastProvider, useToast } from "../../shared/ui";
 import { Group, Panel, Separator } from "react-resizable-panels";
 import { ConnectionsBar } from "./components/ConnectionsBar";
-import { MigrationOptions, type MigrationMode } from "./components/MigrationOptions";
+import { MigrationOptions } from "./components/MigrationOptions";
 import { EntityListPanel } from "./components/EntityListPanel";
 import { FieldsPanel } from "./components/FieldsPanel";
 import { FilterModal } from "./components/FilterModal";
 import { PreviewModal } from "./components/PreviewModal";
+import { ConfirmDeleteDialog, EnableDeleteDialog } from "./components/DeleteDialogs";
+import { DELETE_EXPLANATION } from "./model/recordAction";
 import { MigrationStatusItem } from "./components/MigrationStatusItem";
 import { MigrationRunBanner } from "./components/MigrationRunBanner";
 import type { TargetItem } from "./components/TargetChip";
@@ -60,6 +62,10 @@ function DataMigrationPage() {
   const [fetchFilter, setFetchFilter] = useState("");
   const [doCreate, setDoCreate] = useState(true);
   const [doUpdate, setDoUpdate] = useState(true);
+  const [doDelete, setDoDelete] = useState(false);
+  const [enableDeleteOpen, setEnableDeleteOpen] = useState(false);
+  /** Target whose deletions are waiting for the user's confirmation. */
+  const [deleteConfirmTarget, setDeleteConfirmTarget] = useState<string | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [run, setRun] = useState<MigrationRun | null>(null);
@@ -114,14 +120,15 @@ function DataMigrationPage() {
     setFetchFilter("");
   };
 
-  const mode: MigrationMode = doCreate && doUpdate ? "upsert" : doUpdate ? "update" : "create";
   const settings: MigrationSettings | null =
     entity && sourceName
       ? {
           entityLogicalName: entity.logicalName,
           attributes,
           fetchXmlFilter: fetchFilter || undefined,
-          mode,
+          create: doCreate,
+          update: doUpdate,
+          delete: doDelete,
           sourceConnectionId: sourceName,
         }
       : null;
@@ -139,15 +146,22 @@ function DataMigrationPage() {
     !!settings &&
     targetId !== sourceName &&
     attributes.length > 0 &&
-    (doCreate || doUpdate) &&
+    (doCreate || doUpdate || doDelete) &&
     !isPending &&
     !isRunning;
   const canStart = !!next && canMigrateTo(next);
 
+  // A run that deletes starts only from the confirmation, with the number agreed to.
   const migrateTo = (targetId: string) => {
+    if (!settings || !canMigrateTo(targetId)) return;
+    if (settings.delete) setDeleteConfirmTarget(targetId);
+    else start(targetId);
+  };
+
+  const start = (targetId: string, confirmedDeleteCount?: number) => {
     if (!settings || !key || !canMigrateTo(targetId)) return;
     startMigration(
-      { ...settings, targetConnectionId: targetId },
+      { ...settings, targetConnectionId: targetId, confirmedDeleteCount },
       {
         onSuccess: (res) => {
           setRun((r) => {
@@ -222,8 +236,10 @@ function DataMigrationPage() {
         <MigrationOptions
           doCreate={doCreate}
           doUpdate={doUpdate}
+          doDelete={doDelete}
           onCreateChange={setDoCreate}
           onUpdateChange={setDoUpdate}
+          onDeleteChange={(on) => (on ? setEnableDeleteOpen(true) : setDoDelete(false))}
           hasFilter={!!fetchFilter.trim()}
           filterDisabled={!entity}
           onOpenFilter={() => setFilterOpen(true)}
@@ -235,6 +251,12 @@ function DataMigrationPage() {
           onStart={handleStart}
         />
       </div>
+
+      {doDelete && (
+        <Alert tone="danger" title="Delete is on">
+          {DELETE_EXPLANATION}
+        </Alert>
+      )}
 
       {bannerJob && lastJob && (
         <MigrationRunBanner
@@ -285,9 +307,35 @@ function DataMigrationPage() {
           connectionId={sourceName ?? ""}
           entityLogicalName={entity.logicalName}
           fetchXmlFilter={fetchFilter}
-          mode={mode}
+          options={{ create: doCreate, update: doUpdate, delete: doDelete }}
           targets={targets.map((id) => ({ id, name: nameOf(id) }))}
           defaultTargetId={next ?? runningTargetId ?? targets[0] ?? null}
+        />
+      )}
+
+      <EnableDeleteDialog
+        open={enableDeleteOpen}
+        entityLogicalName={entity?.logicalName ?? null}
+        hasFilter={!!fetchFilter.trim()}
+        onCancel={() => setEnableDeleteOpen(false)}
+        onConfirm={() => {
+          setDoDelete(true);
+          setEnableDeleteOpen(false);
+        }}
+      />
+
+      {entity && sourceName && (
+        <ConfirmDeleteDialog
+          target={deleteConfirmTarget ? { id: deleteConfirmTarget, name: nameOf(deleteConfirmTarget) } : null}
+          sourceConnectionId={sourceName}
+          entityLogicalName={entity.logicalName}
+          fetchXmlFilter={fetchFilter}
+          onCancel={() => setDeleteConfirmTarget(null)}
+          onConfirm={(count) => {
+            const targetId = deleteConfirmTarget;
+            setDeleteConfirmTarget(null);
+            if (targetId) start(targetId, count);
+          }}
         />
       )}
     </div>

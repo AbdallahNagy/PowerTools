@@ -118,21 +118,81 @@ public static class DataMigrationRecords
         }
     }
 
-    /// <summary>Returns the ids that already exist in the given environment.</summary>
+    /// <summary>
+    /// Target records whose id is not among the source records matching the filter:
+    /// the records the delete option removes. As in XrmToolBox Data Transporter, the
+    /// filter only selects source records. Every target record of the table is
+    /// compared, so a target record outside the filter is deleted too, even when the
+    /// source has it.
+    /// </summary>
+    public static async Task<(int SourceCount, List<MissingRecord> Records)> FindTargetRecordsMissingFromSourceAsync(
+        IOrganizationServiceAsync2 sourceSvc,
+        IOrganizationServiceAsync2 targetSvc,
+        string entityLogicalName,
+        string sourcePrimaryIdAttribute,
+        EntityMetadata targetMetadata,
+        string? filterFragment,
+        CancellationToken ct = default)
+    {
+        var sourceCount = await CountAsync(sourceSvc, entityLogicalName, sourcePrimaryIdAttribute, filterFragment, ct);
+
+        var nameAttribute = targetMetadata.PrimaryNameAttribute;
+        var columns = string.IsNullOrEmpty(nameAttribute)
+            ? [targetMetadata.PrimaryIdAttribute]
+            : new List<string> { targetMetadata.PrimaryIdAttribute, nameAttribute };
+        var missing = new List<MissingRecord>();
+        var page = 1;
+        string? pagingCookie = null;
+        while (true)
+        {
+            ct.ThrowIfCancellationRequested();
+            var fetch = DataMigrationFetchXml.Build(
+                entityLogicalName, columns, filterFragment: null, page, CountPageSize, pagingCookie);
+            var result = await targetSvc.RetrieveMultipleAsync(new FetchExpression(fetch), ct);
+
+            if (result.Entities.Count > 0)
+            {
+                var inSource = await FindExistingIdsAsync(
+                    sourceSvc,
+                    entityLogicalName,
+                    sourcePrimaryIdAttribute,
+                    result.Entities.Select(e => e.Id).ToList(),
+                    ct,
+                    filterFragment);
+                missing.AddRange(result.Entities
+                    .Where(e => !inSource.Contains(e.Id))
+                    .Select(e => new MissingRecord(
+                        e.Id,
+                        string.IsNullOrEmpty(nameAttribute) ? null : e.GetAttributeValue<object>(nameAttribute)?.ToString())));
+            }
+
+            if (!result.MoreRecords) return (sourceCount, missing);
+            pagingCookie = result.PagingCookie;
+            page++;
+        }
+    }
+
+    /// <summary>
+    /// Returns the ids that already exist in the given environment, and also match
+    /// the filter when one is given.
+    /// </summary>
     public static async Task<HashSet<Guid>> FindExistingIdsAsync(
         IOrganizationServiceAsync2 svc,
         string entityLogicalName,
         string primaryIdAttribute,
         IReadOnlyCollection<Guid> ids,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        string? filterFragment = null)
     {
         var existing = new HashSet<Guid>();
         foreach (var chunk in ids.Distinct().Chunk(IdLookupChunkSize))
         {
-            var fetch = DataMigrationFetchXml.BuildIdLookup(entityLogicalName, primaryIdAttribute, chunk);
+            var fetch = DataMigrationFetchXml.BuildIdLookup(entityLogicalName, primaryIdAttribute, chunk, filterFragment);
             var result = await svc.RetrieveMultipleAsync(new FetchExpression(fetch), ct);
             existing.UnionWith(result.Entities.Select(e => e.Id));
         }
         return existing;
     }
 }
+
+public record MissingRecord(Guid Id, string? Name);

@@ -8,6 +8,9 @@ namespace PowerTools.API.Tools.DataMigration;
 
 public static class PreviewEndpoints
 {
+    // The count covers every record; the list shown to the user stops here.
+    private const int MaxListedDeletions = 1000;
+
     public static IEndpointRouteBuilder MapPreviewEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/migration")
@@ -130,6 +133,43 @@ public static class PreviewEndpoints
                 var existing = await DataMigrationRecords.FindExistingIdsAsync(
                     targetSvc, req.EntityLogicalName, metadata.PrimaryIdAttribute, req.Ids, ct);
                 return Results.Ok(new { existingIds = existing.Select(id => id.ToString()) });
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                return Results.BadRequest(new { error = DataverseErrorFormatter.Format(ex) });
+            }
+        });
+
+        // The target records the delete option removes: every target record of the
+        // table whose id is not among the source records matching the filter.
+        targetGroup.MapPost("/deletions", async (
+            RecordCountRequest req,
+            HttpContext ctx,
+            DataverseClientFactory factory,
+            CancellationToken ct) =>
+        {
+            var svc = ctx.CreateDataverseClient(factory);
+            var targetSvc = ctx.CreateTargetDataverseClient(factory)
+                ?? throw new InvalidOperationException("Target connection was not provided.");
+
+            try
+            {
+                var sourceMetadata = await DataMigrationRecords.GetEntityMetadataAsync(svc, req.EntityLogicalName);
+                var targetMetadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, req.EntityLogicalName);
+                var (sourceCount, missing) = await DataMigrationRecords.FindTargetRecordsMissingFromSourceAsync(
+                    svc,
+                    targetSvc,
+                    req.EntityLogicalName,
+                    sourceMetadata.PrimaryIdAttribute,
+                    targetMetadata,
+                    req.FetchXmlFilter,
+                    ct);
+                return Results.Ok(new
+                {
+                    count = missing.Count,
+                    sourceCount,
+                    records = missing.Take(MaxListedDeletions).Select(r => new { id = r.Id.ToString(), name = r.Name })
+                });
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {

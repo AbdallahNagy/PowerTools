@@ -17,6 +17,8 @@ describe("MigrationStatusItem", () => {
             succeeded: 0,
             created: 0,
             updated: 0,
+            skipped: 0,
+            deleted: 0,
             failed: 1,
             errors: [
               {
@@ -49,6 +51,8 @@ describe("MigrationStatusItem", () => {
           succeeded: 5,
           created: 3,
           updated: 2,
+          skipped: 0,
+          deleted: 0,
           failed: 0,
           errors: [],
         }}
@@ -72,6 +76,8 @@ describe("MigrationStatusItem", () => {
           succeeded: 3,
           created: 1,
           updated: 2,
+          skipped: 0,
+          deleted: 0,
           failed: 1,
           errors: [],
         }}

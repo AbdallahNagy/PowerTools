@@ -1,13 +1,15 @@
 ---
 seoTitle: "Data Migration Between Dataverse Environments | PowerTools"
-seoDescription: "Copy Dataverse and Dynamics 365 records from one environment to another. Pick tables and columns, filter with FetchXML, preview, then create or update."
+seoDescription: "Copy Dataverse and Dynamics 365 records from one environment to another. Pick tables and columns, filter with FetchXML, preview, then create, update, or delete."
 features:
   - Choose a source and one or more target environments
   - Migrate to the next target in one click with the same settings
   - Pick the table and the exact columns to move
   - Filter the source records with a FetchXML filter
   - Preview the records before anything is written
-  - Create new records, update existing ones, or both
+  - Create new records, update existing ones, or both, and skip the rest
+  - Keep inactive records inactive in the target
+  - Optionally delete target records that are not in the source, after confirming each one
   - Follow each migration job's status as it runs
 ---
 
@@ -19,13 +21,16 @@ Choose a source and one or more targets, then pick a table. Only columns that ca
 
 ## Control what moves
 
-Narrow the source records with a FetchXML filter, then open **Preview** to see how many records will be sent and whether each one will be created or updated in the target, before anything is written.
+Narrow the source records with a FetchXML filter, then open **Preview** to see how many records will be sent and whether each one will be created, updated, or skipped in the target, before anything is written.
 
 Choose how records are written:
 
-- **Create** adds records that do not exist in the target.
-- **Update** overwrites records that already exist in the target with the same ID.
-- **Both** creates or updates each record, an upsert.
+- **Create** adds records that do not exist in the target. Records that already exist are skipped.
+- **Update** overwrites records that already exist in the target with the same ID. Records that do not exist are skipped.
+- **Both** creates or updates each record.
+- **Delete** removes target records that are not among the source records you migrate, as in XrmToolBox Data Transporter. The filter only chooses source records, so target records outside it are deleted too, even when the source has them. Turning it on explains exactly what it does, and before each target runs you see the list of records to delete and confirm that number. If more records would be deleted when the run starts, nothing is deleted.
+
+Inactive records stay inactive: a new record is created and then moved to its status in the same transaction.
 
 Each migration runs as a job, and its status stays visible while you set up the next one.
 

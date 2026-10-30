@@ -9,6 +9,8 @@ const done = (failed = 0, status: MigrationJobStatus["status"] = "completed"): M
   succeeded: 2 - failed,
   created: 2 - failed,
   updated: 0,
+  skipped: 0,
+  deleted: 0,
   failed,
   errors: [],
 });
@@ -29,16 +31,19 @@ describe("target runs", () => {
     expect(targetState(done(0, "failed"), false)).toBe("failed");
   });
 
-  it("treats any change to source, entity, fields, filter, or mode as new settings", () => {
+  it("treats any change to source, entity, fields, filter, or options as new settings", () => {
     const base = {
       sourceConnectionId: "dev",
       entityLogicalName: "account",
       attributes: ["name"],
-      mode: "upsert" as const,
+      create: true,
+      update: true,
+      delete: false,
     };
     expect(settingsKey(base)).toBe(settingsKey({ ...base, fetchXmlFilter: "" }));
     expect(settingsKey(base)).not.toBe(settingsKey({ ...base, attributes: ["name", "phone"] }));
     expect(settingsKey(base)).not.toBe(settingsKey({ ...base, fetchXmlFilter: "<filter/>" }));
-    expect(settingsKey(base)).not.toBe(settingsKey({ ...base, mode: "create" }));
+    expect(settingsKey(base)).not.toBe(settingsKey({ ...base, update: false }));
+    expect(settingsKey(base)).not.toBe(settingsKey({ ...base, delete: true }));
   });
 });

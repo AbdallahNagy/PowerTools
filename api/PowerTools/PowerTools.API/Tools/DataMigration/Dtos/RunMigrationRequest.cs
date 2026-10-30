@@ -4,4 +4,7 @@ public record RunMigrationRequest(
     string EntityLogicalName,
     List<string> Attributes,
     string? FetchXmlFilter,
-    string Mode);
+    bool Create,
+    bool Update,
+    bool Delete,
+    int? ConfirmedDeleteCount = null);

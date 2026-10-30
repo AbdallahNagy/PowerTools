@@ -8,9 +8,13 @@ import {
   Spinner,
   useColumnResize,
 } from "../../../shared/ui";
-import { usePreviewRecords, useRecordCount } from "../api/usePreviewRecords";
-import type { RunMigrationArgs } from "../api/useMigrationJob";
-import { plannedAction, totalActionsSummary, type PlannedAction } from "../model/recordAction";
+import { useDeletions, usePreviewRecords, useRecordCount } from "../api/usePreviewRecords";
+import {
+  plannedAction,
+  totalActionsSummary,
+  type MigrationOptions,
+  type RecordAction,
+} from "../model/recordAction";
 
 interface PreviewModalProps {
   open: boolean;
@@ -18,7 +22,7 @@ interface PreviewModalProps {
   connectionId: string;
   entityLogicalName: string;
   fetchXmlFilter: string;
-  mode: RunMigrationArgs["mode"];
+  options: MigrationOptions;
   /** Targets the records can be compared with, in the user's order. */
   targets: { id: string; name: string }[];
   /** Target selected when the modal opens. */
@@ -34,7 +38,7 @@ export function PreviewModal({
   connectionId,
   entityLogicalName,
   fetchXmlFilter,
-  mode,
+  options,
   targets,
   defaultTargetId,
 }: PreviewModalProps) {
@@ -80,6 +84,17 @@ export function PreviewModal({
       : null
   );
 
+  const deletions = useDeletions(
+    open && options.delete && comparedTarget
+      ? {
+          connectionId,
+          targetConnectionId: comparedTarget.id,
+          entityLogicalName,
+          fetchXmlFilter: fetchXmlFilter || undefined,
+        }
+      : null
+  );
+
   const goNext = () => {
     if (!data?.pagingCookie) return;
     setPagingCookieStack((prev) => [...prev, data.pagingCookie]);
@@ -94,11 +109,11 @@ export function PreviewModal({
 
   const rows = (data?.records ?? []).map((r) => ({
     ...r,
-    planned: plannedAction(mode, r.existsInTarget),
+    planned: plannedAction(options, r.existsInTarget),
   }));
   const resize = useColumnResize(COLUMNS);
   const totals = count.data
-    ? totalActionsSummary(mode, count.data.count, count.data.existing)
+    ? totalActionsSummary(options, count.data.count, count.data.existing)
     : null;
 
   return (
@@ -122,6 +137,17 @@ export function PreviewModal({
                   : null}
           </p>
           {totals && <p className="text-xs text-fg-muted">{totals}</p>}
+          {options.delete && comparedTarget && (
+            <p className="text-xs font-medium text-danger" aria-live="polite">
+              {deletions.isLoading
+                ? `Finding records to delete in ${comparedTarget.name}…`
+                : deletions.error
+                  ? "Could not check which target records would be deleted."
+                  : deletions.data
+                    ? `${deletions.data.count.toLocaleString()} to delete from ${comparedTarget.name} (in the target, not in the source)`
+                    : null}
+            </p>
+          )}
         </div>
         <div className="flex items-end gap-3">
           {isFetching && <Spinner size={14} />}
@@ -143,9 +169,9 @@ export function PreviewModal({
         </div>
       </div>
 
-      {targets.length === 0 && mode === "upsert" && (
+      {targets.length === 0 && (options.create && options.update || options.delete) && (
         <p className="text-xs text-fg-muted">
-          Add a target to see whether each record will be created or updated.
+          Add a target to see what happens to each record{options.delete ? " and which records would be deleted" : ""}.
         </p>
       )}
 
@@ -225,15 +251,10 @@ export function PreviewModal({
   );
 }
 
-function ActionBadge({ planned }: { planned: PlannedAction }) {
-  if (!planned.action) return <span className="text-fg-muted">—</span>;
-  const label = planned.action === "create" ? "Create" : "Update";
-  if (planned.problem) {
-    return (
-      <span title={planned.problem}>
-        <Badge tone="danger">{label} · will fail</Badge>
-      </span>
-    );
-  }
-  return <Badge tone={planned.action === "create" ? "ok" : "accent"}>{label}</Badge>;
+const actionLabels: Record<RecordAction, string> = { create: "Create", update: "Update", skip: "Skip" };
+const actionTones = { create: "ok", update: "accent", skip: "neutral" } as const;
+
+function ActionBadge({ planned }: { planned: RecordAction | null }) {
+  if (!planned) return <span className="text-fg-muted">—</span>;
+  return <Badge tone={actionTones[planned]}>{actionLabels[planned]}</Badge>;
 }

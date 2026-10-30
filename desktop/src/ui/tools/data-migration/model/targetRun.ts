@@ -1,7 +1,7 @@
 import type { MigrationJobStatus, RunMigrationArgs } from "../api/useMigrationJob";
 
 /** The settings one migration run repeats for every target. */
-export type MigrationSettings = Omit<RunMigrationArgs, "targetConnectionId">;
+export type MigrationSettings = Omit<RunMigrationArgs, "targetConnectionId" | "confirmedDeleteCount">;
 
 export type TargetState = "pending" | "running" | "succeeded" | "partial" | "failed";
 
@@ -16,7 +16,9 @@ export function settingsKey(settings: MigrationSettings): string {
     settings.entityLogicalName,
     settings.attributes,
     settings.fetchXmlFilter ?? "",
-    settings.mode,
+    settings.create,
+    settings.update,
+    settings.delete,
   ]);
 }
 

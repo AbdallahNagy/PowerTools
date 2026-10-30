@@ -11,13 +11,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **Data Migration: several targets.** Add more than one target environment, such as QC, UAT, and production. After each migration, Data Migration shows where the data went, and the main button moves on to the next target with the same table, columns, filter, and options. Each target shows whether it is migrated, has errors, or is still to do, and you can migrate any target again.
 
 - **Data Migration: record count in Preview.** Preview shows how many records the migration will send and, across all of them, how many will be created and how many updated in the target you compare with.
+- **Data Migration: Delete.** Tick **Delete** to remove target records that are not among the source records you migrate, as in XrmToolBox Data Transporter. The filter only chooses source records, so target records outside it are deleted too, even when the source has them. Turning it on explains what it does, and a warning stays visible while it is on. Before each target runs, Data Migration lists the records it will delete and asks you to confirm that number. The run deletes nothing if it then finds more records to delete than you confirmed, or if the source returns no records. Deletions happen last, so a run that fails earlier deletes nothing.
 - **Data Migration: created and updated counts.** The status bar, the run banner, and each target's details show how many records were created and how many were updated.
 
 ### Changed
 
-- **Data Migration: simpler Preview.** Preview shows three columns: Action, ID, and Name. Action says whether each record will be created or updated in the target you compare with, and flags records that will fail because the Create or Update option does not allow them.
+- **Data Migration: skip instead of fail.** With only **Create** on, records that already exist in the target are skipped. With only **Update** on, records that are not in the target are skipped. Preview shows these records as Skip, and the run reports how many were skipped.
+- **Data Migration: simpler Preview.** Preview shows three columns: Action, ID, and Name. Action says whether each record will be created, updated, or skipped in the target you compare with.
 - Resize table columns. Drag the right edge of a column header to make the column wider or narrower, and double-click the edge to put that column back to its automatic width. This applies to the tables in every tool, including the FetchXML Builder results grid and the Data Migration field list and preview.
 - Table, column, message, and user pickers filter as you type. Type any words from the display name or logical name, in any order, to narrow the list. This applies to the table, field, and choice value pickers in **FetchXML Builder**, the message, entity, and impersonating user pickers when registering a plugin step, and the table picker in **Solution Layers Explorer**.
+
+### Fixed
+
+- **Data Migration: inactive records.** Creating a record that is inactive in the source no longer fails on its status reason. The record is created, then moved to its source status in the same transaction.
 
 ## [1.1.0] - 2026-10-20
 
