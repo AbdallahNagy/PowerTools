@@ -9,10 +9,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - **Data Migration: several targets.** Add more than one target environment, such as QC, UAT, and production. After each migration, Data Migration shows where the data went, and the main button moves on to the next target with the same table, columns, filter, and options. Each target shows whether it is migrated, has errors, or is still to do, and you can migrate any target again.
-
 - **Data Migration: record count in Preview.** Preview shows how many records the migration will send and, across all of them, how many will be created and how many updated in the target you compare with.
 - **Data Migration: Delete.** Tick **Delete** to remove target records that are not among the source records you migrate, as in XrmToolBox Data Transporter. The filter only chooses source records, so target records outside it are deleted too, even when the source has them. Turning it on explains what it does, and a warning stays visible while it is on. Before each target runs, Data Migration lists the records it will delete and asks you to confirm that number. The run deletes nothing if it then finds more records to delete than you confirmed, or if the source returns no records. Deletions happen last, so a run that fails earlier deletes nothing.
 - **Data Migration: created and updated counts.** The status bar, the run banner, and each target's details show how many records were created and how many were updated.
+- FetchXML Builder: choose the columns to return, add or remove a column from the results grid, and start from any system or personal view of the table: its columns and its filters load into the builder, where you can edit them.
 
 ### Changed
 
@@ -30,7 +30,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - **Solution Layers Explorer.** See every solution layer of a Dataverse component, compare any two layers side by side, and remove the unmanaged Active layer.
-- FetchXML Builder: choose the columns to return, add or remove a column from the results grid, and start from any system or personal view of the table: its columns and its filters load into the builder, where you can edit them.
 - Close actions in the tab menu.
 - Right-click a tool in the sidebar to open it with the active connection or pick another connection for the new tab.
 - Crash reporting. Errors and crashes are reported so they can be fixed. Reports leave out request data, headers, and local variables. Turn it off from **Help > Send Crash Reports**.
