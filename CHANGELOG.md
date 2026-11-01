@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-30
+
 ### Added
 
 - **Data Migration: several targets.** Add more than one target environment, such as QC, UAT, and production. After each migration, Data Migration shows where the data went, and the main button moves on to the next target with the same table, columns, filter, and options. Each target shows whether it is migrated, has errors, or is still to do, and you can migrate any target again.
@@ -110,7 +112,8 @@ The first public beta, built for Windows.
 - **Data Migration.** Move data between Dataverse environments with a guided workflow.
 - **FetchXML Builder.** Build, run, and refine FetchXML queries.
 
-[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.5...v1.0.0
