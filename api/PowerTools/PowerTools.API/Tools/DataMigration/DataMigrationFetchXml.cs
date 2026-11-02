@@ -32,8 +32,8 @@ public static class DataMigrationFetchXml
         if (page is not null) fetch.SetAttributeValue("page", page.Value);
         if (count is not null) fetch.SetAttributeValue("count", count.Value);
         if (pagingCookie is not null) fetch.SetAttributeValue("paging-cookie", pagingCookie);
-        // A join can return a record once per related row, so ask for each record once.
-        if (filter?.HasLinks == true) fetch.SetAttributeValue("distinct", "true");
+        // No distinct: Dataverse returns the record id only for non-distinct queries,
+        // and the migration needs it. A record repeated by a join is upserted again.
 
         var entity = new XElement("entity", new XAttribute("name", entityLogicalName));
         foreach (var attribute in attributes)
@@ -109,9 +109,7 @@ public static class DataMigrationFetchXml
             entity.Add(new XElement(link));
         }
 
-        var fetch = new XElement("fetch", entity);
-        if (parsed?.HasLinks == true) fetch.SetAttributeValue("distinct", "true");
-        return fetch.ToString(SaveOptions.DisableFormatting);
+        return new XElement("fetch", entity).ToString(SaveOptions.DisableFormatting);
     }
 
     private static void AddFilter(XElement entity, DataMigrationFilter? filter)

@@ -233,10 +233,10 @@ const string linkFilter =
     "<link-entity name=\"contact\" from=\"contactid\" to=\"primarycontactid\" link-type=\"inner\" alias=\"ab\">" +
     "<filter type=\"and\"><condition attribute=\"lastname\" operator=\"eq\" value=\"Smith\" /></filter></link-entity>";
 AssertEquals(
-    "<fetch distinct=\"true\"><entity name=\"account\"><attribute name=\"name\" />" + linkFilter + "</entity></fetch>",
+    "<fetch><entity name=\"account\"><attribute name=\"name\" />" + linkFilter + "</entity></fetch>",
     DataMigrationFetchXml.Build("account", ["name"], linkFilter));
 AssertEquals(
-    "<fetch distinct=\"true\"><entity name=\"account\"><attribute name=\"name\" />" + linkFilter + "</entity></fetch>",
+    "<fetch><entity name=\"account\"><attribute name=\"name\" />" + linkFilter + "</entity></fetch>",
     DataMigrationFetchXml.Build(
         "account",
         ["name"],
@@ -258,7 +258,7 @@ AssertEquals(
     "<fetch aggregate=\"true\"><entity name=\"account\"><attribute name=\"accountid\" alias=\"recordcount\" aggregate=\"countcolumn\" distinct=\"true\" />" + linkFilter + "</entity></fetch>",
     DataMigrationFetchXml.BuildCount("account", "accountid", linkFilter));
 AssertEquals(
-    "<fetch distinct=\"true\"><entity name=\"account\"><attribute name=\"accountid\" /><filter><condition attribute=\"accountid\" operator=\"in\"><value>83b129f1-7790-4ca5-a0db-bf02fd67c127</value></condition></filter>" + linkFilter + "</entity></fetch>",
+    "<fetch><entity name=\"account\"><attribute name=\"accountid\" /><filter><condition attribute=\"accountid\" operator=\"in\"><value>83b129f1-7790-4ca5-a0db-bf02fd67c127</value></condition></filter>" + linkFilter + "</entity></fetch>",
     DataMigrationFetchXml.BuildIdLookup("account", "accountid", [Guid.Parse("83b129f1-7790-4ca5-a0db-bf02fd67c127")], linkFilter));
 
 var countFetch = DataMigrationFetchXml.BuildCount(
