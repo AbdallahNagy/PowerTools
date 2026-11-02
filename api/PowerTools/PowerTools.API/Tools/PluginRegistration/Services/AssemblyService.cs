@@ -38,9 +38,7 @@ public sealed class AssemblyService(
             {
                 ["name"] = inspection.Identity.Name,
                 ["version"] = inspection.Identity.Version,
-                ["culture"] = string.IsNullOrWhiteSpace(inspection.Identity.Culture)
-                    ? RegistrationOptionValues.CultureNeutral
-                    : inspection.Identity.Culture,
+                ["culture"] = CultureOf(inspection),
                 ["publickeytoken"] = inspection.Identity.PublicKeyToken,
                 ["isolationmode"] = new OptionSetValue(request.IsolationMode),
                 ["sourcetype"] = new OptionSetValue(request.SourceType),
@@ -62,7 +60,15 @@ public sealed class AssemblyService(
         var existing = await gateway.RetrieveAsync(
             "pluginassembly",
             id,
-            new ColumnSet("name", "publickeytoken", "version", "customizationlevel", "ismanaged"),
+            new ColumnSet(
+                "name",
+                "publickeytoken",
+                "version",
+                "culture",
+                "isolationmode",
+                "sourcetype",
+                "customizationlevel",
+                "ismanaged"),
             ct);
         if (existing is null)
             throw RegistrationException.NotFound("assembly_not_found", "The plug-in assembly was not found.");
@@ -128,13 +134,32 @@ public sealed class AssemblyService(
                     name)).ToList());
         }
 
-        await gateway.UpdateAsync(
-            new Entity("pluginassembly", id)
-            {
-                ["content"] = Convert.ToBase64String(bytes),
-                ["version"] = inspection.Identity.Version,
-            },
-            ct);
+        // Send the whole assembly identity with the content, as the Microsoft Plug-in
+        // Registration Tool does. An update that carries only content and version can fail
+        // with 0x8004417B ("fullnames must be unique") for custom workflow assemblies.
+        var update = new Entity("pluginassembly", id)
+        {
+            ["name"] = inspection.Identity.Name,
+            ["culture"] = CultureOf(inspection),
+            ["publickeytoken"] = inspection.Identity.PublicKeyToken,
+            ["version"] = inspection.Identity.Version,
+            ["content"] = Convert.ToBase64String(bytes),
+        };
+        CopyOptionSet(existing, update, "isolationmode");
+        CopyOptionSet(existing, update, "sourcetype");
+
+        // Workflow activity groups default to "Name (version)". Move the activities that still
+        // use the old default group to the new version in the same request.
+        var regrouped = RegroupWorkflowActivities(
+            existingTypes,
+            id,
+            WorkflowGroupName(existingName, existingVersion),
+            WorkflowGroupName(inspection.Identity.Name, inspection.Identity.Version));
+        if (regrouped.Count > 0)
+            update.RelatedEntities[new Relationship("pluginassembly_plugintype")] =
+                new EntityCollection(regrouped);
+
+        await gateway.UpdateAsync(update, ct);
         await SyncTypesAsync(id, inspection, ct);
         return new MutationResultDto(id);
     }
@@ -162,7 +187,7 @@ public sealed class AssemblyService(
                 ct);
         }
 
-        var workflowGroup = $"{inspection.Identity.Name} ({inspection.Identity.Version})";
+        var workflowGroup = WorkflowGroupName(inspection.Identity.Name, inspection.Identity.Version);
         foreach (var activity in inspection.WorkflowActivities)
         {
             if (existingNames.Contains(activity.TypeName))
@@ -171,6 +196,43 @@ public sealed class AssemblyService(
                 BuildTypeEntity(assemblyId, activity.TypeName, workflowGroup),
                 ct);
         }
+    }
+
+    private static List<Entity> RegroupWorkflowActivities(
+        IReadOnlyList<Entity> types,
+        Guid assemblyId,
+        string oldGroup,
+        string newGroup)
+    {
+        if (SameText(oldGroup, newGroup))
+            return [];
+        return types
+            .Where(type => GetAssemblyId(type) == assemblyId || GetAssemblyId(type) == Guid.Empty)
+            .Where(type => type.GetAttributeValue<bool>("isworkflowactivity"))
+            .Where(type => string.Equals(
+                type.GetAttributeValue<string>("workflowactivitygroupname"),
+                oldGroup,
+                StringComparison.Ordinal))
+            .Select(type => new Entity("plugintype", type.Id)
+            {
+                ["workflowactivitygroupname"] = newGroup,
+            })
+            .ToList();
+    }
+
+    private static string WorkflowGroupName(string assemblyName, string version) =>
+        $"{assemblyName} ({version})";
+
+    private static string CultureOf(AssemblyInspectionDto inspection) =>
+        string.IsNullOrWhiteSpace(inspection.Identity.Culture)
+            ? RegistrationOptionValues.CultureNeutral
+            : inspection.Identity.Culture;
+
+    private static void CopyOptionSet(Entity source, Entity target, string attribute)
+    {
+        var value = source.GetAttributeValue<OptionSetValue>(attribute);
+        if (value is not null)
+            target[attribute] = new OptionSetValue(value.Value);
     }
 
     private static Entity BuildTypeEntity(Guid assemblyId, string typeName, string? workflowGroup)
