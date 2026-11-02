@@ -118,7 +118,7 @@ describe("Environment Variables Manager", () => {
     expect(screen.getByLabelText("Current value of API URL")).toHaveValue("https://api.example.test");
     const retries = screen.getByLabelText("Current value of Retries");
     expect(retries).toHaveValue("");
-    expect(retries).toHaveAttribute("placeholder", "3");
+    expect(retries).not.toHaveAttribute("placeholder");
     expect(within(rowOf("Retries")).getByText("Default")).toBeInTheDocument();
     expect(screen.getByLabelText("Current value of Feature On")).toHaveValue("no");
     expect(within(rowOf("Region")).getByText("Managed value")).toBeInTheDocument();
@@ -175,7 +175,7 @@ describe("Environment Variables Manager", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Save Changes (2)" }));
 
-    expect(await screen.findByText("1 of 2 values failed. Select a failed row to see why.")).toBeInTheDocument();
+    expect(await screen.findByText("1 of 2 changes failed. Select a failed row to see why.")).toBeInTheDocument();
     expect(sent).toEqual([
       { definitionId: apiUrlId, valueId: "aaaaaaaa-0000-0000-0000-000000000001", value: "https://new.example.test" },
       { definitionId: retriesId, valueId: null, value: "-5" },
@@ -248,14 +248,49 @@ describe("Environment Variables Manager", () => {
     await loaded();
 
     fireEvent.click(screen.getByText("API URL"));
-    const definition = screen.getByRole("region", { name: "Variable details" });
-    expect(within(definition).getByRole("button", { name: "Save Definition" })).toBeDisabled();
-    fireEvent.change(within(definition).getByLabelText("Display Name"), { target: { value: "Service URL" } });
-    fireEvent.click(within(definition).getByRole("button", { name: "Save Definition" }));
+    const details = screen.getByRole("region", { name: "Variable details" });
+    expect(within(details).getByRole("button", { name: "Save" })).toBeDisabled();
+    fireEvent.change(within(details).getByLabelText("Display Name"), { target: { value: "Service URL" } });
+    expect(screen.getByRole("button", { name: "Save Changes (1)" })).toBeEnabled();
+    fireEvent.click(within(details).getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByText("Definition saved.")).toBeInTheDocument();
+    expect(await screen.findByText(/^Changes saved\./)).toBeInTheDocument();
     expect(body).toEqual({ displayName: "Service URL" });
     expect(within(rowOf("contoso_ApiUrl")).getByText("Service URL")).toBeInTheDocument();
+  });
+
+  it("saves the definition and the current value with one Save", async () => {
+    let definitionBody: unknown = null;
+    let valuesBody: unknown = null;
+    httpServer.use(
+      http.put(`${base}/definitions/${apiUrlId}`, async ({ request }) => {
+        definitionBody = await request.json();
+        return HttpResponse.json({ definitionId: apiUrlId });
+      }),
+      http.post(`${base}/values`, async ({ request }) => {
+        valuesBody = await request.json();
+        return HttpResponse.json({
+          results: [{ definitionId: apiUrlId, valueId: "aaaaaaaa-0000-0000-0000-000000000001", ok: true, error: null }],
+        });
+      }),
+    );
+    renderTool();
+    await loaded();
+
+    fireEvent.click(screen.getByText("API URL"));
+    const details = screen.getByRole("region", { name: "Variable details" });
+    fireEvent.change(within(details).getByLabelText("Description"), { target: { value: "Base address" } });
+    fireEvent.change(within(details).getByLabelText("Current Value"), { target: { value: "https://new.example.test" } });
+    expect(screen.getByRole("button", { name: "Save Changes (1)" })).toBeEnabled();
+    fireEvent.click(within(details).getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByText(/^Changes saved\./)).toBeInTheDocument();
+    expect(definitionBody).toEqual({ description: "Base address" });
+    expect(valuesBody).toEqual({
+      items: [{ definitionId: apiUrlId, valueId: "aaaaaaaa-0000-0000-0000-000000000001", value: "https://new.example.test" }],
+    });
+    expect(within(details).getByRole("button", { name: "Save" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save Changes (0)" })).toBeDisabled();
   });
 
   it("deletes a value after confirmation and falls back to the default", async () => {
@@ -276,7 +311,8 @@ describe("Environment Variables Manager", () => {
 
     expect(await screen.findByText("Value deleted.")).toBeInTheDocument();
     expect(deleted).toBe("aaaaaaaa-0000-0000-0000-000000000001");
-    expect(screen.getByLabelText("Current value of API URL")).toHaveAttribute("placeholder", "https://default.example.test");
+    expect(screen.getByLabelText("Current value of API URL")).toHaveValue("");
+    expect(within(rowOf("API URL")).getByText("Default")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Delete Value" })).not.toBeInTheDocument();
   });
 

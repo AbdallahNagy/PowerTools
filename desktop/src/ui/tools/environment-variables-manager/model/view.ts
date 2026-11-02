@@ -1,4 +1,4 @@
-import type { EnvironmentVariable, SaveValueItem, SaveValueResult } from "./types";
+import type { EnvironmentVariable, SaveValueItem } from "./types";
 import { valueReadOnlyReason } from "./types";
 import { validateValue } from "./valueValidation";
 
@@ -136,17 +136,16 @@ export function statusText(input: {
   return input.unsaved > 0 ? `${count} · ${input.unsaved} unsaved` : count;
 }
 
-export function saveToast(results: readonly SaveValueResult[]): { message: string; type: "success" | "error" } {
-  const failed = results.filter((result) => !result.ok).length;
+export function saveToast(total: number, failed: number): { message: string; type: "success" | "error" } {
   if (failed === 0) {
-    const noun = results.length === 1 ? "value" : "values";
     return {
-      message: `${results.length} ${noun} saved. Apps and flows can take up to an hour to pick up the change.`,
+      message: "Changes saved. Apps and flows can take up to an hour to pick up the change.",
       type: "success",
     };
   }
+  const noun = total === 1 ? "change" : "changes";
   return {
-    message: `${failed} of ${results.length} values failed. Select a failed row to see why.`,
+    message: `${failed} of ${total} ${noun} failed. Select a failed row to see why.`,
     type: "error",
   };
 }

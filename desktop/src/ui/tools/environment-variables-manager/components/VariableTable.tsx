@@ -98,7 +98,6 @@ function ValueCell(props: {
           onChange={(next) => onDraftChange(variable, next)}
           disabled={disabled}
           invalid={invalid}
-          placeholder={variable.defaultValue ?? ""}
           aria-label={label}
           className="min-w-20 flex-1"
         />
@@ -106,7 +105,6 @@ function ValueCell(props: {
         <Input
           value={value}
           onChange={(event) => onDraftChange(variable, event.target.value)}
-          placeholder={usesDefault ? (variable.defaultValue ?? "") : undefined}
           disabled={disabled}
           aria-label={label}
           aria-invalid={invalid ? true : undefined}
@@ -163,20 +161,22 @@ export function VariableTable({
           key: "displayName",
           header: "Display Name",
           sortable: true,
-          render: (row) => <span className="text-fg">{displayName(row)}</span>,
+          width: "30%",
+          render: (row) => <span className="font-medium text-fg">{displayName(row)}</span>,
         },
         {
           key: "schemaName",
           header: "Schema Name",
           sortable: true,
-          render: (row) => <span className="font-mono text-xs">{row.schemaName}</span>,
+          width: "20%",
+          render: (row) => <span className="break-all font-mono text-xs text-fg-muted">{row.schemaName}</span>,
         },
-        { key: "type", header: "Type", sortable: true, render: (row) => row.typeLabel },
+        { key: "type", header: "Type", sortable: true, width: "9%", render: (row) => row.typeLabel },
         {
           key: "currentValue",
           header: "Current Value",
           sortable: true,
-          width: "34%",
+          width: "28%",
           render: (row) => (
             <ValueCell
               variable={row}
@@ -190,6 +190,7 @@ export function VariableTable({
         {
           key: "state",
           header: "State",
+          width: "13%",
           render: (row) => <StateBadges variable={row} drafts={drafts} results={results} />,
         },
       ]}

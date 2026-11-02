@@ -32,7 +32,13 @@ import { DetailsPanel } from "./components/DetailsPanel";
 import { NewVariableDialog } from "./components/NewVariableDialog";
 import { VariableTable } from "./components/VariableTable";
 import { errorText } from "./model/apiError";
-import { changedFields, hasChanges, type DefinitionForm } from "./model/definitionForm";
+import {
+  changedFields,
+  definitionFormErrors,
+  hasChanges,
+  hasErrors,
+  type DefinitionForm,
+} from "./model/definitionForm";
 import type { CreateDefinitionBody, EnvironmentVariable, SaveValueResult } from "./model/types";
 import {
   applySaved,
@@ -84,7 +90,6 @@ function Manager() {
   const [results, setResults] = useState<SaveResults>({});
   const [saving, setSaving] = useState<{ done: number; total: number } | null>(null);
   const [definitionForm, setDefinitionForm] = useState<DefinitionForm | null>(null);
-  const [savingDefinition, setSavingDefinition] = useState(false);
   const [definitionError, setDefinitionError] = useState<string | null>(null);
   const [pendingSelect, setPendingSelect] = useState<{ id: string | null; focus: boolean } | null>(null);
   const [focusRequest, setFocusRequest] = useState(0);
@@ -124,6 +129,15 @@ function Manager() {
   const invalid = invalidCount(variables, drafts);
   const loading = listQuery.isFetching;
   const busy = loading || saving !== null;
+  /** The selected variable's definition edits, when there are any. */
+  const definitionChange = selected && definitionForm && hasChanges(selected, definitionForm) ? selected : null;
+  const definitionInvalid =
+    definitionChange !== null && hasErrors(definitionFormErrors(definitionChange.type, definitionForm!));
+  const changedIds = new Set(edits.map((item) => item.definitionId));
+  if (definitionChange) changedIds.add(definitionChange.definitionId);
+  const changeCount = changedIds.size;
+  const blocked = invalid > 0 || definitionInvalid;
+
 
   useToolStatus(
     connectionId && listQuery.data
@@ -131,7 +145,7 @@ function Manager() {
           total: variables.length,
           shown: rows.length,
           filtered: search.trim() !== "",
-          unsaved: edits.length,
+          unsaved: changeCount,
           saving,
         })
       : null,
@@ -177,11 +191,46 @@ function Manager() {
     setResults((current) => (current[id]?.ok ? withoutKey(current, id) : current));
   };
 
-  const save = async () => {
-    if (!connectionId || edits.length === 0 || invalid > 0) return;
+  /**
+   * Saves every change the user made: definition edits and current values
+   * together. With `onlyId`, saves only that variable's changes.
+   */
+  const saveChanges = async (onlyId?: string) => {
+    if (!connectionId) return;
     const target = connectionId;
-    const items = edits;
-    setSaving({ done: 0, total: items.length });
+    const items = onlyId ? edits.filter((item) => item.definitionId === onlyId) : edits;
+    const variable = definitionChange && (!onlyId || definitionChange.definitionId === onlyId) ? definitionChange : null;
+    const form = definitionForm;
+    if ((items.length === 0 && !variable) || blocked) return;
+
+    const total = items.length + (variable ? 1 : 0);
+    setSaving({ done: 0, total });
+    setDefinitionError(null);
+    let failed = 0;
+
+    if (variable && form) {
+      try {
+        await updateDefinition(target, variable.definitionId, changedFields(variable, form));
+        updateList(target, (list) =>
+          list.map((item) =>
+            item.definitionId === variable.definitionId
+              ? {
+                  ...item,
+                  displayName: form.displayName.trim() || null,
+                  description: form.description || null,
+                  defaultValue: form.defaultValue || null,
+                }
+              : item,
+          ),
+        );
+        setDefinitionForm(null);
+      } catch (error) {
+        failed += 1;
+        setDefinitionError(errorText(error));
+      }
+      setSaving({ done: 1, total });
+    }
+
     const all: SaveValueResult[] = [];
     for (let start = 0; start < items.length; start += SAVE_BATCH_SIZE) {
       const batch = items.slice(start, start + SAVE_BATCH_SIZE);
@@ -194,7 +243,7 @@ function Manager() {
           ...batch.map((item) => ({ definitionId: item.definitionId, valueId: item.valueId, ok: false, error: message })),
         );
       }
-      setSaving({ done: all.length, total: items.length });
+      setSaving({ done: all.length + (variable ? 1 : 0), total });
     }
 
     const sent = new Map(items.map((item) => [item.definitionId, item.value]));
@@ -214,38 +263,20 @@ function Manager() {
       ...Object.fromEntries(all.map((result) => [result.definitionId, { ok: result.ok, error: result.error }])),
     }));
     setSaving(null);
-    const toast = saveToast(all);
+    failed += all.filter((result) => !result.ok).length;
+    const toast = saveToast(total, failed);
     showToast(toast.message, toast.type);
   };
 
-  const saveDefinition = async () => {
-    if (!connectionId || !selected || !definitionForm) return;
-    const target = connectionId;
-    const variable = selected;
-    const form = definitionForm;
-    setSavingDefinition(true);
-    setDefinitionError(null);
-    try {
-      await updateDefinition(target, variable.definitionId, changedFields(variable, form));
-      updateList(target, (list) =>
-        list.map((item) =>
-          item.definitionId === variable.definitionId
-            ? {
-                ...item,
-                displayName: form.displayName.trim() || null,
-                description: form.description || null,
-                defaultValue: form.defaultValue || null,
-              }
-            : item,
-        ),
-      );
+  const discardChanges = (onlyId?: string) => {
+    if (onlyId) {
+      setDrafts((current) => withoutKey(current, onlyId));
+      if (selected?.definitionId === onlyId) setDefinitionForm(null);
+    } else {
+      setDrafts({});
       setDefinitionForm(null);
-      showToast("Definition saved.", "success");
-    } catch (error) {
-      setDefinitionError(errorText(error));
-    } finally {
-      setSavingDefinition(false);
     }
+    setDefinitionError(null);
   };
 
   const create = async (body: CreateDefinitionBody) => {
@@ -362,12 +393,12 @@ function Manager() {
     );
   }
 
-  const saveLabel = `Save Changes (${edits.length})`;
   const saveButton = (
-    <Button size="sm" disabled={edits.length === 0 || invalid > 0 || busy} onClick={() => void save()}>
-      {saveLabel}
+    <Button size="sm" disabled={changeCount === 0 || blocked || busy} onClick={() => void saveChanges()}>
+      {`Save Changes (${changeCount})`}
     </Button>
   );
+  const blockedReason = invalid > 0 ? `Fix ${invalid} invalid ${invalid === 1 ? "value" : "values"} first` : "Fix the definition first";
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-canvas">
@@ -375,11 +406,11 @@ function Manager() {
         aria-label="Environment variables"
         end={
           <>
-            <Button variant="ghost" size="sm" disabled={edits.length === 0 || busy} onClick={() => setDrafts({})}>
+            <Button variant="ghost" size="sm" disabled={changeCount === 0 || busy} onClick={() => discardChanges()}>
               Discard Changes
             </Button>
-            {invalid > 0 ? (
-              <Tooltip content={`Fix ${invalid} invalid ${invalid === 1 ? "value" : "values"} first`}>
+            {blocked ? (
+              <Tooltip content={blockedReason}>
                 <span tabIndex={0} className="inline-flex">
                   {saveButton}
                 </span>
@@ -436,8 +467,9 @@ function Manager() {
               onDraftChange={changeDraft}
               definitionForm={definitionForm}
               onDefinitionFormChange={setDefinitionForm}
-              onSaveDefinition={() => void saveDefinition()}
-              savingDefinition={savingDefinition}
+              onSave={() => selected && void saveChanges(selected.definitionId)}
+              onDiscard={() => selected && discardChanges(selected.definitionId)}
+              saving={saving !== null}
               definitionError={definitionError}
               onDeleteValue={() => {
                 if (!selected) return;

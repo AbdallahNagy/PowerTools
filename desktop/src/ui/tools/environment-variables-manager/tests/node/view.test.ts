@@ -55,9 +55,8 @@ describe("variable list view", () => {
     expect(statusText({ total: 42, shown: 42, filtered: false, unsaved: 7, saving: { done: 3, total: 7 } })).toBe(
       "Saving 3 of 7…",
     );
-    expect(saveToast([{ definitionId: "a", valueId: "b", ok: false, error: "x" }, { definitionId: "c", valueId: "d", ok: true, error: null }]))
-      .toEqual({ message: "1 of 2 values failed. Select a failed row to see why.", type: "error" });
-    expect(saveToast([{ definitionId: "c", valueId: "d", ok: true, error: null }]).message).toMatch(/^1 value saved\./);
+    expect(saveToast(2, 1)).toEqual({ message: "1 of 2 changes failed. Select a failed row to see why.", type: "error" });
+    expect(saveToast(1, 0).message).toMatch(/^Changes saved\./);
   });
 
   it("sends only changed definition fields", () => {
