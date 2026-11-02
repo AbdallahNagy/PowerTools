@@ -23,6 +23,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **Data Migration: filters on related tables.** A filter can now include `<link-entity>` joins, entered on their own or as full FetchXML, as in XrmToolBox Data Transporter. Before, such a filter failed with “Request failed with status code 400”.
 - **Data Migration: inactive records.** Creating a record that is inactive in the source no longer fails on its status reason. The record is created, then moved to its source status in the same transaction.
 
 ## [1.1.0] - 2026-10-20
