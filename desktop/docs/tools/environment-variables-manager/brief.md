@@ -200,6 +200,163 @@ Sources:
 - [NuGet: XrmToolSuite.EnvironmentInventory](https://packages.nuget.org/packages/XrmToolSuite.EnvironmentInventory)
 - [Microsoft Learn: EnvironmentVariableDefinition table reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/environmentvariabledefinition)
 
+### UX
+
+Scope is the capability list in `### What it does`, cut to the first version the user chose under `### Open questions`. That version covers listing, filtering, inline value edits saved together, creating, editing and deleting definitions, and deleting values. Excel import and export, comparing or pushing to a target environment, and the clipboard copy actions wait for a later phase.
+
+#### Opening the tool
+
+- Sidebar entry in `ActivityBar.tsx`, found by sidebar search like the other tools. No title-bar menu item is needed. `File`, `Edit`, `View` and `Help` stay as they are.
+- Title: `Environment Variables Manager`.
+- Tooltip: `List and edit environment variable values, and create, update, or delete their definitions`.
+- `allowMultipleInstances: true`. Choosing the sidebar entry again opens another tab. Each tab keeps its own search text, sort, selection, unsaved value edits and open dialogs. Every tab follows the selected environment.
+- Public listing, added to `PUBLIC_TOOLS` in `publicCatalog.ts` with the same id and title:
+  > Find every environment variable in an environment, edit current values in place and save them together, and create, update, or delete definitions.
+
+#### Layout
+
+The tab is one column: a `Toolbar` on top, then a horizontal split filling the rest.
+
+- **Toolbar**, left to right:
+  - `SearchInput` with placeholder `Filter by name, schema name, or value`. It filters on the client as you type. Nothing is sent to the server.
+  - Ghost `Button` with a `RotateCw` icon, `aria-label="Refresh"`, and a `Tooltip` reading `Reload from the environment`.
+  - Secondary `Button` labelled `New Variable`.
+  - In the toolbar `end` slot: a ghost `Button` labelled `Discard Changes`, then the primary `Button` labelled `Save Changes (n)`, where `n` is the number of edited rows. Both are disabled when nothing is edited. `Save Changes` is also disabled while any edited value is invalid, and its `Tooltip` then reads `Fix n invalid values first`.
+- **Split** uses `Group`, `Panel` and `Separator` from `react-resizable-panels`, as in `Layout.tsx`.
+  - Left panel: the variable list. Default size 62, `minSize` 35.
+  - `Separator`: `w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent`, `aria-label="Resize panes"`.
+  - Right panel: the details for the selected variable. Default size 38, `minSize` 25.
+  - Each panel is `bg-surface`. The list container is `min-h-0 flex-1` so `DataTable` scrolls itself.
+
+#### Variable list (left panel)
+
+`DataTable`, one row per definition, `getRowKey` set to the definition id. Clicking a row selects it (`selectedKey`) and fills the right panel.
+
+| Column | Content |
+| --- | --- |
+| `Display Name` | Display name, `text-fg`. |
+| `Schema Name` | Schema name, `font-mono text-xs`. |
+| `Type` | Type label. |
+| `Current Value` | The inline editor described below. When there is no value row it shows the default value in `text-fg-muted` with the hint `Default`. |
+| `State` | `Badge`s: `Managed value` (`warn`) when the value row belongs to a managed solution, `Edited` (`accent`) for an unsaved edit, `Invalid` (`danger`), `Saved` (`ok`) or `Failed` (`danger`) after a save. |
+
+Sorting is a click on the `Display Name`, `Schema Name`, `Type` or `Current Value` header. The first click sorts ascending, a second click on the same header sorts descending, and the active header shows ↑ or ↓. Default sort is `Display Name` ascending. `State` is not sortable.
+
+Inline editing in `Current Value`, by type:
+
+- **Text:** an `Input`. Any type the Dataverse review does not name as special also uses this.
+- **Number:** an `Input`. A value that is not a decimal turns the cell border `border-danger`, sets `aria-invalid`, and adds the `Invalid` badge. The message `Enter a decimal number.` appears in the right panel when the row is selected.
+- **Boolean:** a `Select` with the options `yes` and `no`. No free text.
+- **JSON:** no inline editor. The cell shows the first line of the value in `font-mono text-fg-muted`, truncated, plus a ghost `Button` labelled `Edit`. That button selects the row and focuses the JSON editor in the right panel.
+- **Secret:** no inline editor. The cell shows the stored path in `font-mono`, truncated, plus a ghost `Button` labelled `Edit`. That button selects the row and focuses the secret builder in the right panel.
+
+An edit is held in this tab only until it is saved or discarded. Editing a value back to the stored one clears `Edited`. Typing in an inline editor does not select the row. Clicks inside the editor stop propagation, so the table does not steal focus.
+
+#### Details (right panel)
+
+The details panel has two sections, stacked and scrolling together.
+
+1. **Current value**
+   - When the value row belongs to a managed solution, a `warn` `Alert` reads: `This value belongs to a managed solution. Saving changes it in this environment.`
+   - The type-specific editor. It holds the same unsaved edit as the table cell, so editing either one updates both.
+     - Text, Number and Boolean repeat the inline control inside a `Field` labelled `Current Value`, with the validation error shown by `Field`.
+     - JSON uses a `CodeEditor` with `folding`, height `h-48`, labelled `Current Value (JSON)`. Text that does not parse turns `Invalid` on, and `Field` shows `Enter valid JSON.`
+     - Secret is a secret builder: one `Input` inside a `Field` for each part of the Azure Key Vault secret path. Below them, the full path is shown read-only in `font-mono text-fg-muted` and updates as you type. The developer takes the part names and the path format from `### Backend findings` and `### Dataverse review`, not from this section. An empty required part turns `Invalid` on.
+   - A `danger` `Button` labelled `Delete Value`, shown only when a value row exists. It opens a confirm `Modal` (see below). The value is not removed until the confirmation.
+   - After a failed save, a `danger` `Alert` repeats the error returned for this row.
+2. **Definition**
+   - A form of `Field`s:
+     - `Display Name`: an `Input`.
+     - `Schema Name`: a read-only `Input` in `font-mono`, hint `Locked after creation`.
+     - `Type`: a read-only `Input`, hint `Locked after creation`.
+     - `Description`: a `Textarea`.
+     - `Default Value`: the same type-specific editor as above, labelled `Default Value`.
+   - The section has its own buttons: secondary `Save Definition` (disabled until a field changes, and while saving it shows a `Spinner`) and a `danger` `Button` labelled `Delete Variable`.
+   - Saving a definition does not touch the pending value edits. Those still go through `Save Changes`.
+
+If the selected row has unsaved definition edits and the user selects another row, a `Modal` asks `Discard changes to this definition?` with `Discard` (`danger`) and `Keep Editing` (secondary).
+
+#### Dialogs
+
+All dialogs use `Modal`. Each one sets `busy` while its request runs, so it cannot be closed mid-request.
+
+- **New Variable**
+  - Fields:
+    - `Schema Name`: an `Input` in `font-mono`, required.
+    - `Display Name`: an `Input`, required.
+    - `Type`: a `Select` listing the types the Dataverse review allows.
+    - `Description`: a `Textarea`.
+    - `Default Value`: the type-specific editor for the chosen type. It changes when the type changes.
+    - `Solution`: a `Combobox` of unmanaged solutions in the environment, optional, with the hint `Leave empty to create it without adding it to a solution.`
+  - Required and invalid fields show their error through `Field`.
+  - Primary `Create` is disabled until the form is valid. Secondary `Cancel` closes the dialog.
+  - On success the dialog closes, the list reloads, and the new row is selected. Toast: `Variable created.`
+  - On failure the dialog stays open with a `danger` `Alert` holding the message, and every field stays as typed.
+- **Delete Variable:** the dialog reads `Delete <Display Name>? Its current value is deleted too. This cannot be undone.` Buttons are `danger` `Delete` and secondary `Cancel`. On success the row leaves the list, the right panel returns to its empty state, and the toast reads `Variable deleted.`
+- **Delete Value:** the dialog reads `Delete the current value of <Display Name>? The variable will use its default value.` Buttons are `danger` `Delete` and secondary `Cancel`. On success the row shows the default value in `text-fg-muted`, and the toast reads `Value deleted.` If that row had an unsaved edit, the edit is dropped.
+
+#### Saving value edits
+
+`Save Changes (n)` sends every edited row at once.
+
+- A value row is created when there is none and updated when there is one. The developer follows the backend design in the brief for how.
+- While saving:
+  - A `ProgressBar` shows under the toolbar.
+  - Every editor and toolbar button is disabled.
+  - The status text reads `Saving 3 of 7…`.
+- After saving:
+  - Each saved row shows `Saved` and takes the new value as its stored value.
+  - Each failed row shows `Failed` and keeps its edit, so `Save Changes` can retry it. Selecting a failed row shows its error in the right panel.
+  - Toast: `success` with `7 values saved.` when all succeed, or `error` with `2 of 7 values failed. Select a failed row to see why.`
+  - `Saved` badges clear on the next edit or refresh.
+- `Discard Changes` drops every unsaved value edit in this tab right away. There is no confirmation, because nothing has been sent.
+
+#### States
+
+- **No environment selected:** `EmptyState` across the whole tab: `Connect to an environment to see its environment variables.` The toolbar is hidden.
+- **Loading:** a centered `Spinner` with `Loading environment variables…` in the left panel. The toolbar is visible but disabled. The right panel shows its empty state. Refresh shows the same spinner over the list. Any unsaved edits are kept and reapplied to matching rows after the reload.
+- **Load error:** a `danger` `Alert` in the left panel with the message and a secondary `Retry` `Button`.
+- **No variables in the environment:** `EmptyState` in the left panel: `This environment has no environment variables. Choose New Variable to create one.`
+- **Filter matches nothing:** `DataTable` `emptyMessage`: `No variables match "<text>".`
+- **No row selected:** `EmptyState` in the right panel: `Select a variable to edit its value and definition.`
+- **Environment changes:** the tab reloads for the new environment and drops unsaved edits. If any edits were dropped, an `info` toast reads `Discarded n unsaved changes from the previous environment.`
+- **Status bar** (`useToolStatus`): `42 variables` or `42 variables · 3 unsaved`. With a filter the text reads `12 of 42 variables`. While saving it shows the progress text above.
+
+#### Colors
+
+Only theme tokens:
+
+- `bg-surface` for the panels and `bg-canvas` for inputs.
+- `text-fg`, plus `text-fg-muted` for defaults and hints.
+- `border-line` for borders, and `border-danger` for an invalid cell.
+- `Badge` and `Alert` tones `warn`, `accent`, `ok` and `danger`.
+
+No new token is needed.
+
+#### Shared controls
+
+From `desktop/src/ui/shared/ui`:
+
+- `Toolbar`, `SearchInput`, `Button`, `Tooltip`
+- `DataTable`, `Badge`
+- `Input`, `Select`, `Textarea`, `Field`, `CodeEditor`, `Combobox`
+- `Modal`, `Alert`, `EmptyState`
+- `ProgressBar`, `Spinner`, `useToast`
+
+Status comes from `useToolStatus`. The split uses `react-resizable-panels`. Icons come from `lucide-react`. No new shared control is needed.
+
+#### What not to build
+
+- Excel (or CSV or JSON) export and import, the New/Update/Same preview, and one sheet per environment. The user deferred these.
+- Comparing values with, or pushing them to, a second environment. Deferred.
+- The copy-to-clipboard actions for name, schema name and value. They are outside the first version's CRUD scope.
+- Editing the schema name or type of an existing definition.
+- Any column, filter or action not listed above, such as a solution filter, server-side search, or value history.
+- A per-row save button. Value edits save together through `Save Changes`.
+- `allowMultipleInstances: false`, or a single-tab guard.
+- The plugin's WinForms layout: its ribbon of buttons, its grid-plus-property-panel arrangement, its dialogs, icons and wording. The plugin is GPL-3.0, and this design is written from the capability list alone.
+- Any credit or link to the XrmToolBox plugin in the app or on the website page.
+
 ### Open questions
 
 - **License (answered by the user):** The source plugin is GPL-3.0. Proceed clean-room: use it only as domain knowledge, copy no code, UI or text. The user chose **not** to credit the plugin on the website page, so omit `xrmToolBoxEquivalent` and any plugin mention there.
