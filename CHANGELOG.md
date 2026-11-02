@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Solution Components Mover: search component types.** The component type list has a search box. The header checkbox selects or clears the types the search shows, and a count shows how many types are selected.
+- **Solution Components Mover: From and To.** Before you confirm a copy, the component type list shows the source and target solutions it copies between.
+
+### Changed
+
+- **Solution Components Mover: targets clear after a copy.** When a copy finishes, the target solutions are cleared and the sources stay checked. Choose a target again for the next copy, so it no longer also goes to the previous target. A refused copy keeps your selection.
+- **Solution Components Mover: Refresh solutions.** The refresh button shows its icon and label, spins while the list reloads, and confirms with **Solutions refreshed** when it finishes.
+
+### Fixed
+
+- **Solution Components Mover:** the component type list no longer shifts left and right while you scroll it.
+
 ## [1.2.0] - 2026-10-30
 
 ### Added

@@ -19,7 +19,7 @@ Use it to split a large solution into smaller ones, to build a patch-style solut
 
 ## Pick exactly what to copy
 
-Search and sort the solution list, then select sources and targets. Before the copy starts, choose the component types to include. Every type starts selected, and you can select all, clear all, or invert.
+Search and sort the solution list, then select sources and targets. Before the copy starts, check the source and target solutions the copy uses and choose the component types to include. Every type starts selected. Search the type list to find a type quickly, and use the header checkbox to select or clear the types you see. When a copy finishes, the targets are cleared, so the next copy only goes where you choose.
 
 A best-practice check is on by default. It stops the copy when it would add a managed table with all of its assets into an unmanaged solution.
 

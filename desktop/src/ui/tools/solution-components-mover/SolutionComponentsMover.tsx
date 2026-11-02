@@ -107,6 +107,9 @@ function SolutionComponentsMoverPage() {
             continue;
           }
           setPhase(next.status === "refused" ? "refused" : "finished");
+          // Components went to these targets. Clear them so the next copy
+          // cannot also go to them without the user choosing them again.
+          if (next.status !== "refused") setTargets(new Set());
           if (toastedJob.current !== activeJob.jobId) {
             toastedJob.current = activeJob.jobId;
             showResultToast(next, showToast);
@@ -143,7 +146,15 @@ function SolutionComponentsMoverPage() {
     && sources.size > 0
     && targets.size > 0
     && !copyRunning;
-  const canRefresh = !!connectionId && !solutionsQuery.isFetching;
+  const refreshing = !!connectionId && solutionsQuery.isFetching;
+  const canRefresh = !!connectionId && !refreshing && !copyRunning;
+  const sourceNames = solutions.filter((row) => sources.has(row.id)).map(solutionLabel);
+  const targetNames = solutions.filter((row) => targets.has(row.id) && !row.isManaged).map(solutionLabel);
+
+  const refresh = async () => {
+    const result = await solutionsQuery.refetch();
+    if (!result.isError) showToast("Solutions refreshed", "success");
+  };
 
   const status = useMemo(() => {
     if (!connectionId) return "No environment selected";
@@ -235,15 +246,16 @@ function SolutionComponentsMoverPage() {
           <span>Block a copy that would add a fully included managed table from an unmanaged source.</span>
         </label>
         <div className="flex shrink-0 items-center gap-2">
-          <button
+          <Button
             type="button"
-            aria-label="Refresh solutions"
+            variant="secondary"
+            className="inline-flex items-center gap-2"
             disabled={!canRefresh}
-            onClick={() => void solutionsQuery.refetch()}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-sm text-fg hover:bg-hover hover:text-fg-strong disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => void refresh()}
           >
-            <RefreshIcon />
-          </button>
+            {refreshing ? <Spinner size={14} /> : <RefreshIcon />}
+            Refresh solutions
+          </Button>
           <Button type="button" onClick={() => setModalOpen(true)} disabled={!canCopy}>
             Copy components
           </Button>
@@ -378,6 +390,8 @@ function SolutionComponentsMoverPage() {
       </Group>
       <ComponentTypeModal
         open={modalOpen}
+        sourceNames={sourceNames}
+        targetNames={targetNames}
         types={typesQuery.data ? typesQuery.data.componentTypes : null}
         loading={typesQuery.isFetching && !typesQuery.isError}
         errorText={typesQuery.isError ? toSolutionComponentsError(typesQuery.error) : null}
@@ -391,7 +405,7 @@ function SolutionComponentsMoverPage() {
 
 function RefreshIcon() {
   return (
-    <RotateCw size={16} strokeWidth={1.8} aria-hidden="true" />
+    <RotateCw size={14} aria-hidden="true" />
   );
 }
 

@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
-import { Button, Checkbox, DataTable, Modal } from "../../../shared/ui";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Checkbox, DataTable, Modal, SearchInput } from "../../../shared/ui";
 import type { ComponentTypeRow } from "../model/types";
+import { filterComponentTypes } from "../model/view";
 import { LabeledCheckbox } from "./LabeledCheckbox";
 
 export function ComponentTypeModal({
   open,
+  sourceNames,
+  targetNames,
   types,
   loading,
   errorText,
@@ -13,6 +16,10 @@ export function ComponentTypeModal({
   onCopy,
 }: {
   open: boolean;
+  /** Display names of the selected source solutions. */
+  sourceNames: string[];
+  /** Display names of the selected target solutions. */
+  targetNames: string[];
   types: ComponentTypeRow[] | null;
   loading: boolean;
   errorText: string | null;
@@ -21,12 +28,16 @@ export function ComponentTypeModal({
   onCopy: (componentTypes: number[], allComponents: boolean) => void;
 }) {
   const [checked, setChecked] = useState<Set<number>>(() => new Set());
+  const [search, setSearch] = useState("");
   const [session, setSession] = useState(0);
   const appliedSession = useRef(0);
   const wasOpen = useRef(false);
 
   useEffect(() => {
-    if (open && !wasOpen.current) setSession((current) => current + 1);
+    if (open && !wasOpen.current) {
+      setSession((current) => current + 1);
+      setSearch("");
+    }
     wasOpen.current = open;
   }, [open]);
 
@@ -46,12 +57,22 @@ export function ComponentTypeModal({
     });
   };
 
-  const listed = types ?? [];
-  const allSelected = listed.length > 0 && listed.every((type) => checked.has(type.componentType));
-  const someSelected = listed.some((type) => checked.has(type.componentType));
+  const listed = useMemo(() => types ?? [], [types]);
+  const shown = useMemo(() => filterComponentTypes(listed, search), [listed, search]);
+  // The header checkbox acts on the rows the search shows; hidden choices are kept.
+  const allSelected = shown.length > 0 && shown.every((type) => checked.has(type.componentType));
+  const someSelected = shown.some((type) => checked.has(type.componentType));
   const setAll = (selected: boolean) => {
-    setChecked(selected ? new Set(listed.map((type) => type.componentType)) : new Set());
+    setChecked((current) => {
+      const next = new Set(current);
+      for (const type of shown) {
+        if (selected) next.add(type.componentType);
+        else next.delete(type.componentType);
+      }
+      return next;
+    });
   };
+  const selectedCount = listed.filter((type) => checked.has(type.componentType)).length;
 
   return (
     <Modal
@@ -61,54 +82,77 @@ export function ComponentTypeModal({
       busy={loading}
       busyLabel="Loading component types…"
     >
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+        <dt className="text-fg-muted">From</dt>
+        <dd className="m-0 text-fg-strong">{sourceNames.join(", ")}</dd>
+        <dt className="text-fg-muted">To</dt>
+        <dd className="m-0 text-fg-strong">{targetNames.join(", ")}</dd>
+      </dl>
       {errorText ? (
         <div className="flex flex-col items-start gap-3">
           <p role="alert" className="text-fg">{errorText}</p>
           <Button type="button" variant="secondary" onClick={onRetry}>Retry</Button>
         </div>
       ) : (
-        <DataTable
-          columns={[
-            {
-              key: "selected",
-              header: (
-                <label
-                  className="inline-flex"
-                  onClick={(event) => event.stopPropagation()}
-                  onDoubleClick={(event) => event.stopPropagation()}
-                >
-                  <Checkbox
-                    checked={allSelected}
-                    indeterminate={!allSelected && someSelected}
-                    disabled={loading || !!errorText || listed.length === 0}
-                    onChange={setAll}
+        <div className="flex min-h-0 flex-1 flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <SearchInput
+              className="flex-1"
+              value={search}
+              onChange={setSearch}
+              placeholder="Search component types"
+              aria-label="Search component types"
+            />
+            <span className="shrink-0 text-xs text-fg-muted" aria-live="polite">
+              {selectedCount} of {listed.length} selected
+            </span>
+          </div>
+          <DataTable
+            columns={[
+              {
+                key: "selected",
+                width: "3rem",
+                header: (
+                  <label
+                    className="inline-flex"
+                    onClick={(event) => event.stopPropagation()}
+                    onDoubleClick={(event) => event.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={allSelected}
+                      indeterminate={!allSelected && someSelected}
+                      disabled={loading || !!errorText || shown.length === 0}
+                      onChange={setAll}
+                    />
+                    <span className="sr-only">Select all component types</span>
+                  </label>
+                ),
+                render: (row: ComponentTypeRow) => (
+                  <LabeledCheckbox
+                    label={row.label}
+                    checked={checked.has(row.componentType)}
+                    onChange={(value) => toggle(row.componentType, value)}
                   />
-                  <span className="sr-only">Select all component types</span>
-                </label>
-              ),
-              render: (row: ComponentTypeRow) => (
-                <LabeledCheckbox
-                  label={row.label}
-                  checked={checked.has(row.componentType)}
-                  onChange={(value) => toggle(row.componentType, value)}
-                />
-              ),
-            },
-            { key: "label", header: "Component type", render: (row: ComponentTypeRow) => row.label },
-          ]}
-          rows={listed}
-          getRowKey={(row) => String(row.componentType)}
-          emptyMessage="No component types"
-        />
+                ),
+              },
+              { key: "label", header: "Component type", render: (row: ComponentTypeRow) => row.label },
+            ]}
+            rows={shown}
+            getRowKey={(row) => String(row.componentType)}
+            emptyMessage={listed.length === 0 ? "No component types" : "No matching component types"}
+            layout="fixed"
+            resizable={false}
+          />
+        </div>
       )}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="secondary" onClick={onCancel}>Cancel</Button>
         <Button
           type="button"
-          disabled={loading || !!errorText || checked.size === 0}
+          disabled={loading || !!errorText || selectedCount === 0}
           onClick={() => onCopy(
             listed.filter((type) => checked.has(type.componentType)).map((type) => type.componentType),
-            listed.length > 0 && checked.size === listed.length,
+            listed.length > 0 && selectedCount === listed.length,
           )}
         >
           Copy

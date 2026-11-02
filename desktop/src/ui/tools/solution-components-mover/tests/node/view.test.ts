@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { solutionsFixture } from "../fixtures";
-import { filterSolutions, sortSolutions } from "../../model/view";
+import { filterComponentTypes, filterSolutions, sortSolutions } from "../../model/view";
 
 describe("solution list view", () => {
   it("filters every displayed value and keeps a blank publisher out of the match", () => {
@@ -40,5 +40,17 @@ describe("solution list view", () => {
       "asc",
     );
     expect(textFallback.map((row) => row.installedOn)).toEqual(["Alpha", "zeta"]);
+  });
+
+  it("matches component types on every word of the search, in any order", () => {
+    const types = [
+      { componentType: 26, label: "Saved Query" },
+      { componentType: 60, label: "System Form" },
+      { componentType: 1, label: "Entity" },
+    ];
+    expect(filterComponentTypes(types, "  ").map((type) => type.componentType)).toEqual([26, 60, 1]);
+    expect(filterComponentTypes(types, "FORM").map((type) => type.componentType)).toEqual([60]);
+    expect(filterComponentTypes(types, "query saved").map((type) => type.componentType)).toEqual([26]);
+    expect(filterComponentTypes(types, "form query")).toEqual([]);
   });
 });
