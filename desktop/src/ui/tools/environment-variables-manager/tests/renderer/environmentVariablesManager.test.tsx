@@ -198,7 +198,7 @@ describe("Environment Variables Manager", () => {
     await loaded();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit value of Settings" }));
-    expect(await screen.findByRole("textbox", { name: "Current Value (JSON)" })).toBeInTheDocument();
+    expect(await screen.findByRole("textbox", { name: "Current Value" })).toBeInTheDocument();
     expect(screen.getByDisplayValue("contoso_Settings")).toHaveAttribute("readonly");
   });
 
@@ -207,14 +207,14 @@ describe("Environment Variables Manager", () => {
     await loaded();
 
     fireEvent.click(screen.getByRole("button", { name: "Edit value of Password" }));
-    const details = screen.getByRole("region", { name: "Current value" });
-    fireEvent.change(within(details).getByLabelText("Subscription ID"), { target: { value: "sub-1" } });
+    const details = screen.getByRole("region", { name: "Variable details" });
+    fireEvent.change(within(details).getByLabelText("Current Value: Subscription ID"), { target: { value: "sub-1" } });
     expect(within(details).getByText("Fill in every part of the secret path.")).toBeInTheDocument();
-    fireEvent.change(within(details).getByLabelText("Resource Group"), { target: { value: "rg" } });
-    fireEvent.change(within(details).getByLabelText("Key Vault Name"), { target: { value: "kv" } });
-    fireEvent.change(within(details).getByLabelText("Secret Name"), { target: { value: "pw" } });
+    fireEvent.change(within(details).getByLabelText("Current Value: Resource Group"), { target: { value: "rg" } });
+    fireEvent.change(within(details).getByLabelText("Current Value: Key Vault Name"), { target: { value: "kv" } });
+    fireEvent.change(within(details).getByLabelText("Current Value: Secret Name"), { target: { value: "pw" } });
 
-    expect(within(details).getByLabelText("Secret path")).toHaveTextContent(
+    expect(within(details).getByLabelText("Current Value: Secret path")).toHaveTextContent(
       "/subscriptions/sub-1/resourceGroups/rg/providers/Microsoft.KeyVault/vaults/kv/secrets/pw",
     );
     expect(screen.getByRole("button", { name: "Save Changes (1)" })).toBeEnabled();
@@ -225,7 +225,7 @@ describe("Environment Variables Manager", () => {
     await loaded();
 
     fireEvent.click(screen.getByText("API URL"));
-    const definition = screen.getByRole("region", { name: "Definition" });
+    const definition = screen.getByRole("region", { name: "Variable details" });
     fireEvent.change(within(definition).getByLabelText("Display Name"), { target: { value: "Service URL" } });
     fireEvent.click(screen.getByText("Retries"));
 
@@ -235,7 +235,7 @@ describe("Environment Variables Manager", () => {
 
     fireEvent.click(screen.getByText("Retries"));
     fireEvent.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Discard" }));
-    expect(within(screen.getByRole("region", { name: "Definition" })).getByLabelText("Display Name")).toHaveValue("Retries");
+    expect(within(screen.getByRole("region", { name: "Variable details" })).getByLabelText("Display Name")).toHaveValue("Retries");
   });
 
   it("saves only changed definition fields", async () => {
@@ -248,7 +248,7 @@ describe("Environment Variables Manager", () => {
     await loaded();
 
     fireEvent.click(screen.getByText("API URL"));
-    const definition = screen.getByRole("region", { name: "Definition" });
+    const definition = screen.getByRole("region", { name: "Variable details" });
     expect(within(definition).getByRole("button", { name: "Save Definition" })).toBeDisabled();
     fireEvent.change(within(definition).getByLabelText("Display Name"), { target: { value: "Service URL" } });
     fireEvent.click(within(definition).getByRole("button", { name: "Save Definition" }));
@@ -351,13 +351,16 @@ describe("Environment Variables Manager", () => {
     expect(within(dialog).getByLabelText("Schema Name")).toHaveValue("contoso_");
     expect(within(dialog).getByText("Schema names in this solution start with contoso_.")).toBeInTheDocument();
 
-    fireEvent.change(within(dialog).getByLabelText("Schema Name"), { target: { value: "contoso_Timeout" } });
+    fireEvent.change(within(dialog).getByLabelText("Display Name"), { target: { value: "request timeout" } });
+    expect(within(dialog).getByLabelText("Schema Name")).toHaveValue("contoso_RequestTimeout");
     fireEvent.change(within(dialog).getByLabelText("Display Name"), { target: { value: "Timeout" } });
+    expect(within(dialog).getByLabelText("Schema Name")).toHaveValue("contoso_Timeout");
     fireEvent.change(within(dialog).getByLabelText("Type"), { target: { value: "100000001" } });
     fireEvent.change(within(dialog).getByLabelText("Default Value"), { target: { value: "thirty" } });
     expect(within(dialog).getByText("Enter a decimal number.")).toBeInTheDocument();
     expect(createButton).toBeDisabled();
     fireEvent.change(within(dialog).getByLabelText("Default Value"), { target: { value: "30" } });
+    fireEvent.change(within(dialog).getByLabelText("Current Value"), { target: { value: "45" } });
     fireEvent.click(createButton);
 
     expect(await screen.findByText("Variable created.")).toBeInTheDocument();
@@ -366,10 +369,11 @@ describe("Environment Variables Manager", () => {
       displayName: "Timeout",
       type: 100000001,
       defaultValue: "30",
+      initialValue: "45",
       solutionUniqueName: "ContosoCore",
     });
     await waitFor(() =>
-      expect(within(screen.getByRole("region", { name: "Definition" })).getByLabelText("Display Name")).toHaveValue("Timeout"),
+      expect(within(screen.getByRole("region", { name: "Variable details" })).getByLabelText("Display Name")).toHaveValue("Timeout"),
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });

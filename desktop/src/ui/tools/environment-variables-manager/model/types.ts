@@ -49,6 +49,8 @@ export interface CreateDefinitionBody {
   description?: string;
   type: number;
   defaultValue?: string;
+  /** Creates the current value together with the definition. */
+  initialValue?: string;
   solutionUniqueName?: string;
 }
 

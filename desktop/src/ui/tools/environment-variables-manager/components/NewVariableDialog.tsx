@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
 import { Alert, Button, Combobox, Field, Input, Modal, Select, Textarea } from "../../../shared/ui";
-import { creatableTypes, valueKind, VARIABLE_TYPE, type CreateDefinitionBody, type SolutionOption } from "../model/types";
+import { creatableTypes, VARIABLE_TYPE, type CreateDefinitionBody, type SolutionOption } from "../model/types";
 import {
+  DEFAULT_SCHEMA_PREFIX,
+  schemaNameFromDisplayName,
   validateDescription,
   validateDisplayName,
   validateSchemaName,
   validateValue,
 } from "../model/valueValidation";
-import { ValueEditor } from "./ValueEditor";
+import { ValueField } from "./ValueField";
 
 interface NewVariableDialogProps {
   onPremises: boolean;
@@ -31,21 +33,25 @@ export function NewVariableDialog({
   onCreate,
 }: NewVariableDialogProps) {
   const types = creatableTypes(onPremises);
-  const [schemaName, setSchemaName] = useState("");
+  const [solution, setSolution] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [schemaName, setSchemaName] = useState(() => schemaNameFromDisplayName("", null));
+  // The schema name follows the display name until the user types in it.
+  const [schemaEdited, setSchemaEdited] = useState(false);
   const [type, setType] = useState<number>(VARIABLE_TYPE.string);
   const [description, setDescription] = useState("");
   const [defaultValue, setDefaultValue] = useState("");
-  const [solution, setSolution] = useState("");
+  const [currentValue, setCurrentValue] = useState("");
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
-  const selectedSolution = solutions.find((item) => item.uniqueName === solution) ?? null;
-  const prefix = selectedSolution?.prefix || null;
+  const prefixOf = (uniqueName: string) => solutions.find((item) => item.uniqueName === uniqueName)?.prefix || null;
+  const prefix = prefixOf(solution);
   const errors = {
     schemaName: validateSchemaName(schemaName, prefix),
     displayName: validateDisplayName(displayName),
     description: validateDescription(description),
     defaultValue: validateValue(type, defaultValue, false),
+    currentValue: validateValue(type, currentValue, false),
   };
   const valid = Object.values(errors).every((item) => item === null);
   const show = (field: keyof typeof errors) => (touched[field] ? errors[field] : null);
@@ -65,15 +71,27 @@ export function NewVariableDialog({
 
   const changeSolution = (next: string) => {
     setSolution(next);
-    const nextPrefix = solutions.find((item) => item.uniqueName === next)?.prefix;
-    if (nextPrefix && (schemaName.trim() === "" || /^[A-Za-z0-9]*_$/.test(schemaName))) {
-      setSchemaName(`${nextPrefix}_`);
+    const nextPrefix = prefixOf(next);
+    if (!schemaEdited) {
+      setSchemaName(schemaNameFromDisplayName(displayName, nextPrefix));
+      return;
     }
+    // Swap only the prefix of a schema name the user typed.
+    const oldHead = `${prefix || DEFAULT_SCHEMA_PREFIX}_`;
+    if (schemaName.toLowerCase().startsWith(oldHead.toLowerCase())) {
+      setSchemaName(`${nextPrefix || DEFAULT_SCHEMA_PREFIX}_${schemaName.slice(oldHead.length)}`);
+    }
+  };
+
+  const changeDisplayName = (next: string) => {
+    setDisplayName(next);
+    if (!schemaEdited) setSchemaName(schemaNameFromDisplayName(next, prefix));
   };
 
   const changeType = (next: number) => {
     setType(next);
     setDefaultValue("");
+    setCurrentValue("");
   };
 
   const create = () => {
@@ -85,6 +103,7 @@ export function NewVariableDialog({
     };
     if (description) body.description = description;
     if (defaultValue) body.defaultValue = defaultValue;
+    if (currentValue) body.initialValue = currentValue;
     if (solution) body.solutionUniqueName = solution;
     onCreate(body);
   };
@@ -95,22 +114,35 @@ export function NewVariableDialog({
 
   return (
     <Modal open title="New Variable" onClose={onCancel} busy={busy} busyLabel="Creating…" widthClass="max-w-xl">
-      <Field label="Schema Name" error={show("schemaName")}>
-        <Input
-          className="font-mono"
-          value={schemaName}
-          autoFocus
-          required
-          onChange={(event) => setSchemaName(event.target.value)}
-          onBlur={() => touch("schemaName")}
+      <Field label="Solution" hint={solutionsError ? undefined : solutionHint} error={solutionsError}>
+        <Combobox
+          value={solution}
+          options={solutionOptions}
+          onChange={changeSolution}
+          disabled={solutionsLoading}
+          placeholder={solutionsLoading ? "Loading solutions…" : "No solution"}
+          emptyMessage="No unmanaged solutions match."
         />
       </Field>
       <Field label="Display Name" error={show("displayName")}>
         <Input
           value={displayName}
+          autoFocus
           required
-          onChange={(event) => setDisplayName(event.target.value)}
+          onChange={(event) => changeDisplayName(event.target.value)}
           onBlur={() => touch("displayName")}
+        />
+      </Field>
+      <Field label="Schema Name" error={show("schemaName")} hint="Filled in from the display name. You can change it.">
+        <Input
+          className="font-mono"
+          value={schemaName}
+          required
+          onChange={(event) => {
+            setSchemaEdited(true);
+            setSchemaName(event.target.value);
+          }}
+          onBlur={() => touch("schemaName")}
         />
       </Field>
       <Field label="Type">
@@ -125,39 +157,21 @@ export function NewVariableDialog({
       <Field label="Description" error={errors.description}>
         <Textarea rows={3} value={description} onChange={(event) => setDescription(event.target.value)} />
       </Field>
-      {valueKind(type) === "secret" ? (
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-medium text-fg-muted">Default Value</span>
-          <ValueEditor
-            type={type}
-            value={defaultValue}
-            onChange={setDefaultValue}
-            aria-label="Default Value"
-            labelPrefix="Default Value"
-          />
-          {errors.defaultValue && defaultValue ? <p className="text-xs text-danger">{errors.defaultValue}</p> : null}
-        </div>
-      ) : (
-        <Field label="Default Value" error={errors.defaultValue}>
-          <ValueEditor
-            type={type}
-            value={defaultValue}
-            onChange={setDefaultValue}
-            invalid={errors.defaultValue !== null}
-            aria-label="Default Value"
-          />
-        </Field>
-      )}
-      <Field label="Solution" hint={solutionsError ? undefined : solutionHint} error={solutionsError}>
-        <Combobox
-          value={solution}
-          options={solutionOptions}
-          onChange={changeSolution}
-          disabled={solutionsLoading}
-          placeholder={solutionsLoading ? "Loading solutions…" : "No solution"}
-          emptyMessage="No unmanaged solutions match."
-        />
-      </Field>
+      <ValueField
+        label="Default Value"
+        type={type}
+        value={defaultValue}
+        onChange={setDefaultValue}
+        error={defaultValue ? errors.defaultValue : null}
+      />
+      <ValueField
+        label="Current Value"
+        type={type}
+        value={currentValue}
+        onChange={setCurrentValue}
+        error={currentValue ? errors.currentValue : null}
+        hint="Optional. Leave empty to use the default value."
+      />
       {error ? <Alert tone="danger">{error}</Alert> : null}
       <div className="flex justify-end gap-2">
         <Button variant="secondary" onClick={onCancel} disabled={busy}>

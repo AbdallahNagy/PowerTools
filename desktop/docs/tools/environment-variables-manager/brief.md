@@ -462,6 +462,13 @@ Status comes from `useToolStatus`. The split uses `react-resizable-panels`. Icon
 **Not checked**
 - No live Dataverse environment was used, by design. The unverified items in `### Dataverse review` (Boolean storage text, cascade on delete, platform immutability of `schemaname` and `type`, on-premises table availability, automatic `schemaname` on values) are handled defensively but not confirmed against a real server.
 
+
+#### Follow-up changes requested by the user
+
+- Details pane: one form without section headings, in the maker portal's order: Display Name, Schema Name, Type, Description, Default Value, Current Value. The current value field is labelled "Current Value", including for JSON.
+- New Variable dialog: Solution comes first, because it sets the schema name prefix. Display Name comes before Schema Name, and the schema name is filled in from the display name as you type (prefix, underscore, each word capitalized, other characters removed; "test Env Var" with prefix `ng` gives `ng_TestEnvVar`; with no solution the prefix is `new`). Typing in Schema Name stops the auto-fill, and changing the solution then swaps only the prefix. An optional Current Value field follows Default Value and is sent as `initialValue`.
+- Checks: `npm run typecheck`, `npm run lint -- --max-warnings 0`, `npm test` (698 tests) and `npm run build` pass.
+
 ### Open questions
 
 - **License (answered by the user):** The source plugin is GPL-3.0. Proceed clean-room: use it only as domain knowledge, copy no code, UI or text. The user chose **not** to credit the plugin on the website page, so omit `xrmToolBoxEquivalent` and any plugin mention there.

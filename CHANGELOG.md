@@ -8,7 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Added
 
-- **Environment Variables Manager.** A new tool that lists every environment variable in an environment with its type, default value, and current value. Edit current values in the list and save them together, with each value checked against its type first and each row marked as saved or failed. Create a variable, optionally in an unmanaged solution, update its display name, description, and default value, and delete a variable or only its current value. Values and definitions that came from a managed solution are marked, and cannot be deleted.
+- **Environment Variables Manager.** A new tool that lists every environment variable in an environment with its type, default value, and current value. Edit current values in the list and save them together, with each value checked against its type first and each row marked as saved or failed. Create a variable, optionally in an unmanaged solution, with its schema name filled in from the display name and an optional current value. Update its display name, description, and default value, and delete a variable or only its current value. Values and definitions that came from a managed solution are marked, and cannot be deleted.
 
 ## [1.2.0] - 2026-10-30
 

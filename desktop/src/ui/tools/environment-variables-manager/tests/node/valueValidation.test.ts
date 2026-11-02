@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildSecretPath, isCompleteSecretPath, parseSecretPath } from "../../model/secretPath";
 import { VARIABLE_TYPE } from "../../model/types";
 import {
+  schemaNameFromDisplayName,
   validateDisplayName,
   validateSchemaName,
   validateValue,
@@ -59,5 +60,20 @@ describe("secret path", () => {
     expect(parseSecretPath(partial)?.subscriptionId).toBe("s");
     expect(isCompleteSecretPath(partial)).toBe(false);
     expect(parseSecretPath("/subscriptions/s/secrets/x")).toBeNull();
+  });
+});
+
+describe("schema name from display name", () => {
+  it.each([
+    ["test Env Var", "ng", "ng_TestEnvVar"],
+    ["API URL (prod)", "contoso", "contoso_APIURLProd"],
+    ["  ", "ng", "ng_"],
+    ["Retries", null, "new_Retries"],
+  ])("%s with prefix %s gives %s", (displayName, prefix, expected) => {
+    expect(schemaNameFromDisplayName(displayName, prefix)).toBe(expected);
+  });
+
+  it("stops at the schema name length limit", () => {
+    expect(schemaNameFromDisplayName("a".repeat(200), "ng")).toHaveLength(100);
   });
 });

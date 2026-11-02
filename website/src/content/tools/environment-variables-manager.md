@@ -24,7 +24,7 @@ Each value is checked against its type before anything is sent, because Datavers
 
 ## Manage definitions
 
-Create a variable with its schema name, display name, type, description, and default value, and optionally add it to an unmanaged solution. The schema name has to start with that solution publisher's prefix. For an existing variable you can change its display name, description, and default value. Its schema name and type stay locked.
+Create a variable by picking an unmanaged solution, if you want one, and typing a display name. The schema name fills in as you type, using that solution publisher's prefix, so Test Env Var becomes ng_TestEnvVar. Then set the type, description, and default value, and optionally a current value. For an existing variable you can change its display name, description, and default value. Its schema name and type stay locked.
 
 Delete a variable or only its current value after a confirmation. Definitions and values that came from a managed solution cannot be deleted, and a variable that a flow or app still uses is reported instead of deleted.
 

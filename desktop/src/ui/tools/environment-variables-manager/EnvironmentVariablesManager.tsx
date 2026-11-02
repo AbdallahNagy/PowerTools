@@ -255,7 +255,11 @@ function Manager() {
     try {
       const created = await createDefinition(connectionId, body);
       setNewOpen(false);
-      showToast("Variable created.", "success");
+      if (created.valueError) {
+        showToast(`Variable created, but its current value was not saved: ${created.valueError}`, "info");
+      } else {
+        showToast("Variable created.", "success");
+      }
       await reload();
       select(created.variable.definitionId, false);
     } catch (error) {

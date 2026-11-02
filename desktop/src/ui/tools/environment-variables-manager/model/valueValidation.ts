@@ -72,3 +72,22 @@ export function validateSchemaName(schemaName: string, prefix: string | null): s
   }
   return null;
 }
+
+/** Prefix used when no solution is chosen, as the maker portal's default publisher does. */
+export const DEFAULT_SCHEMA_PREFIX = "new";
+
+/**
+ * Builds a schema name from a display name the way the maker portal does:
+ * the publisher prefix, an underscore, then each word with its first letter
+ * capitalized and everything that is not a letter or digit removed.
+ * "test Env Var" with prefix "ng" becomes "ng_TestEnvVar".
+ */
+export function schemaNameFromDisplayName(displayName: string, prefix: string | null): string {
+  const head = `${prefix || DEFAULT_SCHEMA_PREFIX}_`;
+  const body = displayName
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("");
+  return (head + body).slice(0, SCHEMA_NAME_MAX_LENGTH);
+}

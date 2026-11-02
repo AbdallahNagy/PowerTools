@@ -38,7 +38,7 @@ export function SecretPathEditor({ value, onChange, disabled, labelPrefix }: Sec
           />
         </Field>
       ))}
-      <p className="break-all font-mono text-xs text-fg-muted" aria-label="Secret path">
+      <p className="break-all font-mono text-xs text-fg-muted" aria-label={labelPrefix ? `${labelPrefix}: Secret path` : "Secret path"}>
         {value || buildSecretPath(EMPTY_SECRET_PATH)}
       </p>
     </div>
