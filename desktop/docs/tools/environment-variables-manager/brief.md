@@ -200,6 +200,76 @@ Sources:
 - [NuGet: XrmToolSuite.EnvironmentInventory](https://packages.nuget.org/packages/XrmToolSuite.EnvironmentInventory)
 - [Microsoft Learn: EnvironmentVariableDefinition table reference](https://learn.microsoft.com/power-apps/developer/data-platform/reference/entities/environmentvariabledefinition)
 
+### Dataverse review
+
+Evidence used: the Microsoft Learn table references for `environmentvariabledefinition` and `environmentvariablevalue` (generated reference pages, read from the `MicrosoftDocs/powerapps-docs` source), "Environment variables for Power Platform overview", "Use environment variables for Azure Key Vault secrets", "Use optional parameters" (`SolutionUniqueName`), and the `AddSolutionComponentRequest` SDK reference. Where a claim rests only on the plugin's behavior, it is marked unverified below.
+
+**Messages, metadata, paging and batching**
+- Type codes are confirmed: 100000000 String, 100000001 Number, 100000002 Boolean, 100000003 JSON, 100000004 Data Source, 100000005 Secret. The researcher's correction of the plugin's "Connection reference" label is right. Map by the integer, never by the label, because `type` labels are returned in the caller's language.
+- `secretstore` is confirmed as 0 Azure Key Vault and 1 Microsoft Dataverse, but Microsoft states Azure Key Vault is currently the only supported secret store. Treat a definition with `secretstore = 1` as read-only in v1 and do not offer it on create.
+- Lengths from metadata: `schemaname` 100, `displayname` 100, `description` 2000, `defaultvalue` 2000, `environmentvariablevalue.value` 2000. Enforce all of them in the sidecar.
+- **Dataverse does not validate values.** Microsoft's "Current limitations" says validation happens only in the maker UI and in consuming components, not in Dataverse. The sidecar validation in step 2 is therefore the only guard, not a convenience. Allow a leading minus on Number.
+- **Boolean `yes`/`no` is unverified** against Microsoft docs. It matches what the maker UI writes and what the plugin expects. Accept `yes` and `no` only, case-sensitive on write, and display any other stored text as-is rather than failing the list.
+- **Secret values are validated server-side.** Unlike the other types, saving a Key Vault reference triggers an access check: the caller must hold Key Vault Secrets User on the vault, the subscription must have `Microsoft.PowerPlatform` registered, and the vault must be in the same tenant. A failure comes back as a fault ("User isn't authorized to read secrets from ..."). Report it per row. The path can be the value or the `defaultvalue`.
+- **Data Source variables need more than a value.** A Data Source definition depends on `connectionreferenceid`, `apiid`, `parameterkey` and connector-specific parameters, and its value is a connector parameter such as a SharePoint site URL or list id. Creating one with only `schemaname, displayname, type` produces a variable that apps and flows cannot use. Recommendation: allow editing the current value of an existing Data Source variable as plain text, and leave Data Source out of the create type list in v1.
+- **One value per definition is a UI rule, not a platform constraint.** Microsoft says "the interface only allows creation of one value per definition". The API can create a second row. Before each `Create` of a value, re-query `environmentvariablevalue` by `environmentvariabledefinitionid`; if a row now exists, update it instead. If the list query finds more than one value row for a definition, return all of them as a flagged conflict and do not pick one silently.
+- When creating a value, set `environmentvariablevalue.schemaname` to the definition's schema name. It is `ApplicationRequired` in metadata, which the platform does not enforce, but the maker UI fills it. Whether Dataverse fills it on its own is unverified.
+- **Do not put the value in the solution** when `initialValue` is set on create. Send `SolutionUniqueName` on the definition's `CreateRequest` only. Microsoft's guidance is that definitions belong in the solution and values should be supplied per target environment.
+- `CreateRequest` and `UpdateRequest` accept the `SolutionUniqueName` optional parameter for solution components, so the PUT endpoint can pass it on `UpdateRequest` instead of a separate `AddSolutionComponentRequest`. Both work; the single call is preferred by Microsoft's `AddSolutionComponentRequest` remarks.
+- **List query.** Do not page a query whose one-to-many outer joins multiply rows: the 5000-row page then counts joined rows, and the grouping can split a definition across two pages. Instead:
+  1. Page `environmentvariabledefinition` alone with `PageInfo` and the paging cookie, ordered by `displayname` and then `environmentvariabledefinitionid`, so the order is stable across pages. Include `statecode`, `ismanaged`, `secretstore`, `parentdefinitionid` and `iscustomizable`.
+  2. Page `environmentvariablevalue` separately, with columns `environmentvariabledefinitionid, value, ismanaged, schemaname`. Join to definitions in memory.
+  3. Use `environmentvariablevalue.ismanaged` for the managed-value flag. Only for values where it is true, query `solutioncomponent` with `componenttype = 381` and `objectid` in those ids, linked to `solution` with `ismanaged = true`, to get the friendly names.
+- The plugin's exclusions of `Default` and `Active` are redundant once the link filters on `ismanaged = true`, since both are unmanaged. The missing `componenttype` filter is mostly harmless because object ids are unique GUIDs, but add it anyway.
+- **Bulk save.** Do not use `ExecuteTransactionRequest`, `CreateMultiple` or `UpdateMultiple`: each fails or rolls back as a whole, which breaks per-row results. Sequential calls are fine for the usual tens of rows. If `ExecuteMultipleRequest` is used, set `ContinueOnError = true` and `ReturnResponses = true`, keep batches at 100 or fewer (the documented maximum is 1000), and map each response back by request index, never by value text. `ExecuteMultiple` is not transactional.
+- Service protection limits apply per user. The `ServiceClient` online path retries on 429 with `Retry-After`. The on-premises client in `DataverseClientFactory` does not, so surface a throttling fault as a per-row error and do not loop.
+- `RetrieveEnvironmentVariableSecretValue` must not be called (confirmed by the Key Vault page: it returns the secret contents). `RetrieveEnvironmentVariables` and `RetrieveEnvironmentVariableValue` exist but are not needed; plain `RetrieveMultiple` gives everything the list needs.
+
+**Privileges and connection**
+- **Correction to the plugin claim** that privileges are needed on both tables. `environmentvariablevalue` has ownership type None; Microsoft says its permissions are inherited from `environmentvariabledefinition`. Only definition privileges matter.
+- `environmentvariabledefinition` is user owned. Basic User and Environment Maker include its privileges by default, often at user depth. Editing or deleting a definition owned by someone else can fail with an access-denied fault even when creating works. Map it to a typed 403 per row.
+- The solutions endpoint needs read on `solution` and `publisher`. Adding to a solution, by `SolutionUniqueName` or `AddSolutionComponentRequest`, requires the System Administrator or System Customizer role.
+- No `WhoAmI`, impersonation or `CallerId` is needed. Do not set a caller id; the sidecar runs as the signed-in user.
+- A Secret value save also needs the caller's Azure Key Vault role. This is an Azure permission that Dataverse privileges cannot grant.
+
+**Online versus on-premises**
+- The sidecar supports on-premises connections (`OnPremisesConnectionContext` in `Services/DataverseClientFactory.cs`). Whether Dataverse Server 9.1 has these two tables is **unverified**. Treat a "table does not exist" fault on the first list query as a typed "not available on this server" response, not a generic 500.
+- Secret (Azure Key Vault) and Data Source (connectors) are online features. Even where the tables exist on-premises, do not offer those types on create there.
+- Value changes reach canvas apps and cloud flows asynchronously; Microsoft says it can take up to an hour. That is the same online, and should be stated after a save so a user does not assume the save failed.
+
+**Solution and managed limits**
+- A definition in a managed solution cannot be deleted; only uninstalling or upgrading the solution removes it. Check `ismanaged` and refuse before calling `Delete`.
+- Updating `displayname`, `description` or `defaultvalue` on a managed definition depends on its `iscustomizable` managed property. Read it and lock those fields when it is false, rather than letting the update fault.
+- `schemaname` and `type` are listed as writable in metadata, so whether Dataverse rejects changing them after create is **unverified**. The sidecar must reject both on update regardless, as the brief says.
+- A value imported in a managed solution cannot be deleted. Microsoft's FAQ says the only way is to ship a solution version that excludes the value and import it as an upgrade. Disable "delete value" for managed values with that reason.
+- Editing a managed value is allowed, but the next import of a solution version that still carries a value can replace it. The exact layering after an in-place edit is **unverified**. Word the warning that way. Do not repeat the plugin's claim that an upgrade removes the value: that happens only when the new version excludes it.
+- `componentstate` exists on both tables. Normal queries return published rows only; nothing to do in v1.
+
+**Failure modes**
+- Delete definition: blocked by a managed layer, by a dependency (flows, apps, custom connectors, agents), or by user-depth privileges. Call `RetrieveDependenciesForDeleteRequest { ComponentType = 380, ObjectId }` first and return 409 with the dependent components.
+- Delete value: can also be blocked by the dependency system (Microsoft: "if not already prevented by dependency system, runtime uses the last known value"). Run the same check with `ComponentType = 381`.
+- That deleting a definition cascades to its value is **unverified**. The relationship's cascade setting is not published for `environmentvariabledefinition_environmentvariablevalue`. Re-query after delete and report any value row left behind.
+- Create definition: duplicate `schemaname` fault; a prefix that does not match the solution's publisher. Requiring `{prefix}_` plus letters, digits and underscores only is our rule, not a documented platform rule. Microsoft also reserves `$authentication` and `$connection` as names; flows refuse to save with them, so reject them as display names.
+- Value save: Key Vault authorization faults for Secret, length over 2000, a value row created concurrently (handled by the re-query), and access denied. Each is a per-row result; one failure never stops the batch.
+- Inactive definitions (`statecode = 1`) exist. List them with a flag; do not hide them.
+
+**Plugin claims that are wrong**
+- "Connection reference" as the label for 100000004; it is Data Source.
+- Needing privileges on both tables; value privileges are inherited from the definition.
+- Rejecting negative Number values.
+- Paging the joined query, and the 5000 cap.
+- Keying save errors by value text.
+- An upgrade import "could remove the value": only an upgrade that excludes the value removes it.
+- Creating a Data Source definition with only the basic columns; it cannot be used.
+
+**Plugin claims that remain unverified**
+- Boolean values stored as exactly `yes` and `no`.
+- Delete definition cascading to its value.
+- `schemaname` and `type` being immutable at the platform level.
+- Whether the tables exist on Dataverse Server 9.1 on-premises.
+- Whether Dataverse fills `environmentvariablevalue.schemaname` when it is not supplied.
+- How an in-place edit of a managed value is layered against a later import.
+
 ### UX
 
 Scope is the capability list in `### What it does`, cut to the first version the user chose under `### Open questions`. That version covers listing, filtering, inline value edits saved together, creating, editing and deleting definitions, and deleting values. Excel import and export, comparing or pushing to a target environment, and the clipboard copy actions wait for a later phase.
