@@ -8,7 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- **Plugin Registration: updating a custom workflow assembly.** Updating an assembly no longer fails with "Plug-in assembly fullnames must be unique (0x8004417B)". The update now sends the assembly's full identity with the new file, as the Microsoft Plug-in Registration Tool does. Workflow activities in the default "Name (version)" group move to the new version.
+- **Plugin Registration: updating a custom workflow assembly.** Updating an assembly no longer fails with "Plug-in assembly fullnames must be unique (0x8004417B)". The update now sends the assembly's full identity with the new file, as the Microsoft Plug-in Registration Tool and XrmToolBox do. Workflow activities in the default "Name (version)" group move to the new version.
+- **Plugin Registration: match the Microsoft and XrmToolBox tools.** New assemblies store the public key token in uppercase, steps link to their plug-in type through the current event handler column, and images can be added to ExecuteWorkflow and Route steps.
 
 ## [1.2.0] - 2026-10-30
 

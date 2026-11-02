@@ -52,7 +52,9 @@ public sealed class AssemblyServiceTests
         Assert.Equal("MixedRegistrationAssembly", assembly.GetAttributeValue<string>("name"));
         Assert.Equal("1.2.3.4", assembly.GetAttributeValue<string>("version"));
         Assert.Equal("neutral", assembly.GetAttributeValue<string>("culture"));
-        Assert.Equal(ExpectedPublicKeyToken, assembly.GetAttributeValue<string>("publickeytoken"));
+        Assert.Equal(
+            ExpectedPublicKeyToken.ToUpperInvariant(),
+            assembly.GetAttributeValue<string>("publickeytoken"));
         Assert.Equal(2, assembly.GetAttributeValue<OptionSetValue>("isolationmode").Value);
         Assert.Equal(0, assembly.GetAttributeValue<OptionSetValue>("sourcetype").Value);
         Assert.Equal(Convert.ToBase64String(bytes), assembly.GetAttributeValue<string>("content"));
@@ -141,6 +143,32 @@ public sealed class AssemblyServiceTests
         Assert.DoesNotContain(
             gateway.Created,
             entity => entity.GetAttributeValue<string>("typename") == "MixedRegistrationAssembly.AlphaPlugin");
+    }
+
+    [Fact]
+    public async Task Update_keeps_the_identity_values_dataverse_already_stores()
+    {
+        var gateway = SeedWritableAssembly("1.2.0.0", name: "mixedregistrationassembly");
+        gateway.Records[("pluginassembly", _assemblyId)]["publickeytoken"] =
+            ExpectedPublicKeyToken.ToUpperInvariant();
+        var service = CreateService(gateway);
+        var bytes = await File.ReadAllBytesAsync(FixturePath("MixedRegistrationAssembly.dll"));
+        await using var stream = new MemoryStream(bytes);
+
+        await service.UpdateAsync(
+            _assemblyId,
+            stream,
+            "MixedRegistrationAssembly.dll",
+            bytes.LongLength,
+            CancellationToken.None);
+
+        var updated = Assert.Single(gateway.Updated);
+        Assert.Equal("mixedregistrationassembly", updated.GetAttributeValue<string>("name"));
+        Assert.Equal(
+            ExpectedPublicKeyToken.ToUpperInvariant(),
+            updated.GetAttributeValue<string>("publickeytoken"));
+        Assert.Equal("neutral", updated.GetAttributeValue<string>("culture"));
+        Assert.Equal("1.2.3.4", updated.GetAttributeValue<string>("version"));
     }
 
     [Fact]

@@ -12,6 +12,8 @@ public sealed class ImageMessagePropertiesTests
     [InlineData("SetState", "EntityMoniker")]
     [InlineData("CreateMultiple", "Ids")]
     [InlineData("Send", "EmailId")]
+    [InlineData("ExecuteWorkflow", "Target")]
+    [InlineData("Route", "Target")]
     public void Maps_known_messages(string message, string property)
     {
         Assert.True(ImageMessageProperties.TryGet(message, out var actual));

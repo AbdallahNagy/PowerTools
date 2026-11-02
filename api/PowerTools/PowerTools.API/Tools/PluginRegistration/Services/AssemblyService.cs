@@ -39,7 +39,7 @@ public sealed class AssemblyService(
                 ["name"] = inspection.Identity.Name,
                 ["version"] = inspection.Identity.Version,
                 ["culture"] = CultureOf(inspection),
-                ["publickeytoken"] = inspection.Identity.PublicKeyToken,
+                ["publickeytoken"] = TokenOf(inspection),
                 ["isolationmode"] = new OptionSetValue(request.IsolationMode),
                 ["sourcetype"] = new OptionSetValue(request.SourceType),
                 ["content"] = Convert.ToBase64String(bytes),
@@ -135,13 +135,22 @@ public sealed class AssemblyService(
         }
 
         // Send the whole assembly identity with the content, as the Microsoft Plug-in
-        // Registration Tool does. An update that carries only content and version can fail
-        // with 0x8004417B ("fullnames must be unique") for custom workflow assemblies.
+        // Registration Tool and XrmToolBox do. Dataverse rejects a pluginassembly update
+        // that leaves out the identity: 0x8004417B ("fullnames must be unique") when only
+        // content and version are sent. Name, culture, and token were checked against the
+        // file above, so keep the values Dataverse already stores.
+        var existingCulture = existing.GetAttributeValue<string>("culture");
         var update = new Entity("pluginassembly", id)
         {
-            ["name"] = inspection.Identity.Name,
-            ["culture"] = CultureOf(inspection),
-            ["publickeytoken"] = inspection.Identity.PublicKeyToken,
+            ["name"] = string.IsNullOrWhiteSpace(existingName)
+                ? inspection.Identity.Name
+                : existingName,
+            ["culture"] = string.IsNullOrWhiteSpace(existingCulture)
+                ? CultureOf(inspection)
+                : existingCulture,
+            ["publickeytoken"] = string.IsNullOrWhiteSpace(existingToken)
+                ? TokenOf(inspection)
+                : existingToken,
             ["version"] = inspection.Identity.Version,
             ["content"] = Convert.ToBase64String(bytes),
         };
@@ -227,6 +236,11 @@ public sealed class AssemblyService(
         string.IsNullOrWhiteSpace(inspection.Identity.Culture)
             ? RegistrationOptionValues.CultureNeutral
             : inspection.Identity.Culture;
+
+    // Microsoft's Plug-in Registration Tool and XrmToolBox both write the token as
+    // uppercase hex, so new registrations match what those tools store.
+    private static string TokenOf(AssemblyInspectionDto inspection) =>
+        inspection.Identity.PublicKeyToken.ToUpperInvariant();
 
     private static void CopyOptionSet(Entity source, Entity target, string attribute)
     {
