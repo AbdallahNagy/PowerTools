@@ -13,6 +13,7 @@ import { ConditionNode } from "./ConditionNode";
 import { DropSlot } from "./DropSlot";
 import { useDrag } from "./useDrag";
 import { RelationshipNode } from "./RelationshipNode";
+import { RelatedTablePicker } from "./RelatedTablePicker";
 
 type TreeActions = ReturnType<typeof useFilterTree>;
 
@@ -27,6 +28,8 @@ interface GroupNodeProps {
   depth: number;
   path: RelationshipPathSegment[];
   isRoot: boolean;
+  /** True when an enclosing group in the same table scope is an OR group. */
+  withinOr?: boolean;
   actions: TreeActions;
 }
 
@@ -48,8 +51,11 @@ export function GroupNode({
   depth,
   path,
   isRoot,
+  withinOr = false,
   actions,
 }: GroupNodeProps) {
+  // Related table filters become inner link-entity joins, which only AND with the rest of the filter.
+  const allowRelationships = group.logic === "and" && !withinOr;
   const borderColor = DEPTH_COLORS[depth % DEPTH_COLORS.length];
   const groupErrors = errors.filter((e) => e.nodeId === group.id);
   const { dragId, beginDrag, endDrag } = useDrag();
@@ -103,6 +109,16 @@ export function GroupNode({
           + group
         </button>
 
+        {allowRelationships && (
+          <RelatedTablePicker
+            fields={fields}
+            tables={tables}
+            relationships={relationships}
+            path={path}
+            onSelect={(relationship) => actions.addRelationship(group.id, relationship)}
+          />
+        )}
+
         {!isRoot && (
           <button
             type="button"
@@ -137,6 +153,7 @@ export function GroupNode({
                 depth={depth + 1}
                 path={path}
                 isRoot={false}
+                withinOr={!allowRelationships}
                 actions={actions}
               />
             ) : child.kind === "relationship" ? (
@@ -157,7 +174,7 @@ export function GroupNode({
                 tables={tables}
                 relationships={relationships}
                 path={path}
-                allowRelationships={group.logic === "and"}
+                allowRelationships={allowRelationships}
                 errors={errors}
                 canRemove={group.children.length > 1}
                 actions={actions}

@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **FetchXML Builder: filter on related tables.** Each AND filter group has **+ related table**, which lists the table's lookup columns, such as *Company Name > Account*. Pick one to filter on the record that lookup points to; the builder adds a `<link-entity>` join with your conditions inside it. A related table filter can hold its own related tables, so you can follow lookups several levels deep.
+
 ## [1.2.0] - 2026-10-30
 
 ### Added

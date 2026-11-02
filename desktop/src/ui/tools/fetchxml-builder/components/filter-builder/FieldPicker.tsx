@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { createRelationshipPathSegment, selectLookupRelationships } from "../../model/fetchxml";
+import { createRelationshipPathSegment } from "../../model/fetchxml";
+import { lookupRelationshipChoices } from "../../model/relationships";
 import type { EntityInfo } from "../../../../shared/contracts/dataverse";
 import type {
   FieldMetadata,
@@ -34,11 +35,8 @@ export function FieldPicker({
     () => [...fields].sort((a, b) => fieldLabel(a).localeCompare(fieldLabel(b))),
     [fields],
   );
-  const sortedRelationships = useMemo(
-    () =>
-      selectLookupRelationships(relationships).sort((a, b) =>
-        relationshipLabel(a, tables, fields).localeCompare(relationshipLabel(b, tables, fields)),
-      ),
+  const relationshipChoices = useMemo(
+    () => lookupRelationshipChoices(relationships, tables, fields),
     [fields, relationships, tables],
   );
   const options = useMemo<ComboboxOption[]>(() => {
@@ -49,9 +47,9 @@ export function FieldPicker({
       group: "Fields",
     }));
     const relationshipOptions = allowRelationships
-      ? sortedRelationships.map((relationship, index) => ({
+      ? relationshipChoices.map(({ relationship, label }, index) => ({
           value: `relationship:${index}`,
-          label: relationshipLabel(relationship, tables, fields),
+          label,
           description: relationship.targetEntity,
           group: "Related tables",
         }))
@@ -59,7 +57,7 @@ export function FieldPicker({
     const legacy =
       value?.kind === "related" ? [{ value: "legacy-related", label: legacyFieldLabel(value) }] : [];
     return [...legacy, ...fieldOptions, ...relationshipOptions];
-  }, [allowRelationships, fields, sortedFields, sortedRelationships, tables, value]);
+  }, [allowRelationships, relationshipChoices, sortedFields, value]);
   const selectedValue =
     value?.kind === "root"
       ? `field:${value.field}`
@@ -79,10 +77,9 @@ export function FieldPicker({
           return;
         }
         if (next.startsWith("relationship:")) {
-          const relationship = sortedRelationships[Number(next.slice("relationship:".length))];
-          if (!relationship) return;
-          const label = relationshipLabel(relationship, tables, fields);
-          onSelectRelationship(createRelationshipPathSegment(relationship, path, label));
+          const choice = relationshipChoices[Number(next.slice("relationship:".length))];
+          if (!choice) return;
+          onSelectRelationship(createRelationshipPathSegment(choice.relationship, path, choice.label));
         }
       }}
       className="w-56 shrink-0 [&>input]:py-1"
@@ -92,16 +89,6 @@ export function FieldPicker({
 
 function fieldLabel(field: FieldMetadata): string {
   return field.displayName || field.logicalName;
-}
-
-function relationshipLabel(
-  relationship: RelationshipMetadata,
-  tables: EntityInfo[],
-  fields: FieldMetadata[],
-): string {
-  const target = tables.find((table) => table.logicalName === relationship.targetEntity);
-  const lookup = fields.find((field) => field.logicalName === relationship.sourceAttribute);
-  return `${lookup?.displayName ?? relationship.sourceAttribute} > ${target?.displayName ?? relationship.targetEntity}`;
 }
 
 function legacyFieldLabel(value: Extract<FieldReference, { kind: "related" }>): string {

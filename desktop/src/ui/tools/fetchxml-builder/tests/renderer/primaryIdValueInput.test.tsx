@@ -59,6 +59,7 @@ function renderCondition(
     root,
     addCondition: vi.fn(),
     addGroup: vi.fn(),
+    addRelationship: vi.fn(),
     replaceConditionWithRelationship: vi.fn(),
     updateCondition: vi.fn(),
     toggleLogic: vi.fn(),

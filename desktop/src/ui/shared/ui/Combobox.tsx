@@ -26,6 +26,8 @@ interface ComboboxProps {
   id?: string;
   className?: string;
   onBlur?: () => void;
+  /** Focus the input and open the list when the control mounts. */
+  autoFocus?: boolean;
   "aria-label"?: string;
 }
 
@@ -44,6 +46,7 @@ export function Combobox({
   id,
   className,
   onBlur,
+  autoFocus = false,
   "aria-label": ariaLabel,
 }: ComboboxProps) {
   const field = useFieldControl();
@@ -76,6 +79,13 @@ export function Combobox({
     setHighlighted(selectedIndex >= 0 ? selectedIndex : options.findIndex((option) => !option.disabled));
     requestAnimationFrame(() => inputRef.current?.select());
   };
+
+  const openOnMount = useRef(autoFocus ? openList : null);
+  useEffect(() => {
+    if (!openOnMount.current) return;
+    inputRef.current?.focus();
+    openOnMount.current();
+  }, []);
 
   const closeList = () => {
     setOpen(false);

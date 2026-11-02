@@ -12,6 +12,7 @@ import type {
 type Action =
   | { type: "add-condition"; parentId: string }
   | { type: "add-group"; parentId: string }
+  | { type: "add-relationship"; parentId: string; relationship: RelationshipPathSegment }
   | { type: "replace-with-relationship"; id: string; relationship: RelationshipPathSegment }
   | { type: "update-condition"; id: string; patch: Partial<Omit<FilterCondition, "id" | "kind">> }
   | { type: "toggle-logic"; id: string }
@@ -156,6 +157,26 @@ function setGroupChildren(group: FilterGroup, id: string, children: FilterNode[]
   };
 }
 
+function isBlankCondition(node: FilterNode): boolean {
+  return node.kind === "condition" && !node.field && !node.fieldRef && !node.operator;
+}
+
+/**
+ * Adds a related table filter to a group. A group that holds only the blank
+ * starter condition gets the related table in its place.
+ */
+export function addRelationshipToTree(
+  root: FilterGroup,
+  parentId: string,
+  relationship: RelationshipPathSegment,
+): FilterGroup {
+  const parent = findGroup(root, parentId);
+  if (!parent) return root;
+  const node = makeRelationship(relationship);
+  const onlyBlank = parent.children.length === 1 && isBlankCondition(parent.children[0]);
+  return setGroupChildren(root, parentId, onlyBlank ? [node] : [...parent.children, node]);
+}
+
 export function replaceConditionWithRelationshipInTree(
   group: FilterGroup,
   id: string,
@@ -217,6 +238,9 @@ function reducer(state: FilterGroup, action: Action): FilterGroup {
 
     case "add-group":
       return addToGroup(state, action.parentId, makeGroup());
+
+    case "add-relationship":
+      return addRelationshipToTree(state, action.parentId, action.relationship);
 
     case "replace-with-relationship":
       return replaceConditionWithRelationshipInTree(state, action.id, action.relationship);
@@ -315,6 +339,11 @@ export function useFilterTree() {
 
   const addCondition = useCallback((parentId: string) => dispatch({ type: "add-condition", parentId }), []);
   const addGroup = useCallback((parentId: string) => dispatch({ type: "add-group", parentId }), []);
+  const addRelationship = useCallback(
+    (parentId: string, relationship: RelationshipPathSegment) =>
+      dispatch({ type: "add-relationship", parentId, relationship }),
+    [],
+  );
   const replaceConditionWithRelationship = useCallback(
     (id: string, relationship: RelationshipPathSegment) =>
       dispatch({ type: "replace-with-relationship", id, relationship }),
@@ -340,6 +369,7 @@ export function useFilterTree() {
     root,
     addCondition,
     addGroup,
+    addRelationship,
     replaceConditionWithRelationship,
     updateCondition,
     toggleLogic: toggleLogicFn,
