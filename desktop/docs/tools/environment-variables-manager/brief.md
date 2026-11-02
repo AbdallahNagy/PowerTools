@@ -427,6 +427,41 @@ Status comes from `useToolStatus`. The split uses `react-resizable-panels`. Icon
 - The plugin's WinForms layout: its ribbon of buttons, its grid-plus-property-panel arrangement, its dialogs, icons and wording. The plugin is GPL-3.0, and this design is written from the capability list alone.
 - Any credit or link to the XrmToolBox plugin in the app or on the website page.
 
+### Implementation notes and test evidence
+
+**Files and endpoints added**
+- Sidecar group `/api/environment-variables` in `api/PowerTools/PowerTools.API/Tools/EnvironmentVariables/`, registered with `app.MapEnvironmentVariablesEndpoints()` in `Program.cs` behind `DataverseContextFilter`, using `DataverseClientFactory` through `ctx.CreateDataverseClient`:
+  - `EnvironmentVariablesEndpoints.cs`, `EnvironmentVariablesService.cs`, `EnvironmentVariablesQueries.cs`, `EnvironmentVariablesDtos.cs`, `EnvironmentVariablesFaults.cs`, plus `EnvironmentVariablesClient.cs` (a two-method seam over the organization service so tests can fake it) and `EnvironmentVariablesRules.cs` (validation).
+  - `GET /`, `GET /solutions`, `POST /definitions`, `PUT /definitions/{id}`, `DELETE /definitions/{id}`, `POST /values`, `DELETE /values/{valueId}`, as in the mapping table.
+- Sidecar tests: new project `api/PowerTools/PowerTools.API.EnvironmentVariables.Tests/`, added to `PowerTools.sln`.
+- Desktop tool `desktop/src/ui/tools/environment-variables-manager/`: `tool.ts`, `EnvironmentVariablesManager.tsx`, icon, `api/` (`environmentVariablesApi.ts`, `queryKeys.ts`), `model/` (`types.ts`, `valueValidation.ts`, `secretPath.ts`, `apiError.ts`, `view.ts`, `definitionForm.ts`), `components/` (`VariableTable.tsx`, `ValueEditor.tsx`, `SecretPathEditor.tsx`, `DetailsPanel.tsx`, `NewVariableDialog.tsx`, `DeleteDialog.tsx`), and `tests/` (`fixtures.ts`, `node/`, `renderer/` with MSW handlers).
+- Registered in `registry.tsx` and `publicCatalog.ts` after Data Migration, README table regenerated with `node scripts/sync-readme-tools.mjs`, `desktop/test/toolRegistry.test.ts` updated, website page `website/src/content/tools/environment-variables-manager.md` (no `xrmToolBoxEquivalent` and no plugin mention, per the user's answer), and a `CHANGELOG.md` entry under `## [Unreleased]`.
+
+**Behavior taken from the brief**
+- Title, tooltip and public sentence come from `### UX` ("Environment Variables Manager"), which supersedes the shorter title in the mapping. `allowMultipleInstances: true`.
+- List: definitions and values are paged separately (5000 per page, paging cookie, definitions ordered by display name then id) and joined in memory. Managed-value solution names come from `solutioncomponent` with `componenttype = 381` linked to managed solutions, queried only for values whose `ismanaged` is true. A definition with more than one value row returns them all in `conflictingValues` with no current value picked; the UI shows a `Conflict` badge and locks the value. Inactive definitions are listed with an `Inactive` badge. A missing-table fault returns 501 `NotAvailable`.
+- Types are mapped by integer, with Data Source as 100000004. Create offers Text, Number, Boolean, JSON and Secret; Data Source is never offered, and Secret is hidden (UI) and refused (sidecar) on on-premises connections. Secrets with `secretstore = 1` are read-only.
+- Validation runs in both the renderer and the sidecar: Number allows a leading minus, Boolean is exactly `yes` or `no`, JSON must parse, Secret must be a complete Key Vault path, every value and default is at most 2000 characters, display names at most 100 and not `$authentication` or `$connection`, schema names at most 100 and `{prefix}_` plus letters, digits or underscores, with the chosen solution's publisher prefix enforced.
+- Create uses `CreateRequest` with `SolutionUniqueName` on the definition only; an optional `initialValue` is created outside the solution with `schemaname` set. The New Variable dialog does not send `initialValue`, because the UX dialog has no such field.
+- Update rejects `schemaName` and `type`, refuses managed definitions whose `iscustomizable` is false (the UI locks those fields), and sends only changed fields through `UpdateRequest`.
+- Delete definition and delete value refuse managed rows, then call `RetrieveDependenciesForDeleteRequest` (380 or 381) and return 409 `HasDependencies` with the dependent component types and ids. After deleting a definition, value rows left behind are re-queried and reported.
+- Save values: one call per item, sequentially, never transactional; before each write the definition's value rows are re-read, so an existing row is updated, a missing one is created, and two or more rows fail that item. Results are keyed by definition id and returned in request order. Faults (privilege, Key Vault authorization, throttling) become per-row errors and never stop the batch.
+- `RetrieveEnvironmentVariableSecretValue` is never called. No caller id is set.
+- Renderer: react-query list keyed by connection; unsaved edits are a per-tab draft map, reapplied after refresh and dropped (with the info toast) when the environment changes. `Save Changes (n)` posts edits in batches of 5 so the `ProgressBar` and status text can show `Saving x of n…`. Writes use `noAuthRetry` so a create or delete is never replayed.
+- Small additions, each to honor the Dataverse review: the `Conflict` and `Inactive` badges; disabled Delete buttons with the managed reason in a tooltip; the managed-value alert names the solution and says a later import of a version that still carries a value can replace it; and the success toast adds "Apps and flows can take up to an hour to pick up the change."
+- The JSON editor is the shared `CodeEditor`, which highlights XML only; JSON is edited there without JSON highlighting, as no shared JSON mode exists. No link to a Dataverse page is in the UX, so `useOpenInBrowser` is not used.
+
+**Commands run and results**
+- `dotnet build api/PowerTools/PowerTools.API/PowerTools.API.csproj`: succeeded, 0 warnings.
+- `dotnet test api/PowerTools/PowerTools.sln`: all 9 test projects with tests passed; `PowerTools.API.EnvironmentVariables.Tests` 32 passed.
+- From `desktop/`: `npm test` 109 files, 693 tests passed (the new tool adds 24 node and 14 renderer tests); `npm run lint` clean; `npm run build` succeeded.
+- `npm run check`: typecheck, lint with `--max-warnings 0`, tests and renderer build passed; the Playwright smoke step failed only because the container has no X display. Rerun as `xvfb-run -a npm run test:smoke:run`: passed.
+- From `website/`: `pnpm install --frozen-lockfile` then `pnpm build`: 18 pages built, including `/tools/environment-variables-manager/`.
+- `node --test scripts/changelog.test.mjs` and `node scripts/changelog.mjs check`: passed.
+
+**Not checked**
+- No live Dataverse environment was used, by design. The unverified items in `### Dataverse review` (Boolean storage text, cascade on delete, platform immutability of `schemaname` and `type`, on-premises table availability, automatic `schemaname` on values) are handled defensively but not confirmed against a real server.
+
 ### Open questions
 
 - **License (answered by the user):** The source plugin is GPL-3.0. Proceed clean-room: use it only as domain knowledge, copy no code, UI or text. The user chose **not** to credit the plugin on the website page, so omit `xrmToolBoxEquivalent` and any plugin mention there.
