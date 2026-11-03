@@ -52,7 +52,9 @@ public sealed class AssemblyServiceTests
         Assert.Equal("MixedRegistrationAssembly", assembly.GetAttributeValue<string>("name"));
         Assert.Equal("1.2.3.4", assembly.GetAttributeValue<string>("version"));
         Assert.Equal("neutral", assembly.GetAttributeValue<string>("culture"));
-        Assert.Equal(ExpectedPublicKeyToken, assembly.GetAttributeValue<string>("publickeytoken"));
+        Assert.Equal(
+            ExpectedPublicKeyToken.ToUpperInvariant(),
+            assembly.GetAttributeValue<string>("publickeytoken"));
         Assert.Equal(2, assembly.GetAttributeValue<OptionSetValue>("isolationmode").Value);
         Assert.Equal(0, assembly.GetAttributeValue<OptionSetValue>("sourcetype").Value);
         Assert.Equal(Convert.ToBase64String(bytes), assembly.GetAttributeValue<string>("content"));
@@ -131,10 +133,75 @@ public sealed class AssemblyServiceTests
         Assert.Equal("pluginassembly", updated.LogicalName);
         Assert.Equal(Convert.ToBase64String(bytes), updated.GetAttributeValue<string>("content"));
         Assert.Equal("1.2.3.4", updated.GetAttributeValue<string>("version"));
+        Assert.Equal("MixedRegistrationAssembly", updated.GetAttributeValue<string>("name"));
+        Assert.Equal("neutral", updated.GetAttributeValue<string>("culture"));
+        Assert.Equal(ExpectedPublicKeyToken, updated.GetAttributeValue<string>("publickeytoken"));
+        Assert.Equal(2, updated.GetAttributeValue<OptionSetValue>("isolationmode").Value);
+        Assert.Equal(0, updated.GetAttributeValue<OptionSetValue>("sourcetype").Value);
+        Assert.Empty(updated.RelatedEntities);
         Assert.Equal(3, gateway.Created.Count(entity => entity.LogicalName == "plugintype"));
         Assert.DoesNotContain(
             gateway.Created,
             entity => entity.GetAttributeValue<string>("typename") == "MixedRegistrationAssembly.AlphaPlugin");
+    }
+
+    [Fact]
+    public async Task Update_keeps_the_identity_values_dataverse_already_stores()
+    {
+        var gateway = SeedWritableAssembly("1.2.0.0", name: "mixedregistrationassembly");
+        gateway.Records[("pluginassembly", _assemblyId)]["publickeytoken"] =
+            ExpectedPublicKeyToken.ToUpperInvariant();
+        var service = CreateService(gateway);
+        var bytes = await File.ReadAllBytesAsync(FixturePath("MixedRegistrationAssembly.dll"));
+        await using var stream = new MemoryStream(bytes);
+
+        await service.UpdateAsync(
+            _assemblyId,
+            stream,
+            "MixedRegistrationAssembly.dll",
+            bytes.LongLength,
+            CancellationToken.None);
+
+        var updated = Assert.Single(gateway.Updated);
+        Assert.Equal("mixedregistrationassembly", updated.GetAttributeValue<string>("name"));
+        Assert.Equal(
+            ExpectedPublicKeyToken.ToUpperInvariant(),
+            updated.GetAttributeValue<string>("publickeytoken"));
+        Assert.Equal("neutral", updated.GetAttributeValue<string>("culture"));
+        Assert.Equal("1.2.3.4", updated.GetAttributeValue<string>("version"));
+    }
+
+    [Fact]
+    public async Task Update_moves_workflow_activities_in_the_default_group_to_the_new_version()
+    {
+        var gateway = SeedWritableAssembly("1.2.0.0");
+        var defaultGroup = WorkflowType(
+            "MixedRegistrationAssembly.FirstWorkflowActivity",
+            "MixedRegistrationAssembly (1.2.0.0)");
+        var customGroup = WorkflowType(
+            "MixedRegistrationAssembly.SecondWorkflowActivity",
+            "Contoso tools");
+        gateway.Seed(defaultGroup);
+        gateway.Seed(customGroup);
+        var service = CreateService(gateway);
+        var bytes = await File.ReadAllBytesAsync(FixturePath("MixedRegistrationAssembly.dll"));
+        await using var stream = new MemoryStream(bytes);
+
+        await service.UpdateAsync(
+            _assemblyId,
+            stream,
+            "MixedRegistrationAssembly.dll",
+            bytes.LongLength,
+            CancellationToken.None);
+
+        var updated = Assert.Single(gateway.Updated);
+        var related = Assert.Single(updated.RelatedEntities);
+        Assert.Equal("pluginassembly_plugintype", related.Key.SchemaName);
+        var regrouped = Assert.Single(related.Value.Entities);
+        Assert.Equal(defaultGroup.Id, regrouped.Id);
+        Assert.Equal(
+            "MixedRegistrationAssembly (1.2.3.4)",
+            regrouped.GetAttributeValue<string>("workflowactivitygroupname"));
     }
 
     [Fact]
@@ -226,6 +293,9 @@ public sealed class AssemblyServiceTests
             ["name"] = name,
             ["publickeytoken"] = ExpectedPublicKeyToken,
             ["version"] = version,
+            ["culture"] = "neutral",
+            ["isolationmode"] = new OptionSetValue(2),
+            ["sourcetype"] = new OptionSetValue(0),
             ["customizationlevel"] = 1,
             ["ismanaged"] = false,
         });
@@ -235,6 +305,14 @@ public sealed class AssemblyServiceTests
     private Entity Type(string typeName) => new("plugintype")
     {
         ["typename"] = typeName,
+        ["pluginassemblyid"] = new EntityReference("pluginassembly", _assemblyId),
+    };
+
+    private Entity WorkflowType(string typeName, string group) => new("plugintype", Guid.NewGuid())
+    {
+        ["typename"] = typeName,
+        ["isworkflowactivity"] = true,
+        ["workflowactivitygroupname"] = group,
         ["pluginassemblyid"] = new EntityReference("pluginassembly", _assemblyId),
     };
 

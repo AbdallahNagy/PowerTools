@@ -27,6 +27,10 @@ public sealed class StepServiceTests
         Assert.False(created.Contains("sdkmessagefilterid"));
         Assert.False(created.Contains("filteringattributes"));
         Assert.False(created.Contains("impersonatinguserid"));
+        var handler = created.GetAttributeValue<EntityReference>("eventhandler");
+        Assert.Equal("plugintype", handler.LogicalName);
+        Assert.Equal(_typeId, handler.Id);
+        Assert.False(created.Contains("plugintypeid"));
     }
 
     [Fact]
@@ -41,6 +45,7 @@ public sealed class StepServiceTests
         var updated = Assert.Single(gateway.Updated, e => e.LogicalName == "sdkmessageprocessingstep");
         Assert.Null(updated["sdkmessagefilterid"]);
         Assert.Equal("", updated["filteringattributes"]);
+        Assert.Equal(_typeId, updated.GetAttributeValue<EntityReference>("eventhandler").Id);
     }
 
     [Fact]

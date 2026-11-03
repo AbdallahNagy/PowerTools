@@ -11,6 +11,8 @@ public static class ImageMessageProperties
         ["Delete"] = "Target",
         ["Assign"] = "Target",
         ["Merge"] = "Target",
+        ["ExecuteWorkflow"] = "Target",
+        ["Route"] = "Target",
         ["SetState"] = "EntityMoniker",
         ["SetStateDynamicEntity"] = "EntityMoniker",
         ["CreateMultiple"] = "Ids",
