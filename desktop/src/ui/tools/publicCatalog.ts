@@ -39,7 +39,6 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
     title: "Environment Variables Manager",
     description:
       "Find every environment variable in an environment, edit current values in place and save them together, and create, update, or delete definitions.",
-    unreleased: true,
   },
   {
     id: "fetchxml-builder",
