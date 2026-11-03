@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { legacyConnection } from "../../../../../../test/support/desktopBridge";
@@ -225,8 +225,11 @@ describe("Solution Components Mover", () => {
     fireEvent.click(screen.getByRole("button", { name: "Copy components" }));
     const entity = await screen.findByRole("checkbox", { name: "Entity" });
     await waitFor(() => expect(entity).toBeChecked());
-    expect(screen.getByText("From").nextElementSibling).toHaveTextContent("Alpha Widgets");
-    expect(screen.getByText("To").nextElementSibling).toHaveTextContent("Beta Flows");
+    expect(screen.getByRole("group", { name: "Copy from Alpha Widgets to Beta Flows" })).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Source solutions" })).getAllByRole("listitem")
+      .map((item) => item.textContent)).toEqual(["Alpha Widgets"]);
+    expect(within(screen.getByRole("list", { name: "Target solutions" })).getAllByRole("listitem")
+      .map((item) => item.textContent)).toEqual(["Beta Flows"]);
     expect(screen.getByText("4 of 4 selected")).toBeInTheDocument();
 
     const search = screen.getByRole("textbox", { name: "Search component types" });

@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - **Solution Components Mover: search component types.** The component type list has a search box. The header checkbox selects or clears the types the search shows, and a count shows how many types are selected.
-- **Solution Components Mover: From and To.** Before you confirm a copy, the component type list shows the source and target solutions it copies between.
+- **Solution Components Mover: From and To.** Before you confirm a copy, a small diagram above the component type list shows the source solutions, an arrow, and the target solutions the copy goes to.
 
 ### Changed
 

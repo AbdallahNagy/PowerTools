@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Checkbox, DataTable, Modal, SearchInput } from "../../../shared/ui";
 import type { ComponentTypeRow } from "../model/types";
 import { filterComponentTypes } from "../model/view";
+import { CopyRoute } from "./CopyRoute";
 import { LabeledCheckbox } from "./LabeledCheckbox";
 
 export function ComponentTypeModal({
@@ -82,12 +83,7 @@ export function ComponentTypeModal({
       busy={loading}
       busyLabel="Loading component types…"
     >
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-        <dt className="text-fg-muted">From</dt>
-        <dd className="m-0 text-fg-strong">{sourceNames.join(", ")}</dd>
-        <dt className="text-fg-muted">To</dt>
-        <dd className="m-0 text-fg-strong">{targetNames.join(", ")}</dd>
-      </dl>
+      <CopyRoute sourceNames={sourceNames} targetNames={targetNames} />
       {errorText ? (
         <div className="flex flex-col items-start gap-3">
           <p role="alert" className="text-fg">{errorText}</p>
