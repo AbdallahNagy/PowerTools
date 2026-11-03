@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import { legacyConnection } from "../../../../../../test/support/desktopBridge";
@@ -7,6 +7,7 @@ import { ConnectionsProvider } from "../../../../shared/connections";
 import { StatusBarProvider, useStatusItems } from "../../../../shared/status";
 import ToolHost from "../../../../shell/tool-runtime/ToolHost";
 import { solutionComponentsMoverTool } from "../../tool";
+import { CopyRoute, MAX_VISIBLE_CARDS } from "../../components/CopyRoute";
 import {
   alphaId,
   betaId,
@@ -192,9 +193,80 @@ describe("Solution Components Mover", () => {
     renderTool();
     expect(await screen.findByText("Alpha Widgets")).toBeInTheDocument();
     const before = calls;
-    fireEvent.click(screen.getByRole("button", { name: "Refresh solutions" }));
+    const refresh = screen.getByRole("button", { name: "Refresh solutions" });
+    expect(refresh.querySelector(".lucide-rotate-cw")).not.toBeNull();
+    fireEvent.click(refresh);
     await waitFor(() => expect(calls).toBeGreaterThan(before));
+    await waitFor(() => expect(document.querySelector("[data-toast-type='success']")).toHaveTextContent(
+      "Solutions refreshed",
+    ));
     expect(screen.getByText("Alpha Widgets")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refresh solutions" })).toBeEnabled();
+  });
+
+  it("searches component types and keeps hidden choices", async () => {
+    let body: StartCopyRequest | null = null;
+    httpServer.use(
+      typesHandler({
+        componentTypes: [
+          { componentType: 1, label: "Entity" },
+          { componentType: 26, label: "Saved Query" },
+          { componentType: 29, label: "Workflow" },
+          { componentType: 60, label: "System Form" },
+        ],
+      }),
+      http.post("http://localhost/api/solution-components-mover/copies", async ({ request }) => {
+        body = await request.json() as StartCopyRequest;
+        return HttpResponse.json({ jobId: "job-search" });
+      }),
+      http.get("http://localhost/api/solution-components-mover/copies/:jobId", () => HttpResponse.json(mixedJob)),
+    );
+    renderTool();
+    await selectSourceAndTarget();
+    fireEvent.click(screen.getByRole("button", { name: "Copy components" }));
+    const entity = await screen.findByRole("checkbox", { name: "Entity" });
+    await waitFor(() => expect(entity).toBeChecked());
+    expect(screen.getByRole("group", { name: "Copy from Alpha Widgets to Beta Flows" })).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: "Source solutions" })).getAllByRole("listitem")
+      .map((item) => item.textContent)).toEqual(["Alpha Widgets"]);
+    expect(within(screen.getByRole("list", { name: "Target solutions" })).getAllByRole("listitem")
+      .map((item) => item.textContent)).toEqual(["Beta Flows"]);
+    expect(screen.getByText("4 of 4 selected")).toBeInTheDocument();
+
+    const search = screen.getByRole("textbox", { name: "Search component types" });
+    fireEvent.change(search, { target: { value: "form" } });
+    expect(screen.getByRole("checkbox", { name: "System Form" })).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox", { name: "Entity" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("checkbox", { name: "Select all component types" }));
+    expect(screen.getByRole("checkbox", { name: "System Form" })).not.toBeChecked();
+    expect(screen.getByText("3 of 4 selected")).toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "missing" } });
+    expect(screen.getByText("No matching component types")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(screen.getByRole("checkbox", { name: "Entity" })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "System Form" })).not.toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(body).not.toBeNull());
+    expect(body).toMatchObject({ componentTypes: [1, 26, 29], allComponents: false });
+  });
+
+  it("clears the targets after a copy finishes so the next copy starts with no target", async () => {
+    httpServer.use(
+      http.post("http://localhost/api/solution-components-mover/copies", () => HttpResponse.json({ jobId: "job-done" })),
+      http.get("http://localhost/api/solution-components-mover/copies/:jobId", () => HttpResponse.json(mixedJob)),
+    );
+    renderTool();
+    await selectSourceAndTarget();
+    fireEvent.click(screen.getByRole("button", { name: "Copy components" }));
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "Account" })).toBeChecked());
+    fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+
+    await waitFor(() => expect(screen.getByLabelText("tool statuses")).toHaveTextContent("Copy finished"));
+    expect(screen.getByRole("checkbox", { name: "Target Beta Flows" })).not.toBeChecked();
+    expect(screen.getByRole("checkbox", { name: "Source Alpha Widgets" })).toBeChecked();
+    expect(screen.getByRole("button", { name: "Copy components" })).toBeDisabled();
   });
 
   it("shows no solutions after an empty load", async () => {
@@ -289,6 +361,7 @@ describe("Solution Components Mover", () => {
     expect(progress).toHaveAttribute("aria-valuenow", "0");
     expect(progress).toHaveAttribute("aria-valuemax", "0");
     await waitFor(() => expect(screen.getByLabelText("tool statuses")).toHaveTextContent("Copy refused"));
+    expect(screen.getByRole("checkbox", { name: "Target Beta Flows" })).toBeChecked();
     expect(document.querySelector("[data-toast-type='error']")).toHaveTextContent("managed table: Account");
   });
 
@@ -329,5 +402,16 @@ describe("Solution Components Mover", () => {
     renderTool({ ...toolBridge, openUrlForConnection: async () => ({ fallback: true }) });
     fireEvent.doubleClick(await screen.findByText("Alpha Widgets"));
     expect(await screen.findByText(/default browser opened/)).toBeInTheDocument();
+  });
+
+  it("collapses a long copy route into a +N more card that names the rest", () => {
+    const names = ["One", "Two", "Three", "Four", "Five", "Six"];
+    renderWithProviders(<CopyRoute sourceNames={names} targetNames={["Target"]} />);
+    expect(screen.getByRole("group", { name: "Copy from One, Two, Three, Four, Five, Six to Target" })).toBeInTheDocument();
+    const sources = within(screen.getByRole("list", { name: "Source solutions" })).getAllByRole("listitem");
+    expect(sources).toHaveLength(MAX_VISIBLE_CARDS);
+    expect(sources.map((item) => item.textContent)).toEqual(["One", "Two", "Three", "+3 more"]);
+    expect(sources[3]).toHaveAttribute("title", "Four\nFive\nSix");
+    expect(screen.queryByText("copy")).not.toBeInTheDocument();
   });
 });

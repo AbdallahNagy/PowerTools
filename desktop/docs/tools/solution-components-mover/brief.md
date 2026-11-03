@@ -140,7 +140,7 @@ One surface on `bg-[var(--color-bg-dark)]`. The environment is the connection al
 
 The surface stacks two views and splits them with a draggable divider so both tables keep the full width. Use `Group`, `Panel`, and `Separator` from `react-resizable-panels`, with `orientation="vertical"`. The top `Panel` is the solution list (`minSize="30%"`). The bottom `Panel` is the copy log (`minSize="20%"`). The `Separator` accessible name is `Resize panes`. Its classes are `h-1 cursor-row-resize bg-[var(--color-bg-light)]`, with `hover:bg-[var(--color-primary)]` and `active:bg-[var(--color-primary)]`. Either view stays reachable. A fixed half height or a static border is not the divider.
 
-A toolbar on `bg-[var(--color-bg-darker)]` sits above the split. The best-practice `Checkbox` stays on the left. On the right are an icon button **Refresh solutions** and `Button` **Copy components** (primary). The refresh control is an icon whose accessible name is `Refresh solutions`. Both panes use `bg-[var(--color-bg-darker)]`. Primary text is `text-[var(--color-text-white)]`. Secondary text is `text-[var(--color-text-gray)]`. Muted text is `text-[var(--color-text-dark-gray)]`.
+A toolbar on `bg-[var(--color-bg-darker)]` sits above the split. The best-practice `Checkbox` stays on the left. On the right are `Button` **Refresh solutions** (secondary) and `Button` **Copy components** (primary). **Refresh solutions** shows the refresh icon, swaps it for a `Spinner` while the list reloads, and shows the success toast `Solutions refreshed` when the reload succeeds, as **Refresh metadata** does in Attribute Explorer. It is disabled while a copy runs. Both panes use `bg-[var(--color-bg-darker)]`. Primary text is `text-[var(--color-text-white)]`. Secondary text is `text-[var(--color-text-gray)]`. Muted text is `text-[var(--color-text-dark-gray)]`.
 
 1. **No environment.** Both panes show one message: select an environment from the connection control at the bottom of the tool sidebar. The filter, **Refresh solutions**, and **Copy components** are disabled. Do not load solutions.
 2. **Solutions.** After an environment is selected, load visible solutions in that environment. Omit the solution whose unique name is `Default`. `SearchInput` placeholder `Filter solutions`. The filter keeps a row when any displayed value contains the text, compared case-insensitively: friendly name, unique name, publisher name, installed date, version, and the managed flag.
@@ -161,7 +161,7 @@ Changing the selected environment while no copy is running reloads solutions, re
 
 #### Shared controls
 
-- `Button` — Copy components, Copy, Cancel, Clear, Export, and Retry. Refresh solutions is an icon button on the toolbar, not a shared control. Select all component types is the checkbox in the component-type column header.
+- `Button` — Copy components, Copy, Cancel, Clear, Export, and Retry. Refresh solutions is a secondary `Button` with the refresh icon. Select all component types is the checkbox in the component-type column header.
 - `Checkbox` — the best-practice check, source selection, target selection, and component-type selection.
 - `DataTable` — the solution list, the component-type list, and the copy log.
 - `Modal` — the component-type choice before a copy.
@@ -315,3 +315,10 @@ All unmanaged solutions in one environment share the active layer. Copying into 
   - From `desktop/`: `npm run build` — Passed.
   - From `desktop/`: `npm run check` — Passed (typecheck, lint with max warnings 0, test, renderer build, and the desktop smoke test).
 - Any check you could not run: None. The new tool was exercised with MSW and a fake organization service. No live Dataverse environment was required.
+
+### Follow-up changes
+
+- **Component-type search.** The component-type modal has a `SearchInput` (`Search component types`) above the list. It keeps a type whose label contains every word typed, in any order, ignoring case. The header checkbox selects or clears only the types the search shows; choices on hidden types are kept. A count reads `{selected} of {total} selected`. A search with no matches shows `No matching component types`.
+- **Stable columns.** The component-type table uses a fixed table layout with a narrow checkbox column, so columns do not move left and right as virtualized rows scroll into view.
+- **From and To.** The component-type modal shows the copy as a diagram above the search: source solution cards under **From (n)**, a curved connector from each into a round copy node centred between the columns, and an accent connector with an arrowhead from the node to each target card under **To (n)**. Target cards are accent-tinted. Long names are truncated with the full name as a tooltip. Each side shows at most four cards; past that the last card reads `+N more` and its tooltip lists the rest. The diagram is a group named `Copy from {sources} to {targets}`, so screen readers announce the whole route in one sentence.
+- **Targets clear after a copy.** When a copy finishes, the target checks are cleared and the source checks are kept. The next copy needs a target chosen again, so it cannot go to the previous target by accident. A refused copy keeps both, so the user can change the selection and try again.

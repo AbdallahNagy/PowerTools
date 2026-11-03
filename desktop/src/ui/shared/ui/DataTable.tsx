@@ -31,6 +31,11 @@ interface DataTableProps<T> {
   className?: string;
   /** Lets the user drag header edges to resize columns. On by default. */
   resizable?: boolean;
+  /**
+   * "fixed" sizes columns from their `width` and the table width only, so
+   * column widths do not change as virtualized rows scroll into view.
+   */
+  layout?: "auto" | "fixed";
 }
 
 export function DataTable<T>({
@@ -46,9 +51,12 @@ export function DataTable<T>({
   onSort,
   className,
   resizable = true,
+  layout = "auto",
 }: DataTableProps<T>) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const resize = useColumnResize(columns.map((col) => col.key));
+  const fixedLayout = layout === "fixed" || resize.resized;
+  const tableStyle = resize.tableStyle ?? (layout === "fixed" ? { tableLayout: "fixed" as const } : undefined);
   const virtualize = rows.length > VIRTUALIZE_AFTER;
   const virtualizer = useVirtualizer({
     count: virtualize ? rows.length : 0,
@@ -75,7 +83,7 @@ export function DataTable<T>({
       <table
         ref={resize.tableRef}
         className="w-full text-sm text-fg border-collapse"
-        style={resize.tableStyle}
+        style={tableStyle}
         aria-rowcount={virtualize ? rows.length + 1 : undefined}
       >
         <thead className="bg-surface sticky top-0 z-10">
@@ -152,7 +160,7 @@ export function DataTable<T>({
                     {columns.map((col) => (
                       <td
                         key={col.key}
-                        className={cn("px-3 py-2", resize.resized && "overflow-hidden text-ellipsis")}
+                        className={cn("px-3 py-2", fixedLayout && "overflow-hidden text-ellipsis")}
                       >
                         {col.render
                           ? col.render(row)

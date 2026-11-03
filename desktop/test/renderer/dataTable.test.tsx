@@ -26,6 +26,25 @@ describe("DataTable", () => {
     expect(getRowKey.mock.calls.map(([, index]) => index)).toEqual([0, 1, 2]);
   });
 
+  it("keeps column widths fixed with the fixed layout", () => {
+    render(
+      <DataTable
+        columns={[{ key: "pick", header: "Pick", width: "3rem" }, ...columns]}
+        rows={makeRows(3)}
+        getRowKey={(row) => row.id}
+        layout="fixed"
+      />,
+    );
+    expect(screen.getByRole("table")).toHaveStyle({ tableLayout: "fixed" });
+    expect(screen.getByRole("columnheader", { name: "Pick" })).toHaveStyle({ width: "3rem" });
+    expect(screen.getAllByRole("cell")[1]).toHaveClass("overflow-hidden", "text-ellipsis");
+  });
+
+  it("sizes columns from content by default", () => {
+    render(<DataTable columns={columns} rows={makeRows(3)} getRowKey={(row) => row.id} />);
+    expect(screen.getByRole("table")).not.toHaveStyle({ tableLayout: "fixed" });
+  });
+
   describe("with many rows", () => {
     beforeEach(() => {
       // jsdom has no layout; give the scroll container a 400px viewport.

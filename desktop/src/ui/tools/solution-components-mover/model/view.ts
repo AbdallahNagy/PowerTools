@@ -1,4 +1,4 @@
-import type { SolutionRow, SortColumn, SortDirection, SortState } from "./types";
+import type { ComponentTypeRow, SolutionRow, SortColumn, SortDirection, SortState } from "./types";
 
 export const defaultSort: SortState = { column: "friendlyName", direction: "asc" };
 
@@ -38,6 +38,19 @@ export function exportLogText(environmentName: string | null, rows: readonly { l
       [row.label, row.solutionUniqueName, row.succeeded ? "Succeeded" : "Failed", row.succeeded ? "" : row.message].join("\t")),
   ];
   return lines.join("\n");
+}
+
+/** Keeps component types whose label contains every word of the search. */
+export function filterComponentTypes(
+  types: readonly ComponentTypeRow[],
+  search: string,
+): ComponentTypeRow[] {
+  const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return [...types];
+  return types.filter((type) => {
+    const label = type.label.toLowerCase();
+    return words.every((word) => label.includes(word));
+  });
 }
 
 function displayedValues(row: SolutionRow): string[] {
