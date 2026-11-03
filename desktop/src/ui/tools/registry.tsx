@@ -12,6 +12,8 @@ import { translatorTool } from "./translator/tool";
 import { workflowActivitiesTool } from "./workflow-activities-viewer/tool";
 import { createToolRegistry } from "./defineTool";
 import { welcomeTool } from "./welcome/tool";
+// PROTOTYPE (issue #101).
+import { communityToolSpikeTool } from "./community-tool-spike-prototype/tool";
 
 export const BUILT_IN_TOOLS = [
   welcomeTool,
@@ -27,6 +29,7 @@ export const BUILT_IN_TOOLS = [
   solutionLayersExplorerTool,
   translatorTool,
   workflowActivitiesTool,
+  communityToolSpikeTool,
 ] as const;
 
 const registry = createToolRegistry(BUILT_IN_TOOLS);

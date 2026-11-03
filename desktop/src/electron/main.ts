@@ -29,6 +29,8 @@ import {
 } from "./windowChrome.js";
 import { initializeTheme, windowBackgroundColor } from "./theme.js";
 import { startUsageStats } from "./usageStats.js";
+// PROTOTYPE (issue #101): registers the pt-tool scheme before app ready.
+import { registerPrototypeCommunityTools } from "./prototypeCommunityTool.js";
 
 const { autoUpdater } = electronUpdater;
 
@@ -152,6 +154,12 @@ app.whenReady().then(async () => {
   });
 
   await connectionIpc.registerRestoredOnPremises();
+
+  // PROTOTYPE (issue #101).
+  registerPrototypeCommunityTools({
+    getMainWindow: () => mainWindow,
+    getConnection: (id) => connectionIpc.getConnectionForRenderer(id),
+  });
 
   const mainWindow = new BrowserWindow(getMainWindowOptions({
     webPreferences: {

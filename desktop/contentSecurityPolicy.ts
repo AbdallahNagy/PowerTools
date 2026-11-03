@@ -21,7 +21,8 @@ export function buildContentSecurityPolicy({ dev }: { dev: boolean }): string {
     "object-src": ["'none'"],
     "base-uri": ["'none'"],
     "form-action": ["'none'"],
-    "frame-src": ["'none'"],
+    // PROTOTYPE (issue #101): community tool frames.
+    "frame-src": ["pt-tool:"],
   };
 
   return Object.entries(directives)
