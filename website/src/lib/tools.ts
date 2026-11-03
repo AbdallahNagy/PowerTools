@@ -1,6 +1,6 @@
-import { PUBLIC_TOOLS, type PublicTool } from "../../../desktop/src/ui/tools/publicCatalog";
+import { RELEASED_TOOLS, type PublicTool } from "../../../desktop/src/ui/tools/publicCatalog";
 
-export { PUBLIC_TOOLS, type PublicTool };
+export { RELEASED_TOOLS, type PublicTool };
 
 // The desktop sidebar icons, one per tool folder. The folder name is the tool id.
 const iconModules = import.meta.glob<string>(

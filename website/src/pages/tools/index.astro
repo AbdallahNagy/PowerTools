@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ToolIcon from "../../components/ToolIcon.astro";
-import { PUBLIC_TOOLS, toolPath } from "../../lib/tools";
+import { RELEASED_TOOLS, toolPath } from "../../lib/tools";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const site = Astro.site ?? new URL("https://powertools.abdallahnagy.com");
@@ -11,8 +11,8 @@ const itemListStructuredData = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   name: "PowerTools for Dataverse and Dynamics 365",
-  numberOfItems: PUBLIC_TOOLS.length,
-  itemListElement: PUBLIC_TOOLS.map((tool, index) => ({
+  numberOfItems: RELEASED_TOOLS.length,
+  itemListElement: RELEASED_TOOLS.map((tool, index) => ({
     "@type": "ListItem",
     position: index + 1,
     name: tool.title,
@@ -23,7 +23,7 @@ const itemListStructuredData = {
 
 <BaseLayout
   title="Dataverse and Dynamics 365 Developer Tools | PowerTools"
-  description={`Every tool in PowerTools, the free open-source Windows toolkit for Dataverse and Dynamics 365: ${PUBLIC_TOOLS.slice(0, 4).map((tool) => tool.title).join(", ")}, and more.`}
+  description={`Every tool in PowerTools, the free open-source Windows toolkit for Dataverse and Dynamics 365: ${RELEASED_TOOLS.slice(0, 4).map((tool) => tool.title).join(", ")}, and more.`}
   currentPath="/tools/"
   structuredData={[itemListStructuredData]}
 >
@@ -31,7 +31,7 @@ const itemListStructuredData = {
     <p class="eyebrow">Tools</p>
     <h1>Tools for <span class="gradient-text">Dataverse</span> developers</h1>
     <p class="lead">
-      PowerTools ships {PUBLIC_TOOLS.length} built-in tools for Dataverse,
+      PowerTools ships {RELEASED_TOOLS.length} built-in tools for Dataverse,
       Dynamics 365, and Power Platform work. Each one runs on your machine
       and connects straight to your environments.
     </p>
@@ -40,7 +40,7 @@ const itemListStructuredData = {
   <section class="section">
     <div class="tool-grid">
       {
-        PUBLIC_TOOLS.map((tool) => (
+        RELEASED_TOOLS.map((tool) => (
           <a class="feature-card tool-card tool-link-card" href={`${basePath}${toolPath(tool.id)}`}>
             <ToolIcon id={tool.id} />
             <h2>{tool.title}</h2>

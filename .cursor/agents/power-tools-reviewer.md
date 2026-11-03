@@ -18,7 +18,7 @@ The brief must already contain the researcher sections, `### Dataverse review`, 
 Fail the pull request when any check fails.
 
 - Behavior matches the brief, including `### UX` empty and error states and the "what not to build" list. Dataverse corrections override earlier researcher claims where they conflict.
-- The new activity-bar tool is in `desktop/src/ui/tools/publicCatalog.ts`, in registry order, with the same id and title as `tool.ts` and the public-listing sentence from `### UX`. The welcome page and `website/src/pages/index.astro` render `PUBLIC_TOOLS`. A second handwritten tool list on either screen fails the check. Welcome is not a public tool.
+- The new activity-bar tool is in `desktop/src/ui/tools/publicCatalog.ts`, in registry order, with the same id and title as `tool.ts` and the public-listing sentence from `### UX`. The entry has `unreleased: true`; without it the website lists a tool the published installer does not have. The welcome page renders `PUBLIC_TOOLS` and `website/src/pages/index.astro` renders `RELEASED_TOOLS`. A second handwritten tool list on either screen fails the check. Welcome is not a public tool.
 - `website/src/content/tools/<tool-id>.md` exists and follows `### Website tool page` in the pipeline doc: `seoTitle`, `seoDescription`, `features`, and `xrmToolBoxEquivalent` when the brief names a plugin. The text describes only shipped behavior, nothing from "what not to build", and no wording copied from the XrmToolBox plugin. It does not repeat the catalog title or description.
 - No tool imports another tool's private files or shell internals.
 - The renderer has no Dataverse SDK, no raw IPC, and no `window.electron` outside the platform adapter.

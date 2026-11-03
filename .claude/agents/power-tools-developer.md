@@ -31,7 +31,7 @@ Shape:
 
 - New folder `desktop/src/ui/tools/<tool-id>/` with a `tool.ts` manifest created by `defineTool`. Set `allowMultipleInstances: true` unless the brief says a second tab cannot work and why. Welcome stays `false`.
 - One registration in `desktop/src/ui/tools/registry.tsx`
-- One entry in `desktop/src/ui/tools/publicCatalog.ts`, in that same order, using the id and title from `defineTool` and the public-listing sentence from `### UX`
+- One entry in `desktop/src/ui/tools/publicCatalog.ts`, in that same order, using the id and title from `defineTool` and the public-listing sentence from `### UX`, plus `unreleased: true` so the website lists the tool only once a release ships it (see `### Unreleased tools` in the pipeline doc). Then run `node scripts/sync-readme-tools.mjs`.
 - One website tool page at `website/src/content/tools/<tool-id>.md`, written as `### Website tool page` in the pipeline doc says. It lists the tool on the website's Tools tab and gives it a page at `/tools/<tool-id>/`
 - Private components, model, API hooks, state, fixtures, and tests inside that folder
 - Sidecar endpoints under `api/PowerTools/PowerTools.API/Tools/<Tool>/`, registered from `api/PowerTools/PowerTools.API/Program.cs`

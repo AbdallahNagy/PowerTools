@@ -80,11 +80,26 @@ Activity-bar tools appear on the welcome page and the website from one list: `de
 
 `PUBLIC_TOOLS` follows `ACTIVITY_BAR_TOOLS` in `desktop/src/ui/tools/registry.tsx`. Each entry uses that tool's id and title, plus the one-sentence description from `### UX`.
 
-The welcome page, `website/src/pages/index.astro`, and the website's Tools tab (`website/src/pages/tools/index.astro`) render `PUBLIC_TOOLS`. Adding a tool means adding that catalog entry. It does not mean editing any screen's tool markup. Welcome is not a public tool.
+The welcome page, `website/src/pages/index.astro`, and the website's Tools tab (`website/src/pages/tools/index.astro`) render the catalog. Adding a tool means adding that catalog entry. It does not mean editing any screen's tool markup. Welcome is not a public tool.
+
+### Unreleased tools
+
+A new tool reaches `main` before it reaches the installer people download. So a new catalog entry carries `unreleased: true`:
+
+```ts
+{
+  id: "environment-variables-manager",
+  title: "Environment Variables Manager",
+  description: "...",
+  unreleased: true,
+},
+```
+
+The welcome page shows every entry, because it runs inside the build that has the tool. The website and the README table list `RELEASED_TOOLS`, which leaves flagged entries out. Prepare Release removes every flag in the release pull request (`scripts/release-tools.mjs`), so merging that pull request lists the new tools on the website as the installer that has them is published. Do not remove the flag by hand. See `docs/releasing.md`.
 
 ### Website tool page
 
-Every public tool also has its own page at `/tools/<tool-id>/`, so people and search engines can find it. The page route and the sitemap come from `PUBLIC_TOOLS`. The page text comes from one Markdown file:
+Every released tool also has its own page at `/tools/<tool-id>/`, so people and search engines can find it. The page route and the sitemap come from `RELEASED_TOOLS`. Write the page with the tool anyway; it goes live with the release. The page text comes from one Markdown file:
 
 `website/src/content/tools/<tool-id>.md`
 
@@ -97,7 +112,7 @@ The file name is the catalog id. The catalog owns the title and the one-sentence
 
 The body is three or four `##` sections: what the tool is for, how it works, and `## When to use it` with real developer scenarios. Write for a Dataverse developer who has never opened the app. Describe only shipped behavior; leave out anything in "what not to build". Do not copy wording from the XrmToolBox plugin. Use other tool pages in that folder as the model.
 
-The website build fails when a catalog tool has no page, and `desktop/test/publicCatalog.test.ts` fails too. Run `pnpm build` from `website/` when you can.
+The website build fails when a released tool has no page, and `desktop/test/publicCatalog.test.ts` fails when any catalog tool has none. Run `pnpm build` from `website/` when you can.
 
 ## Developer gate
 

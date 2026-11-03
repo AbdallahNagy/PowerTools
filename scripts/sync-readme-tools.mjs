@@ -1,6 +1,6 @@
 // Writes the README tool table from the public tool catalog.
 //
-// Source of truth: PUBLIC_TOOLS in desktop/src/ui/tools/publicCatalog.ts
+// Source of truth: RELEASED_TOOLS in desktop/src/ui/tools/publicCatalog.ts
 // Generated: the table between the tools markers in README.md
 //
 // Usage:
@@ -48,9 +48,9 @@ export function replaceToolTable(readme, table) {
 }
 
 async function main() {
-  const { PUBLIC_TOOLS } = await import(pathToFileURL(catalogPath).href);
+  const { RELEASED_TOOLS } = await import(pathToFileURL(catalogPath).href);
   const readme = readFileSync(readmePath, "utf8");
-  const next = replaceToolTable(readme, renderToolTable(PUBLIC_TOOLS));
+  const next = replaceToolTable(readme, renderToolTable(RELEASED_TOOLS));
 
   if (process.argv.includes("--check")) {
     if (next !== readme.replace(/\r\n/g, "\n")) {
@@ -62,7 +62,7 @@ async function main() {
   }
 
   writeFileSync(readmePath, next);
-  console.log(`README.md lists ${PUBLIC_TOOLS.length} tools.`);
+  console.log(`README.md lists ${RELEASED_TOOLS.length} tools.`);
   return 0;
 }
 

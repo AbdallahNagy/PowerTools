@@ -2,6 +2,12 @@ export interface PublicTool {
   id: string;
   title: string;
   description: string;
+  /**
+   * Set on a new tool until it ships in a release. The website and the README
+   * leave it out, because the installer people download does not have it yet.
+   * Prepare Release removes the flag (scripts/release-tools.mjs).
+   */
+  unreleased?: true;
 }
 
 /**
@@ -33,6 +39,7 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
     title: "Environment Variables Manager",
     description:
       "Find every environment variable in an environment, edit current values in place and save them together, and create, update, or delete definitions.",
+    unreleased: true,
   },
   {
     id: "fetchxml-builder",
@@ -83,3 +90,8 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
       "See which activated processes reference a custom workflow activity.",
   },
 ];
+
+/** Tools in the latest release: what the website and the README list. */
+export const RELEASED_TOOLS: readonly PublicTool[] = PUBLIC_TOOLS.filter(
+  (tool) => !tool.unreleased,
+);

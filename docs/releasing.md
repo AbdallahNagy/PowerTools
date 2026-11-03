@@ -13,7 +13,7 @@ Add a line under `## [Unreleased]` for every change a desktop user would notice.
 ## Cut a release
 
 1. In **Actions**, run **Prepare Release** and pick the bump: `patch` for fixes only, `minor` for new tools or features, `major` for breaking changes. You can type an exact version instead.
-2. The workflow opens a `Release x.y.z` pull request. It moves the `[Unreleased]` notes into `## [x.y.z] - <today>`, updates the compare links, and bumps `desktop/package.json`. The pull request body shows the release notes. Edit `CHANGELOG.md` on that branch if they need work.
+2. The workflow opens a `Release x.y.z` pull request. It moves the `[Unreleased]` notes into `## [x.y.z] - <today>`, updates the compare links, and bumps `desktop/package.json`. It also removes `unreleased: true` from new tools in `desktop/src/ui/tools/publicCatalog.ts` and regenerates the README tool table, so merging lists those tools on the website. The pull request body shows the release notes. Edit `CHANGELOG.md` on that branch if they need work.
 3. Merge it. **Release Desktop** starts on its own, builds the installer, and publishes the GitHub release with those notes. Installed apps then offer the update.
 
 Prepare Release fails if `[Unreleased]` is empty, so a release always has notes.
@@ -25,7 +25,7 @@ Prepare Release fails if `[Unreleased]` is empty, so a release always has notes.
 
 ## Without the workflow
 
-`node scripts/changelog.mjs release <patch|minor|major|x.y.z>` does the changelog part locally and prints the new version. Then run `npm version <x.y.z> --no-git-tag-version` in `desktop/`, open a pull request, and merge it. Release Desktop publishes it the same way.
+`node scripts/changelog.mjs release <patch|minor|major|x.y.z>` does the changelog part locally and prints the new version. Then run `npm version <x.y.z> --no-git-tag-version` in `desktop/`, and `node scripts/release-tools.mjs` followed by `node scripts/sync-readme-tools.mjs` from the repository root. Open a pull request, and merge it. Release Desktop publishes it the same way.
 
 ## Fix published notes
 

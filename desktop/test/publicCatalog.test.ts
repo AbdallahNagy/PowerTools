@@ -3,8 +3,9 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
+import { releaseTools } from "../../scripts/release-tools.mjs";
 import { readToolTable, renderToolTable } from "../../scripts/sync-readme-tools.mjs";
-import { PUBLIC_TOOLS } from "../src/ui/tools/publicCatalog";
+import { PUBLIC_TOOLS, RELEASED_TOOLS } from "../src/ui/tools/publicCatalog";
 import { ACTIVITY_BAR_TOOLS } from "../src/ui/tools/registry";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -34,7 +35,7 @@ describe("public tool catalog", () => {
     );
 
     expect(welcome).toContain("PUBLIC_TOOLS");
-    expect(website).toContain("PUBLIC_TOOLS");
+    expect(website).toContain("RELEASED_TOOLS");
 
     for (const tool of PUBLIC_TOOLS) {
       expect(welcome).not.toContain(`title: "${tool.title}"`);
@@ -48,7 +49,25 @@ describe("public tool catalog", () => {
     expect(
       readToolTable(readme),
       "README.md tool table is out of date. Run: node scripts/sync-readme-tools.mjs",
-    ).toBe(renderToolTable(PUBLIC_TOOLS));
+    ).toBe(renderToolTable(RELEASED_TOOLS));
+  });
+
+  it("leaves unreleased tools off the website and the README", () => {
+    expect(RELEASED_TOOLS).toEqual(PUBLIC_TOOLS.filter((tool) => !tool.unreleased));
+  });
+
+  it("releases every flagged tool in Prepare Release", () => {
+    const catalog = readFileSync(
+      resolve(repoRoot, "desktop/src/ui/tools/publicCatalog.ts"),
+      "utf8",
+    );
+    const { source, released } = releaseTools(catalog);
+
+    expect(released).toEqual(
+      PUBLIC_TOOLS.filter((tool) => tool.unreleased).map((tool) => tool.id),
+    );
+    expect(source).not.toMatch(/unreleased: true/);
+    expect(source).toContain("unreleased?: true;");
   });
 
   it("has a website tool page for every tool", () => {
