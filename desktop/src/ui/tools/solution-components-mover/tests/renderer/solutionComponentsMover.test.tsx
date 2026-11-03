@@ -7,6 +7,7 @@ import { ConnectionsProvider } from "../../../../shared/connections";
 import { StatusBarProvider, useStatusItems } from "../../../../shared/status";
 import ToolHost from "../../../../shell/tool-runtime/ToolHost";
 import { solutionComponentsMoverTool } from "../../tool";
+import { CopyRoute, MAX_VISIBLE_CARDS } from "../../components/CopyRoute";
 import {
   alphaId,
   betaId,
@@ -401,5 +402,16 @@ describe("Solution Components Mover", () => {
     renderTool({ ...toolBridge, openUrlForConnection: async () => ({ fallback: true }) });
     fireEvent.doubleClick(await screen.findByText("Alpha Widgets"));
     expect(await screen.findByText(/default browser opened/)).toBeInTheDocument();
+  });
+
+  it("collapses a long copy route into a +N more card that names the rest", () => {
+    const names = ["One", "Two", "Three", "Four", "Five", "Six"];
+    renderWithProviders(<CopyRoute sourceNames={names} targetNames={["Target"]} />);
+    expect(screen.getByRole("group", { name: "Copy from One, Two, Three, Four, Five, Six to Target" })).toBeInTheDocument();
+    const sources = within(screen.getByRole("list", { name: "Source solutions" })).getAllByRole("listitem");
+    expect(sources).toHaveLength(MAX_VISIBLE_CARDS);
+    expect(sources.map((item) => item.textContent)).toEqual(["One", "Two", "Three", "+3 more"]);
+    expect(sources[3]).toHaveAttribute("title", "Four\nFive\nSix");
+    expect(screen.queryByText("copy")).not.toBeInTheDocument();
   });
 });
