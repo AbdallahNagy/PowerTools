@@ -21,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - **Plugin Registration: updating a custom workflow assembly.** Updating an assembly no longer fails with "Plug-in assembly fullnames must be unique (0x8004417B)". The update now sends the assembly's full identity with the new file, as the Microsoft Plug-in Registration Tool and XrmToolBox do. Workflow activities in the default "Name (version)" group move to the new version.
 - **Plugin Registration: match the Microsoft and XrmToolBox tools.** New assemblies store the public key token in uppercase, steps link to their plug-in type through the current event handler column, and images can be added to ExecuteWorkflow and Route steps.
+- **Data Migration: filters on related tables.** A filter can now include `<link-entity>` joins, entered on their own or as full FetchXML, as in XrmToolBox Data Transporter. Before, such a filter failed with “Request failed with status code 400”.
 - **Solution Components Mover:** the component type list no longer shifts left and right while you scroll it.
 
 ## [1.2.0] - 2026-10-30
@@ -42,7 +43,6 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
-- **Data Migration: filters on related tables.** A filter can now include `<link-entity>` joins, entered on their own or as full FetchXML, as in XrmToolBox Data Transporter. Before, such a filter failed with “Request failed with status code 400”.
 - **Data Migration: inactive records.** Creating a record that is inactive in the source no longer fails on its status reason. The record is created, then moved to its source status in the same transaction.
 
 ## [1.1.0] - 2026-10-20
