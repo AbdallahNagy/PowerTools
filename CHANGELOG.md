@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-03
+
 ### Added
 
 - **Environment Variables Manager.** A new tool that lists every environment variable in an environment with its type, default value, and current value. Edit current values in the list and save them together, with each value checked against its type first and each row marked as saved or failed. Create a variable, optionally in an unmanaged solution, with its schema name filled in from the display name and an optional current value. Update its display name, description, and default value, and delete a variable or only its current value. Values and definitions that came from a managed solution are marked, and cannot be deleted.
@@ -130,7 +132,8 @@ The first public beta, built for Windows.
 - **Data Migration.** Move data between Dataverse environments with a guided workflow.
 - **FetchXML Builder.** Build, run, and refine FetchXML queries.
 
-[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.1...v1.1.0
 [1.0.1]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.0...v1.0.1
