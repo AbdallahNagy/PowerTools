@@ -29,6 +29,12 @@ export const PUBLIC_TOOLS: readonly PublicTool[] = [
       "Move data between Dataverse environments with a guided, developer-friendly workflow that is easier to understand and control.",
   },
   {
+    id: "environment-variables-manager",
+    title: "Environment Variables Manager",
+    description:
+      "Find every environment variable in an environment, edit current values in place and save them together, and create, update, or delete definitions.",
+  },
+  {
     id: "fetchxml-builder",
     title: "FetchXML Builder",
     description:
