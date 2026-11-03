@@ -2,13 +2,13 @@
 import { getEntry, type CollectionEntry } from "astro:content";
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import ToolIcon from "../../components/ToolIcon.astro";
-import { PUBLIC_TOOLS, toolPath, type PublicTool } from "../../lib/tools";
+import { RELEASED_TOOLS, toolPath, type PublicTool } from "../../lib/tools";
 
-// One page per public tool. A catalog tool without a Markdown file in
+// One page per released tool. A released tool without a Markdown file in
 // src/content/tools/ fails the build, so a new tool cannot ship unlisted.
 export async function getStaticPaths() {
   return Promise.all(
-    PUBLIC_TOOLS.map(async (tool) => {
+    RELEASED_TOOLS.map(async (tool) => {
       const entry = await getEntry("tools", tool.id);
       if (!entry) {
         throw new Error(
@@ -35,7 +35,7 @@ const localPath = (path: string) => `${basePath}${path}`;
 const site = Astro.site ?? new URL("https://powertools.abdallahnagy.com");
 const absoluteUrl = (path: string) => new URL(path, site).href;
 
-const otherTools = PUBLIC_TOOLS.filter((other) => other.id !== tool.id);
+const otherTools = RELEASED_TOOLS.filter((other) => other.id !== tool.id);
 
 const structuredData = [
   {

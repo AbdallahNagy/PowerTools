@@ -1,8 +1,9 @@
 name: Prepare Release
 
 # Opens a release pull request: moves the [Unreleased] notes in CHANGELOG.md
-# into a new version section and bumps desktop/package.json. Merging that pull
-# request runs Release Desktop, which publishes the installer. See
+# into a new version section, bumps desktop/package.json, and lists new tools
+# on the website and in the README. Merging that pull request runs Release
+# Desktop, which publishes the installer. See
 # docs/releasing.md.
 on:
   workflow_dispatch:
@@ -64,6 +65,14 @@ jobs:
         working-directory: desktop
         run: npm version "${{ steps.version.outputs.version }}" --no-git-tag-version
 
+      # Tools added since the last release carry `unreleased: true` in the
+      # public catalog, which keeps them off the website and the README.
+      # Merging this pull request ships them, so list them from here on.
+      - name: List new tools on the website and in the README
+        run: |
+          node scripts/release-tools.mjs
+          node scripts/sync-readme-tools.mjs
+
       - name: Check changelog
         run: |
           node scripts/changelog.mjs check
@@ -82,7 +91,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898+github-actions[bot]@users.noreply.github.com"
           git switch -c "$branch"
-          git add CHANGELOG.md desktop/package.json desktop/package-lock.json
+          git add CHANGELOG.md desktop/package.json desktop/package-lock.json desktop/src/ui/tools/publicCatalog.ts README.md
           git commit -m "Release $VERSION"
           git push -u origin "$branch"
 

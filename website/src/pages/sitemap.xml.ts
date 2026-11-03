@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { PUBLIC_TOOLS, toolPath } from "../lib/tools";
+import { RELEASED_TOOLS, toolPath } from "../lib/tools";
 
 // Every public page, in the trailing-slash form the site serves and the
 // canonical links use. Add new pages here so search engines find them.
@@ -7,7 +7,7 @@ import { PUBLIC_TOOLS, toolPath } from "../lib/tools";
 const pages = [
   "/",
   "/tools/",
-  ...PUBLIC_TOOLS.map((tool) => toolPath(tool.id)),
+  ...RELEASED_TOOLS.map((tool) => toolPath(tool.id)),
   "/request-tool/",
   "/download/",
   "/changelog/",
