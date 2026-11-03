@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join } from "path";
 import { AZURE_CLIENT_ID } from "./config.js";
 import { renderAuthenticationErrorTemplate } from "./authTemplates.js";
+import { CancellableLoopbackClient } from "./cancellableLoopbackClient.js";
 
 let pca: PublicClientApplication | null = null;
 let interactiveAuthWindow: BrowserWindow | null = null;
@@ -90,12 +91,19 @@ function scopesFor(envUrl: string): string[] {
   return [`${envUrl.replace(/\/$/, "")}/.default`];
 }
 
-async function openAuthBrowserWindow(url: string): Promise<void> {
+/**
+ * Opens the sign-in window. Closing it before Microsoft redirects back cancels
+ * the pending sign-in, so acquireTokenInteractive rejects instead of waiting.
+ */
+async function openAuthBrowserWindow(
+  url: string,
+  loopbackClient: CancellableLoopbackClient,
+): Promise<void> {
   if (interactiveAuthWindow && !interactiveAuthWindow.isDestroyed()) {
     interactiveAuthWindow.close();
   }
 
-  interactiveAuthWindow = new BrowserWindow({
+  const authWindow = new BrowserWindow({
     width: 980,
     height: 720,
     title: "PowerTools sign in",
@@ -106,28 +114,39 @@ async function openAuthBrowserWindow(url: string): Promise<void> {
       sandbox: true,
     },
   });
+  interactiveAuthWindow = authWindow;
 
-  interactiveAuthWindow.on("closed", () => {
-    interactiveAuthWindow = null;
+  authWindow.on("closed", () => {
+    if (interactiveAuthWindow === authWindow) interactiveAuthWindow = null;
+    loopbackClient.cancel();
   });
 
-  await interactiveAuthWindow.loadURL(url);
-  interactiveAuthWindow.show();
+  try {
+    await authWindow.loadURL(url);
+  } catch (err) {
+    // Closing the window mid-load aborts loadURL; the close already cancelled.
+    if (authWindow.isDestroyed()) return;
+    throw err;
+  }
+  authWindow.show();
 }
 
 /**
- * Interactive login via the system browser. Use when no account exists yet
- * (first-time connect) or when silent refresh fails.
+ * Interactive login in a PowerTools sign-in window. Use when no account
+ * exists yet (first-time connect) or when silent refresh fails. Rejects with
+ * SignInCancelledError if the user closes the window before signing in.
  */
 export async function acquireTokenInteractive(
   envUrl: string
 ): Promise<{ accessToken: string; account: AccountInfo | null; expiresOn: Date | null }> {
+  const loopbackClient = new CancellableLoopbackClient();
   const result = await getPca().acquireTokenInteractive({
+    loopbackClient,
     scopes: scopesFor(envUrl),
     // The sign-in window keeps Microsoft cookies; without the picker it signs in
     // as the last account, which may have no access to this environment.
     prompt: "select_account",
-    openBrowser: openAuthBrowserWindow,
+    openBrowser: (url) => openAuthBrowserWindow(url, loopbackClient),
     successTemplate: `
       <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#14171c;color:#d3d8df">
         <h2 style="color:#4ec9b0">&#10003; Microsoft sign-in complete</h2>

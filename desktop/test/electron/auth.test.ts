@@ -109,6 +109,23 @@ describe("acquireTokenSilentOrInteractive", () => {
     );
   });
 
+  it("passes a cancellable loopback client to interactive sign-in", async () => {
+    acquireTokenInteractiveMock.mockResolvedValue({
+      accessToken: "interactive-token",
+      account,
+      expiresOn: null,
+    });
+
+    const { acquireTokenInteractive } = await importAuth();
+    const { CancellableLoopbackClient } = await import(
+      "../../src/electron/cancellableLoopbackClient.ts"
+    );
+    await acquireTokenInteractive("https://org.crm.dynamics.com");
+
+    const request = acquireTokenInteractiveMock.mock.calls[0][0];
+    expect(request.loopbackClient).toBeInstanceOf(CancellableLoopbackClient);
+  });
+
   it("propagates transient errors instead of forcing an interactive prompt", async () => {
     acquireTokenSilentMock.mockRejectedValue(new Error("ENETUNREACH"));
 
