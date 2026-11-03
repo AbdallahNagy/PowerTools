@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Environment Variables Manager.** A new tool that lists every environment variable in an environment with its type, default value, and current value. Edit current values in the list and save them together, with each value checked against its type first and each row marked as saved or failed. Create a variable, optionally in an unmanaged solution, with its schema name filled in from the display name and an optional current value. Update its display name, description, and default value, and delete a variable or only its current value. Values and definitions that came from a managed solution are marked, and cannot be deleted.
+
 ### Fixed
 
 - **Plugin Registration: updating a custom workflow assembly.** Updating an assembly no longer fails with "Plug-in assembly fullnames must be unique (0x8004417B)". The update now sends the assembly's full identity with the new file, as the Microsoft Plug-in Registration Tool and XrmToolBox do. Workflow activities in the default "Name (version)" group move to the new version.
@@ -30,6 +34,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **Data Migration: filters on related tables.** A filter can now include `<link-entity>` joins, entered on their own or as full FetchXML, as in XrmToolBox Data Transporter. Before, such a filter failed with “Request failed with status code 400”.
 - **Data Migration: inactive records.** Creating a record that is inactive in the source no longer fails on its status reason. The record is created, then moved to its source status in the same transaction.
 
 ## [1.1.0] - 2026-10-20

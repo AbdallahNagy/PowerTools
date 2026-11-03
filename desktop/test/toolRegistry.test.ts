@@ -14,6 +14,7 @@ import { fetchXmlBuilderTool } from "../src/ui/tools/fetchxml-builder/tool";
 import { fetchXmlTesterTool } from "../src/ui/tools/fetchxml-tester/tool";
 import { attributeExplorerTool } from "../src/ui/tools/attribute-explorer/tool";
 import { dataMigrationTool } from "../src/ui/tools/data-migration/tool";
+import { environmentVariablesManagerTool } from "../src/ui/tools/environment-variables-manager/tool";
 import { pluginRegistrationTool } from "../src/ui/tools/plugin-registration/tool";
 import { polymorphicLookupTool } from "../src/ui/tools/polymorphic-lookup-creator/tool";
 import { solutionComponentsMoverTool } from "../src/ui/tools/solution-components-mover/tool";
@@ -82,6 +83,7 @@ describe("tool registry", () => {
       "attribute-explorer",
       "bulk-workflow-execution",
       "data-migration",
+      "environment-variables-manager",
       "fetchxml-builder",
       "fetchxml-tester",
       "plugin-registration",
@@ -95,6 +97,7 @@ describe("tool registry", () => {
       "attribute-explorer",
       "bulk-workflow-execution",
       "data-migration",
+      "environment-variables-manager",
       "fetchxml-builder",
       "fetchxml-tester",
       "plugin-registration",
@@ -139,6 +142,10 @@ describe("tool registry", () => {
     expect(solutionLayersExplorerTool.tooltip).toBe(
       "Inspect and compare the solution layers of a component, and remove its unmanaged Active layer",
     );
+    expect(TOOL_REGISTRY["environment-variables-manager"]).toBe(environmentVariablesManagerTool);
+    expect(environmentVariablesManagerTool.allowMultipleInstances).toBe(true);
+    expect(environmentVariablesManagerTool.showInActivityBar).toBe(true);
+    expect(environmentVariablesManagerTool.title).toBe("Environment Variables Manager");
     expect(TOOL_REGISTRY["bulk-workflow-execution"]).toBe(bulkWorkflowExecutionTool);
     expect(bulkWorkflowExecutionTool.allowMultipleInstances).toBe(true);
     expect(bulkWorkflowExecutionTool.showInActivityBar).toBe(true);
