@@ -38,10 +38,8 @@ public sealed class AssemblyService(
             {
                 ["name"] = inspection.Identity.Name,
                 ["version"] = inspection.Identity.Version,
-                ["culture"] = string.IsNullOrWhiteSpace(inspection.Identity.Culture)
-                    ? RegistrationOptionValues.CultureNeutral
-                    : inspection.Identity.Culture,
-                ["publickeytoken"] = inspection.Identity.PublicKeyToken,
+                ["culture"] = CultureOf(inspection),
+                ["publickeytoken"] = TokenOf(inspection),
                 ["isolationmode"] = new OptionSetValue(request.IsolationMode),
                 ["sourcetype"] = new OptionSetValue(request.SourceType),
                 ["content"] = Convert.ToBase64String(bytes),
@@ -62,7 +60,15 @@ public sealed class AssemblyService(
         var existing = await gateway.RetrieveAsync(
             "pluginassembly",
             id,
-            new ColumnSet("name", "publickeytoken", "version", "customizationlevel", "ismanaged"),
+            new ColumnSet(
+                "name",
+                "publickeytoken",
+                "version",
+                "culture",
+                "isolationmode",
+                "sourcetype",
+                "customizationlevel",
+                "ismanaged"),
             ct);
         if (existing is null)
             throw RegistrationException.NotFound("assembly_not_found", "The plug-in assembly was not found.");
@@ -128,13 +134,41 @@ public sealed class AssemblyService(
                     name)).ToList());
         }
 
-        await gateway.UpdateAsync(
-            new Entity("pluginassembly", id)
-            {
-                ["content"] = Convert.ToBase64String(bytes),
-                ["version"] = inspection.Identity.Version,
-            },
-            ct);
+        // Send the whole assembly identity with the content, as the Microsoft Plug-in
+        // Registration Tool and XrmToolBox do. Dataverse rejects a pluginassembly update
+        // that leaves out the identity: 0x8004417B ("fullnames must be unique") when only
+        // content and version are sent. Name, culture, and token were checked against the
+        // file above, so keep the values Dataverse already stores.
+        var existingCulture = existing.GetAttributeValue<string>("culture");
+        var update = new Entity("pluginassembly", id)
+        {
+            ["name"] = string.IsNullOrWhiteSpace(existingName)
+                ? inspection.Identity.Name
+                : existingName,
+            ["culture"] = string.IsNullOrWhiteSpace(existingCulture)
+                ? CultureOf(inspection)
+                : existingCulture,
+            ["publickeytoken"] = string.IsNullOrWhiteSpace(existingToken)
+                ? TokenOf(inspection)
+                : existingToken,
+            ["version"] = inspection.Identity.Version,
+            ["content"] = Convert.ToBase64String(bytes),
+        };
+        CopyOptionSet(existing, update, "isolationmode");
+        CopyOptionSet(existing, update, "sourcetype");
+
+        // Workflow activity groups default to "Name (version)". Move the activities that still
+        // use the old default group to the new version in the same request.
+        var regrouped = RegroupWorkflowActivities(
+            existingTypes,
+            id,
+            WorkflowGroupName(existingName, existingVersion),
+            WorkflowGroupName(inspection.Identity.Name, inspection.Identity.Version));
+        if (regrouped.Count > 0)
+            update.RelatedEntities[new Relationship("pluginassembly_plugintype")] =
+                new EntityCollection(regrouped);
+
+        await gateway.UpdateAsync(update, ct);
         await SyncTypesAsync(id, inspection, ct);
         return new MutationResultDto(id);
     }
@@ -162,7 +196,7 @@ public sealed class AssemblyService(
                 ct);
         }
 
-        var workflowGroup = $"{inspection.Identity.Name} ({inspection.Identity.Version})";
+        var workflowGroup = WorkflowGroupName(inspection.Identity.Name, inspection.Identity.Version);
         foreach (var activity in inspection.WorkflowActivities)
         {
             if (existingNames.Contains(activity.TypeName))
@@ -171,6 +205,48 @@ public sealed class AssemblyService(
                 BuildTypeEntity(assemblyId, activity.TypeName, workflowGroup),
                 ct);
         }
+    }
+
+    private static List<Entity> RegroupWorkflowActivities(
+        IReadOnlyList<Entity> types,
+        Guid assemblyId,
+        string oldGroup,
+        string newGroup)
+    {
+        if (SameText(oldGroup, newGroup))
+            return [];
+        return types
+            .Where(type => GetAssemblyId(type) == assemblyId || GetAssemblyId(type) == Guid.Empty)
+            .Where(type => type.GetAttributeValue<bool>("isworkflowactivity"))
+            .Where(type => string.Equals(
+                type.GetAttributeValue<string>("workflowactivitygroupname"),
+                oldGroup,
+                StringComparison.Ordinal))
+            .Select(type => new Entity("plugintype", type.Id)
+            {
+                ["workflowactivitygroupname"] = newGroup,
+            })
+            .ToList();
+    }
+
+    private static string WorkflowGroupName(string assemblyName, string version) =>
+        $"{assemblyName} ({version})";
+
+    private static string CultureOf(AssemblyInspectionDto inspection) =>
+        string.IsNullOrWhiteSpace(inspection.Identity.Culture)
+            ? RegistrationOptionValues.CultureNeutral
+            : inspection.Identity.Culture;
+
+    // Microsoft's Plug-in Registration Tool and XrmToolBox both write the token as
+    // uppercase hex, so new registrations match what those tools store.
+    private static string TokenOf(AssemblyInspectionDto inspection) =>
+        inspection.Identity.PublicKeyToken.ToUpperInvariant();
+
+    private static void CopyOptionSet(Entity source, Entity target, string attribute)
+    {
+        var value = source.GetAttributeValue<OptionSetValue>(attribute);
+        if (value is not null)
+            target[attribute] = new OptionSetValue(value.Value);
     }
 
     private static Entity BuildTypeEntity(Guid assemblyId, string typeName, string? workflowGroup)

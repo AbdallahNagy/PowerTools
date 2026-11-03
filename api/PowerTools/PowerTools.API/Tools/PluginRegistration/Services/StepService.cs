@@ -196,7 +196,9 @@ public sealed class StepService(IPluginRegistrationGateway gateway)
             : new Entity("sdkmessageprocessingstep");
 
         entity["name"] = draft.Name.Trim();
-        entity["plugintypeid"] = new EntityReference("plugintype", draft.PluginTypeId);
+        // eventhandler is the current lookup to the plug-in type; plugintypeid is deprecated.
+        // Microsoft's Plug-in Registration Tool and XrmToolBox both write eventhandler.
+        entity["eventhandler"] = new EntityReference("plugintype", draft.PluginTypeId);
         entity["sdkmessageid"] = new EntityReference("sdkmessage", draft.MessageId);
         entity["stage"] = new OptionSetValue(draft.Stage);
         entity["mode"] = new OptionSetValue(draft.Mode);

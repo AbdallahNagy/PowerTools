@@ -110,6 +110,8 @@ public sealed class FakePluginRegistrationGateway : IPluginRegistrationGateway
         var clone = new Entity(entity.LogicalName, entity.Id);
         foreach (var attribute in entity.Attributes)
             clone[attribute.Key] = attribute.Value;
+        foreach (var related in entity.RelatedEntities)
+            clone.RelatedEntities[related.Key] = related.Value;
         return clone;
     }
 

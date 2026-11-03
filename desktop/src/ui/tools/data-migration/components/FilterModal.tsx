@@ -82,9 +82,10 @@ export function FilterModal({
           />
         </Field>
         <p className="text-xs text-fg-muted mt-1">
-          Enter only the{" "}
-          <code className="text-fg">&lt;filter&gt;</code> element. Leave
-          blank to migrate all records.
+          Enter the{" "}
+          <code className="text-fg">&lt;filter&gt;</code> and{" "}
+          <code className="text-fg">&lt;link-entity&gt;</code> elements, or
+          paste full FetchXML. Leave blank to migrate all records.
         </p>
       </div>
 

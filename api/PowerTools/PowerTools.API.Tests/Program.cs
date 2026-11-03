@@ -4,6 +4,7 @@ using System.Runtime.CompilerServices;
 using System.ServiceModel.Description;
 using System.ServiceModel.Federation;
 using System.Text;
+using System.Xml.Linq;
 using Data8.PowerPlatform.Dataverse.Client;
 using Data8.PowerPlatform.Dataverse.Client.Wsdl;
 using Microsoft.Xrm.Sdk;
@@ -210,7 +211,7 @@ var nestedConnectionMessage = DataverseErrorFormatter.Format(
 AssertContains("Failed to connect to Dataverse.", nestedConnectionMessage);
 AssertContains("The provided URI scheme 'http' is invalid; expected 'https'.", nestedConnectionMessage);
 
-var normalizedFullFetchFilter = DataMigrationFetchXml.NormalizeFilterFragment(
+var normalizedFullFetchFilter = DataMigrationFetchXml.ParseFilter(
     """
     <fetch>
       <entity name="account">
@@ -225,7 +226,40 @@ var normalizedFullFetchFilter = DataMigrationFetchXml.NormalizeFilterFragment(
     "account");
 AssertEquals(
     "<filter type=\"and\"><condition attribute=\"name\" operator=\"like\" value=\"%Tesdt%\" /></filter>",
-    normalizedFullFetchFilter!);
+    normalizedFullFetchFilter!.CombinedFilter()!.ToString(SaveOptions.DisableFormatting));
+
+// A filter on a related table arrives as a link-entity, alone or inside full FetchXML.
+const string linkFilter =
+    "<link-entity name=\"contact\" from=\"contactid\" to=\"primarycontactid\" link-type=\"inner\" alias=\"ab\">" +
+    "<filter type=\"and\"><condition attribute=\"lastname\" operator=\"eq\" value=\"Smith\" /></filter></link-entity>";
+AssertEquals(
+    "<fetch><entity name=\"account\"><attribute name=\"name\" />" + linkFilter + "</entity></fetch>",
+    DataMigrationFetchXml.Build("account", ["name"], linkFilter));
+AssertEquals(
+    "<fetch><entity name=\"account\"><attribute name=\"name\" />" + linkFilter + "</entity></fetch>",
+    DataMigrationFetchXml.Build(
+        "account",
+        ["name"],
+        """
+        <fetch version="1.0" mapping="logical" distinct="false">
+          <entity name="account">
+            <attribute name="accountid" />
+            <order attribute="name" descending="false" />
+            <link-entity name="contact" from="contactid" to="primarycontactid" link-type="inner" alias="ab">
+              <attribute name="fullname" />
+              <filter type="and">
+                <condition attribute="lastname" operator="eq" value="Smith" />
+              </filter>
+            </link-entity>
+          </entity>
+        </fetch>
+        """));
+AssertEquals(
+    "<fetch aggregate=\"true\"><entity name=\"account\"><attribute name=\"accountid\" alias=\"recordcount\" aggregate=\"countcolumn\" distinct=\"true\" />" + linkFilter + "</entity></fetch>",
+    DataMigrationFetchXml.BuildCount("account", "accountid", linkFilter));
+AssertEquals(
+    "<fetch><entity name=\"account\"><attribute name=\"accountid\" /><filter><condition attribute=\"accountid\" operator=\"in\"><value>83b129f1-7790-4ca5-a0db-bf02fd67c127</value></condition></filter>" + linkFilter + "</entity></fetch>",
+    DataMigrationFetchXml.BuildIdLookup("account", "accountid", [Guid.Parse("83b129f1-7790-4ca5-a0db-bf02fd67c127")], linkFilter));
 
 var countFetch = DataMigrationFetchXml.BuildCount(
     "account",
