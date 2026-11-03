@@ -20,6 +20,11 @@ _Avoid_: Bridge, toolbox API
 Script a **Community tool** ships to run outside its tab's page, still sandboxed and limited to the **Host API**.
 _Avoid_: Backend, service
 
+**Catalog**:
+The list of **Community tools** a user can browse, install and update from inside Power Tools.
+_Avoid_: Store, marketplace, gallery
+
 ## Relationships
 
 - A **Community tool** has a UI and may ship **Tool workers**
+- A user installs, updates, disables and uninstalls **Community tools** through the **Catalog**
