@@ -3,6 +3,7 @@ using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.AttributeExplorer;
 using PowerTools.API.Tools.BulkWorkflowExecution;
+using PowerTools.API.Tools.CommunityToolApi;
 using PowerTools.API.Tools.Connection;
 using PowerTools.API.Tools.DataMigration;
 using PowerTools.API.Tools.EnvironmentVariables;
@@ -115,6 +116,7 @@ app.MapBulkWorkflowExecutionEndpoints();
 app.MapTranslatorEndpoints();
 app.MapSolutionLayersEndpoints();
 app.MapEnvironmentVariablesEndpoints();
+app.MapCommunityToolEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would
