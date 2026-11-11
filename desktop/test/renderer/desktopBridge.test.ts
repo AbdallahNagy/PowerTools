@@ -117,6 +117,74 @@ describe("desktopBridge", () => {
     ]);
   });
 
+  it("delegates community tool operations with their arguments and results", async () => {
+    const observed: unknown[] = [];
+    const tool = {
+      id: "contoso.counter",
+      folder: "C:\\tools\\counter",
+      status: "ready" as const,
+      errors: [],
+      manifest: null,
+      iconDataUrl: null,
+      consentGranted: false,
+    };
+    installDesktopBridge(createFakeDesktopBridge({
+      listCommunityTools: async () => {
+        observed.push(["listCommunityTools"]);
+        return [tool];
+      },
+      addCommunityToolFromFolder: async () => {
+        observed.push(["addCommunityToolFromFolder"]);
+        return tool;
+      },
+      removeCommunityTool: async (id) => {
+        observed.push(["removeCommunityTool", id]);
+      },
+      grantCommunityToolConsent: async (id) => {
+        observed.push(["grantCommunityToolConsent", id]);
+      },
+      readCommunityToolStorage: async (id) => {
+        observed.push(["readCommunityToolStorage", id]);
+        return { count: 1 };
+      },
+      writeCommunityToolStorage: async (id, data) => {
+        observed.push(["writeCommunityToolStorage", id, data]);
+      },
+      openFileForCommunityTool: async (id, filters) => {
+        observed.push(["openFileForCommunityTool", id, filters]);
+        return { name: "a.csv", content: "x" };
+      },
+      saveFileForCommunityTool: async (id, suggestedName, content) => {
+        observed.push(["saveFileForCommunityTool", id, suggestedName, content]);
+        return true;
+      },
+    }));
+    const filters = [{ name: "CSV", extensions: ["csv"] }];
+
+    await expect(desktopBridge.listCommunityTools()).resolves.toEqual([tool]);
+    await expect(desktopBridge.addCommunityToolFromFolder()).resolves.toEqual(tool);
+    await expect(desktopBridge.removeCommunityTool("contoso.counter")).resolves.toBeUndefined();
+    await expect(desktopBridge.grantCommunityToolConsent("contoso.counter")).resolves.toBeUndefined();
+    await expect(desktopBridge.readCommunityToolStorage("contoso.counter")).resolves.toEqual({ count: 1 });
+    await expect(desktopBridge.writeCommunityToolStorage("contoso.counter", { count: 2 })).resolves.toBeUndefined();
+    await expect(desktopBridge.openFileForCommunityTool("contoso.counter", filters)).resolves.toEqual({
+      name: "a.csv",
+      content: "x",
+    });
+    await expect(desktopBridge.saveFileForCommunityTool("contoso.counter", "out.csv", "a,b")).resolves.toBe(true);
+
+    expect(observed).toEqual([
+      ["listCommunityTools"],
+      ["addCommunityToolFromFolder"],
+      ["removeCommunityTool", "contoso.counter"],
+      ["grantCommunityToolConsent", "contoso.counter"],
+      ["readCommunityToolStorage", "contoso.counter"],
+      ["writeCommunityToolStorage", "contoso.counter", { count: 2 }],
+      ["openFileForCommunityTool", "contoso.counter", filters],
+      ["saveFileForCommunityTool", "contoso.counter", "out.csv", "a,b"],
+    ]);
+  });
+
   it("preserves desktop event delivery and unsubscribe behavior", () => {
     const fake = createFakeDesktopBridge();
     installDesktopBridge(fake);
@@ -205,6 +273,11 @@ describe("createFakeDesktopBridge", () => {
     await expect(bridge.toggleMaximizeWindow()).resolves.toBeUndefined();
     await expect(bridge.closeWindow()).resolves.toBeUndefined();
     await expect(bridge.isWindowMaximized()).resolves.toBe(false);
+    await expect(bridge.listCommunityTools()).resolves.toEqual([]);
+    await expect(bridge.addCommunityToolFromFolder()).resolves.toBeNull();
+    await expect(bridge.readCommunityToolStorage("contoso.counter")).resolves.toEqual({});
+    await expect(bridge.openFileForCommunityTool("contoso.counter", [])).resolves.toBeNull();
+    await expect(bridge.saveFileForCommunityTool("contoso.counter", "out.csv", "")).resolves.toBe(false);
 
     expect(() => bridge.onConnectionStatusUpdate(() => undefined)).not.toThrow();
     expect(() => bridge.onUpdateStatusChanged(() => undefined)()).not.toThrow();

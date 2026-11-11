@@ -90,6 +90,17 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       ipcRenderer.on("window-maximized-changed", listener);
       return () => ipcRenderer.removeListener("window-maximized-changed", listener);
     },
+    listCommunityTools: () => ipcRenderer.invoke("list-community-tools"),
+    addCommunityToolFromFolder: () => ipcRenderer.invoke("add-community-tool-from-folder"),
+    removeCommunityTool: (id: string) => ipcRenderer.invoke("remove-community-tool", id),
+    grantCommunityToolConsent: (id: string) => ipcRenderer.invoke("grant-community-tool-consent", id),
+    readCommunityToolStorage: (id: string) => ipcRenderer.invoke("read-community-tool-storage", id),
+    writeCommunityToolStorage: (id: string, data: Record<string, unknown>) =>
+      ipcRenderer.invoke("write-community-tool-storage", id, data),
+    openFileForCommunityTool: (id: string, filters: Array<{ name: string; extensions: string[] }>) =>
+      ipcRenderer.invoke("open-file-for-community-tool", id, filters),
+    saveFileForCommunityTool: (id: string, suggestedName: string, content: string) =>
+      ipcRenderer.invoke("save-file-for-community-tool", id, suggestedName, content),
   };
 }
 

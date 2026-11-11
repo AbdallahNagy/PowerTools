@@ -77,6 +77,14 @@ describe("createPreloadApi", () => {
     ["toggleMaximizeWindow", [], "window-toggle-maximize", []],
     ["closeWindow", [], "window-close", []],
     ["isWindowMaximized", [], "window-is-maximized", []],
+    ["listCommunityTools", [], "list-community-tools", []],
+    ["addCommunityToolFromFolder", [], "add-community-tool-from-folder", []],
+    ["removeCommunityTool", ["contoso.counter"], "remove-community-tool", ["contoso.counter"]],
+    ["grantCommunityToolConsent", ["contoso.counter"], "grant-community-tool-consent", ["contoso.counter"]],
+    ["readCommunityToolStorage", ["contoso.counter"], "read-community-tool-storage", ["contoso.counter"]],
+    ["writeCommunityToolStorage", ["contoso.counter", { count: 1 }], "write-community-tool-storage", ["contoso.counter", { count: 1 }]],
+    ["openFileForCommunityTool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]], "open-file-for-community-tool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]]],
+    ["saveFileForCommunityTool", ["contoso.counter", "out.csv", "a,b"], "save-file-for-community-tool", ["contoso.counter", "out.csv", "a,b"]],
   ] as const)(
     "%s invokes %s with the existing arguments",
     async (methodName, methodArgs, expectedChannel, expectedArgs) => {
@@ -188,6 +196,14 @@ describe("createPreloadApi", () => {
       "closeWindow",
       "isWindowMaximized",
       "onWindowMaximizedChanged",
+      "listCommunityTools",
+      "addCommunityToolFromFolder",
+      "removeCommunityTool",
+      "grantCommunityToolConsent",
+      "readCommunityToolStorage",
+      "writeCommunityToolStorage",
+      "openFileForCommunityTool",
+      "saveFileForCommunityTool",
     ]);
   });
 });

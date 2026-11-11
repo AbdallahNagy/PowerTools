@@ -3,7 +3,7 @@ import "./devUserData.js";
 // Must load next so Sentry hooks the app before anything else runs.
 import "./sentry.js";
 import { spawn } from "child_process";
-import { readFile, writeFile } from "fs/promises";
+import { access, mkdir, readFile, stat, writeFile } from "fs/promises";
 import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
@@ -29,6 +29,9 @@ import {
 } from "./windowChrome.js";
 import { initializeTheme, windowBackgroundColor } from "./theme.js";
 import { startUsageStats } from "./usageStats.js";
+import { BUILT_IN_TOOL_IDS } from "./communityTools/builtInToolIds.js";
+import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
+import { createToolStore } from "./communityTools/toolStore.js";
 
 const { autoUpdater } = electronUpdater;
 
@@ -130,6 +133,47 @@ app.whenReady().then(async () => {
         window.loadFile("dist-react/index.html", { hash: route });
       }
       return window;
+    },
+  });
+
+  registerCommunityToolIpc({
+    ipcMain,
+    store: createToolStore({
+      userDataPath: app.getPath("userData"),
+      hostVersion: app.getVersion(),
+      builtInToolIds: BUILT_IN_TOOL_IDS,
+      fs: {
+        readText: (path) => readFile(path, "utf-8"),
+        writeText: (path, content) => writeFile(path, content, "utf-8"),
+        exists: (path) => access(path).then(() => true, () => false),
+        mkdir: async (path) => {
+          await mkdir(path, { recursive: true });
+        },
+        size: async (path) => (await stat(path)).size,
+      },
+    }),
+    getMainWindow: () => mainWindow,
+    dialogs: {
+      chooseFolder: async (window) => {
+        const result = await dialog.showOpenDialog(window, {
+          title: "Load community tool from folder",
+          properties: ["openDirectory"],
+        });
+        return result.canceled ? null : result.filePaths[0] ?? null;
+      },
+      chooseOpenFile: async (window, filters) => {
+        const result = await dialog.showOpenDialog(window, { properties: ["openFile"], filters });
+        return result.canceled ? null : result.filePaths[0] ?? null;
+      },
+      chooseSaveFile: async (window, suggestedName) => {
+        const result = await dialog.showSaveDialog(window, { defaultPath: suggestedName });
+        return result.canceled || !result.filePath ? null : result.filePath;
+      },
+    },
+    files: {
+      size: async (path) => (await stat(path)).size,
+      readText: (path) => readFile(path, "utf-8"),
+      writeText: (path, content) => writeFile(path, content, "utf-8"),
     },
   });
 

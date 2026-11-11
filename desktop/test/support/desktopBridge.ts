@@ -117,6 +117,14 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
       windowMaximizedChangedListeners.add(callback);
       return () => windowMaximizedChangedListeners.delete(callback);
     },
+    listCommunityTools: async () => [],
+    addCommunityToolFromFolder: async () => null,
+    removeCommunityTool: async () => undefined,
+    grantCommunityToolConsent: async () => undefined,
+    readCommunityToolStorage: async () => ({}),
+    writeCommunityToolStorage: async () => undefined,
+    openFileForCommunityTool: async () => null,
+    saveFileForCommunityTool: async () => false,
     ...overrides,
   };
 
