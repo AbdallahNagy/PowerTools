@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
 import { useTabs } from "../tabs/useTabs";
-import { useShellShortcuts } from "../keyboard/useShellShortcuts";
+import { ShellShortcutDispatchContext, useShellShortcuts } from "../keyboard/useShellShortcuts";
 import { ConnectionsProvider } from "../../shared/connections";
 import { openToolRequest } from "../../shared/links/openToolRequest";
 import { StatusBarProvider } from "../../shared/status";
@@ -62,13 +62,14 @@ const Layout = () => {
   const [quickOpen, setQuickOpen] = useState(false);
   const { openTool } = useTabs();
 
-  useShellShortcuts({
+  const dispatchShortcut = useShellShortcuts({
     quickOpen,
     onQuickOpenChange: setQuickOpen,
     onToggleSidebar: () => setSidebarVisible((visible) => !visible),
   });
 
   return (
+    <ShellShortcutDispatchContext.Provider value={dispatchShortcut}>
     <ConnectionsProvider>
       <StatusBarProvider>
         <UpdateProvider>
@@ -122,6 +123,7 @@ const Layout = () => {
         </UpdateProvider>
       </StatusBarProvider>
     </ConnectionsProvider>
+    </ShellShortcutDispatchContext.Provider>
   );
 };
 
