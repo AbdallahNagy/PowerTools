@@ -3,7 +3,7 @@ import "./devUserData.js";
 // Must load next so Sentry hooks the app before anything else runs.
 import "./sentry.js";
 import { spawn } from "child_process";
-import { access, mkdir, readFile, stat, writeFile } from "fs/promises";
+import { access, mkdir, readFile, realpath, stat, writeFile } from "fs/promises";
 import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
@@ -32,8 +32,12 @@ import { startUsageStats } from "./usageStats.js";
 import { BUILT_IN_TOOL_IDS } from "./communityTools/builtInToolIds.js";
 import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
 import { createToolStore } from "./communityTools/toolStore.js";
+import { installToolProtocol, registerToolScheme } from "./communityTools/toolProtocol.js";
 
 const { autoUpdater } = electronUpdater;
+
+// Privileged schemes must be registered before the app is ready.
+registerToolScheme();
 
 app.whenReady().then(async () => {
   const theme = initializeTheme();
@@ -136,22 +140,32 @@ app.whenReady().then(async () => {
     },
   });
 
+  const toolStore = createToolStore({
+    userDataPath: app.getPath("userData"),
+    hostVersion: app.getVersion(),
+    builtInToolIds: BUILT_IN_TOOL_IDS,
+    fs: {
+      readText: (path) => readFile(path, "utf-8"),
+      writeText: (path, content) => writeFile(path, content, "utf-8"),
+      exists: (path) => access(path).then(() => true, () => false),
+      mkdir: async (path) => {
+        await mkdir(path, { recursive: true });
+      },
+      size: async (path) => (await stat(path)).size,
+    },
+  });
+  installToolProtocol({
+    folderFor: (id) => toolStore.folderFor(id),
+    manifestFor: (id) => toolStore.manifestFor(id),
+    readFile: (path) => readFile(path),
+    realpath: (path) => realpath(path),
+    // folderFor and manifestFor are filled by list(); load once so a tool opened at start-up is found.
+    ready: toolStore.list(),
+  });
+
   registerCommunityToolIpc({
     ipcMain,
-    store: createToolStore({
-      userDataPath: app.getPath("userData"),
-      hostVersion: app.getVersion(),
-      builtInToolIds: BUILT_IN_TOOL_IDS,
-      fs: {
-        readText: (path) => readFile(path, "utf-8"),
-        writeText: (path, content) => writeFile(path, content, "utf-8"),
-        exists: (path) => access(path).then(() => true, () => false),
-        mkdir: async (path) => {
-          await mkdir(path, { recursive: true });
-        },
-        size: async (path) => (await stat(path)).size,
-      },
-    }),
+    store: toolStore,
     getMainWindow: () => mainWindow,
     dialogs: {
       chooseFolder: async (window) => {

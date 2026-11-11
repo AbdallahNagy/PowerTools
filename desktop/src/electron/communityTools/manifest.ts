@@ -34,7 +34,17 @@ const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/;
 const HOST_VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)/;
 const MESSAGE_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const HOST_LABEL = "[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?";
-const HOST_PATTERN = new RegExp(`^${HOST_LABEL}(\\.${HOST_LABEL})*$`);
+// At least two labels: rules out "localhost", intranet names, and IPv6 literals.
+const DOMAIN_PATTERN = new RegExp(`^${HOST_LABEL}(\\.${HOST_LABEL})+$`);
+// A last label a URL parser reads as a number makes the host an IPv4 address ("127.1", "0x7f.0x1").
+const NUMERIC_LABEL = /^(\d+|0x[0-9a-f]*)$/i;
+
+/** A multi-label domain name that is not an IP literal and not under the loopback-only `localhost` name. */
+function isNetworkDomain(host: string): boolean {
+  if (!DOMAIN_PATTERN.test(host)) return false;
+  const last = host.slice(host.lastIndexOf(".") + 1);
+  return !NUMERIC_LABEL.test(last) && last.toLowerCase() !== "localhost";
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -132,7 +142,7 @@ export function parseManifest(json: unknown, hostVersion: string): ManifestResul
 
   const permissions = stringList("permissions", (p) => MANIFEST_PERMISSIONS.includes(p), "is not a known permission");
   const messages = stringList("messages", (m) => MESSAGE_PATTERN.test(m), "is not a valid message name");
-  const network = stringList("network", (h) => HOST_PATTERN.test(h), "must be a bare host name");
+  const network = stringList("network", isNetworkDomain, "must be a domain name with at least two labels, not localhost or an IP address");
 
   let allowMultipleInstances = true;
   if (json.allowMultipleInstances !== undefined) {

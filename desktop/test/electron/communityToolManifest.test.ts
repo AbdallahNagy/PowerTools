@@ -89,6 +89,33 @@ describe("parseManifest", () => {
     expect(errors[0]).toContain(field);
   });
 
+  it.each([
+    "localhost",
+    "intranet",
+    "app.localhost",
+    "127.0.0.1",
+    "169.254.169.254",
+    "10.0.0.1",
+    "127.1",
+    "0x7f.0x1",
+    "[::1]",
+    "::1",
+    "[fe80::1]",
+  ])("rejects network entry %j that is not a multi-label domain name", (host) => {
+    const errors = errorsFor({ network: [host] });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/^network: /);
+    expect(errors[0]).toContain(JSON.stringify(host));
+  });
+
+  it("accepts multi-label domain names in network", () => {
+    const result = parseManifest(
+      { ...validManifest(), network: ["api.contoso.example", "graph.microsoft.com", "a-1.b2.io"] },
+      HOST_VERSION,
+    );
+    expect(result.ok).toBe(true);
+  });
+
   it("compares minHostVersion numerically per segment", () => {
     expect(parseManifest({ ...validManifest(), minHostVersion: "1.3.0" }, "1.10.0").ok).toBe(true);
     expect(parseManifest({ ...validManifest(), minHostVersion: "1.10.0" }, "1.9.0").ok).toBe(false);

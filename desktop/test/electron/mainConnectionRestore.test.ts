@@ -55,6 +55,7 @@ vi.mock("electron", () => {
       getApplicationMenu: vi.fn(() => ({ items: [] })),
       buildFromTemplate: vi.fn((template: unknown) => template),
     },
+    protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
     shell: { openExternal: vi.fn() },
   };
 });
