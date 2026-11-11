@@ -13,8 +13,12 @@ import { authorize } from "./permissions";
 
 export interface BrokerServices {
   getConnection(): ConnectionSnapshot | null;
-  /** Rejects with ToolError-shaped objects. */
-  callSidecar(method: "GET" | "POST", path: string, body?: unknown): Promise<unknown>;
+  /** The tab's current connection id. Stays inside host code; it is never sent to the tool. */
+  connectionKey(): string | null;
+  /** True when this tool's tab is the active tab. */
+  isActive(): boolean;
+  /** Runs against the connection named by `connectionKey`, not the live one. Rejects with ToolError-shaped objects. */
+  callSidecar(method: "GET" | "POST", path: string, body: unknown, connectionKey: string | null): Promise<unknown>;
   toast(type: "info" | "success" | "error", message: string): void;
   setStatus(text: string | null): void;
   confirm(title: string, message: string): Promise<boolean>;
@@ -70,7 +74,9 @@ const isGuid = (value: unknown): value is string => typeof value === "string" &&
 const isString = (value: unknown): value is string => typeof value === "string";
 const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every(isString);
 const isOptional = (value: unknown, check: (v: unknown) => boolean) => value === undefined || check(value);
-const isNumber = (value: unknown) => typeof value === "number" && Number.isFinite(value);
+const isPositiveInteger = (value: unknown) => typeof value === "number" && Number.isInteger(value) && value >= 1;
+// Used as a URL path segment, so "." and ".." and anything with a separator are out.
+const isIdentifier = (value: unknown): value is string => typeof value === "string" && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
 
 function isEntityRefList(value: unknown): boolean {
   return Array.isArray(value) && value.every((ref) => isRecord(ref) && isText(ref.logicalName) && isText(ref.id));
@@ -95,8 +101,8 @@ const ARGS_CHECK: Record<MethodName, (a: Args) => boolean> = {
   "data.retrieve": (a) => isText(a.table) && isText(a.id) && isStringArray(a.columns),
   "data.fetchXml": (a) =>
     isText(a.fetchXml) &&
-    isOptional(a.page, isNumber) &&
-    isOptional(a.pageSize, isNumber) &&
+    isOptional(a.page, isPositiveInteger) &&
+    isOptional(a.pageSize, isPositiveInteger) &&
     isOptional(a.pagingCookie, (v) => v === null || isString(v)),
   "data.create": (a) => isText(a.table) && isRecord(a.values),
   "data.update": (a) => isText(a.table) && isText(a.id) && isRecord(a.values),
@@ -106,10 +112,10 @@ const ARGS_CHECK: Record<MethodName, (a: Args) => boolean> = {
   "data.execute": (a) => isText(a.message) && isRecord(a.parameters),
   "data.batch": (a) => Array.isArray(a.operations) && a.operations.every(isBatchOperation) && typeof a.continueOnError === "boolean",
   "metadata.tables": () => true,
-  "metadata.table": (a) => isText(a.table),
-  "metadata.columns": (a) => isText(a.table),
-  "metadata.relationships": (a) => isText(a.table),
-  "metadata.choices": (a) => isText(a.table) && isText(a.column),
+  "metadata.table": (a) => isIdentifier(a.table),
+  "metadata.columns": (a) => isIdentifier(a.table),
+  "metadata.relationships": (a) => isIdentifier(a.table),
+  "metadata.choices": (a) => isIdentifier(a.table) && isIdentifier(a.column),
   "shell.toast": (a) => typeof a.type === "string" && TOAST_TYPES.includes(a.type) && isString(a.message),
   "shell.setStatus": (a) => a.text === null || isString(a.text),
   "shell.confirm": (a) => isString(a.title) && isString(a.message),
@@ -142,9 +148,9 @@ function toToolError(error: unknown): ToolError {
 
 const enc = encodeURIComponent;
 
-async function runSidecar(services: BrokerServices, method: MethodName, a: Args): Promise<unknown> {
-  const post = (route: string) => services.callSidecar("POST", `${API}/data/${route}`, a);
-  const get = (path: string) => services.callSidecar("GET", `${API}/metadata/tables${path}`);
+async function runSidecar(services: BrokerServices, method: MethodName, a: Args, key: string | null): Promise<unknown> {
+  const post = (route: string) => services.callSidecar("POST", `${API}/data/${route}`, a, key);
+  const get = (path: string) => services.callSidecar("GET", `${API}/metadata/tables${path}`, undefined, key);
   switch (method) {
     case "data.retrieve": return post("retrieve");
     case "data.fetchXml": return post("fetch");
@@ -209,7 +215,9 @@ export function createBroker(input: {
   const maxInFlight = Math.max(1, input.maxInFlight ?? DEFAULT_MAX_IN_FLIGHT);
   let disposed = false;
   let running = 0;
-  const queue: Array<() => void> = [];
+  const queue: Array<{ run(): void; cancel(error: RequestError): void }> = [];
+  const CHANGED = () => fail("Cancelled", "The connection changed before this call ran.");
+  const NOT_ACTIVE = () => fail("Cancelled", "This tool is not in the active tab.");
 
   function post(message: ToolResponse | HostEvent): boolean {
     if (disposed) return false;
@@ -232,29 +240,53 @@ export function createBroker(input: {
     );
   }
 
-  /** Runs a sidecar-bound job now or when a slot frees, in arrival order. */
-  function schedule<T>(job: () => Promise<T>): Promise<T> {
+  function pump(): void {
+    while (running < maxInFlight && queue.length > 0) queue.shift()!.run();
+  }
+
+  /**
+   * Runs a sidecar-bound job now or when a slot frees, in arrival order. A job that has not started
+   * when the tab's connection differs from `key` is cancelled instead of run against another environment.
+   */
+  function schedule<T>(key: string | null, job: () => Promise<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
-      const start = () => {
-        running += 1;
-        job()
-          .then(resolve, reject)
-          .finally(() => {
-            running -= 1;
-            queue.shift()?.();
-          });
-      };
-      if (running < maxInFlight) start();
-      else queue.push(start);
+      queue.push({
+        run() {
+          if (disposed) {
+            reject(fail("Cancelled", "The tool was closed."));
+            return;
+          }
+          if (services.connectionKey() !== key) {
+            reject(CHANGED());
+            return;
+          }
+          running += 1;
+          job()
+            .then(resolve, reject)
+            .finally(() => {
+              running -= 1;
+              pump();
+            });
+        },
+        cancel: reject,
+      });
+      pump();
     });
   }
 
   async function handle(method: MethodName, args: Args): Promise<unknown> {
     const decision = authorize(manifest, method, args);
     if (!decision.ok) throw fail("PermissionDenied", decision.message);
-    if (!isSidecarMethod(method)) return runLocal(services, method, args);
-    if (services.getConnection() === null) throw fail("NoConnection", "No connection is open for this tool.");
-    return schedule(() => (disposed ? Promise.reject(fail("Cancelled", "The tool was closed.")) : runSidecar(services, method, args)));
+    if (!isSidecarMethod(method)) {
+      if (!services.isActive()) {
+        if (method === "shell.shortcut") return undefined;
+        if (method === "shell.confirm" || method === "shell.openFile" || method === "shell.saveFile") throw NOT_ACTIVE();
+      }
+      return runLocal(services, method, args);
+    }
+    const key = services.connectionKey();
+    if (services.getConnection() === null || key === null) throw fail("NoConnection", "No connection is open for this tool.");
+    return schedule(key, () => runSidecar(services, method, args, key));
   }
 
   function onMessage(event: MessageEvent): void {
@@ -286,6 +318,7 @@ export function createBroker(input: {
       post({ type: "event", event: "theme", theme });
     },
     notifyConnection(connection) {
+      for (const pending of queue.splice(0)) pending.cancel(CHANGED());
       post({ type: "event", event: "connection", connection });
     },
     dispose() {

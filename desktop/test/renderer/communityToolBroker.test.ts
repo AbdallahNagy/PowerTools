@@ -7,6 +7,8 @@ const CONNECTION: ConnectionSnapshot = { displayName: "Contoso", kind: "online" 
 function makeServices(overrides: Partial<BrokerServices> = {}): BrokerServices {
   return {
     getConnection: vi.fn(() => CONNECTION),
+    connectionKey: vi.fn(() => "conn-1"),
+    isActive: vi.fn(() => true),
     callSidecar: vi.fn(async () => ({})),
     toast: vi.fn(),
     setStatus: vi.fn(),
@@ -73,7 +75,7 @@ describe("community tool broker", () => {
     const args = { table: "account", id: "1", columns: ["name"] };
     const response = await ctx.call(1, "data.retrieve", args);
     expect(response).toEqual({ id: 1, ok: true, result: { records: [] } });
-    expect(callSidecar).toHaveBeenCalledWith("POST", "/api/community-tools/data/retrieve", args);
+    expect(callSidecar).toHaveBeenCalledWith("POST", "/api/community-tools/data/retrieve", args, "conn-1");
   });
 
   it("denies a request without the permission and never calls the sidecar", async () => {
@@ -107,10 +109,10 @@ describe("community tool broker", () => {
       ["data.execute", { message: "WhoAmI", parameters: {} }, "POST", "/api/community-tools/data/execute", { message: "WhoAmI", parameters: {} }, { A: 1 }],
       ["data.batch", { operations: [{ op: "delete", table: "a", id: "1" }], continueOnError: true }, "POST", "/api/community-tools/data/batch", { operations: [{ op: "delete", table: "a", id: "1" }], continueOnError: true }],
       ["metadata.tables", {}, "GET", "/api/community-tools/metadata/tables"],
-      ["metadata.table", { table: "my table/1" }, "GET", "/api/community-tools/metadata/tables/my%20table%2F1"],
+      ["metadata.table", { table: "my_table1" }, "GET", "/api/community-tools/metadata/tables/my_table1"],
       ["metadata.columns", { table: "account" }, "GET", "/api/community-tools/metadata/tables/account/columns"],
       ["metadata.relationships", { table: "account" }, "GET", "/api/community-tools/metadata/tables/account/relationships"],
-      ["metadata.choices", { table: "account", column: "a/b" }, "GET", "/api/community-tools/metadata/tables/account/columns/a%2Fb/choices"],
+      ["metadata.choices", { table: "account", column: "a_b" }, "GET", "/api/community-tools/metadata/tables/account/columns/a_b/choices"],
     ];
     let id = 0;
     for (const [method, args, verb, path, body, result] of cases) {
@@ -118,8 +120,8 @@ describe("community tool broker", () => {
       const response = await ctx.call(++id, method, args);
       expect(response, method).toMatchObject({ ok: true });
       if (result !== undefined) expect((response as { result: unknown }).result, method).toEqual(result);
-      if (body === undefined) expect(callSidecar).toHaveBeenCalledWith(verb, path);
-      else expect(callSidecar).toHaveBeenCalledWith(verb, path, body);
+      if (body === undefined) expect(callSidecar).toHaveBeenCalledWith(verb, path, undefined, "conn-1");
+      else expect(callSidecar).toHaveBeenCalledWith(verb, path, body, "conn-1");
     }
   });
 
@@ -250,5 +252,144 @@ describe("community tool broker", () => {
       });
     }
     expect(ctx.services.openSolution).toHaveBeenCalledTimes(1);
+  });
+
+  describe("argument checks", () => {
+    it.each([
+      ["page", 0], ["page", -1], ["page", 1.5], ["page", "2"], ["page", Number.NaN],
+      ["pageSize", 0], ["pageSize", 2.5], ["pageSize", -10], ["pageSize", "5"],
+    ])("rejects %s = %j for data.fetchXml", async (field, value) => {
+      const ctx = track(setup());
+      const response = await ctx.call(1, "data.fetchXml", { fetchXml: "<fetch/>", [field]: value });
+      expect(response).toMatchObject({ ok: false, error: { code: "InvalidRequest" } });
+      expect(ctx.services.callSidecar).not.toHaveBeenCalled();
+    });
+
+    it("accepts integer paging values of 1 or more", async () => {
+      const ctx = track(setup());
+      expect(await ctx.call(1, "data.fetchXml", { fetchXml: "<fetch/>", page: 1, pageSize: 5000 })).toMatchObject({ ok: true });
+    });
+
+    it.each(["metadata.table", "metadata.columns", "metadata.relationships"])("%s rejects table names that are not identifiers", async (method) => {
+      const ctx = track(setup());
+      let id = 0;
+      for (const table of [".", "..", "a/b", "a b", "1abc", "a.b", "a%2Fb", "a?x"]) {
+        expect(await ctx.call(++id, method, { table }), table).toMatchObject({ ok: false, error: { code: "InvalidRequest" } });
+      }
+      expect(ctx.services.callSidecar).not.toHaveBeenCalled();
+      expect(await ctx.call(++id, method, { table: "_new_Table9" })).toMatchObject({ ok: true });
+    });
+
+    it("metadata.choices rejects a table or column that is not an identifier", async () => {
+      const ctx = track(setup());
+      expect(await ctx.call(1, "metadata.choices", { table: "account", column: ".." })).toMatchObject({ ok: false, error: { code: "InvalidRequest" } });
+      expect(await ctx.call(2, "metadata.choices", { table: "..", column: "name" })).toMatchObject({ ok: false, error: { code: "InvalidRequest" } });
+      expect(await ctx.call(3, "metadata.choices", { table: "account", column: "a/b" })).toMatchObject({ ok: false, error: { code: "InvalidRequest" } });
+      expect(ctx.services.callSidecar).not.toHaveBeenCalled();
+      expect(await ctx.call(4, "metadata.choices", { table: "account", column: "statuscode" })).toMatchObject({ ok: true });
+    });
+  });
+
+  describe("connection changes", () => {
+    function controlled() {
+      let key: string | null = "conn-A";
+      const releases: Array<() => void> = [];
+      const seen: Array<{ n: number; key: string | null }> = [];
+      const callSidecar = vi.fn((_m: string, _p: string, body?: unknown, k?: string | null) => {
+        seen.push({ n: (body as { n: number }).n, key: k ?? null });
+        return new Promise<unknown>((resolve) => releases.push(() => resolve({ n: (body as { n: number }).n })));
+      });
+      const ctx = track(setup({ maxInFlight: 2, services: { callSidecar, connectionKey: vi.fn(() => key) } }));
+      const send = (n: number) =>
+        ctx.channel.port2.postMessage({ id: n, method: "data.update", args: { table: "a", id: "1", values: {}, n } });
+      return { ctx, send, callSidecar, seen, releases, setKey: (k: string | null) => (key = k) };
+    }
+
+    it("cancels queued calls when the connection changes and lets started calls finish", async () => {
+      const { ctx, send, callSidecar, seen, releases, setKey } = controlled();
+      [1, 2, 3, 4].forEach(send);
+      await ctx.settle();
+      expect(seen.map((s) => s.n)).toEqual([1, 2]);
+      setKey("conn-B");
+      releases.splice(0).forEach((release) => release());
+      await ctx.nextMessage(4);
+      const byId = new Map((ctx.received as ToolResponse[]).map((r) => [r.id, r]));
+      expect(byId.get(1)).toMatchObject({ ok: true });
+      expect(byId.get(2)).toMatchObject({ ok: true });
+      const cancelled = { ok: false, error: { code: "Cancelled", message: "The connection changed before this call ran." } };
+      expect(byId.get(3)).toMatchObject(cancelled);
+      expect(byId.get(4)).toMatchObject(cancelled);
+      expect(callSidecar).toHaveBeenCalledTimes(2);
+      expect(seen.every((s) => s.key === "conn-A")).toBe(true);
+    });
+
+    it("rejects queued calls as soon as notifyConnection runs", async () => {
+      const { ctx, send, callSidecar, setKey } = controlled();
+      [1, 2, 3].forEach(send);
+      await ctx.settle();
+      setKey("conn-B");
+      ctx.broker.notifyConnection({ displayName: "Other", kind: "online" });
+      await ctx.settle();
+      expect(ctx.received).toContainEqual({ id: 3, ok: false, error: { code: "Cancelled", message: "The connection changed before this call ran." } });
+      expect(callSidecar).toHaveBeenCalledTimes(2);
+    });
+
+    it("runs a call made after the change against the new key", async () => {
+      const { ctx, send, seen, releases, setKey } = controlled();
+      send(1);
+      await ctx.settle();
+      setKey("conn-B");
+      send(2);
+      await ctx.settle();
+      expect(seen).toEqual([{ n: 1, key: "conn-A" }, { n: 2, key: "conn-B" }]);
+      releases.splice(0).forEach((release) => release());
+    });
+  });
+
+  describe("inactive tab", () => {
+    const inactive = () => track(setup({ services: { isActive: vi.fn(() => false) } }));
+    const cancelled = { ok: false, error: { code: "Cancelled", message: "This tool is not in the active tab." } };
+
+    it("ignores shell.shortcut but still replies ok", async () => {
+      const ctx = inactive();
+      expect(await ctx.call(1, "shell.shortcut", { key: "w", code: "KeyW", ctrlKey: true, shiftKey: false })).toEqual({ id: 1, ok: true, result: undefined });
+      expect(ctx.services.dispatchShortcut).not.toHaveBeenCalled();
+    });
+
+    it("cancels shell.confirm", async () => {
+      const ctx = inactive();
+      expect(await ctx.call(1, "shell.confirm", { title: "T", message: "M" })).toMatchObject(cancelled);
+      expect(ctx.services.confirm).not.toHaveBeenCalled();
+    });
+
+    it("cancels shell.openFile", async () => {
+      const ctx = inactive();
+      expect(await ctx.call(1, "shell.openFile", { filters: [] })).toMatchObject(cancelled);
+      expect(ctx.services.openFile).not.toHaveBeenCalled();
+    });
+
+    it("cancels shell.saveFile", async () => {
+      const ctx = inactive();
+      expect(await ctx.call(1, "shell.saveFile", { suggestedName: "a", content: "c" })).toMatchObject(cancelled);
+      expect(ctx.services.saveFile).not.toHaveBeenCalled();
+    });
+
+    it("still runs those four when the tab is active", async () => {
+      const ctx = track(setup());
+      await ctx.call(1, "shell.shortcut", { key: "w", code: "KeyW", ctrlKey: true, shiftKey: false });
+      await ctx.call(2, "shell.confirm", { title: "T", message: "M" });
+      await ctx.call(3, "shell.openFile", { filters: [] });
+      await ctx.call(4, "shell.saveFile", { suggestedName: "a", content: "c" });
+      expect(ctx.services.dispatchShortcut).toHaveBeenCalled();
+      expect(ctx.services.confirm).toHaveBeenCalled();
+      expect(ctx.services.openFile).toHaveBeenCalled();
+      expect(ctx.services.saveFile).toHaveBeenCalled();
+    });
+
+    it("keeps serving non-interactive calls", async () => {
+      const ctx = inactive();
+      expect(await ctx.call(1, "shell.toast", { type: "info", message: "hi" })).toMatchObject({ ok: true });
+      expect(await ctx.call(2, "storage.get", { key: "k" })).toMatchObject({ ok: true });
+    });
   });
 });

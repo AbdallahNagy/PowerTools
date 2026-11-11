@@ -21,7 +21,7 @@ const connection: ConnectionInfo = {
   isUngrouped: false,
 };
 
-function services(overrides: { connection?: ConnectionInfo | null; bridge?: DesktopBridgeOverrides } = {}) {
+function services(overrides: { connection?: ConnectionInfo | null; bridge?: DesktopBridgeOverrides; active?: boolean } = {}) {
   installDesktopBridge(createFakeDesktopBridge(overrides.bridge));
   const openInBrowser = vi.fn().mockResolvedValue({ fallback: false });
   const showToast = vi.fn();
@@ -35,8 +35,9 @@ function services(overrides: { connection?: ConnectionInfo | null; bridge?: Desk
     setStatus,
     requestConfirm: vi.fn().mockResolvedValue(true),
     dispatchShortcut: vi.fn(),
+    isActive: () => overrides.active ?? true,
   });
-  return { built, openInBrowser, showToast, setStatus };
+  return { built, openInBrowser, showToast, setStatus, overrides };
 }
 
 function axiosFailure(response?: { status: number; data: unknown }) {
@@ -58,13 +59,27 @@ describe("community tool host services", () => {
 
   it("sends sidecar calls on the tab connection and stops auth replay on writes", async () => {
     const { built } = services();
-    await built.callSidecar("POST", "/api/community-tools/data/create", { a: 1 });
-    await built.callSidecar("POST", "/api/community-tools/data/fetch", { a: 1 });
-    await built.callSidecar("GET", "/api/community-tools/metadata/tables");
+    await built.callSidecar("POST", "/api/community-tools/data/create", { a: 1 }, "conn-1");
+    await built.callSidecar("POST", "/api/community-tools/data/fetch", { a: 1 }, "conn-1");
+    await built.callSidecar("GET", "/api/community-tools/metadata/tables", undefined, "conn-1");
     const calls = vi.mocked(api.request).mock.calls.map(([config]) => config);
     expect(calls[0]).toMatchObject({ method: "POST", meta: { connectionId: "conn-1", noAuthRetry: true } });
     expect(calls[1]?.meta).toEqual({ connectionId: "conn-1", noAuthRetry: false });
     expect(calls[2]?.meta).toEqual({ connectionId: "conn-1", noAuthRetry: false });
+  });
+
+  it("exposes the connection id as the key and reports whether the tab is active", () => {
+    expect(services().built.connectionKey()).toBe("conn-1");
+    expect(services({ connection: null }).built.connectionKey()).toBeNull();
+    expect(services().built.isActive()).toBe(true);
+    expect(services({ active: false }).built.isActive()).toBe(false);
+  });
+
+  it("uses the key it is given, not the live connection", async () => {
+    const { built, overrides } = services();
+    overrides.connection = { ...connection, id: "conn-2" };
+    await built.callSidecar("GET", "/api/community-tools/metadata/tables", undefined, "conn-1");
+    expect(vi.mocked(api.request).mock.calls[0]?.[0]?.meta).toMatchObject({ connectionId: "conn-1" });
   });
 
   it("never sends a path outside /api/community-tools/", async () => {
@@ -75,14 +90,14 @@ describe("community tool host services", () => {
       "http://evil.test/api/community-tools/a",
       "/api/community-tools/../secrets",
     ]) {
-      await expect(built.callSidecar("GET", path)).rejects.toMatchObject({ code: "Internal" });
+      await expect(built.callSidecar("GET", path, undefined, "conn-1")).rejects.toMatchObject({ code: "Internal" });
     }
     expect(api.request).not.toHaveBeenCalled();
   });
 
   it("refuses a sidecar call without a connection", async () => {
     const { built } = services({ connection: null });
-    await expect(built.callSidecar("GET", "/api/community-tools/metadata/tables")).rejects.toMatchObject({
+    await expect(built.callSidecar("GET", "/api/community-tools/metadata/tables", undefined, null)).rejects.toMatchObject({
       code: "NoConnection",
       message: "This tab is not connected to an environment.",
     });
@@ -92,7 +107,7 @@ describe("community tool host services", () => {
   it("maps a 429 body code to a Throttled error and unknown failures to Internal", async () => {
     const { built } = services();
     vi.mocked(api.request).mockRejectedValueOnce(axiosFailure({ status: 429, data: { code: "Throttled", message: "Slow down" } }));
-    await expect(built.callSidecar("POST", "/api/community-tools/data/fetch", {})).rejects.toEqual({
+    await expect(built.callSidecar("POST", "/api/community-tools/data/fetch", {}, "conn-1")).rejects.toEqual({
       code: "Throttled",
       message: "Slow down",
     });
@@ -100,20 +115,20 @@ describe("community tool host services", () => {
     vi.mocked(api.request).mockRejectedValueOnce(
       axiosFailure({ status: 400, data: { code: "DataverseFault", message: "Bad", dataverseCode: -2147220969 } }),
     );
-    await expect(built.callSidecar("POST", "/api/community-tools/data/fetch", {})).rejects.toEqual({
+    await expect(built.callSidecar("POST", "/api/community-tools/data/fetch", {}, "conn-1")).rejects.toEqual({
       code: "DataverseFault",
       message: "Bad",
       dataverseCode: -2147220969,
     });
 
     vi.mocked(api.request).mockRejectedValueOnce(axiosFailure());
-    await expect(built.callSidecar("GET", "/api/community-tools/metadata/tables")).rejects.toEqual({
+    await expect(built.callSidecar("GET", "/api/community-tools/metadata/tables", undefined, "conn-1")).rejects.toEqual({
       code: "Internal",
       message: "The host could not complete the request.",
     });
 
     vi.mocked(api.request).mockRejectedValueOnce(axiosFailure({ status: 500, data: { code: "Teapot", message: "x" } }));
-    await expect(built.callSidecar("GET", "/api/community-tools/metadata/tables")).rejects.toMatchObject({
+    await expect(built.callSidecar("GET", "/api/community-tools/metadata/tables", undefined, "conn-1")).rejects.toMatchObject({
       code: "Internal",
     });
   });

@@ -6,6 +6,7 @@ import { StatusBarProvider, useStatusItems } from "../../src/ui/shared/status";
 import { ShellShortcutDispatchContext } from "../../src/ui/shell/keyboard/useShellShortcuts";
 import { CommunityToolFrame } from "../../src/ui/shell/community-tools/CommunityToolFrame";
 import { FORWARDED_SHORTCUTS } from "../../src/ui/shell/community-tools/themeSnapshot";
+import { TabProviderContext, type TabContextValue } from "../../src/ui/shell/tabs/TabProviderContext";
 import { ToolRuntimeContext } from "../../src/ui/shell/tool-runtime/ToolRuntimeContext";
 import { renderWithProviders } from "../support/render";
 
@@ -38,13 +39,23 @@ function StatusProbe() {
   return <output aria-label="status items">{items.map((item) => String(item.content)).join("|")}</output>;
 }
 
-function renderFrame(dispatch: ((keys: { key: string; code?: string; ctrlKey: boolean; shiftKey: boolean }) => void) | null = null) {
+function renderFrame(
+  dispatch: ((keys: { key: string; code?: string; ctrlKey: boolean; shiftKey: boolean }) => void) | null = null,
+  activeTabId: string | null = null,
+) {
+  const frame = (
+    <ToolRuntimeContext.Provider value={{ toolId: tool.id, instanceId: "tab-1", connectionId: null }}>
+      <CommunityToolFrame tool={tool} />
+    </ToolRuntimeContext.Provider>
+  );
   return renderWithProviders(
     <StatusBarProvider>
       <ShellShortcutDispatchContext.Provider value={dispatch}>
-        <ToolRuntimeContext.Provider value={{ toolId: tool.id, instanceId: "tab-1", connectionId: null }}>
-          <CommunityToolFrame tool={tool} />
-        </ToolRuntimeContext.Provider>
+        {activeTabId === null ? (
+          frame
+        ) : (
+          <TabProviderContext.Provider value={{ activeTabId } as TabContextValue}>{frame}</TabProviderContext.Provider>
+        )}
         <StatusProbe />
       </ShellShortcutDispatchContext.Provider>
     </StatusBarProvider>,
@@ -191,6 +202,46 @@ describe("CommunityToolFrame", () => {
   it("forwards a shell shortcut from the frame to the shell dispatcher", async () => {
     const dispatch = vi.fn();
     renderFrame(dispatch);
+    const { port } = loadFrame();
+    const ready = nextMessage(port);
+    port.postMessage({ type: "hello", protocolVersion: 1 });
+    await ready;
+
+    const reply = nextMessage(port);
+    const keys = { key: "w", code: "KeyW", ctrlKey: true, shiftKey: false };
+    port.postMessage({ id: 4, method: "shell.shortcut", args: keys });
+    await reply;
+    expect(dispatch).toHaveBeenCalledWith(keys);
+    port.close();
+  });
+
+  it("ignores a shell shortcut while its tab is not the active tab, and answers confirm with Cancelled", async () => {
+    const dispatch = vi.fn();
+    renderFrame(dispatch, "tab-2");
+    const { port } = loadFrame();
+    const ready = nextMessage(port);
+    port.postMessage({ type: "hello", protocolVersion: 1 });
+    await ready;
+
+    let reply = nextMessage(port);
+    port.postMessage({ id: 4, method: "shell.shortcut", args: { key: "w", code: "KeyW", ctrlKey: true, shiftKey: false } });
+    expect(await reply).toEqual({ id: 4, ok: true });
+    expect(dispatch).not.toHaveBeenCalled();
+
+    reply = nextMessage(port);
+    port.postMessage({ id: 5, method: "shell.confirm", args: { title: "T", message: "Hidden" } });
+    expect(await reply).toEqual({
+      id: 5,
+      ok: false,
+      error: { code: "Cancelled", message: "This tool is not in the active tab." },
+    });
+    expect(screen.queryByText("Hidden")).not.toBeInTheDocument();
+    port.close();
+  });
+
+  it("forwards a shell shortcut when its own tab is the active tab", async () => {
+    const dispatch = vi.fn();
+    renderFrame(dispatch, "tab-1");
     const { port } = loadFrame();
     const ready = nextMessage(port);
     port.postMessage({ type: "hello", protocolVersion: 1 });

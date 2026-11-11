@@ -58,6 +58,8 @@ export function createHostServices(input: {
   setStatus(text: string | null): void;
   requestConfirm(options: { title: string; message: string; confirmLabel: string }): Promise<boolean>;
   dispatchShortcut(keys: { key: string; code?: string; ctrlKey: boolean; shiftKey: boolean }): void;
+  /** True when this tool's tab is the active tab. */
+  isActive(): boolean;
 }): BrokerServices {
   const { toolId, getConnection, openInBrowser, toast } = input;
 
@@ -77,10 +79,15 @@ export function createHostServices(input: {
       return connection ? { displayName: connection.displayName, kind: connection.crmType } : null;
     },
 
-    async callSidecar(method, path, body) {
+    connectionKey() {
+      return getConnection()?.id ?? null;
+    },
+
+    isActive: input.isActive,
+
+    async callSidecar(method, path, body, connectionKey) {
       if (!path.startsWith(API_PREFIX) || path.split("/").includes("..")) throw { ...INTERNAL };
-      const connection = getConnection();
-      if (!connection) {
+      if (connectionKey === null) {
         throw { code: "NoConnection", message: "This tab is not connected to an environment." } satisfies ToolError;
       }
       try {
@@ -88,7 +95,7 @@ export function createHostServices(input: {
           method,
           url: path,
           data: body,
-          meta: { connectionId: connection.id, noAuthRetry: !isReplayable(method, path) },
+          meta: { connectionId: connectionKey, noAuthRetry: !isReplayable(method, path) },
         });
         return response.data as unknown;
       } catch (error) {

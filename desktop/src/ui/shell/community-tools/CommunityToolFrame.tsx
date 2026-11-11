@@ -11,6 +11,8 @@ import { useConnection, useOpenInBrowser, useTabConnection } from "../../shared/
 import { useToolStatus } from "../../shared/status";
 import { Button, EmptyState, Modal, ToastProvider, useToast } from "../../shared/ui";
 import { ShellShortcutDispatchContext } from "../keyboard/useShellShortcuts";
+import { TabProviderContext } from "../tabs/TabProviderContext";
+import { useToolRuntime } from "../tool-runtime/useToolRuntime";
 import { createBroker } from "./broker";
 import { createHostServices } from "./hostServices";
 import { FORWARDED_SHORTCUTS, readThemeSnapshot } from "./themeSnapshot";
@@ -66,6 +68,10 @@ function ManifestFrame({
   const toast = useToast();
   const openInBrowser = useOpenInBrowser();
   const shellDispatch = useContext(ShellShortcutDispatchContext);
+  const { instanceId } = useToolRuntime();
+  // Outside a tab provider there is no other tab to be hidden behind.
+  const tabs = useContext(TabProviderContext);
+  const isActiveTab = tabs === undefined || tabs.activeTabId === instanceId;
 
   const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
@@ -80,8 +86,8 @@ function ManifestFrame({
   const pendingConfirmRef = useRef<PendingConfirm | null>(null);
 
   // The services outlive renders, so they read the latest values through refs.
-  const live = useRef({ connection, toast, openInBrowser, shellDispatch });
-  live.current = { connection, toast, openInBrowser, shellDispatch };
+  const live = useRef({ connection, toast, openInBrowser, shellDispatch, isActiveTab });
+  live.current = { connection, toast, openInBrowser, shellDispatch, isActiveTab };
 
   useToolStatus(status === null || status === "" ? null : status);
 
@@ -113,6 +119,7 @@ function ManifestFrame({
         setStatus,
         requestConfirm,
         dispatchShortcut: (keys) => live.current.shellDispatch?.(keys),
+        isActive: () => live.current.isActiveTab,
       }),
     [manifest.id, manifest.name, requestConfirm],
   );
