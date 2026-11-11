@@ -38,6 +38,7 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
   const [actionError, setActionError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
   const [reviewId, setReviewId] = useState<string | null>(null);
+  const [granting, setGranting] = useState(false);
   const reviewTool = reviewId === null ? null : (tools.find((tool) => tool.id === reviewId) ?? null);
   const error = actionError ?? loadError;
 
@@ -136,13 +137,20 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
       <Modal
         open={open && reviewTool?.manifest != null}
         title="Review permissions"
-        onClose={() => setReviewId(null)}
+        onClose={() => {
+          if (!granting) setReviewId(null);
+        }}
+        busy={granting}
+        busyLabel="Saving your choice…"
         widthClass="max-w-md"
         zClass="z-[60]"
       >
         {reviewTool?.manifest ? (
           <>
-            <p className="min-w-0 truncate text-sm font-medium text-fg-strong">{reviewTool.manifest.name}</p>
+            <div className="flex flex-col gap-0.5">
+              <p className="break-all text-sm font-medium text-fg-strong">{reviewTool.manifest.name}</p>
+              <p className="break-all text-xs text-fg-muted">{reviewTool.manifest.publisher.name}</p>
+            </div>
             <Alert tone="warn">This tool was loaded from a folder on this computer and has not been reviewed.</Alert>
             <ReviewSection title="Permissions" empty="No permissions">
               {reviewTool.manifest.permissions.map((permission) => PERMISSION_WORDS[permission] ?? permission)}
@@ -154,17 +162,18 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
               {reviewTool.manifest.network}
             </ReviewSection>
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setReviewId(null)}>
+              <Button variant="secondary" disabled={granting} onClick={() => setReviewId(null)}>
                 Cancel
               </Button>
               <Button
-                disabled={working}
-                onClick={() =>
+                disabled={working || granting}
+                onClick={() => {
+                  setGranting(true);
                   void run(async () => {
                     await desktopBridge.grantCommunityToolConsent(reviewTool.id);
                     setReviewId(null);
-                  })
-                }
+                  }).finally(() => setGranting(false));
+                }}
               >
                 Allow
               </Button>
@@ -195,7 +204,7 @@ function ReviewSection({
       ) : (
         <ul className="flex flex-col gap-0.5 text-sm text-fg">
           {children.map((item, index) => (
-            <li key={`${item}-${index}`} className={`min-w-0 truncate ${mono ? "font-mono text-xs" : ""}`}>
+            <li key={`${item}-${index}`} className={`min-w-0 whitespace-normal break-all ${mono ? "font-mono text-xs" : ""}`}>
               {item}
             </li>
           ))}

@@ -128,6 +128,50 @@ describe("community tools dialog", () => {
     }
   });
 
+  it("shows a 200-character host, message, tool name, and publisher in full in the review modal", async () => {
+    const host = `${"a".repeat(60)}.${"b".repeat(60)}.${"c".repeat(70)}.example.com`;
+    const message = "Message_" + "M".repeat(150);
+    const name = "Tool " + "N".repeat(150);
+    const publisher = "Publisher " + "P".repeat(150);
+    const tool = communityTool("acme.long", { consentGranted: false }, name);
+    tool.manifest!.network = [host];
+    tool.manifest!.messages = [message];
+    tool.manifest!.publisher = { name: publisher };
+    expect(host.length).toBeGreaterThanOrEqual(200);
+    renderManager([tool]);
+
+    fireEvent.click(await screen.findByText("Review permissions"));
+    const review = await screen.findByRole("dialog", { name: "Review permissions" });
+
+    for (const text of [host, message, name, publisher]) {
+      const element = within(review).getByText(text);
+      expect(element.textContent).toBe(text);
+      expect(element.className).not.toContain("truncate");
+      expect(element.className).toContain("break-all");
+    }
+  });
+
+  it("keeps the review modal open and Cancel disabled while the grant is in flight", async () => {
+    let finish: () => void = () => undefined;
+    const grant = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    renderManager([unreviewed], { bridgeOverrides: { grantCommunityToolConsent: grant } });
+
+    fireEvent.click(await screen.findByText("Review permissions"));
+    const review = await screen.findByRole("dialog", { name: "Review permissions" });
+    fireEvent.click(within(review).getByRole("button", { name: "Allow" }));
+    await waitFor(() => expect(grant).toHaveBeenCalledTimes(1));
+
+    expect(within(review).getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(within(review).getByRole("button", { name: "Allow" })).toBeDisabled();
+    fireEvent.click(within(review).getByRole("button", { name: "Cancel" }));
+    fireEvent.keyDown(review, { key: "Escape" });
+    fireEvent.click(within(review).getByRole("button", { name: "Close" }));
+    expect(screen.getByRole("dialog", { name: "Review permissions" })).toBeInTheDocument();
+
+    finish();
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Review permissions" })).not.toBeInTheDocument());
+  });
+
   it("Remove calls removeCommunityTool and the row disappears", async () => {
     const { calls } = renderManager([communityTool("acme.demo")]);
 
