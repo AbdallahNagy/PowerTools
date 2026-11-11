@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "skipLibCheck": true,
+    "noEmit": true,
+    "strict": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": { "*": ["./node_modules/@types/*", "./node_modules/*"] }
+  },
+  "include": ["src", "tests", "*.ts", "../../desktop/src/ui/shared/ui/index.ts"]
+}

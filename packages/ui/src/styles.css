@@ -1,0 +1,65 @@
+/*
+ * @powertools/ui stylesheet. Built into dist/styles.css: Tailwind 4 output with the
+ * theme tokens (dark default, light under [data-theme="light"]), the utilities the
+ * kit's components use, the IBM Plex fonts, and the base element styles.
+ * Base styles mirror the relevant parts of desktop/src/ui/index.css; the app-shell
+ * rules (drag regions, tab strip, root overflow) are left out on purpose.
+ */
+@import "tailwindcss" source("../../../desktop/src/ui/shared/ui");
+@import "../../../desktop/src/ui/styles/theme.css";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans/700.css";
+@import "@fontsource/ibm-plex-mono/400.css";
+@import "@fontsource/ibm-plex-mono/500.css";
+
+@layer base {
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: var(--text-sm--line-height);
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  :is(a, button, summary, [role="button"], [role="tab"], [role="menuitem"], [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--color-focus) !important;
+    outline-offset: 1px;
+  }
+
+  ::selection {
+    background-color: var(--color-accent-soft);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-line-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-fg-muted);
+}
