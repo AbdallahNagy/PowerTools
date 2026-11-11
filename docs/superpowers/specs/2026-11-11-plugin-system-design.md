@@ -69,7 +69,7 @@ Before listing (project 4):
 Once installed (project 1 enforces, project 4 adds the consent screens):
 
 - Declared permissions, enforced by the host. An update that asks for more needs fresh consent.
-- No outside network unless the manifest names the host.
+- No outside network unless the manifest names the host. The rule is the `connect-src` Content Security Policy directive, and it has two known gaps. It does not cover WebRTC: on Electron 39 a tool can reach STUN and TURN servers (including over TCP) even with `network: []`, so the network rule does not cover WebRTC (see "WebRTC check" under "Spike result"). It also does not cover resource hints: `<link rel="dns-prefetch">` can leak host names through DNS. The second gap has no code change.
 - The registry can revoke a version; the app disables it.
 
 Two tiers: Community (automated checks only) and Verified (a maintainer read the code).
@@ -227,3 +227,18 @@ Run on 2026-11-11 with Electron 39.1.1 on Windows 11. The spike was a throwaway 
 - **`'self'` in the CSP header:** with `Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'` sent as a response header and the frame sandboxed without `allow-same-origin`, `'self'` matches the frame's own `pt-tool://spike.tool` origin: a classic script and an ES module (with its import) from that origin ran. The same policy blocked an inline script (`script-src-elem` violation) and a `fetch` (`connect-src` from `default-src 'none'`), and `script-src 'none'` blocked every script, so the header is enforced. Listing the origin explicitly (`script-src pt-tool://spike.tool`) also works.
 
 Decision: iframe. The sandboxed frame runs in its own renderer process, the host stays responsive while it loops, ES modules load from its origin, the MessagePort arrives, and the response-header CSP with `'self'` is enforced.
+
+### WebRTC check
+
+Run on 2026-11-11 with Electron 39.1.1 (Chromium 142) on Windows 11. A throwaway Electron app (deleted afterwards, not committed) served a `pt-tool://` page into `<iframe sandbox="allow-scripts">` from a `file://` host window, under a copy of the real `toolPolicy({ network: [] })` (`connect-src 'none'`). The page created an `RTCPeerConnection` with three `iceServers` (`stun:` and `turn:` on a UDP listener on 127.0.0.1, and `turn:...?transport=tcp` on a TCP listener on 127.0.0.1), a data channel, and an offer. The main process counted datagrams and connections that reached the listeners over 9 seconds. The run exits by itself, with a hard 40-second timeout.
+
+| Variant | UDP packets | TCP connections |
+| --- | --- | --- |
+| Baseline (policy as shipped) | 12 | 1 |
+| Policy plus `webrtc 'block'` (also `webrtc-block`) | 12 | 1 |
+| `webContents.setWebRTCIPHandlingPolicy("disable_non_proxied_udp")` | 0 | 1 |
+| `setWebRTCIPHandlingPolicy("default_public_interface_only")` | 12 | 1 |
+| Chromium switches `force-webrtc-ip-handling-policy=disable_non_proxied_udp`, `disable-blink-features=RTCPeerConnection`, `disable-blink-features=WebRTC` | 12 | 1 |
+| Session frame preload that deletes `RTCPeerConnection` | 12 | 1 (the preload did not run in the sandboxed frame) |
+
+Observed: before any mitigation the sandboxed frame reaches both a STUN/TURN server over UDP and a TURN server over TCP, so `connect-src` does not apply to WebRTC. Chromium 142 ignores the `webrtc` CSP directive. Only `disable_non_proxied_udp` removed any traffic: it stops UDP, but the TURN-over-TCP connection still arrives, and a TURN server can relay a data channel, so it does not close the channel. Electron 39 has no switch that turns WebRTC off (the only WebRTC switch in the binary is `disable-webrtc-encryption`). Nothing tried stops WebRTC, so nothing was shipped, and WebRTC remains a documented limitation. A future fix has to come from a newer Chromium (the `webrtc` CSP directive), or from routing the app's traffic through a proxy that drops it. `disable_non_proxied_udp` is a cheap hardening that removes the UDP channel but not the TCP one; it was not added because it would suggest the gap is closed.

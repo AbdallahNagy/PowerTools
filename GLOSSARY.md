@@ -9,8 +9,8 @@ A tool that ships inside Power Tools and is maintained in this repository.
 _Avoid_: Core tool, native tool
 
 **Community tool**:
-A tool built outside this repository that runs in a sandboxed frame and reaches Dataverse only through the SDK. It is never called a plugin: in Dataverse, that word means server-side code.
-_Avoid_: Extension, add-in
+A tool built outside this repository that runs in a sandboxed frame and reaches Dataverse only through the SDK.
+_Avoid_: Plugin, extension, add-in
 
 **Tool manifest**:
 The `powertools-tool.json` file at the root of a **Community tool** package. It names the tool and declares its **Tool permissions**, the Dataverse messages it may execute, and the network hosts it may call.
