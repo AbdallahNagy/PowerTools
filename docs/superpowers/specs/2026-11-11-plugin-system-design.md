@@ -213,3 +213,17 @@ Attribute Explorer rebuilt as a plugin in this repo, next to the built-in one, w
 - Where remembered plugin folders, consent, and plugin storage live under user data.
 - The message-to-permission table's initial contents.
 
+
+## Spike result
+
+Run on 2026-11-11 with Electron 39.1.1 on Windows 11. The spike was a throwaway Electron app driven entirely from the main process: it loaded a host page with a counter that increments every 100 ms, started `while (true) {}` inside the framed page, sampled the host counter from the main process before and during the loop, and read process ids from `webContents.mainFrame.framesInSubtree` and `app.getAppMetrics()`. The window used `sandbox: true`, `contextIsolation: true`, `nodeIntegration: false`, and `backgroundThrottling: false` (without the last one, an unfocused window throttles the host timer and the counter cannot be measured).
+
+- **Scheme privileges:** `protocol.registerSchemesAsPrivileged([{ scheme: "pt-tool", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }])`, files served with `protocol.handle("pt-tool", ...)` returning a `Response`.
+- **Iframe attributes that work:** `<iframe sandbox="allow-scripts" src="pt-tool://spike.tool/index.html">`. The frame's origin is opaque (`self.origin` is `"null"`). `sandbox="allow-scripts allow-same-origin"` and no `sandbox` attribute also worked (origin `pt-tool://spike.tool`), but `allow-scripts` alone is the one to use.
+- **Response headers required:** only `Content-Type` (`text/html`, `text/javascript`). ES modules, including a nested `import`, loaded from the opaque origin with and without `Access-Control-Allow-Origin: *`. A `fetch` of the tool's own file from the opaque origin also succeeded without that header, so Electron does not enforce CORS on `protocol.handle` responses here; isolation between tools must come from the Content Security Policy (`connect-src`), not from CORS.
+- **Own process:** yes. In every variant (both sandbox settings, no sandbox, host loaded from `file://` and from `http://127.0.0.1`) the frame had a different `osProcessId` from the host, and `app.getAppMetrics()` listed two `Tab` processes.
+- **Host responsive during the loop:** yes. The host counter advanced 30 times in 3 seconds while the frame was stuck in `while (true) {}` (and `executeJavaScript` on the frame timed out, which confirms the loop was running). Same result in every variant.
+- **MessagePort transfer:** works. `iframe.contentWindow.postMessage({ type: "port" }, "*", [port])` delivered the port to the sandboxed frame, and a reply on that port reached the host.
+- **`'self'` in the CSP header:** with `Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'` sent as a response header and the frame sandboxed without `allow-same-origin`, `'self'` matches the frame's own `pt-tool://spike.tool` origin: a classic script and an ES module (with its import) from that origin ran. The same policy blocked an inline script (`script-src-elem` violation) and a `fetch` (`connect-src` from `default-src 'none'`), and `script-src 'none'` blocked every script, so the header is enforced. Listing the origin explicitly (`script-src pt-tool://spike.tool`) also works.
+
+Decision: iframe. The sandboxed frame runs in its own renderer process, the host stays responsive while it loops, ES modules load from its origin, the MessagePort arrives, and the response-header CSP with `'self'` is enforced.
