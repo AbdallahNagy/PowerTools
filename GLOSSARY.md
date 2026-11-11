@@ -9,8 +9,24 @@ A tool that ships inside Power Tools and is maintained in this repository.
 _Avoid_: Core tool, native tool
 
 **Community tool**:
-A tool written by a third party and installed by the user, which runs sandboxed and reaches Dataverse and the desktop only through the **Host API**.
-_Avoid_: Plugin, extension, add-in (in Dataverse, "plugin" means server-side plugin code)
+A tool built outside this repository that runs in a sandboxed frame and reaches Dataverse only through the SDK. It is never called a plugin: in Dataverse, that word means server-side code.
+_Avoid_: Extension, add-in
+
+**Tool manifest**:
+The `powertools-tool.json` file at the root of a **Community tool** package. It names the tool and declares its **Tool permissions**, the Dataverse messages it may execute, and the network hosts it may call.
+_Avoid_: Config, package file
+
+**Tool permission**:
+One entry of a fixed list in a **Tool manifest** (for example `data:read` or `metadata:write`) that allows a **Community tool** a class of operations. The **Broker** enforces it, and the user consents to the full set.
+_Avoid_: Scope, role, capability
+
+**Broker**:
+The shell module that sits between a **Community tool**'s frame and the app. It checks every request against the tool's **Tool permissions**, runs it, and replies; it is the only place permissions are enforced.
+_Avoid_: Proxy, gateway, bridge
+
+**Reference tool**:
+Attribute Explorer rebuilt as a **Community tool** in `packages/reference-tool`. It is the runtime's test fixture and the example for tool authors.
+_Avoid_: Sample tool, demo tool
 
 **Host API**:
 The interface Power Tools offers a **Community tool** for everything outside its sandbox.

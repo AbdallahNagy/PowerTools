@@ -9,7 +9,7 @@ import {
 import type { LoadedCommunityTool } from "../../platform/desktopBridge";
 import { useConnection, useOpenInBrowser, useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
-import { Button, EmptyState, Modal, useToast } from "../../shared/ui";
+import { Button, EmptyState, Modal, ToastProvider, useToast } from "../../shared/ui";
 import { ShellShortcutDispatchContext } from "../keyboard/useShellShortcuts";
 import { createBroker } from "./broker";
 import { createHostServices } from "./hostServices";
@@ -48,7 +48,12 @@ export function CommunityToolFrame({ tool }: { tool: LoadedCommunityTool }) {
   if (!manifest) {
     return <EmptyState title="This tool did not start" description="Its manifest could not be read." />;
   }
-  return <ManifestFrame manifest={manifest} />;
+  // Built-in tools each bring their own toast provider; the shell supplies none, so the frame does.
+  return (
+    <ToastProvider>
+      <ManifestFrame manifest={manifest} />
+    </ToastProvider>
+  );
 }
 
 function ManifestFrame({

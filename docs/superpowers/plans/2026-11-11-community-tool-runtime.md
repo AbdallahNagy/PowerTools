@@ -331,7 +331,7 @@ export interface BrokerServices {
   setStatus(text: string | null): void;
   confirm(title: string, message: string): Promise<boolean>;
   openRecord(table: string, id: string): void;
-  openSolution(uniqueName: string): void;
+  openSolution(solutionId: string): void;
   openFile(filters: Array<{ name: string; extensions: string[] }>): Promise<{ name: string; content: string } | null>;
   saveFile(suggestedName: string, content: string): Promise<boolean>;
   copyText(text: string): Promise<void>;

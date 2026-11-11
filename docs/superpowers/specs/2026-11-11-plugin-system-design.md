@@ -151,7 +151,7 @@ A small typed package that wraps the message port. No dependencies on Electron o
 - `connection.get()` returns `{ displayName, kind }`. No id, URL token, or secret. `connection.onChange(cb)`.
 - `data.retrieve`, `data.retrieveMultiple`, `data.fetchXml` (paged, returns a continuation value), `data.create`, `data.update`, `data.delete`, `data.associate`, `data.disassociate`, `data.execute(message, parameters)`, `data.batch(operations)`.
 - `metadata.tables()`, `metadata.table(name)`, `metadata.columns(name)`, `metadata.relationships(name)`, `metadata.choices(...)`.
-- `shell.toast`, `shell.setStatus` (the plugin equivalent of `useToolStatus`), `shell.confirm`, `shell.openRecord` and `shell.openSolution` (routed through `useOpenInBrowser`), `shell.openFile` and `shell.saveFile` (content passes through the host; the plugin never sees a path), `shell.copyText`.
+- `shell.toast`, `shell.setStatus` (the plugin equivalent of `useToolStatus`), `shell.confirm`, `shell.openRecord` and `shell.openSolution` (takes a solution id; both routed through `useOpenInBrowser`), `shell.openFile` and `shell.saveFile` (content passes through the host; the plugin never sees a path), `shell.copyText`.
 - `storage.get/set/remove`: per-plugin key-value settings, capped at 1 MB, stored under the app's user data folder. (cap is my call)
 - `theme.current()` and `theme.onChange(cb)`.
 

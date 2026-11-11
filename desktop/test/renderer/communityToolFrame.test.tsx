@@ -3,7 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LoadedCommunityTool } from "../../src/ui/platform/desktopBridge";
 import { StatusBarProvider, useStatusItems } from "../../src/ui/shared/status";
-import { ToastProvider } from "../../src/ui/shared/ui";
 import { ShellShortcutDispatchContext } from "../../src/ui/shell/keyboard/useShellShortcuts";
 import { CommunityToolFrame } from "../../src/ui/shell/community-tools/CommunityToolFrame";
 import { FORWARDED_SHORTCUTS } from "../../src/ui/shell/community-tools/themeSnapshot";
@@ -41,16 +40,14 @@ function StatusProbe() {
 
 function renderFrame(dispatch: ((keys: { key: string; code?: string; ctrlKey: boolean; shiftKey: boolean }) => void) | null = null) {
   return renderWithProviders(
-    <ToastProvider>
-      <StatusBarProvider>
-        <ShellShortcutDispatchContext.Provider value={dispatch}>
-          <ToolRuntimeContext.Provider value={{ toolId: tool.id, instanceId: "tab-1", connectionId: null }}>
-            <CommunityToolFrame tool={tool} />
-          </ToolRuntimeContext.Provider>
-          <StatusProbe />
-        </ShellShortcutDispatchContext.Provider>
-      </StatusBarProvider>
-    </ToastProvider>,
+    <StatusBarProvider>
+      <ShellShortcutDispatchContext.Provider value={dispatch}>
+        <ToolRuntimeContext.Provider value={{ toolId: tool.id, instanceId: "tab-1", connectionId: null }}>
+          <CommunityToolFrame tool={tool} />
+        </ToolRuntimeContext.Provider>
+        <StatusProbe />
+      </ShellShortcutDispatchContext.Provider>
+    </StatusBarProvider>,
   );
 }
 
