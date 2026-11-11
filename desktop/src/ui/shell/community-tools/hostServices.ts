@@ -14,7 +14,6 @@ import type { BrokerServices } from "./broker";
 
 const API_PREFIX = "/api/community-tools/";
 const MAX_STATUS_LENGTH = 200;
-const GUID = /^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i;
 
 const INTERNAL: ToolError = { code: "Internal", message: "The host could not complete the request." };
 const KNOWN_CODES: ReadonlySet<string> = new Set<ErrorCode>([
@@ -115,15 +114,10 @@ export function createHostServices(input: {
       void openInBrowser(buildDynamicsRecordUrl({ envUrl: connection.envUrl, entityLogicalName: table, recordId: id }));
     },
 
-    openSolution(uniqueName) {
+    openSolution(solutionId) {
       const connection = getConnection();
       if (!connection) return;
-      // The solution editor addresses a solution by id, not by unique name.
-      if (!GUID.test(uniqueName)) {
-        toast.showToast(`"${input.toolName}" asked to open a solution that cannot be located by name.`, "error");
-        return;
-      }
-      void openInBrowser(solutionEditorUrl(connection.envUrl, uniqueName.replace(/[{}]/g, "")));
+      void openInBrowser(solutionEditorUrl(connection.envUrl, solutionId));
     },
 
     async openFile(filters) {

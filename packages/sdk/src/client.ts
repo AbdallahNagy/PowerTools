@@ -64,7 +64,7 @@ export interface PowerToolsClient {
     setStatus(text: string | null): Promise<void>;
     confirm(title: string, message: string): Promise<boolean>;
     openRecord(table: string, id: string): Promise<void>;
-    openSolution(uniqueName: string): Promise<void>;
+    openSolution(solutionId: string): Promise<void>;
     openFile(filters?: FileFilter[]): Promise<OpenedFile | null>;
     saveFile(suggestedName: string, content: string): Promise<boolean>;
     copyText(text: string): Promise<void>;
@@ -176,7 +176,7 @@ export function createClient(port: MessagePort, ready: ReadyMessage): PowerTools
       setStatus: (text) => call("shell.setStatus", { text }),
       confirm: (title, message) => call("shell.confirm", { title, message }),
       openRecord: (table, id) => call("shell.openRecord", { table, id }),
-      openSolution: (uniqueName) => call("shell.openSolution", { uniqueName }),
+      openSolution: (solutionId) => call("shell.openSolution", { solutionId }),
       openFile: (filters = []) => call("shell.openFile", { filters }),
       saveFile: (suggestedName, content) => call("shell.saveFile", { suggestedName, content }),
       copyText: (text) => call("shell.copyText", { text }),

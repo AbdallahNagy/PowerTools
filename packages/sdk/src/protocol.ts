@@ -83,7 +83,7 @@ export interface MethodArgs {
   "shell.setStatus": { text: string | null };
   "shell.confirm": { title: string; message: string };
   "shell.openRecord": { table: string; id: string };
-  "shell.openSolution": { uniqueName: string };
+  "shell.openSolution": { solutionId: string };
   "shell.openFile": { filters: FileFilter[] };
   "shell.saveFile": { suggestedName: string; content: string };
   "shell.copyText": { text: string };

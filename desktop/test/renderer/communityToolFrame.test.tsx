@@ -207,6 +207,33 @@ describe("CommunityToolFrame", () => {
     port.close();
   });
 
+  it("hands over the port only on the first load; a second load disposes the tool and shows the error state", async () => {
+    renderFrame();
+    const { port, postMessage } = loadFrame();
+    const ready = nextMessage(port);
+    port.postMessage({ type: "hello", protocolVersion: 1 });
+    await ready;
+
+    const iframe = screen.getByTitle("Demo tool");
+    fireEvent.load(iframe);
+    expect(postMessage).toHaveBeenCalledTimes(1);
+    expect(await screen.findByText("This tool did not start")).toBeInTheDocument();
+
+    // The broker is gone: a request on the old port gets no reply.
+    const replies: unknown[] = [];
+    port.onmessage = (event) => replies.push(event.data);
+    port.postMessage({ id: 9, method: "shell.setStatus", args: { text: "late" } });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(replies).toEqual([]);
+    expect(screen.getByRole("status", { name: "status items" }).textContent).toBe("");
+
+    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+    const fresh = loadFrame();
+    expect(fresh.postMessage).toHaveBeenCalledTimes(1);
+    fresh.port.close();
+    port.close();
+  });
+
   it("closes the port on unmount", async () => {
     const { unmount } = renderFrame();
     const { port } = loadFrame();

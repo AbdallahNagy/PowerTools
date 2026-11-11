@@ -19,7 +19,7 @@ export interface BrokerServices {
   setStatus(text: string | null): void;
   confirm(title: string, message: string): Promise<boolean>;
   openRecord(table: string, id: string): void;
-  openSolution(uniqueName: string): void;
+  openSolution(solutionId: string): void;
   openFile(filters: Array<{ name: string; extensions: string[] }>): Promise<{ name: string; content: string } | null>;
   saveFile(suggestedName: string, content: string): Promise<boolean>;
   copyText(text: string): Promise<void>;
@@ -65,6 +65,8 @@ function isRecord(value: unknown): value is Args {
 }
 
 const isText = (value: unknown): value is string => typeof value === "string" && value !== "";
+const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isGuid = (value: unknown): value is string => typeof value === "string" && GUID_PATTERN.test(value);
 const isString = (value: unknown): value is string => typeof value === "string";
 const isStringArray = (value: unknown): value is string[] => Array.isArray(value) && value.every(isString);
 const isOptional = (value: unknown, check: (v: unknown) => boolean) => value === undefined || check(value);
@@ -112,7 +114,7 @@ const ARGS_CHECK: Record<MethodName, (a: Args) => boolean> = {
   "shell.setStatus": (a) => a.text === null || isString(a.text),
   "shell.confirm": (a) => isString(a.title) && isString(a.message),
   "shell.openRecord": (a) => isText(a.table) && isText(a.id),
-  "shell.openSolution": (a) => isText(a.uniqueName),
+  "shell.openSolution": (a) => isGuid(a.solutionId),
   "shell.openFile": (a) => isFileFilterList(a.filters),
   "shell.saveFile": (a) => isString(a.suggestedName) && isString(a.content),
   "shell.copyText": (a) => isString(a.text),
@@ -177,7 +179,7 @@ async function runLocal(services: BrokerServices, method: MethodName, a: Args): 
     case "shell.setStatus": services.setStatus(a.text as string | null); return undefined;
     case "shell.confirm": return (await services.confirm(a.title as string, a.message as string)) === true;
     case "shell.openRecord": services.openRecord(a.table as string, a.id as string); return undefined;
-    case "shell.openSolution": services.openSolution(a.uniqueName as string); return undefined;
+    case "shell.openSolution": services.openSolution(a.solutionId as string); return undefined;
     case "shell.openFile": return services.openFile(a.filters as Array<{ name: string; extensions: string[] }>);
     case "shell.saveFile": return (await services.saveFile(a.suggestedName as string, a.content as string)) === true;
     case "shell.copyText": await services.copyText(a.text as string); return undefined;

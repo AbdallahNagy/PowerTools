@@ -136,9 +136,7 @@ describe("community tool host services", () => {
     expect(openInBrowser).toHaveBeenLastCalledWith(
       "https://contoso.crm.dynamics.com/tools/solution/edit.aspx?id=22222222-2222-2222-2222-222222222222",
     );
-    built.openSolution("MySolution");
-    expect(openInBrowser).toHaveBeenCalledTimes(2);
-    expect(showToast).toHaveBeenCalledWith(expect.any(String), "error");
+    expect(showToast).not.toHaveBeenCalled();
   });
 
   it("maps file bridge results and refusals", async () => {

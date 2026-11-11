@@ -237,4 +237,18 @@ describe("community tool broker", () => {
     expect(await ctx.call(6, "shell.shortcut", { key: "k", code: "KeyK", ctrlKey: true, shiftKey: false })).toMatchObject({ ok: true });
     expect(ctx.services.dispatchShortcut).toHaveBeenCalledWith({ key: "k", code: "KeyK", ctrlKey: true, shiftKey: false });
   });
+
+  it("accepts only a braceless GUID for shell.openSolution", async () => {
+    const ctx = track(setup());
+    const id = "22222222-2222-2222-2222-222222222222";
+    expect(await ctx.call(1, "shell.openSolution", { solutionId: id })).toEqual({ id: 1, ok: true, result: undefined });
+    expect(ctx.services.openSolution).toHaveBeenCalledWith(id);
+    for (const [n, bad] of [`{${id}}`, "MySolution", "", 5, undefined].entries()) {
+      expect(await ctx.call(10 + n, "shell.openSolution", { solutionId: bad })).toMatchObject({
+        ok: false,
+        error: { code: "InvalidRequest" },
+      });
+    }
+    expect(ctx.services.openSolution).toHaveBeenCalledTimes(1);
+  });
 });

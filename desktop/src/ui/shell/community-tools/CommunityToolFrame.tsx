@@ -71,6 +71,7 @@ function ManifestFrame({
   const brokerRef = useRef<Broker | null>(null);
   const sessionCleanupRef = useRef<(() => void) | null>(null);
   const startedAtRef = useRef(0);
+  const loadedRef = useRef(false);
   const pendingConfirmRef = useRef<PendingConfirm | null>(null);
 
   // The services outlive renders, so they read the latest values through refs.
@@ -114,6 +115,7 @@ function ManifestFrame({
   // Starts the handshake clock and the timeout whenever a fresh frame is mounted.
   useEffect(() => {
     startedAtRef.current = performance.now();
+    loadedRef.current = false;
     const timer = setTimeout(() => {
       if (!brokerRef.current) fail();
     }, HANDSHAKE_TIMEOUT_MS);
@@ -132,7 +134,15 @@ function ManifestFrame({
   const onFrameLoad = () => {
     const target = iframeRef.current?.contentWindow;
     if (!target) return;
-    sessionCleanupRef.current?.();
+    // Only the first load of a mounted frame gets a port. A later load means the frame navigated
+    // or reloaded itself, so whatever page is there now must not receive the tool's permissions.
+    if (loadedRef.current) {
+      sessionCleanupRef.current?.();
+      setStatus(null);
+      setFailed(true);
+      return;
+    }
+    loadedRef.current = true;
 
     const channel = new MessageChannel();
     const port = channel.port1;
