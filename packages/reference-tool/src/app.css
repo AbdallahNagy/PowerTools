@@ -1,0 +1,9 @@
+/*
+ * The kit's stylesheet (imported in main.tsx) carries the theme tokens, fonts, base styles
+ * and the utilities the kit's own components use. This file adds the utilities this tool's
+ * layout needs, built from the same tokens. Preflight is left out: the kit already has it.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "@powertools/ui/theme.css";
+@import "tailwindcss/utilities.css" layer(utilities) source("./");

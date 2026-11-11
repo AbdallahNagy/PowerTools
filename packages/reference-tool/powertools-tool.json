@@ -1,0 +1,14 @@
+{
+  "manifestVersion": 1,
+  "id": "powertools.attribute-explorer-reference",
+  "name": "Attribute Explorer (reference)",
+  "description": "Browse the tables and columns of the connected environment. The reference community tool.",
+  "version": "0.1.0",
+  "publisher": { "name": "Power Tools" },
+  "icon": "icon.svg",
+  "entry": "index.html",
+  "minHostVersion": "1.3.0",
+  "permissions": ["metadata:read"],
+  "messages": [],
+  "network": []
+}
