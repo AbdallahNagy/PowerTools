@@ -22,6 +22,9 @@ public sealed partial class CommunityToolService(ICommunityToolClient client)
     public const int MaxPageSize = 5000;
     public const int MaxBatchOperations = 200;
 
+    /// <summary>Messages that can carry other requests past the host's permission check.</summary>
+    private static readonly HashSet<string> WrapperMessages = new(["ExecuteMultiple", "ExecuteTransaction", "ExecuteAsync"], StringComparer.OrdinalIgnoreCase);
+
     // ── Data ─────────────────────────────────────────────────────────────────
 
     public Task<CommunityToolResult<DataRecordDto>> RetrieveAsync(RetrieveRecordRequest request, CancellationToken cancellationToken) =>
@@ -111,6 +114,9 @@ public sealed partial class CommunityToolService(ICommunityToolClient client)
         {
             if (request.Message is not { } message || !MessageName().IsMatch(message))
                 throw new CommunityToolValueException("message must be a Dataverse message name, such as WhoAmI.");
+
+            if (WrapperMessages.Contains(message))
+                throw new CommunityToolValueException($"{message} cannot be run by a community tool.");
 
             var organizationRequest = new OrganizationRequest(message);
             foreach (var (key, value) in request.Parameters ?? new Dictionary<string, JsonElement>())

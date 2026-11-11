@@ -91,6 +91,47 @@ describe("community tool permissions", () => {
     it("rejects a missing message name", () => {
       expect(authorize(manifest(), "data.execute", {}).ok).toBe(false);
     });
+
+    const IMPLIED: Array<[string, Permission]> = [
+      ["Retrieve", "data:read"],
+      ["RetrieveMultiple", "data:read"],
+      ["Create", "data:write"],
+      ["Update", "data:write"],
+      ["Upsert", "data:write"],
+      ["Associate", "data:write"],
+      ["Disassociate", "data:write"],
+      ["Merge", "data:write"],
+      ["Delete", "data:delete"],
+    ];
+
+    it.each(IMPLIED)("%s needs %s", (message, needed) => {
+      const call = { message, parameters: {} };
+      expect(authorize(manifest([], [message]), "data.execute", call).ok).toBe(false);
+      expect(
+        authorize(
+          manifest(
+            ALL.filter((p) => p !== needed),
+            [message],
+          ),
+          "data.execute",
+          call,
+        ).ok,
+      ).toBe(false);
+      expect(authorize(manifest([needed], [message]), "data.execute", call)).toEqual({ ok: true, needs: [needed] });
+    });
+
+    it("matches message names without regard to case", () => {
+      const call = { message: "delete", parameters: {} };
+      expect(authorize(manifest([], ["delete"]), "data.execute", call).ok).toBe(false);
+      expect(authorize(manifest([], ["executemultiple"]), "data.execute", { message: "executemultiple", parameters: {} }).ok).toBe(false);
+    });
+
+    it.each(["ExecuteMultiple", "ExecuteTransaction", "ExecuteAsync"])("never runs %s, even when declared", (message) => {
+      expect(authorize(manifest(ALL, [message]), "data.execute", { message, parameters: {} })).toEqual({
+        ok: false,
+        message: `Message "${message}" cannot be run by a community tool`,
+      });
+    });
   });
 
   describe("data.batch", () => {

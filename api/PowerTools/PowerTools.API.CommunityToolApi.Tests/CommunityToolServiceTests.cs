@@ -307,6 +307,21 @@ public sealed class CommunityToolServiceTests
         Assert.Empty(fake.Calls);
     }
 
+    [Theory]
+    [InlineData("ExecuteMultiple")]
+    [InlineData("ExecuteTransaction")]
+    [InlineData("ExecuteAsync")]
+    public async Task Execute_refuses_wrapper_messages(string message)
+    {
+        var fake = new FakeCommunityToolClient();
+
+        var result = await new CommunityToolService(fake).ExecuteAsync(
+            Json.Body<ExecuteMessageRequest>($$$"""{"message":"{{{message}}}","parameters":{}}"""), None);
+
+        AssertProblem(result.Problem, 400, "InvalidRequest", message);
+        Assert.Empty(fake.Calls);
+    }
+
     [Fact]
     public async Task Execute_decodes_parameters_and_encodes_results()
     {

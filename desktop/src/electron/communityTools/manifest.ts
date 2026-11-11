@@ -29,6 +29,9 @@ export const MANIFEST_PERMISSIONS: readonly string[] = [
   "files",
 ];
 
+/** Wrapper messages a tool may never run; the broker and the sidecar refuse them too. */
+const FORBIDDEN_MESSAGES: readonly string[] = ["executemultiple", "executetransaction", "executeasync"];
+
 const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.[a-z0-9]+(-[a-z0-9]+)*$/;
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/;
 const HOST_VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)/;
@@ -141,7 +144,11 @@ export function parseManifest(json: unknown, hostVersion: string): ManifestResul
   }
 
   const permissions = stringList("permissions", (p) => MANIFEST_PERMISSIONS.includes(p), "is not a known permission");
-  const messages = stringList("messages", (m) => MESSAGE_PATTERN.test(m), "is not a valid message name");
+  const messages = stringList(
+    "messages",
+    (m) => MESSAGE_PATTERN.test(m) && !FORBIDDEN_MESSAGES.includes(m.toLowerCase()),
+    "is not a valid message name, or is a wrapper message that tools cannot run",
+  );
   const network = stringList("network", isNetworkDomain, "must be a domain name with at least two labels, not localhost or an IP address");
 
   let allowMultipleInstances = true;

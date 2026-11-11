@@ -89,6 +89,13 @@ describe("parseManifest", () => {
     expect(errors[0]).toContain(field);
   });
 
+  it.each(["ExecuteMultiple", "ExecuteTransaction", "ExecuteAsync"])("rejects the wrapper message %s", (message) => {
+    const errors = errorsFor({ messages: [message] });
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/^messages: /);
+    expect(errors[0]).toContain(JSON.stringify(message));
+  });
+
   it.each([
     "localhost",
     "intranet",

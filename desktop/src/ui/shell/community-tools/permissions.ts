@@ -42,6 +42,15 @@ export const MESSAGE_PERMISSION: Record<string, Permission | null> = {
   RetrieveEntity: "metadata:read",
   RetrieveAllEntities: "metadata:read",
   RetrieveAttribute: "metadata:read",
+  Retrieve: "data:read",
+  RetrieveMultiple: "data:read",
+  Create: "data:write",
+  Update: "data:write",
+  Upsert: "data:write",
+  Associate: "data:write",
+  Disassociate: "data:write",
+  Merge: "data:write",
+  Delete: "data:delete",
   PublishXml: "metadata:write",
   PublishAllXml: "metadata:write",
   CreateEntity: "metadata:write",
@@ -61,6 +70,14 @@ export const MESSAGE_PERMISSION: Record<string, Permission | null> = {
   ExecuteWorkflow: "data:write",
   BulkDelete: "data:delete",
 };
+
+/** Lower case; compared case-insensitively. Wrapper messages that can carry other requests past the per-message check. Never allowed. */
+export const FORBIDDEN_MESSAGES: readonly string[] = ["executemultiple", "executetransaction", "executeasync"];
+
+// Dataverse does not distinguish message names by case, so neither does the lookup.
+const MESSAGE_PERMISSION_BY_LOWER = new Map(
+  Object.entries(MESSAGE_PERMISSION).map(([name, permission]) => [name.toLowerCase(), permission]),
+);
 
 const BATCH_OPERATION_PERMISSION: Record<string, Permission> = {
   create: "data:write",
@@ -112,10 +129,13 @@ export function authorize(manifest: Manifest, method: MethodName, args: unknown)
 
   if (METHOD_PERMISSION[method] === "per-message") {
     const message = (args as { message: string }).message;
+    if (FORBIDDEN_MESSAGES.includes(message.toLowerCase())) {
+      return { ok: false, message: `Message "${message}" cannot be run by a community tool` };
+    }
     if (!manifest.messages.includes(message)) {
       return { ok: false, message: `Message "${message}" is not declared in powertools-tool.json` };
     }
-    const implied = has(MESSAGE_PERMISSION, message) ? MESSAGE_PERMISSION[message] : null;
+    const implied = MESSAGE_PERMISSION_BY_LOWER.get(message.toLowerCase()) ?? null;
     if (implied) needs.push(implied);
   }
 
