@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Boxes } from "lucide-react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
 import { useTabs } from "../tabs/useTabs";
@@ -6,7 +7,7 @@ import { ShellShortcutDispatchContext, useShellShortcuts } from "../keyboard/use
 import { ConnectionsProvider } from "../../shared/connections";
 import { openToolRequest } from "../../shared/links/openToolRequest";
 import { StatusBarProvider } from "../../shared/status";
-import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
+import { useCommunityTools, useToolRegistry } from "../community-tools/useToolRegistry";
 import ActivityBar from "./ActivityBar";
 import CommandPalette, { type PaletteSection } from "./CommandPalette";
 import { useConnectionCommands } from "./useConnectionCommands";
@@ -27,8 +28,26 @@ function ShellCommandPalette({
   onOpenTool: (toolId: string) => void;
 }) {
   const connectionSections = useConnectionCommands();
+  const { activityBarTools } = useToolRegistry();
+  const { openManager } = useCommunityTools();
+  const allSections: PaletteSection[] = [
+    ...connectionSections,
+    {
+      id: "community-tools",
+      label: "Community tools",
+      commands: [
+        {
+          id: "manage",
+          title: "Community tools…",
+          tooltip: "Load, review, and remove community tools",
+          icon: <Boxes size={16} strokeWidth={1.5} />,
+          onRun: openManager,
+        },
+      ],
+    },
+  ];
   // Running a command closes the palette first, so windows it opens get focus.
-  const sections: PaletteSection[] = connectionSections.map((section) => ({
+  const sections: PaletteSection[] = allSections.map((section) => ({
     ...section,
     commands: section.commands.map((command) => ({
       ...command,
@@ -42,7 +61,7 @@ function ShellCommandPalette({
   return (
     <CommandPalette
       open={open}
-      tools={ACTIVITY_BAR_TOOLS}
+      tools={activityBarTools}
       sections={sections}
       onClose={onClose}
       onOpen={(toolId) => {

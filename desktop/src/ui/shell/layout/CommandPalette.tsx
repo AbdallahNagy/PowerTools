@@ -2,6 +2,7 @@ import { MessageSquarePlus } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { filterSidebarItems } from "./sidebarSearch";
+import { isCommunityIcon } from "./isCommunityIcon";
 import { ToolIcon } from "./ToolIcon";
 
 export interface QuickOpenTool {
@@ -9,6 +10,8 @@ export interface QuickOpenTool {
   title: string;
   tooltip?: string;
   icon: string;
+  /** "local" for a community tool; its data URL icon is drawn as an image. */
+  source?: "built-in" | "local";
 }
 
 /** A command listed after the tools, such as switching connection. */
@@ -162,7 +165,7 @@ export default function CommandPalette({
       const { tool } = option;
       return (
         <li key={option.key} {...common} className={rowClass}>
-          <ToolIcon src={tool.icon} />
+          <ToolIcon src={tool.icon} untrusted={isCommunityIcon(tool)} />
           <span className="min-w-0 truncate">{tool.title}</span>
           {tool.tooltip && tool.tooltip !== tool.title ? (
             <span className="min-w-0 flex-1 truncate text-xs text-fg-muted">

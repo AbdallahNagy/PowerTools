@@ -12,6 +12,8 @@ export interface ToolDefinition {
    * Omitted means true. Set false only when a second tab cannot work.
    */
   allowMultipleInstances?: boolean;
+  /** Where the tool comes from. Omitted means "built-in"; "local" is a community tool loaded from a folder. */
+  source?: "built-in" | "local";
 }
 
 export function defineTool<const Definition extends ToolDefinition>(

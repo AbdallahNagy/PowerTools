@@ -4,13 +4,23 @@ import TabContextMenu from "./TabContextMenu";
 import EmptyWorkspace from "../layout/EmptyWorkspace";
 import { useTabs } from "./useTabs";
 import ToolHost from "../tool-runtime/ToolHost";
-import { TOOL_REGISTRY } from "../../tools/registry";
+import { useToolRegistry } from "../community-tools/useToolRegistry";
+import { EmptyState } from "../../shared/ui";
 import type { TabData } from "./types";
 import { ConnectionsContext } from "../../shared/connections/ConnectionsContext";
 
 const TabContent = memo(({ tab }: { tab: TabData }) => {
-  const def = TOOL_REGISTRY[tab.toolId];
-  return def ? <ToolHost tab={tab} definition={def} /> : <>{tab.content}</>;
+  const { toolsById } = useToolRegistry();
+  const def = toolsById[tab.toolId];
+  if (def) return <ToolHost tab={tab} definition={def} />;
+  // A tab with its own content is a static tab. Any other tab lost its tool, for example a removed community tool.
+  if (tab.content !== undefined) return <>{tab.content}</>;
+  return (
+    <EmptyState
+      title="This tool is no longer loaded"
+      description="Close this tab, or load the tool again from File > Community tools."
+    />
+  );
 });
 TabContent.displayName = "TabContent";
 

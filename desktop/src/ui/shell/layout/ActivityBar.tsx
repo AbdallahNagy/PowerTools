@@ -1,25 +1,27 @@
 import { useMemo, useState } from "react";
 
 import { useTabs } from "../tabs/useTabs";
-import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
+import { useToolRegistry } from "../community-tools/useToolRegistry";
 import ConnectionFooter from "./ConnectionFooter";
 import { filterSidebarItems } from "./sidebarSearch";
-import { Input } from "../../shared/ui";
+import { Badge, Input } from "../../shared/ui";
+import { isCommunityIcon } from "./isCommunityIcon";
 import { ToolIcon } from "./ToolIcon";
 import ToolContextMenu from "./ToolContextMenu";
 
 const ActivityBar = () => {
   const { openTool } = useTabs();
+  const { activityBarTools } = useToolRegistry();
   const [query, setQuery] = useState("");
   const [menu, setMenu] = useState<{
     toolId: string;
     x: number;
     y: number;
   } | null>(null);
-  const menuTool = ACTIVITY_BAR_TOOLS.find((tool) => tool.id === menu?.toolId);
+  const menuTool = activityBarTools.find((tool) => tool.id === menu?.toolId);
   const tools = useMemo(
-    () => filterSidebarItems(ACTIVITY_BAR_TOOLS, query),
-    [query],
+    () => filterSidebarItems(activityBarTools, query),
+    [activityBarTools, query],
   );
 
   return (
@@ -52,8 +54,9 @@ const ActivityBar = () => {
               setMenu({ toolId: tool.id, x: event.clientX, y: event.clientY });
             }}
           >
-            <ToolIcon src={tool.icon} />
-            <span className="truncate">{tool.title}</span>
+            <ToolIcon src={tool.icon} untrusted={isCommunityIcon(tool)} />
+            <span className="min-w-0 flex-1 truncate">{tool.title}</span>
+            {tool.source === "local" ? <Badge tone="neutral">Local</Badge> : null}
           </button>
         ))}
 

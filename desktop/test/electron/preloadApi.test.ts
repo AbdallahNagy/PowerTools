@@ -154,6 +154,22 @@ describe("createPreloadApi", () => {
     expect(removals).toEqual([{ channel: "window-maximized-changed", listener }]);
   });
 
+  it("forwards the Community tools menu event and unsubscribes the same listener", () => {
+    const { ipcRenderer, listeners, removals } = createIpcRendererFake();
+    const api = createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">);
+    let calls = 0;
+
+    const unsubscribe = api.onOpenCommunityTools(() => {
+      calls += 1;
+    });
+    const listener = listeners.get("open-community-tools");
+    listener?.({ ignored: true }, undefined);
+    unsubscribe();
+
+    expect(calls).toBe(1);
+    expect(removals).toEqual([{ channel: "open-community-tools", listener }]);
+  });
+
   it("exposes exactly the declared renderer methods", () => {
     const { ipcRenderer } = createIpcRendererFake();
 
@@ -204,6 +220,7 @@ describe("createPreloadApi", () => {
       "writeCommunityToolStorage",
       "openFileForCommunityTool",
       "saveFileForCommunityTool",
+      "onOpenCommunityTools",
     ]);
   });
 });

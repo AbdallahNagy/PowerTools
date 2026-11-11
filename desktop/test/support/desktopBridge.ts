@@ -59,6 +59,7 @@ export interface FakeDesktopBridge extends DesktopBridge {
   emitConnectionsUpdated(connections: ConnectionList): void;
   emitUpdateStatusChanged(status: UpdateStatus): void;
   emitWindowMaximizedChanged(maximized: boolean): void;
+  emitOpenCommunityTools(): void;
 }
 
 export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}): FakeDesktopBridge {
@@ -66,6 +67,7 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
   const connectionsUpdatedListeners = new Set<ConnectionsUpdatedListener>();
   const updateStatusChangedListeners = new Set<UpdateStatusChangedListener>();
   const windowMaximizedChangedListeners = new Set<WindowMaximizedChangedListener>();
+  const openCommunityToolsListeners = new Set<() => void>();
 
   const bridge: DesktopBridge = {
     createConnectionWindow: async () => undefined,
@@ -125,6 +127,10 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     writeCommunityToolStorage: async () => undefined,
     openFileForCommunityTool: async () => null,
     saveFileForCommunityTool: async () => false,
+    onOpenCommunityTools: (callback) => {
+      openCommunityToolsListeners.add(callback);
+      return () => openCommunityToolsListeners.delete(callback);
+    },
     ...overrides,
   };
 
@@ -141,6 +147,9 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     },
     emitWindowMaximizedChanged: (maximized) => {
       windowMaximizedChangedListeners.forEach((listener) => listener(maximized));
+    },
+    emitOpenCommunityTools: () => {
+      openCommunityToolsListeners.forEach((listener) => listener());
     },
   };
 }

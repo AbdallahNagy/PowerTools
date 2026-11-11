@@ -101,6 +101,11 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       ipcRenderer.invoke("open-file-for-community-tool", id, filters),
     saveFileForCommunityTool: (id: string, suggestedName: string, content: string) =>
       ipcRenderer.invoke("save-file-for-community-tool", id, suggestedName, content),
+    onOpenCommunityTools: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("open-community-tools", listener);
+      return () => ipcRenderer.removeListener("open-community-tools", listener);
+    },
   };
 }
 

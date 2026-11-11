@@ -178,6 +178,8 @@ export interface DesktopBridge {
   openFileForCommunityTool(id: string, filters: CommunityToolFileFilter[]): Promise<CommunityToolOpenFileResult | null>;
   /** Asks where to save and writes the text. `false` when the user cancels. */
   saveFileForCommunityTool(id: string, suggestedName: string, content: string): Promise<boolean>;
+  /** The File > Community tools menu item was chosen. */
+  onOpenCommunityTools(callback: () => void): () => void;
 }
 
 declare global {
@@ -242,4 +244,5 @@ export const desktopBridge: DesktopBridge = {
   openFileForCommunityTool: (id, filters) => bridge().openFileForCommunityTool(id, filters),
   saveFileForCommunityTool: (id, suggestedName, content) =>
     bridge().saveFileForCommunityTool(id, suggestedName, content),
+  onOpenCommunityTools: (callback) => bridge().onOpenCommunityTools(callback),
 };

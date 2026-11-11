@@ -25,6 +25,7 @@ import {
   configureMainWindowChrome,
   getMainWindowOptions,
   registerWindowChromeIpc,
+  setCommunityToolsMenuHandler,
   setConnectionsMenuHandlers,
 } from "./windowChrome.js";
 import { initializeTheme, windowBackgroundColor } from "./theme.js";
@@ -207,6 +208,12 @@ app.whenReady().then(async () => {
         }
       });
     },
+  });
+
+  setCommunityToolsMenuHandler(() => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("open-community-tools");
+    }
   });
 
   await connectionIpc.registerRestoredOnPremises();

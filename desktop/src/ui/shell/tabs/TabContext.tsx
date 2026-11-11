@@ -14,6 +14,7 @@ import {
 } from "./tabState";
 import type { ToolDefinition } from "../../tools/defineTool";
 import { TOOL_REGISTRY } from "../../tools/registry";
+import { useToolRegistry } from "../community-tools/useToolRegistry";
 import { TabProviderContext, type OpenToolOptions } from "./TabProviderContext";
 
 type TabAction =
@@ -62,8 +63,10 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
     initialTabState,
   );
 
+  const { toolsById } = useToolRegistry();
+
   const openTool = (toolId: string, options?: OpenToolOptions) => {
-    const def = TOOL_REGISTRY[toolId];
+    const def = toolsById[toolId];
     if (!def) {
       console.warn(`openTool: unknown toolId "${toolId}"`);
       return;
