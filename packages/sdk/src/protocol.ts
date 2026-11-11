@@ -53,6 +53,8 @@ export type TypedValue =
   | { $type: "EntityReference"; logicalName: string; id: string; name?: string }
   | { $type: "OptionSetValue"; value: number }
   | { $type: "Money"; value: number }
+  | { $type: "Decimal"; value: number }
+  | { $type: "Double"; value: number }
   | { $type: "DateTime"; value: string }
   | { $type: "Guid"; value: string }
   | { $type: "OptionSetValueCollection"; values: number[] };

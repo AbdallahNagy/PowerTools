@@ -7,7 +7,7 @@ namespace PowerTools.API.Tools.CommunityToolApi;
 /// <summary>
 /// Converts between the JSON value encoding of the community tool protocol and Dataverse SDK values.
 /// Strings, numbers, booleans and null are plain; other values carry a "$type" tag:
-/// EntityReference, OptionSetValue, Money, DateTime, Guid, OptionSetValueCollection,
+/// EntityReference, OptionSetValue, Money, Decimal, Double, DateTime, Guid, OptionSetValueCollection,
 /// and for execute parameters and results also Entity and EntityCollection.
 /// </summary>
 public static class CommunityToolValueCodec
@@ -69,6 +69,8 @@ public static class CommunityToolValueCodec
             },
             "OptionSetValue" => new OptionSetValue(RequiredInt(value, "value", path)),
             "Money" => new Money(RequiredDecimal(value, "value", path)),
+            "Decimal" => RequiredDecimal(value, "value", $"{path} (Decimal)"),
+            "Double" => RequiredDouble(value, "value", $"{path} (Double)"),
             "DateTime" => ParseDateTime(RequiredString(value, "value", path), path),
             "Guid" => RequiredGuid(value, "value", path),
             "OptionSetValueCollection" => DecodeOptionSetValues(value, path),
@@ -192,6 +194,18 @@ public static class CommunityToolValueCodec
         if (!value.TryGetProperty(name, out var property)
             || property.ValueKind != JsonValueKind.Number
             || !property.TryGetDecimal(out var number))
+        {
+            throw Invalid(path, $"\"{name}\" must be a number.");
+        }
+
+        return number;
+    }
+
+    private static double RequiredDouble(JsonElement value, string name, string path)
+    {
+        if (!value.TryGetProperty(name, out var property)
+            || property.ValueKind != JsonValueKind.Number
+            || !property.TryGetDouble(out var number))
         {
             throw Invalid(path, $"\"{name}\" must be a number.");
         }

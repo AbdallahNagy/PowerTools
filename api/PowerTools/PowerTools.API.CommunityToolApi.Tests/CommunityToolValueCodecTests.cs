@@ -55,6 +55,55 @@ public sealed class CommunityToolValueCodecTests
     }
 
     [Fact]
+    public void Decimal_and_double_tags_decode_to_their_sdk_types()
+    {
+        var number = CommunityToolValueCodec.Decode(Json.Element("""{"$type":"Decimal","value":5}"""), "values.x");
+        Assert.Equal(5m, Assert.IsType<decimal>(number));
+
+        var real = CommunityToolValueCodec.Decode(Json.Element("""{"$type":"Double","value":1.5}"""), "parameters.x");
+        Assert.Equal(1.5d, Assert.IsType<double>(real));
+    }
+
+    [Fact]
+    public void Untagged_numbers_keep_int_and_decimal()
+    {
+        Assert.IsType<int>(CommunityToolValueCodec.Decode(Json.Element("5"), "values.x"));
+        Assert.IsType<decimal>(CommunityToolValueCodec.Decode(Json.Element("1.5"), "values.x"));
+    }
+
+    [Theory]
+    [InlineData("""{"$type":"Decimal"}""", "Decimal")]
+    [InlineData("""{"$type":"Decimal","value":"5"}""", "Decimal")]
+    [InlineData("""{"$type":"Double"}""", "Double")]
+    [InlineData("""{"$type":"Double","value":null}""", "Double")]
+    public void Numeric_tags_without_a_number_name_the_tag(string json, string tag)
+    {
+        var error = Assert.Throws<CommunityToolValueException>(() =>
+            CommunityToolValueCodec.Decode(Json.Element(json), "values.x"));
+
+        Assert.Contains(tag, error.Message);
+        Assert.Contains("value", error.Message);
+    }
+
+    [Fact]
+    public async Task Decimal_tag_reaches_create_values_and_a_missing_value_is_400()
+    {
+        var fake = new FakeCommunityToolClient();
+        var service = new CommunityToolService(fake);
+
+        await service.CreateAsync(
+            Json.Body<CreateRecordRequest>("""{"table":"account","values":{"new_rate":{"$type":"Decimal","value":5}}}"""),
+            CancellationToken.None);
+        Assert.Equal(5m, fake.LastCreate!["new_rate"]);
+
+        var bad = await service.CreateAsync(
+            Json.Body<CreateRecordRequest>("""{"table":"account","values":{"new_rate":{"$type":"Double"}}}"""),
+            CancellationToken.None);
+        Assert.Equal(400, bad.Problem!.Status);
+        Assert.Contains("Double", bad.Problem.Message);
+    }
+
+    [Fact]
     public void Entity_reference_out_of_dataverse_includes_name()
     {
         var id = Guid.NewGuid();
