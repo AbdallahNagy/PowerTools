@@ -156,6 +156,7 @@ app.whenReady().then(async () => {
     },
   });
   installToolProtocol({
+    isConsented: (id) => toolStore.isConsented(id),
     folderFor: (id) => toolStore.folderFor(id),
     manifestFor: (id) => toolStore.manifestFor(id),
     readFile: (path) => readFile(path),

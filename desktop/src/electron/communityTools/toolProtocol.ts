@@ -8,6 +8,8 @@ import type { CommunityToolManifest } from "./manifest.js";
 export const TOOL_SCHEME = "pt-tool";
 
 export interface ToolProtocolDeps {
+  /** True when the user has reviewed this tool's permissions. An unreviewed tool is never served. */
+  isConsented(id: string): boolean;
   folderFor(id: string): string | null;
   manifestFor(id: string): CommunityToolManifest | null;
   readFile(path: string): Promise<Buffer>;
@@ -81,6 +83,8 @@ function parseToolUrl(url: string): { id: string; rawPath: string } | null {
 export async function resolveToolRequest(url: string, deps: ToolProtocolDeps): Promise<ToolResponse> {
   const parsed = parseToolUrl(url);
   if (!parsed) return failure(404);
+
+  if (!deps.isConsented(parsed.id)) return failure(404);
 
   const folder = deps.folderFor(parsed.id);
   const manifest = deps.manifestFor(parsed.id);

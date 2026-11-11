@@ -46,6 +46,8 @@ export type ToolStore = ReturnType<typeof createToolStore>;
 interface StoreState {
   folders: string[];
   consent: Record<string, string>;
+  /** Manifest id by folder, so consent can be cleared when the folder is gone. Absent in older files. */
+  ids: Record<string, string>;
 }
 
 /** SHA-256 of the sorted permission, message, and network lists. */
@@ -66,7 +68,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseState(text: string): StoreState {
   try {
     const value: unknown = JSON.parse(text);
-    if (!isRecord(value)) return { folders: [], consent: {} };
+    if (!isRecord(value)) return { folders: [], consent: {}, ids: {} };
     const folders = Array.isArray(value.folders) ? value.folders.filter((f): f is string => typeof f === "string") : [];
     const consent: Record<string, string> = {};
     if (isRecord(value.consent)) {
@@ -74,9 +76,15 @@ function parseState(text: string): StoreState {
         if (typeof hash === "string") consent[id] = hash;
       }
     }
-    return { folders, consent };
+    const ids: Record<string, string> = {};
+    if (isRecord(value.ids)) {
+      for (const [folder, id] of Object.entries(value.ids)) {
+        if (typeof id === "string") ids[folder] = id;
+      }
+    }
+    return { folders, consent, ids };
   } catch {
-    return { folders: [], consent: {} };
+    return { folders: [], consent: {}, ids: {} };
   }
 }
 
@@ -91,11 +99,11 @@ export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs 
   let ready = new Map<string, LoadedCommunityTool>();
 
   async function readState(): Promise<StoreState> {
-    if (!(await fs.exists(statePath))) return { folders: [], consent: {} };
+    if (!(await fs.exists(statePath))) return { folders: [], consent: {}, ids: {} };
     try {
       return parseState(await fs.readText(statePath));
     } catch {
-      return { folders: [], consent: {} };
+      return { folders: [], consent: {}, ids: {} };
     }
   }
 
@@ -201,7 +209,8 @@ export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs 
         throw new Error(duplicateIdError(tool.id));
       }
 
-      await writeState({ ...state, folders: [...state.folders, folder] });
+      const ids = tool.status === "ready" ? { ...state.ids, [folder]: tool.id } : state.ids;
+      await writeState({ ...state, folders: [...state.folders, folder], ids });
       if (tool.status === "ready") ready.set(tool.id, tool);
       return tool;
     },
@@ -212,22 +221,36 @@ export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs 
       const tools = await loadAll(state);
       const tool = tools.find((entry) => entry.id === id);
       if (!tool) return;
+      // A missing or broken folder has no readable manifest, so use the id recorded when it was added.
+      const consentId = tool.manifest?.id ?? state.ids[tool.folder] ?? id;
+      const stillUsed = tools.some((entry) => entry !== tool && entry.status === "ready" && entry.id === consentId);
       const consent = { ...state.consent };
-      delete consent[id];
-      await writeState({ folders: state.folders.filter((folder) => folder !== tool.folder), consent });
+      if (!stillUsed) delete consent[consentId];
+      const ids = { ...state.ids };
+      delete ids[tool.folder];
+      await writeState({ folders: state.folders.filter((folder) => folder !== tool.folder), consent, ids });
       ready.delete(id);
     },
 
     async grantConsent(id: string): Promise<void> {
       const tool = requireReady(id);
       const state = await readState();
-      await writeState({ ...state, consent: { ...state.consent, [id]: consentHash(tool.manifest!) } });
+      await writeState({
+        ...state,
+        consent: { ...state.consent, [id]: consentHash(tool.manifest!) },
+        ids: { ...state.ids, [tool.folder]: id },
+      });
       ready.set(id, { ...tool, consentGranted: true });
     },
 
     /** Folder of a ready tool, for the protocol handler. */
     folderFor(id: string): string | null {
       return ready.get(id)?.folder ?? null;
+    },
+
+    /** True when the tool is ready and the user has reviewed its current permission set. */
+    isConsented(id: string): boolean {
+      return ready.get(id)?.consentGranted ?? false;
     },
 
     manifestFor(id: string): CommunityToolManifest | null {

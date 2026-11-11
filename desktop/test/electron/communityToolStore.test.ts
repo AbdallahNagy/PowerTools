@@ -75,7 +75,11 @@ describe("community tool store", () => {
       iconDataUrl: `data:image/svg+xml;base64,${Buffer.from(ICON).toString("base64")}`,
     });
     expect(tool.manifest?.name).toBe("Record Counter");
-    expect(JSON.parse(files.get(STATE_FILE) ?? "")).toEqual({ folders: [folder], consent: {} });
+    expect(JSON.parse(files.get(STATE_FILE) ?? "")).toEqual({
+      folders: [folder],
+      consent: {},
+      ids: { [folder]: "contoso.record-counter" },
+    });
     expect(store.folderFor("contoso.record-counter")).toBe(folder);
     expect(store.manifestFor("contoso.record-counter")?.id).toBe("contoso.record-counter");
   });
@@ -181,8 +185,45 @@ describe("community tool store", () => {
     await store.remove("contoso.record-counter");
 
     expect(await store.list()).toEqual([]);
-    expect(JSON.parse(files.get(STATE_FILE) ?? "")).toEqual({ folders: [], consent: {} });
+    expect(JSON.parse(files.get(STATE_FILE) ?? "")).toEqual({ folders: [], consent: {}, ids: {} });
     expect(store.folderFor("contoso.record-counter")).toBeNull();
+  });
+
+  it("forgets the consent of a tool whose folder is missing when it is removed", async () => {
+    const { store, writeTool, files, dirs } = setup();
+    const gone = writeTool("gone");
+    await store.addFolder(gone);
+    await store.grantConsent("contoso.record-counter");
+    dirs.delete(gone);
+    files.delete(join(gone, "powertools-tool.json"));
+    expect((await store.list())[0]).toMatchObject({ status: "missing" });
+
+    await store.remove(gone);
+
+    expect(JSON.parse(files.get(STATE_FILE) ?? "")).toEqual({ folders: [], consent: {}, ids: {} });
+    const other = await store.addFolder(writeTool("other"));
+    expect(other).toMatchObject({ id: "contoso.record-counter", status: "ready", consentGranted: false });
+    expect(store.isConsented("contoso.record-counter")).toBe(false);
+  });
+
+  it("reads a state file written before ids were recorded", async () => {
+    const { store, writeTool, files } = setup();
+    const folder = writeTool("counter");
+    files.set(STATE_FILE, JSON.stringify({ folders: [folder] }));
+
+    expect((await store.list()).map((tool) => tool.id)).toEqual(["contoso.record-counter"]);
+    await store.grantConsent("contoso.record-counter");
+    expect(JSON.parse(files.get(STATE_FILE) ?? "").ids).toEqual({ [folder]: "contoso.record-counter" });
+  });
+
+  it("reports consent by id only for a ready tool whose permission set was reviewed", async () => {
+    const { store, writeTool } = setup();
+    await store.addFolder(writeTool("counter"));
+
+    expect(store.isConsented("contoso.record-counter")).toBe(false);
+    await store.grantConsent("contoso.record-counter");
+    expect(store.isConsented("contoso.record-counter")).toBe(true);
+    expect(store.isConsented("nobody.here")).toBe(false);
   });
 
   it("treats a corrupt state file as empty", async () => {

@@ -43,11 +43,14 @@ function enoent(path: string): Error {
 function fakeDeps(options: { files?: Record<string, string>; links?: Record<string, string>; network?: string[] } = {}) {
   const files = new Map(Object.entries(options.files ?? {}));
   const links = new Map(Object.entries(options.links ?? {}));
+  const consented = new Set(["acme.demo", "other.tool"]);
   const tools = new Map([
     ["acme.demo", { folder: FOLDER, manifest: manifest({ network: options.network ?? [] }) }],
     ["other.tool", { folder: OTHER_FOLDER, manifest: manifest({ id: "other.tool" }) }],
   ]);
   return {
+    consented,
+    isConsented: (id: string) => consented.has(id),
     folderFor: (id: string) => tools.get(id)?.folder ?? null,
     manifestFor: (id: string) => tools.get(id)?.manifest ?? null,
     readFile: vi.fn(async (path: string) => {
@@ -196,6 +199,22 @@ describe("registerToolScheme", () => {
     expect(electronProtocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
       { scheme: "pt-tool", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
     ]);
+  });
+});
+
+describe("consent", () => {
+  it("serves a ready tool only once its consent is granted", async () => {
+    const deps = fakeDeps({ files: { [join(FOLDER, "index.html")]: "<p>hi</p>" } });
+    deps.consented.delete("acme.demo");
+
+    const before = await resolveToolRequest("pt-tool://acme.demo/index.html", deps);
+    expect(before.status).toBe(404);
+    expect(before.body).toBeNull();
+    expect(deps.readFile).not.toHaveBeenCalled();
+
+    deps.consented.add("acme.demo");
+    const after = await resolveToolRequest("pt-tool://acme.demo/index.html", deps);
+    expect(after.status).toBe(200);
   });
 });
 
