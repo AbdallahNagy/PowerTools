@@ -1,4 +1,4 @@
-# Community plugins for Power Tools: design
+# Community tools for Power Tools: design
 
 Date: 2026-11-11
 Status: draft, waiting for owner approval
@@ -212,7 +212,6 @@ Attribute Explorer rebuilt as a plugin in this repo, next to the built-in one, w
 - How the generic endpoints map onto `ServiceClient` calls, and which existing metadata and fetch code to reuse.
 - Where remembered plugin folders, consent, and plugin storage live under user data.
 - The message-to-permission table's initial contents.
-
 
 ## Spike result
 

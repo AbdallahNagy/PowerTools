@@ -8,7 +8,7 @@
 
 **Tech Stack:** Electron 39, React 19, TypeScript 5.8, Vite 6, Vitest 4, Playwright, Tailwind 4, ASP.NET Core (.NET 9) with `Microsoft.PowerPlatform.Dataverse.Client`, xUnit.
 
-**Spec:** `docs/superpowers/specs/2026-11-11-plugin-system-design.md`. Read it before any task.
+**Spec:** `docs/superpowers/specs/2026-11-11-community-tools-design.md`. Read it before any task.
 
 **Execution:** Subagent-driven. Implementation subagents run on model `opus` at `medium` effort (owner's instruction).
 
@@ -69,7 +69,7 @@ api/PowerTools/PowerTools.API.CommunityToolApi.Tests/
 
 **Files:**
 - Create: `desktop/spike/community-tool-isolation/` (deleted at the end of this task)
-- Modify: `docs/superpowers/specs/2026-11-11-plugin-system-design.md` (append a "Spike result" section)
+- Modify: `docs/superpowers/specs/2026-11-11-community-tools-design.md` (append a "Spike result" section)
 
 No tests, no production code. This task answers three questions on Electron 39.
 
