@@ -130,6 +130,36 @@ export const metadataListRelationships: AgentTool = {
   },
 };
 
+export const metadataListForms: AgentTool = {
+  name: "metadata_list_forms",
+  group: "metadata",
+  title: "List forms",
+  description:
+    "Lists the active main and quick create forms of a table with their ids, tabs and sections. Use the names to place a column with schema_add_column_to_form. Read-only.",
+  inputSchema: { type: "object", properties: { connection, table }, required: ["table"], additionalProperties: false },
+  effect: "read",
+  summarize: (args) => `metadata_list_forms ${String(args.table)}`,
+  async run(args, ctx) {
+    const { conn, data } = await get(args, ctx, `/api/agent/metadata/forms?table=${enc(args.table as string)}`);
+    return dataverseResult(`Forms of ${String(args.table)}.`, { forms: data }, conn.displayName);
+  },
+};
+
+export const metadataListViews: AgentTool = {
+  name: "metadata_list_views",
+  group: "metadata",
+  title: "List views",
+  description:
+    "Lists the system views of a table (public, advanced find, associated, quick find, lookup) with their ids and columns. Use an id with schema_add_column_to_view. Read-only.",
+  inputSchema: { type: "object", properties: { connection, table }, required: ["table"], additionalProperties: false },
+  effect: "read",
+  summarize: (args) => `metadata_list_views ${String(args.table)}`,
+  async run(args, ctx) {
+    const { conn, data } = await get(args, ctx, `/api/agent/metadata/views?table=${enc(args.table as string)}`);
+    return dataverseResult(`Views of ${String(args.table)}.`, { views: data }, conn.displayName);
+  },
+};
+
 export const metadataGetChoices: AgentTool = {
   name: "metadata_get_choices",
   group: "metadata",

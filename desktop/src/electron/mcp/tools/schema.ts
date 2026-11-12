@@ -325,6 +325,58 @@ export const schemaPublish: AgentTool = {
   },
 };
 
+const GUID_PATTERN = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
+const columnToAdd = { type: "string", pattern: NAME_PATTERN, description: "Logical name of the column to add." };
+
+export const schemaAddColumnToForm = change({
+  name: "schema_add_column_to_form",
+  title: "Add column to form",
+  description:
+    "Adds a column as a new row at the end of a section of a main or quick create form. Find form ids, tabs and sections with metadata_list_forms. Call schema_publish afterwards. Changes the environment.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      connection: connectionProp,
+      table: tableProp,
+      formId: { type: "string", pattern: GUID_PATTERN, description: "The form's GUID, from metadata_list_forms." },
+      column: columnToAdd,
+      tab: { type: "string", description: "Tab name or label. Default the first tab." },
+      section: { type: "string", description: "Section name or label. Default the first section of the tab." },
+      solution: solutionProp,
+    },
+    required: ["table", "formId", "column"],
+    additionalProperties: false,
+  },
+  route: "/schema/forms/add-column",
+  done: "Column added to the form.",
+  describe: (args) => ({ summary: `add column ${str(args.column)} to a ${str(args.table)} form` }),
+  summarize: (args) => `schema_add_column_to_form ${str(args.table)}.${str(args.column)}`,
+});
+
+export const schemaAddColumnToView = change({
+  name: "schema_add_column_to_view",
+  title: "Add column to view",
+  description:
+    "Adds a column to the end of a system view's grid and to its query. Find view ids with metadata_list_views. Call schema_publish afterwards. Changes the environment.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      connection: connectionProp,
+      table: tableProp,
+      viewId: { type: "string", pattern: GUID_PATTERN, description: "The view's GUID, from metadata_list_views." },
+      column: columnToAdd,
+      width: { type: "integer", minimum: 10, maximum: 1000, description: "Column width in pixels. Default 150." },
+      solution: solutionProp,
+    },
+    required: ["table", "viewId", "column"],
+    additionalProperties: false,
+  },
+  route: "/schema/views/add-column",
+  done: "Column added to the view.",
+  describe: (args) => ({ summary: `add column ${str(args.column)} to a ${str(args.table)} view` }),
+  summarize: (args) => `schema_add_column_to_view ${str(args.table)}.${str(args.column)}`,
+});
+
 export const SCHEMA_TOOLS: AgentTool[] = [
   schemaCreateTable,
   schemaCreateColumn,
@@ -334,4 +386,6 @@ export const SCHEMA_TOOLS: AgentTool[] = [
   schemaAddChoiceOption,
   schemaUpdateColumn,
   schemaPublish,
+  schemaAddColumnToForm,
+  schemaAddColumnToView,
 ];

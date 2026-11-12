@@ -23,9 +23,9 @@ const tool = (name: string) => READ_TOOLS.find((t) => t.name === name)!;
 const structured = (r: { structuredContent?: unknown }) => r.structuredContent as Record<string, unknown>;
 
 describe("READ_TOOLS", () => {
-  it("builds a valid registry with eight read tools", () => {
+  it("builds a valid registry with ten read tools", () => {
     const registry = createAgentToolRegistry(READ_TOOLS);
-    expect(registry.list()).toHaveLength(8);
+    expect(registry.list()).toHaveLength(10);
     expect(READ_TOOLS.every((t) => t.effect === "read" && t.description.includes("Read-only."))).toBe(true);
   });
 

@@ -17,6 +17,15 @@ internal static class AgentSchemaEndpoints
         AgentEndpoints.Post<UpdateColumnBody, ColumnUpdatedDto>(group, "/schema/columns/update", (c, b, ct) => new AgentSchemaService(c).UpdateColumnAsync(b, ct));
         AgentEndpoints.Post<PublishBody, PublishedDto>(group, "/schema/publish", (c, b, ct) => new AgentSchemaService(c).PublishAsync(b, ct));
 
+        AgentEndpoints.Post<AddFormColumnBody, ColumnAddedDto>(group, "/schema/forms/add-column", (c, b, ct) => new AgentSchemaService(c).AddColumnToFormAsync(b, ct));
+        AgentEndpoints.Post<AddViewColumnBody, ColumnAddedDto>(group, "/schema/views/add-column", (c, b, ct) => new AgentSchemaService(c).AddColumnToViewAsync(b, ct));
+
+        group.MapGet("/metadata/forms", async (string? table, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
+            AgentEndpoints.ToHttp(await new AgentSchemaService(AgentEndpoints.Client(ctx, factory)).ListFormsAsync(table, ct)));
+
+        group.MapGet("/metadata/views", async (string? table, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
+            AgentEndpoints.ToHttp(await new AgentSchemaService(AgentEndpoints.Client(ctx, factory)).ListViewsAsync(table, ct)));
+
         group.MapGet("/metadata/tables/{table}/columns/{column}", async (string table, string column, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
             AgentEndpoints.ToHttp(await new AgentSchemaService(AgentEndpoints.Client(ctx, factory)).GetColumnInfoAsync(table, column, ct)));
 

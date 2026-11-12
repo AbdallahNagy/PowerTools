@@ -64,7 +64,7 @@ async function setup() {
 }
 
 describe("MCP server", () => {
-  it("lists the eight read tools and sends instructions", async () => {
+  it("lists the ten read tools and sends instructions", async () => {
     const { client } = await setup();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
@@ -72,8 +72,10 @@ describe("MCP server", () => {
       "metadata_get_choices",
       "metadata_get_table",
       "metadata_list_columns",
+      "metadata_list_forms",
       "metadata_list_relationships",
       "metadata_list_tables",
+      "metadata_list_views",
       "records_get",
       "records_query",
     ]);

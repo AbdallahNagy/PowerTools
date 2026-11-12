@@ -198,3 +198,46 @@ describe("schema_publish", () => {
     expect(call).toHaveBeenCalledWith(conn, "POST", "/api/agent/schema/publish", { tables: ["account"] });
   });
 });
+
+describe("forms and views", () => {
+  const GUID = "11111111-1111-1111-1111-111111111111";
+
+  it("lists forms and views as reads with the table in the query", async () => {
+    for (const [name, key, route] of [
+      ["metadata_list_forms", "forms", "forms"],
+      ["metadata_list_views", "views", "views"],
+    ] as const) {
+      const t = tool(name);
+      expect(t.effect).toBe("read");
+      expect(t.description).toContain("Read-only.");
+      const call = vi.fn(async () => [{ id: GUID }]);
+      const result = await t.run({ table: "account" }, ctx(call));
+      expect(call).toHaveBeenCalledWith(conn, "GET", `/api/agent/metadata/${route}?table=account`);
+      expect(result.structuredContent).toMatchObject({ [key]: [{ id: GUID }] });
+      expect(result._meta).toMatchObject({ "powertools/untrusted": true });
+    }
+  });
+
+  it("adds columns to forms and views as changes, with summaries", async () => {
+    const form = tool("schema_add_column_to_form");
+    const view = tool("schema_add_column_to_view");
+    expect(form.effect).toBe("change");
+    expect(view.effect).toBe("change");
+    expect(form.describe!({ table: "account", column: "new_rating" }).summary).toBe("add column new_rating to a account form");
+    expect(view.describe!({ table: "account", column: "new_rating" }).summary).toBe("add column new_rating to a account view");
+    const call = vi.fn(async () => ({ id: GUID, column: "new_rating" }));
+    await form.run({ connection: "A · Dev", table: "account", formId: GUID, column: "new_rating", section: "notes" }, ctx(call));
+    expect(call).toHaveBeenCalledWith(conn, "POST", "/api/agent/schema/forms/add-column", {
+      table: "account",
+      formId: GUID,
+      column: "new_rating",
+      section: "notes",
+    });
+  });
+
+  it("rejects a form id that is not a GUID and a width out of range", () => {
+    expect(registry.validate(tool("schema_add_column_to_form"), { table: "account", formId: "nope", column: "c" }).ok).toBe(false);
+    expect(registry.validate(tool("schema_add_column_to_view"), { table: "account", viewId: GUID, column: "c", width: 5 }).ok).toBe(false);
+    expect(registry.validate(tool("schema_add_column_to_view"), { table: "account", viewId: GUID, column: "c", width: 200 }).ok).toBe(true);
+  });
+});
