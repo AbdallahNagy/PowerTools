@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, RefreshCw } from "lucide-react";
 
 import type { McpStatusInfo } from "../../platform/desktopBridge";
-import { Alert, Badge, Button, Checkbox, EmptyState, Modal } from "../../shared/ui";
+import { Alert, Badge, Button, Checkbox, EmptyState, Field, Input, Modal } from "../../shared/ui";
 import { useAgents } from "./useAgents";
 
 function statusOf(status: McpStatusInfo | null): { label: string; tone: "neutral" | "ok" | "danger" } {
@@ -62,13 +62,94 @@ function Snippet({ label, text }: { label: string; text: string }) {
   );
 }
 
+function DirectHttp({
+  http,
+  busy,
+  onChange,
+  onCopy,
+  onRegenerate,
+}: {
+  http: McpStatusInfo["http"];
+  busy: boolean;
+  onChange(http: McpStatusInfo["http"]): void;
+  onCopy(): void;
+  onRegenerate(): void;
+}) {
+  const [port, setPort] = useState(String(http.port));
+  const [portError, setPortError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => setPort(String(http.port)), [http.port]);
+
+  const savePort = () => {
+    const value = Number(port);
+    if (!Number.isInteger(value) || value < 1024 || value > 65535) {
+      setPortError("Enter a port from 1024 to 65535.");
+      return;
+    }
+    setPortError(null);
+    onChange({ enabled: http.enabled, port: value });
+  };
+
+  return (
+    <section className="flex flex-col gap-2" aria-label="Direct HTTP">
+      <h3 className="text-sm font-medium text-fg-strong">Direct HTTP</h3>
+      <p className="text-xs text-fg-muted">
+        For clients that only accept a URL. Most clients should use the command above, which needs no token in a config file.
+      </p>
+      <label className="flex items-center gap-2 text-sm text-fg-strong">
+        <Checkbox checked={http.enabled} disabled={busy} onChange={(enabled) => onChange({ enabled, port: http.enabled ? http.port : Number(port) || http.port })} aria-label="Direct HTTP" />
+        Let clients connect to a fixed port
+      </label>
+      <div className="flex flex-wrap items-end gap-2">
+        <Field label="Port" hint="1024 to 65535. Default 47800." error={portError ?? undefined}>
+          <Input value={port} inputMode="numeric" className="w-28 bg-raised" onChange={(event) => setPort(event.target.value)} />
+        </Field>
+        <Button variant="secondary" size="sm" disabled={busy} onClick={savePort}>
+          Save port
+        </Button>
+        <Button variant="secondary" size="sm" disabled={busy || !http.enabled} onClick={onCopy}>
+          <Copy size={14} aria-hidden="true" />
+          Copy client config
+        </Button>
+        <Button variant="ghost" size="sm" disabled={busy || !http.enabled} onClick={() => setConfirming(true)}>
+          Regenerate token
+        </Button>
+      </div>
+      {confirming ? (
+        <Alert
+          tone="warn"
+          action={
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setConfirming(false);
+                  onRegenerate();
+                }}
+              >
+                Regenerate and restart
+              </Button>
+            </div>
+          }
+        >
+          Clients using the old config will stop working until you copy the new one. The server restarts and ends open sessions.
+        </Alert>
+      ) : null}
+    </section>
+  );
+}
+
 interface AgentsDialogProps {
   open: boolean;
   onClose(): void;
 }
 
 export function AgentsDialog({ open, onClose }: AgentsDialogProps) {
-  const { status, busy, error, setEnabled, setGroup, refresh } = useAgents(open);
+  const { status, busy, error, setEnabled, setGroup, setHttp, regenerateToken, copyHttpConfig, refresh } = useAgents(open);
   const state = statusOf(status);
   const enabled = status?.running === true || (status?.enabled === true && !status.error);
 
@@ -129,6 +210,16 @@ export function AgentsDialog({ open, onClose }: AgentsDialogProps) {
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {status ? (
+        <DirectHttp
+          http={status.http}
+          busy={busy}
+          onChange={(http) => void setHttp(http)}
+          onCopy={() => void copyHttpConfig()}
+          onRegenerate={() => void regenerateToken()}
+        />
       ) : null}
 
       <section className="flex flex-col gap-2" aria-label="Recent activity">

@@ -20,6 +20,7 @@ const OFF: McpStatusInfo = {
     { group: "connections", enabled: true, tools: 1 },
     { group: "schema", enabled: false, tools: 13 },
   ],
+  http: { enabled: false, port: 47800 },
 };
 
 function OpenButton() {
@@ -101,6 +102,50 @@ describe("Agents dialog", () => {
     fireEvent.click(schema);
     await waitFor(() => expect(setMcpGroup).toHaveBeenCalledWith("schema", true));
     await waitFor(() => expect(screen.getByRole("checkbox", { name: "schema tools" })).toBeChecked());
+  });
+
+  it("offers the direct HTTP option, saves the port and copies the config through main", async () => {
+    const setMcpHttp = vi.fn(async (http: { enabled: boolean; port: number }): Promise<McpStatusInfo> => ({ ...OFF, http }));
+    const copyMcpHttpConfig = vi.fn(async () => undefined);
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpHttp, copyMcpHttpConfig } });
+    const toggle = await screen.findByRole("checkbox", { name: "Direct HTTP" });
+    await waitFor(() => expect(toggle).not.toBeDisabled());
+    expect(toggle).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Copy client config" })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText("Port"), { target: { value: "48000" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save port" }));
+    await waitFor(() => expect(setMcpHttp).toHaveBeenCalledWith({ enabled: false, port: 48000 }));
+
+    fireEvent.click(toggle);
+    await waitFor(() => expect(setMcpHttp).toHaveBeenCalledWith({ enabled: true, port: 48000 }));
+    const copy = await screen.findByRole("button", { name: "Copy client config" });
+    await waitFor(() => expect(copy).not.toBeDisabled());
+    fireEvent.click(copy);
+    await waitFor(() => expect(copyMcpHttpConfig).toHaveBeenCalledTimes(1));
+    expect(document.body.textContent ?? "").not.toMatch(/[0-9a-f]{64}/);
+  });
+
+  it("refuses a port outside 1024 to 65535 without calling main", async () => {
+    const setMcpHttp = vi.fn(async (http: { enabled: boolean; port: number }): Promise<McpStatusInfo> => ({ ...OFF, http }));
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpHttp } });
+    await screen.findByRole("checkbox", { name: "Direct HTTP" });
+    fireEvent.change(screen.getByLabelText("Port"), { target: { value: "80" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save port" }));
+    expect(await screen.findByText("Enter a port from 1024 to 65535.")).toBeInTheDocument();
+    expect(setMcpHttp).not.toHaveBeenCalled();
+  });
+
+  it("warns before regenerating the token, then regenerates it", async () => {
+    const regenerateMcpHttpToken = vi.fn(async (): Promise<McpStatusInfo> => ({ ...OFF, http: { enabled: true, port: 47800 } }));
+    renderAgents({
+      bridgeOverrides: { getMcpStatus: async () => ({ ...OFF, http: { enabled: true, port: 47800 } }), regenerateMcpHttpToken },
+    });
+    fireEvent.click(await screen.findByRole("button", { name: "Regenerate token" }));
+    expect(screen.getByText(/clients using the old config will stop working/i)).toBeInTheDocument();
+    expect(regenerateMcpHttpToken).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate and restart" }));
+    await waitFor(() => expect(regenerateMcpHttpToken).toHaveBeenCalledTimes(1));
   });
 
   it("reloads the status when Refresh is pressed", async () => {

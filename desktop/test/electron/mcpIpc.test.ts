@@ -9,12 +9,15 @@ type Handler = (event: unknown, ...args: unknown[]) => Promise<unknown>;
 function setup() {
   const handlers = new Map<string, Handler>();
   const mainContents = { id: 1 };
-  const status: McpStatus = { enabled: false, running: false, port: null, discoveryPath: "C:\\u\\mcp-endpoint.json", error: null, groups: [] };
+  const status: McpStatus = { enabled: false, running: false, port: null, discoveryPath: "C:\\u\\mcp-endpoint.json", error: null, groups: [], http: { enabled: false, port: 47800 } };
   const service = {
     status: vi.fn(() => status),
     setEnabled: vi.fn(async (enabled: boolean) => ({ ...status, enabled, running: enabled, port: enabled ? 5000 : null })),
     recentActivity: vi.fn(async () => []),
     respondApproval: vi.fn(),
+    setHttp: vi.fn(async (http: { enabled: boolean; port: number }) => ({ ...status, http })),
+    copyHttpConfig: vi.fn(async () => undefined),
+    regenerateHttpToken: vi.fn(async () => status),
     setGroup: vi.fn((group: string, enabled: boolean) => ({
       ...status,
       groups: [{ group: group as never, enabled, tools: 3 }],
@@ -67,6 +70,45 @@ describe("mcp IPC", () => {
     const { call, mainContents, service } = setup();
     await call("mcp-get-activity", mainContents, 20);
     expect(service.recentActivity).toHaveBeenCalledWith(20);
+  });
+});
+
+describe("mcp HTTP option IPC", () => {
+  it("sets the option and returns the new status", async () => {
+    const { call, mainContents, service } = setup();
+    const info = (await call("mcp-set-http", mainContents, { enabled: true, port: 48000 })) as { http: unknown };
+    expect(service.setHttp).toHaveBeenCalledWith({ enabled: true, port: 48000 });
+    expect(info.http).toEqual({ enabled: true, port: 48000 });
+  });
+
+  it.each([1023, 65536, 80, 47800.5, "47800", null, undefined])("rejects the port %j", async (port) => {
+    const { call, mainContents, service } = setup();
+    await expect(call("mcp-set-http", mainContents, { enabled: true, port })).rejects.toThrow(/1024 to 65535/);
+    expect(service.setHttp).not.toHaveBeenCalled();
+  });
+
+  it("rejects a bad shape and a foreign sender", async () => {
+    const { call, mainContents, service } = setup();
+    await expect(call("mcp-set-http", mainContents, { enabled: "yes", port: 48000 })).rejects.toThrow(/true or false/);
+    await expect(call("mcp-set-http", mainContents, null)).rejects.toThrow(/true or false/);
+    await expect(call("mcp-set-http", { id: 2 }, { enabled: true, port: 48000 })).rejects.toThrow(/main window/);
+    await expect(call("mcp-copy-http-config", { id: 2 })).rejects.toThrow(/main window/);
+    await expect(call("mcp-regenerate-http-token", { id: 2 })).rejects.toThrow(/main window/);
+    expect(service.setHttp).not.toHaveBeenCalled();
+    expect(service.copyHttpConfig).not.toHaveBeenCalled();
+  });
+
+  it("copies the config without returning anything", async () => {
+    const { call, mainContents, service } = setup();
+    expect(await call("mcp-copy-http-config", mainContents)).toBeUndefined();
+    expect(service.copyHttpConfig).toHaveBeenCalledTimes(1);
+  });
+
+  it("regenerates the token and returns a status with no token in it", async () => {
+    const { call, mainContents, service } = setup();
+    const info = await call("mcp-regenerate-http-token", mainContents);
+    expect(service.regenerateHttpToken).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(info)).not.toMatch(/[0-9a-f]{64}/);
   });
 });
 

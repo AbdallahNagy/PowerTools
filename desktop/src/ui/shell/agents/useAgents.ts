@@ -10,6 +10,9 @@ export interface AgentsState {
   error: string | null;
   setEnabled(enabled: boolean): Promise<void>;
   setGroup(group: string, enabled: boolean): Promise<void>;
+  setHttp(http: { enabled: boolean; port: number }): Promise<void>;
+  regenerateToken(): Promise<void>;
+  copyHttpConfig(): Promise<void>;
   refresh(): Promise<void>;
 }
 
@@ -53,5 +56,17 @@ export function useAgents(active: boolean): AgentsState {
     if (active) void refresh();
   }, [active, refresh]);
 
-  return { status, busy, error, setEnabled, setGroup, refresh };
+  const setHttp = useCallback((http: { enabled: boolean; port: number }) => run(() => desktopBridge.setMcpHttp(http)), [run]);
+  const regenerateToken = useCallback(() => run(() => desktopBridge.regenerateMcpHttpToken()), [run]);
+  // Main does the copying; nothing comes back but success or an error.
+  const copyHttpConfig = useCallback(async () => {
+    try {
+      await desktopBridge.copyMcpHttpConfig();
+      setError(null);
+    } catch (failure) {
+      setError(bridgeErrorMessage(failure));
+    }
+  }, []);
+
+  return { status, busy, error, setEnabled, setGroup, setHttp, regenerateToken, copyHttpConfig, refresh };
 }

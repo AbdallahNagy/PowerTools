@@ -6,7 +6,7 @@ import { spawn } from "child_process";
 import { rmSync } from "fs";
 import { join } from "path";
 import { access, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile } from "fs/promises";
-import { app, BrowserWindow, dialog, ipcMain, net, Notification, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, net, Notification, safeStorage, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
 import { getAppIconPath, getPreloadPath } from "./pathResolver.js";
@@ -39,6 +39,7 @@ import { createToolStore } from "./communityTools/toolStore.js";
 import { connectorLaunch } from "./mcp/connectorCommand.js";
 import { registerMcpIpc } from "./mcp/mcpIpc.js";
 import { createApprovalWindow } from "./mcp/approvalWindow.js";
+import { createHttpTokenStore } from "./mcp/httpToken.js";
 import { createMcpService } from "./mcp/mcpService.js";
 import { readSettings, writeSettings } from "./settings.js";
 import { installToolProtocol, registerToolScheme } from "./communityTools/toolProtocol.js";
@@ -237,6 +238,10 @@ app.whenReady().then(async () => {
       return saved && typeof saved === "object" ? saved : {};
     },
     writeGroups: (groups) => writeSettings({ mcp: { ...mcpSettings(), groups } }),
+    readHttp: () => mcpSettings().http ?? {},
+    writeHttp: (http) => writeSettings({ mcp: { ...mcpSettings(), http } }),
+    httpToken: createHttpTokenStore(join(app.getPath("userData"), "mcp-http-token.bin"), safeStorage),
+    clipboard: { writeText: (text) => clipboard.writeText(text) },
     approvalUi: createApprovalWindow({
       getWindow: () => mainWindow,
       notify: (onClick) => {
@@ -250,9 +255,9 @@ app.whenReady().then(async () => {
       onUnavailable: () => mcpService.failApprovals(),
     }),
   });
-  function mcpSettings(): { enabled?: boolean; groups?: Record<string, boolean> } {
+  function mcpSettings(): { enabled?: boolean; groups?: Record<string, boolean>; http?: { enabled?: boolean; port?: number } } {
     const value = readSettings().mcp;
-    return value && typeof value === "object" ? (value as { enabled?: boolean; groups?: Record<string, boolean> }) : {};
+    return value && typeof value === "object" ? (value as ReturnType<typeof mcpSettings>) : {};
   }
   registerMcpIpc({
     ipcMain,
