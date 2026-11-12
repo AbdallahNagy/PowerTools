@@ -57,7 +57,17 @@ export type TypedValue =
   | { $type: "Double"; value: number }
   | { $type: "DateTime"; value: string }
   | { $type: "Guid"; value: string }
-  | { $type: "OptionSetValueCollection"; values: number[] };
+  | { $type: "OptionSetValueCollection"; values: number[] }
+  | EntityValue
+  | { $type: "EntityCollection"; entities: EntityValue[] };
+
+/** A whole record as a value, for `data.execute` parameters and results. */
+export interface EntityValue {
+  $type: "Entity";
+  logicalName: string;
+  id?: string;
+  values?: Record<string, unknown>;
+}
 
 export type ToastType = "info" | "success" | "warning" | "error";
 export interface FileFilter { name: string; extensions: string[] }

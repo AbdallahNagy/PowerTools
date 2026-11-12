@@ -14,7 +14,6 @@ import type {
   ThemeSnapshot,
   ToastType,
   ToolRequest,
-  ToolResponse,
 } from "./protocol";
 
 /** Rejection reason for every SDK call the host refuses or fails. */
@@ -84,8 +83,17 @@ export interface PowerToolsClient {
 
 interface Pending { resolve: (value: unknown) => void; reject: (reason: unknown) => void }
 
-function isResponse(data: unknown): data is ToolResponse {
+function isResponse(data: unknown): data is { id: number; ok: boolean; result?: unknown; error?: unknown } {
   return typeof data === "object" && data !== null && typeof (data as { id?: unknown }).id === "number" && "ok" in data;
+}
+
+function isToolError(value: unknown): value is { code: ErrorCode; message: string; dataverseCode?: number } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { code?: unknown }).code === "string" &&
+    typeof (value as { message?: unknown }).message === "string"
+  );
 }
 
 function isHostEvent(data: unknown): data is HostEvent {
@@ -113,14 +121,28 @@ export function createClient(port: MessagePort, ready: ReadyMessage): PowerTools
   const themeListeners = listenerSet<ThemeSnapshot>();
   const connectionListeners = listenerSet<ConnectionSnapshot | null>();
 
+  let closed = false;
+  const CLOSED = () => new ToolClientError("Cancelled", "The connection to Power Tools was closed.");
+
+  // A closed port never answers, so settle what is waiting instead of leaving it pending forever.
+  port.addEventListener("close", () => {
+    closed = true;
+    for (const [id, entry] of [...pending]) {
+      pending.delete(id);
+      entry.reject(CLOSED());
+    }
+  });
+
   port.onmessage = (event: MessageEvent) => {
     const data: unknown = event.data;
     if (isResponse(data)) {
       const entry = pending.get(data.id);
       if (!entry) return;
       pending.delete(data.id);
-      if (data.ok) entry.resolve(data.result);
-      else entry.reject(new ToolClientError(data.error.code, data.error.message, data.error.dataverseCode));
+      if (data.ok === true) entry.resolve(data.result);
+      else if (isToolError(data.error)) {
+        entry.reject(new ToolClientError(data.error.code, data.error.message, data.error.dataverseCode));
+      } else entry.reject(new ToolClientError("Internal", "The host sent a reply the SDK could not read."));
       return;
     }
     if (isHostEvent(data)) {
@@ -136,6 +158,10 @@ export function createClient(port: MessagePort, ready: ReadyMessage): PowerTools
   function call<M extends MethodName, R = unknown>(method: M, args: MethodArgs[M]): Promise<R> {
     const id = nextId++;
     return new Promise<R>((resolve, reject) => {
+      if (closed) {
+        reject(CLOSED());
+        return;
+      }
       pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
       const request: ToolRequest = { id, method, args };
       port.postMessage(request);

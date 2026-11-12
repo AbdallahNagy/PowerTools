@@ -91,6 +91,54 @@ describe("connect", () => {
     expect(document.documentElement.style.getPropertyValue("--color-canvas")).toBe("#000000");
   });
 
+  it.each([
+    ["no theme", { theme: undefined }],
+    ["a theme without tokens", { theme: { name: "dark" } }],
+    ["a non-string token", { theme: { name: "dark", tokens: { "--x": 1 } } }],
+    ["no shortcuts", { shortcuts: undefined }],
+    ["a bad shortcut", { shortcuts: [{}] }],
+    ["a connection that is not an object", { connection: "Contoso" }],
+  ])("rejects, instead of never settling, when ready has %s", async (_name, broken) => {
+    const promise = connect({ timeoutMs: 1000 });
+    const host = sendConnect(window.parent);
+    void respondWith(host, { ...ready, ...broken } as unknown as ReadyMessage);
+    await expect(promise).rejects.toThrow("malformed ready message");
+  });
+
+  it("removes a token the next theme no longer sets", async () => {
+    const promise = connect({ timeoutMs: 1000 });
+    const host = sendConnect(window.parent);
+    void respondWith(host, { ...ready, theme: { name: "light", tokens: { "--color-canvas": "#fff", "--color-extra": "red" } } });
+    const client = await promise;
+    expect(document.documentElement.style.getPropertyValue("--color-extra")).toBe("red");
+    const changed = new Promise((resolve) => client.theme.onChange(resolve));
+
+    host.postMessage({ type: "event", event: "theme", theme: { name: "dark", tokens: { "--color-canvas": "#000" } } } satisfies HostEvent);
+    await changed;
+
+    expect(document.documentElement.style.getPropertyValue("--color-extra")).toBe("");
+    expect(document.documentElement.style.getPropertyValue("--color-canvas")).toBe("#000");
+  });
+
+  it("does not forward a shortcut chord that also holds Alt or Meta", async () => {
+    const promise = connect({ timeoutMs: 1000 });
+    const host = sendConnect(window.parent);
+    void respondWith(host, ready);
+    await promise;
+    const requests: ToolRequest[] = [];
+    host.onmessage = (e: MessageEvent) => requests.push(e.data as ToolRequest);
+
+    const alt = new KeyboardEvent("keydown", { key: "k", code: "KeyK", ctrlKey: true, altKey: true, cancelable: true });
+    const meta = new KeyboardEvent("keydown", { key: "k", code: "KeyK", ctrlKey: true, metaKey: true, cancelable: true });
+    window.dispatchEvent(alt);
+    window.dispatchEvent(meta);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    expect(alt.defaultPrevented).toBe(false);
+    expect(meta.defaultPrevented).toBe(false);
+    expect(requests).toEqual([]);
+  });
+
   it("forwards a matching shell shortcut and prevents its default", async () => {
     const promise = connect({ timeoutMs: 1000 });
     const host = sendConnect(window.parent);

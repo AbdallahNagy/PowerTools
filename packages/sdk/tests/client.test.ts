@@ -24,6 +24,11 @@ function setup(): { client: PowerToolsClient; host: MessagePort; requests: ToolR
   return { client, host, requests };
 }
 
+/** The test closes its ports at the end, which rejects calls nobody awaits; those rejections are not the point. */
+function settleLater(call: Promise<unknown>): void {
+  call.catch(() => undefined);
+}
+
 async function waitFor<T>(get: () => T | undefined): Promise<T> {
   for (let i = 0; i < 100; i++) {
     const value = get();
@@ -43,7 +48,7 @@ afterEach(() => {
 describe("createClient", () => {
   it("posts a data.retrieve request with its args", async () => {
     const { client, requests } = setup();
-    void client.data.retrieve("account", GUID, ["name"]);
+    settleLater(client.data.retrieve("account", GUID, ["name"]));
     const req = await waitFor(() => requests[0]);
     expect(req).toEqual({ id: 1, method: "data.retrieve", args: { table: "account", id: GUID, columns: ["name"] } });
   });
@@ -119,7 +124,7 @@ describe("createClient", () => {
 
   it("sends retrieveMultiple as data.fetchXml with built FetchXML", async () => {
     const { client, requests } = setup();
-    void client.data.retrieveMultiple("account", { select: ["name"], top: 5 });
+    settleLater(client.data.retrieveMultiple("account", { select: ["name"], top: 5 }));
     const req = await waitFor(() => requests[0]);
     expect(req.method).toBe("data.fetchXml");
     expect(req.args).toEqual({
@@ -127,12 +132,50 @@ describe("createClient", () => {
     });
   });
 
+  it("passes page, pagingCookie and pageSize through to data.fetchXml", async () => {
+    const { client, requests } = setup();
+    settleLater(client.data.fetchXml("<fetch/>", { page: 3, pagingCookie: "<cookie/>", pageSize: 50 }));
+    settleLater(client.data.retrieveMultiple("account", { select: ["name"] }, { page: 2, pagingCookie: null, pageSize: 10 }));
+    await waitFor(() => requests[1]);
+    expect(requests[0].args).toEqual({ fetchXml: "<fetch/>", page: 3, pagingCookie: "<cookie/>", pageSize: 50 });
+    expect(requests[1].args).toMatchObject({ page: 2, pagingCookie: null, pageSize: 10 });
+  });
+
+  it("sends openSolution with the solution id", async () => {
+    const { client, requests } = setup();
+    settleLater(client.shell.openSolution(GUID));
+    const req = await waitFor(() => requests[0]);
+    expect(req).toMatchObject({ method: "shell.openSolution", args: { solutionId: GUID } });
+  });
+
+  it("rejects the call when the reply says not ok but carries no usable error", async () => {
+    const { client, host, requests } = setup();
+    const first = client.metadata.tables();
+    const second = client.metadata.columns("account");
+    await waitFor(() => requests[1]);
+    host.postMessage({ id: requests[0].id, ok: false });
+    host.postMessage({ id: requests[1].id, ok: false, error: { code: 7 } });
+    await expect(first).rejects.toMatchObject({ code: "Internal" });
+    await expect(second).rejects.toMatchObject({ code: "Internal" });
+  });
+
+  it("rejects pending calls, and later ones, when the host closes the port", async () => {
+    const { client, host, requests } = setup();
+    const pending = client.metadata.tables();
+    await waitFor(() => requests[0]);
+
+    host.close();
+
+    await expect(pending).rejects.toMatchObject({ name: "ToolClientError", code: "Cancelled" });
+    await expect(client.metadata.tables()).rejects.toMatchObject({ code: "Cancelled" });
+  });
+
   it("sends execute, batch, setStatus, and choices args with the shared names", async () => {
     const { client, requests } = setup();
-    void client.data.execute("WhoAmI", {});
-    void client.data.batch([{ op: "delete", table: "account", id: GUID }]);
-    void client.shell.setStatus(null);
-    void client.metadata.choices("account", "industrycode");
+    settleLater(client.data.execute("WhoAmI", {}));
+    settleLater(client.data.batch([{ op: "delete", table: "account", id: GUID }]));
+    settleLater(client.shell.setStatus(null));
+    settleLater(client.metadata.choices("account", "industrycode"));
     await waitFor(() => requests[3]);
     expect(requests.map((r) => [r.method, r.args])).toEqual([
       ["data.execute", { message: "WhoAmI", parameters: {} }],

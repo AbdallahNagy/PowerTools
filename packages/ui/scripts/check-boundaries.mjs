@@ -9,6 +9,10 @@ const dist = join(packageRoot, "dist");
 const repoRoot = resolve(packageRoot, "../..");
 const forbidden = ["desktop/src/ui/platform/", "desktop/src/ui/shell/", "desktop/src/ui/tools/", "desktop/src/electron/"];
 
+// CodeMirror is only for tools that import the code-editor entry; no other file may bundle it.
+const editorLibraries = ["node_modules/@codemirror/", "node_modules/@lezer/", "node_modules/codemirror/"];
+const editorFiles = (map) => map === "code-editor.js.map" || map.startsWith("CodeMirrorEditor-");
+
 const maps = readdirSync(dist).filter((name) => name.endsWith(".js.map"));
 if (maps.length === 0) {
   console.error("check-boundaries: no source maps in dist; run vite build first.");
@@ -26,6 +30,9 @@ for (const map of maps) {
     if (forbidden.some((prefix) => relative.startsWith(prefix))) {
       problems.push(`${map}: ${relative} is app-private code`);
     }
+    if (!editorFiles(map) && editorLibraries.some((library) => relative.includes(library))) {
+      problems.push(`${map}: ${relative} puts CodeMirror outside the code-editor entry`);
+    }
     if (relative.startsWith("desktop/node_modules/")) {
       problems.push(`${map}: ${relative} resolved from desktop/node_modules instead of packages/ui/node_modules`);
     }
@@ -36,4 +43,4 @@ if (problems.length > 0) {
   console.error(`check-boundaries failed:\n${problems.join("\n")}`);
   process.exit(1);
 }
-console.log(`check-boundaries: ${moduleCount} bundled modules, none under platform, shell, tools or electron.`);
+console.log(`check-boundaries: ${moduleCount} bundled modules, none under platform, shell, tools or electron, and CodeMirror only in the code-editor entry.`);

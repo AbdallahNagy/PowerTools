@@ -1,5 +1,7 @@
 export type FilterOperator = "eq" | "ne" | "like" | "null" | "not-null" | "in";
 
+const OPERATORS: ReadonlySet<string> = new Set<FilterOperator>(["eq", "ne", "like", "null", "not-null", "in"]);
+
 export interface RetrieveMultipleQuery {
   select?: string[];
   filter?: Array<{ column: string; operator: FilterOperator; value?: unknown }>;
@@ -17,6 +19,8 @@ function escapeXml(value: unknown): string {
 }
 
 function condition(column: string, operator: FilterOperator, value: unknown): string {
+  // The operator is written into the query unescaped, so only the known words may pass.
+  if (!OPERATORS.has(operator)) throw new Error(`Unsupported filter operator: ${JSON.stringify(operator)}`);
   const head = `<condition attribute="${escapeXml(column)}" operator="${operator}"`;
   if (operator === "null" || operator === "not-null") return `${head} />`;
   if (operator === "in") {

@@ -10,13 +10,22 @@ import {
 
 const DEFAULT_TIMEOUT_MS = 10_000;
 
+// Tokens the previous theme set, so a token the next theme drops does not keep its old value.
+let appliedTokens: string[] = [];
+
 function applyTheme(theme: ThemeSnapshot): void {
   const root = document.documentElement;
   root.dataset.theme = theme.name;
+  for (const name of appliedTokens) {
+    if (!(name in theme.tokens)) root.style.removeProperty(name);
+  }
   for (const [name, value] of Object.entries(theme.tokens)) root.style.setProperty(name, value);
+  appliedTokens = Object.keys(theme.tokens);
 }
 
 function matchesShortcut(event: KeyboardEvent, spec: ShortcutSpec): boolean {
+  // Ctrl+Alt+K and Cmd+K are different chords from the shell's Ctrl+K.
+  if (event.altKey || event.metaKey) return false;
   if (event.ctrlKey !== spec.ctrl || event.shiftKey !== spec.shift) return false;
   if (spec.code !== undefined) return event.code === spec.code;
   return event.key.toLowerCase() === spec.key.toLowerCase();
@@ -33,8 +42,26 @@ function installShortcuts(client: PowerToolsClient, shortcuts: ShortcutSpec[]): 
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
 function isReady(data: unknown): data is ReadyMessage {
-  return typeof data === "object" && data !== null && (data as { type?: unknown }).type === "ready";
+  return isRecord(data) && data.type === "ready";
+}
+
+/** True when a `ready` message has the shape the rest of the SDK relies on. */
+function isWellFormed(ready: ReadyMessage): boolean {
+  const { theme, shortcuts, connection } = ready;
+  return (
+    isRecord(theme) &&
+    typeof theme.name === "string" &&
+    isRecord(theme.tokens) &&
+    Object.values(theme.tokens).every((value) => typeof value === "string") &&
+    Array.isArray(shortcuts) &&
+    shortcuts.every((spec) => isRecord(spec) && typeof spec.key === "string") &&
+    (connection === null || isRecord(connection))
+  );
 }
 
 /**
@@ -70,6 +97,11 @@ export function connect(options: { timeoutMs?: number } = {}): Promise<PowerTool
       if (!isReady(data) || !port) return;
       if (data.protocolVersion !== PROTOCOL_VERSION) {
         fail(new Error(`Unsupported host protocol ${data.protocolVersion}`));
+        return;
+      }
+      // Reject a malformed message instead of throwing halfway through setup and leaving this promise unsettled.
+      if (!isWellFormed(data)) {
+        fail(new Error("The Power Tools host sent a malformed ready message"));
         return;
       }
       cleanup();

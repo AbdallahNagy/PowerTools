@@ -45,3 +45,15 @@ describe("buildFetchXml", () => {
     );
   });
 });
+
+describe("buildFetchXml operators", () => {
+  it.each(["eq", "ne", "like", "null", "not-null", "in"] as const)("accepts %s", (operator) => {
+    expect(() => buildFetchXml("account", { filter: [{ column: "name", operator, value: "x" }] })).not.toThrow();
+  });
+
+  it.each(['eq" /><attribute name="secret', "gt", "", "EQ"])("refuses the operator %j", (operator) => {
+    expect(() =>
+      buildFetchXml("account", { filter: [{ column: "name", operator: operator as never, value: "x" }] }),
+    ).toThrow("Unsupported filter operator");
+  });
+});
