@@ -37,6 +37,14 @@ async function withApp(
   }
 }
 
+/** Opens File > Community tools… the way the menu does. The menu is native, so its item is clicked from the main process. */
+async function openManager(app: ElectronApplication): Promise<void> {
+  await app.evaluate(({ Menu }) => {
+    const file = Menu.getApplicationMenu()?.items.find((item) => item.label === "File");
+    file?.submenu?.items.find((item) => item.label === "Community tools…")?.click();
+  });
+}
+
 function toolFrame(window: Page) {
   return window.frames().find((frame) => frame.url().startsWith("pt-tool://"));
 }
@@ -69,6 +77,51 @@ test("loads the reference community tool in a sandboxed frame that follows the s
   );
 });
 
+test("loads, reviews, allows and opens the reference tool through the Community tools dialog", async () => {
+  await withApp(
+    (userData) => seedCommunityTools(userData, []),
+    async (app, window) => {
+      // The folder picker is a native dialog; answer it with the reference tool's folder.
+      await app.evaluate(({ dialog }, folder) => {
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
+      }, referenceToolFolder);
+      const nav = window.getByRole("navigation").locator("button", { hasText: "Attribute Explorer (reference)" });
+      await expect(window.getByRole("heading", { level: 1, name: "PowerTools" })).toBeVisible();
+      await expect(nav).toHaveCount(0);
+
+      await openManager(app);
+      const manager = window.getByRole("dialog", { name: "Community tools" });
+      await expect(manager.getByText("No community tools are loaded")).toBeVisible({ timeout: 10_000 });
+
+      await manager.getByRole("button", { name: /Load from folder/ }).click();
+      await expect(manager.getByText("Attribute Explorer (reference)")).toBeVisible();
+      await expect(manager.getByText("Needs review")).toBeVisible();
+      // Until it is allowed the tool is not offered anywhere.
+      await expect(nav).toHaveCount(0);
+
+      await manager.getByRole("button", { name: "Review permissions for Attribute Explorer (reference)" }).click();
+      const review = window.getByRole("dialog", { name: "Review permissions" });
+      await expect(review.getByText("Read table definitions")).toBeVisible();
+      await expect(review.getByText("No hosts declared")).toBeVisible();
+      await expect(
+        review.getByText("Power Tools limits which hosts a tool can call, but cannot fully block network access."),
+      ).toBeVisible();
+      await review.getByRole("button", { name: "Allow" }).click();
+      await expect(review).toHaveCount(0);
+      await expect(manager.getByText("Ready")).toBeVisible();
+
+      await window.keyboard.press("Escape");
+      await expect(manager).toHaveCount(0);
+      await expect(nav).toBeVisible();
+      await expect(nav.getByText("Local", { exact: true })).toBeVisible();
+
+      await nav.click();
+      await expect(window.locator("iframe")).toHaveAttribute("sandbox", "allow-scripts");
+      await expect(window.frameLocator("iframe").getByText("No environment selected")).toBeVisible({ timeout: 30_000 });
+    },
+  );
+});
+
 test("a community tool stuck in an infinite loop leaves the shell responsive", async () => {
   await withApp(
     (userData) => seedCommunityTools(userData, [hangingToolFolder]),
@@ -85,20 +138,23 @@ test("a community tool stuck in an infinite loop leaves the shell responsive", a
       // Prove the loop is running: the frame no longer answers a trivial script.
       const frame = toolFrame(window);
       expect(frame).toBeDefined();
+      let giveUp: NodeJS.Timeout | undefined;
       const answered = await Promise.race([
         frame?.evaluate(() => true).then(() => true),
-        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 1_000)),
+        new Promise<boolean>((resolve) => {
+          giveUp = setTimeout(() => resolve(false), 1_000);
+        }),
       ]);
+      clearTimeout(giveUp);
       expect(answered).toBe(false);
 
+      // Another tool still opens, in its own tab.
       await window.getByRole("button", { name: "Build, run, and refine FetchXML queries" }).click({ timeout: 5_000 });
-      await expect(window.locator("span.mr-2").filter({ hasText: /^FetchXML Builder$/ })).toBeVisible({
-        timeout: 5_000,
-      });
+      await expect(window.locator('div[aria-label="FetchXML Builder"]')).toBeVisible({ timeout: 5_000 });
 
-      const file = window.getByRole("button", { name: "File" });
-      await file.click({ timeout: 5_000 });
-      await expect(file).toBeVisible();
+      // The File button opens a native menu that Playwright cannot see; a click that lands within the timeout
+      // shows the shell still takes input.
+      await window.getByRole("button", { name: "File" }).click({ timeout: 5_000 });
 
       // The shell stays in control of the hung tool: its tab is listed and can be closed.
       await expect(tab).toBeVisible();
@@ -116,11 +172,7 @@ test("starts with a missing tool folder and lists it as not found", async () => 
     async (app, window) => {
       await expect(window.getByRole("heading", { level: 1, name: "PowerTools" })).toBeVisible();
 
-      // The File menu is native, so click its real menu item from the main process.
-      await app.evaluate(({ Menu }) => {
-        const file = Menu.getApplicationMenu()?.items.find((item) => item.label === "File");
-        file?.submenu?.items.find((item) => item.label === "Community tools…")?.click();
-      });
+      await openManager(app);
 
       await expect(window.getByRole("dialog").getByText("Folder not found").first()).toBeVisible({ timeout: 10_000 });
     },
