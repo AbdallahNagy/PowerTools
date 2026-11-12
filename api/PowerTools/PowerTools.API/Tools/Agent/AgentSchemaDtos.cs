@@ -99,3 +99,25 @@ public sealed record ChoiceCreatedDto(string Name, Guid MetadataId);
 public sealed record ChoiceOptionAddedDto(int Value);
 
 public sealed record ChoiceValueDto(int Value, string Label);
+
+public sealed class UpdateColumnBody
+{
+    public string? Table { get; set; }
+    public string? Column { get; set; }
+    public string? DisplayName { get; set; }
+    public string? Description { get; set; }
+    public string? RequiredLevel { get; set; }
+    public int? MaxLength { get; set; }
+    public string? Solution { get; set; }
+}
+
+public sealed class PublishBody
+{
+    public List<string>? Tables { get; set; }
+}
+
+public sealed record ColumnUpdatedDto(string LogicalName);
+
+public sealed record ColumnInfoDto(string Type, int? MaxLength);
+
+public sealed record PublishedDto(string Published, IReadOnlyList<string> Tables);

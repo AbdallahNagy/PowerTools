@@ -251,6 +251,80 @@ export const schemaAddChoiceOption = change({
   summarize: (args) => `schema_add_choice_option ${args.choice ? str(args.choice) : `${str(args.table)}.${str(args.column)}`}`,
 });
 
+export const schemaUpdateColumn: AgentTool = {
+  name: "schema_update_column",
+  group: "schema",
+  title: "Update column",
+  description:
+    "Changes a column's display name, description, required level or max length. Lowering maxLength can cut off existing values, so that asks as destructive; anything else is a change. Changes the environment.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      connection: connectionProp,
+      table: tableProp,
+      column: { type: "string", pattern: NAME_PATTERN, description: "Column logical name." },
+      displayName: { type: "string", minLength: 1, description: "New display name." },
+      description: { type: "string", description: "New description." },
+      requiredLevel: requiredLevelProp,
+      maxLength: { type: "integer", minimum: 1, description: "New max length, for text or memo columns." },
+      solution: solutionProp,
+    },
+    required: ["table", "column"],
+    additionalProperties: false,
+  },
+  // Decided here from the column's current length, never from anything the agent says about it.
+  effect: async (args, ctx) => {
+    if (typeof args.maxLength !== "number") return "change";
+    const conn = await ctx.resolveConnection(args.connection as string | undefined);
+    const info = (await ctx.callSidecar(
+      conn,
+      "GET",
+      `${AGENT_API}/metadata/tables/${encodeURIComponent(str(args.table))}/columns/${encodeURIComponent(str(args.column))}`,
+    )) as { maxLength?: number | null } | null;
+    const current = info?.maxLength;
+    return typeof current === "number" && args.maxLength < current ? "destructive" : "change";
+  },
+  describe: (args) => ({
+    summary: `update column ${str(args.column)} on ${str(args.table)}`,
+    removes: `values longer than ${str(args.maxLength)} characters in ${str(args.table)}.${str(args.column)}`,
+  }),
+  summarize: (args) => `schema_update_column ${str(args.table)}.${str(args.column)}`,
+  async run(args, ctx) {
+    const { conn, data } = await postAgent(args, ctx, "/schema/columns/update");
+    return dataverseResult("Column updated.", { result: data }, conn.displayName);
+  },
+};
+
+export const schemaPublish: AgentTool = {
+  name: "schema_publish",
+  group: "schema",
+  title: "Publish customizations",
+  description:
+    "Publishes customizations so schema, form and view changes take effect. Give tables to publish only those; with none it publishes everything. Changes the environment.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      connection: connectionProp,
+      tables: {
+        type: "array",
+        maxItems: 100,
+        items: { type: "string", pattern: NAME_PATTERN },
+        description: "Logical names of the tables to publish. Leave out to publish all customizations.",
+      },
+    },
+    additionalProperties: false,
+  },
+  effect: "change",
+  describe: (args) => ({
+    summary: Array.isArray(args.tables) && args.tables.length > 0 ? `publish ${args.tables.join(", ")}` : "publish all customizations",
+  }),
+  summarize: (args) => (Array.isArray(args.tables) && args.tables.length > 0 ? "schema_publish (tables)" : "schema_publish (all)"),
+  async run(args, ctx) {
+    const { conn, data } = await postAgent(args, ctx, "/schema/publish");
+    return dataverseResult("Published.", { result: data }, conn.displayName);
+  },
+};
+
 export const SCHEMA_TOOLS: AgentTool[] = [
   schemaCreateTable,
   schemaCreateColumn,
@@ -258,4 +332,6 @@ export const SCHEMA_TOOLS: AgentTool[] = [
   schemaCreateManyToMany,
   schemaCreateChoice,
   schemaAddChoiceOption,
+  schemaUpdateColumn,
+  schemaPublish,
 ];

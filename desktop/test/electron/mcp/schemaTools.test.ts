@@ -20,6 +20,9 @@ function ctx(callSidecar: (...a: unknown[]) => unknown): AgentToolContext {
   };
 }
 
+type EffectFn = (args: Record<string, unknown>, ctx: AgentToolContext) => Promise<string> | string;
+const effectOf = (t: { effect: unknown }) => t.effect as EffectFn;
+
 const registry = createAgentToolRegistry([...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS]);
 const tool = (name: string) => registry.get(name)!;
 
@@ -129,5 +132,69 @@ describe("metadata_get_choices with a global choice", () => {
     await expect(get.run({ table: "account" }, ctx(vi.fn()))).rejects.toMatchObject({ code: "InvalidRequest" });
     await expect(get.run({}, ctx(vi.fn()))).rejects.toMatchObject({ code: "InvalidRequest" });
     await expect(get.run({ choice: "x", table: "account", column: "c" }, ctx(vi.fn()))).rejects.toMatchObject({ code: "InvalidRequest" });
+  });
+});
+
+describe("schema_update_column", () => {
+  const update = tool("schema_update_column");
+  const columnInfo = (maxLength: number | null) =>
+    vi.fn(async () => ({ type: "string", maxLength }));
+
+  it("is destructive when maxLength drops from 200 to 100, and says what is lost", async () => {
+    const call = columnInfo(200);
+    const effect = await effectOf(update)({ table: "account", column: "new_title", maxLength: 100 }, ctx(call));
+    expect(effect).toBe("destructive");
+    expect(call).toHaveBeenCalledWith(conn, "GET", "/api/agent/metadata/tables/account/columns/new_title");
+    expect(update.describe!({ table: "account", column: "new_title", maxLength: 100 }).removes).toBe(
+      "values longer than 100 characters in account.new_title",
+    );
+  });
+
+  it("is a change when maxLength goes from 200 to 300, or stays the same", async () => {
+    const effect = effectOf(update);
+    expect(await effect({ table: "account", column: "c", maxLength: 300 }, ctx(columnInfo(200)))).toBe("change");
+    expect(await effect({ table: "account", column: "c", maxLength: 200 }, ctx(columnInfo(200)))).toBe("change");
+  });
+
+  it("is a change with no maxLength, and reads nothing", async () => {
+    const call = columnInfo(200);
+    expect(await effectOf(update)({ table: "account", column: "c", displayName: "X" }, ctx(call))).toBe("change");
+    expect(call).not.toHaveBeenCalled();
+  });
+
+  it("is a change when the column has no current length to compare", async () => {
+    expect(await effectOf(update)({ table: "account", column: "c", maxLength: 10 }, ctx(columnInfo(null)))).toBe("change");
+  });
+
+  it("lets a failed lookup fail the call instead of guessing", async () => {
+    const failing = vi.fn(async () => {
+      throw new Error("boom");
+    });
+    await expect(effectOf(update)({ table: "account", column: "c", maxLength: 10 }, ctx(failing))).rejects.toThrow("boom");
+  });
+
+  it("posts to the update route", async () => {
+    const call = vi.fn(async () => ({ logicalName: "new_title" }));
+    await update.run({ table: "account", column: "new_title", maxLength: 300 }, ctx(call));
+    expect(call).toHaveBeenCalledWith(conn, "POST", "/api/agent/schema/columns/update", { table: "account", column: "new_title", maxLength: 300 });
+  });
+});
+
+describe("schema_publish", () => {
+  const publish = tool("schema_publish");
+
+  it("is a change that publishes everything when no tables are given", async () => {
+    expect(publish.effect).toBe("change");
+    expect(publish.describe!({}).summary).toBe("publish all customizations");
+    const call = vi.fn(async () => ({ published: "all" }));
+    await publish.run({}, ctx(call));
+    expect(call).toHaveBeenCalledWith(conn, "POST", "/api/agent/schema/publish", {});
+  });
+
+  it("names the tables it publishes", async () => {
+    expect(publish.describe!({ tables: ["account", "contact"] }).summary).toBe("publish account, contact");
+    const call = vi.fn(async () => ({}));
+    await publish.run({ tables: ["account"] }, ctx(call));
+    expect(call).toHaveBeenCalledWith(conn, "POST", "/api/agent/schema/publish", { tables: ["account"] });
   });
 });
