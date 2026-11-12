@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
+import { createApprovalGate, type ApprovalGate, type ApprovalRequest } from "./approval.js";
 import { createActivityLog, type ActivityEntry, type ActivityLog } from "./activityLog.js";
 import { createConnectionResolver, type ConnectionSummaryLike } from "./connections.js";
 import { deleteDiscovery, writeDiscovery } from "./discovery.js";
@@ -37,11 +38,21 @@ export interface McpServiceDeps {
   /** Defaults to a log under the user data folder. */
   log?: ActivityLog;
   fetch?: typeof fetch;
+  /** Shows approval requests to the user. Without it no request can be answered and all are refused. */
+  approvalUi?: {
+    present(request: ApprovalRequest): void;
+    dismiss(id: string): void;
+    attention(): void;
+  };
 }
 
 export interface McpService {
   /** The most recent activity entries, newest first. */
   recentActivity(limit: number): Promise<ActivityEntry[]>;
+  /** The user's answer to the approval request on screen. */
+  respondApproval(id: string, allow: boolean): void;
+  /** The approval window went away: every waiting request is refused as unavailable. */
+  failApprovals(): void;
   start(): Promise<void>;
   stop(): Promise<void>;
   setEnabled(value: boolean): Promise<McpStatus>;
@@ -63,6 +74,12 @@ export function createMcpService(deps: McpServiceDeps): McpService {
     refresh: resolver.refresh,
   });
   const registry = createAgentToolRegistry(READ_TOOLS);
+  const approvalUi = deps.approvalUi ?? {
+    present: () => queueMicrotask(() => gate.failAll("unavailable")),
+    dismiss: () => undefined,
+    attention: () => undefined,
+  };
+  const gate: ApprovalGate = createApprovalGate(approvalUi);
 
   let host: HttpHost | null = null;
   let handler: McpRequestHandler | null = null;
@@ -130,6 +147,8 @@ export function createMcpService(deps: McpServiceDeps): McpService {
 
   return {
     recentActivity: (limit) => log.recent(limit),
+    respondApproval: (id, allow) => gate.respond(id, allow),
+    failApprovals: () => gate.failAll("unavailable"),
     start: () => enqueue(doStart),
     stop: () => enqueue(doStop),
     async setEnabled(value) {

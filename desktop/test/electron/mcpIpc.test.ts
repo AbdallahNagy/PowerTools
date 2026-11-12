@@ -14,6 +14,7 @@ function setup() {
     status: vi.fn(() => status),
     setEnabled: vi.fn(async (enabled: boolean) => ({ ...status, enabled, running: enabled, port: enabled ? 5000 : null })),
     recentActivity: vi.fn(async () => []),
+    respondApproval: vi.fn(),
   };
   registerMcpIpc({
     ipcMain: { handle: (channel: string, handler: Handler) => void handlers.set(channel, handler) } as never,
@@ -62,6 +63,22 @@ describe("mcp IPC", () => {
     const { call, mainContents, service } = setup();
     await call("mcp-get-activity", mainContents, 20);
     expect(service.recentActivity).toHaveBeenCalledWith(20);
+  });
+});
+
+describe("mcp approval IPC", () => {
+  it("passes the answer to the service", async () => {
+    const { call, mainContents, service } = setup();
+    await call("mcp-approval-respond", mainContents, "req-1", true);
+    expect(service.respondApproval).toHaveBeenCalledWith("req-1", true);
+  });
+
+  it("rejects a foreign sender, and bad ids or answers, without answering anything", async () => {
+    const { call, mainContents, service } = setup();
+    await expect(call("mcp-approval-respond", { id: 2 }, "req-1", true)).rejects.toThrow(/main window/);
+    await expect(call("mcp-approval-respond", mainContents, 5, true)).rejects.toThrow(/id/);
+    await expect(call("mcp-approval-respond", mainContents, "req-1", "yes")).rejects.toThrow(/true or false/);
+    expect(service.respondApproval).not.toHaveBeenCalled();
   });
 });
 

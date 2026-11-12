@@ -6,7 +6,7 @@ import { spawn } from "child_process";
 import { rmSync } from "fs";
 import { join } from "path";
 import { access, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile } from "fs/promises";
-import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
+import { app, BrowserWindow, dialog, ipcMain, net, Notification, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
 import { getAppIconPath, getPreloadPath } from "./pathResolver.js";
@@ -38,6 +38,7 @@ import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
 import { createToolStore } from "./communityTools/toolStore.js";
 import { connectorLaunch } from "./mcp/connectorCommand.js";
 import { registerMcpIpc } from "./mcp/mcpIpc.js";
+import { createApprovalWindow } from "./mcp/approvalWindow.js";
 import { createMcpService } from "./mcp/mcpService.js";
 import { readSettings, writeSettings } from "./settings.js";
 import { installToolProtocol, registerToolScheme } from "./communityTools/toolProtocol.js";
@@ -231,6 +232,18 @@ app.whenReady().then(async () => {
     appVersion: app.getVersion(),
     readEnabled: () => mcpSettings().enabled === true,
     writeEnabled: (enabled) => writeSettings({ mcp: { ...mcpSettings(), enabled } }),
+    approvalUi: createApprovalWindow({
+      getWindow: () => mainWindow,
+      notify: (onClick) => {
+        const notification = new Notification({
+          title: "Power Tools",
+          body: "An agent is waiting for your approval",
+        });
+        notification.on("click", onClick);
+        notification.show();
+      },
+      onUnavailable: () => mcpService.failApprovals(),
+    }),
   });
   function mcpSettings(): { enabled?: boolean } {
     const value = readSettings().mcp;
@@ -296,6 +309,7 @@ app.whenReady().then(async () => {
     show: false,
   }));
   configureMainWindowChrome(mainWindow);
+  mainWindow.on("closed", () => mcpService.failApprovals());
   mainWindow.maximize();
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();

@@ -148,6 +148,9 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     getMcpStatus: async () => offlineMcpStatus,
     setMcpEnabled: async (enabled) => ({ ...offlineMcpStatus, enabled, running: enabled, port: enabled ? 51234 : null }),
     getMcpActivity: async () => [],
+    onMcpApprovalPresent: () => () => undefined,
+    onMcpApprovalDismiss: () => () => undefined,
+    respondMcpApproval: async () => undefined,
     onOpenAgents: (callback) => {
       openAgentsListeners.add(callback);
       return () => openAgentsListeners.delete(callback);

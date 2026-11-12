@@ -96,6 +96,18 @@ export interface McpActivityEntry {
   summary: string;
 }
 
+/** An agent call waiting for the user. Mirrors ApprovalRequest in src/electron/mcp/approval.ts. */
+export interface McpApprovalRequest {
+  id: string;
+  tool: string;
+  title: string;
+  connection: string;
+  effect: "change" | "destructive";
+  summary: string;
+  removes?: string;
+  args: Record<string, unknown>;
+}
+
 /** The MCP server's state for the Agents dialog. Mirrors McpStatusInfo in src/electron/mcp/mcpIpc.ts. */
 export interface McpStatusInfo {
   enabled: boolean;
@@ -215,6 +227,11 @@ export interface DesktopBridge {
   getMcpActivity(limit: number): Promise<McpActivityEntry[]>;
   /** The File > Agents (MCP) menu item was chosen. */
   onOpenAgents(callback: () => void): () => void;
+  /** An agent call needs the user's answer. */
+  onMcpApprovalPresent(callback: (request: McpApprovalRequest) => void): () => void;
+  /** An approval request was answered elsewhere or gave up; take its dialog down. */
+  onMcpApprovalDismiss(callback: (id: string) => void): () => void;
+  respondMcpApproval(id: string, allow: boolean): Promise<void>;
 }
 
 declare global {
@@ -285,4 +302,7 @@ export const desktopBridge: DesktopBridge = {
   setMcpEnabled: (enabled) => bridge().setMcpEnabled(enabled),
   getMcpActivity: (limit) => bridge().getMcpActivity(limit),
   onOpenAgents: (callback) => bridge().onOpenAgents(callback),
+  onMcpApprovalPresent: (callback) => bridge().onMcpApprovalPresent(callback),
+  onMcpApprovalDismiss: (callback) => bridge().onMcpApprovalDismiss(callback),
+  respondMcpApproval: (id, allow) => bridge().respondMcpApproval(id, allow),
 };

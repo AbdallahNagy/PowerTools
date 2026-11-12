@@ -89,6 +89,7 @@ describe("createPreloadApi", () => {
     ["getMcpStatus", [], "mcp-get-status", []],
     ["setMcpEnabled", [true], "mcp-set-enabled", [true]],
     ["getMcpActivity", [50], "mcp-get-activity", [50]],
+    ["respondMcpApproval", ["req-1", true], "mcp-approval-respond", ["req-1", true]],
   ] as const)(
     "%s invokes %s with the existing arguments",
     async (methodName, methodArgs, expectedChannel, expectedArgs) => {
@@ -190,6 +191,29 @@ describe("createPreloadApi", () => {
     expect(removals).toEqual([{ channel: "open-agents", listener }]);
   });
 
+  it("forwards approval requests and dismissals and unsubscribes the same listeners", () => {
+    const { ipcRenderer, listeners, removals } = createIpcRendererFake();
+    const api = createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">);
+    const requests: unknown[] = [];
+    const dismissed: string[] = [];
+
+    const offPresent = api.onMcpApprovalPresent((request) => requests.push(request));
+    const offDismiss = api.onMcpApprovalDismiss((id) => dismissed.push(id));
+    const presentListener = listeners.get("mcp-approval-present");
+    const dismissListener = listeners.get("mcp-approval-dismiss");
+    presentListener?.({ ignored: true }, { id: "r1" });
+    dismissListener?.({ ignored: true }, "r1");
+    offPresent();
+    offDismiss();
+
+    expect(requests).toEqual([{ id: "r1" }]);
+    expect(dismissed).toEqual(["r1"]);
+    expect(removals).toEqual([
+      { channel: "mcp-approval-present", listener: presentListener },
+      { channel: "mcp-approval-dismiss", listener: dismissListener },
+    ]);
+  });
+
   it("exposes exactly the declared renderer methods", () => {
     const { ipcRenderer } = createIpcRendererFake();
 
@@ -245,6 +269,9 @@ describe("createPreloadApi", () => {
       "getMcpStatus",
       "setMcpEnabled",
       "getMcpActivity",
+      "onMcpApprovalPresent",
+      "onMcpApprovalDismiss",
+      "respondMcpApproval",
       "onOpenAgents",
     ]);
   });

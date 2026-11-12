@@ -13,7 +13,7 @@ export type McpStatusInfo = McpStatus & {
 
 export interface McpIpcDeps {
   ipcMain: Pick<IpcMain, "handle">;
-  service: Pick<McpService, "status" | "setEnabled" | "recentActivity">;
+  service: Pick<McpService, "status" | "setEnabled" | "recentActivity" | "respondApproval">;
   getMainWindow: () => BrowserWindow | null;
   connector: () => ConnectorLaunch;
 }
@@ -47,6 +47,13 @@ export function registerMcpIpc({ ipcMain, service, getMainWindow, connector }: M
     assertMainWindow(event);
     if (typeof enabled !== "boolean") throw new Error("Enabled must be true or false");
     return statusInfo(await service.setEnabled(enabled));
+  });
+
+  ipcMain.handle("mcp-approval-respond", async (event, id: unknown, allow: unknown) => {
+    assertMainWindow(event);
+    if (typeof id !== "string" || id.length === 0 || id.length > 100) throw new Error("A request id is required");
+    if (typeof allow !== "boolean") throw new Error("The answer must be true or false");
+    service.respondApproval(id, allow);
   });
 
   ipcMain.handle("mcp-get-activity", async (event, limit: unknown) => {

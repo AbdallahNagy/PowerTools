@@ -110,6 +110,17 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
     getMcpStatus: () => ipcRenderer.invoke("mcp-get-status"),
     setMcpEnabled: (enabled: boolean) => ipcRenderer.invoke("mcp-set-enabled", enabled),
     getMcpActivity: (limit: number) => ipcRenderer.invoke("mcp-get-activity", limit),
+    onMcpApprovalPresent: (callback: (request: any) => void) => {
+      const listener = (_: unknown, request: any) => callback(request);
+      ipcRenderer.on("mcp-approval-present", listener);
+      return () => ipcRenderer.removeListener("mcp-approval-present", listener);
+    },
+    onMcpApprovalDismiss: (callback: (id: string) => void) => {
+      const listener = (_: unknown, id: string) => callback(id);
+      ipcRenderer.on("mcp-approval-dismiss", listener);
+      return () => ipcRenderer.removeListener("mcp-approval-dismiss", listener);
+    },
+    respondMcpApproval: (id: string, allow: boolean) => ipcRenderer.invoke("mcp-approval-respond", id, allow),
     onOpenAgents: (callback: () => void) => {
       const listener = () => callback();
       ipcRenderer.on("open-agents", listener);

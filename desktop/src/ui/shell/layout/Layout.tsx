@@ -8,6 +8,7 @@ import { ConnectionsProvider } from "../../shared/connections";
 import { openToolRequest } from "../../shared/links/openToolRequest";
 import { StatusBarProvider } from "../../shared/status";
 import { AgentsContext } from "../agents/AgentsContext";
+import { ApprovalDialog } from "../agents/ApprovalDialog";
 import { useCommunityTools, useToolRegistry } from "../community-tools/useToolRegistry";
 import ActivityBar from "./ActivityBar";
 import CommandPalette, { type PaletteSection } from "./CommandPalette";
@@ -153,6 +154,7 @@ const Layout = () => {
                 onOpenTool={openTool}
               />
               <UpdateDialog />
+              <ApprovalDialog />
             </div>
           </UpdateProvider>
         </StatusBarProvider>
