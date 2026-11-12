@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - Community tools: load a tool from a local folder (File > Community tools).
+- An optional MCP server (off by default, File > Agents (MCP)…) that lets AI agents such as Claude Code read Dataverse metadata and records through your Power Tools connections.
 
 ## [1.3.0] - 2026-11-03
 

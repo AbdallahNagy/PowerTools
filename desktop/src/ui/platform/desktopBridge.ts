@@ -83,6 +83,32 @@ export interface ImportConnectionsResult extends DesktopOperationResult {
   imported?: number;
 }
 
+/** One agent tool call in the activity log. Mirrors src/electron/mcp/activityLog.ts. */
+export interface McpActivityEntry {
+  time: string;
+  client: string | null;
+  tool: string;
+  connection: string | null;
+  effect: "read" | "change" | "destructive";
+  approval: "not-needed";
+  outcome: "ok" | "error";
+  code?: string;
+  summary: string;
+}
+
+/** The MCP server's state for the Agents dialog. Mirrors McpStatusInfo in src/electron/mcp/mcpIpc.ts. */
+export interface McpStatusInfo {
+  enabled: boolean;
+  running: boolean;
+  port: number | null;
+  discoveryPath: string;
+  error: string | null;
+  /** The connector launch as one pasteable line. */
+  connectorCommand: string;
+  connector: { command: string; args: string[] };
+  recent: McpActivityEntry[];
+}
+
 /** A community tool's validated powertools-tool.json. Mirrors src/electron/communityTools/manifest.ts. */
 export interface CommunityToolManifest {
   manifestVersion: 1;
@@ -182,6 +208,13 @@ export interface DesktopBridge {
   saveFileForCommunityTool(id: string, suggestedName: string, content: string): Promise<boolean>;
   /** The File > Community tools menu item was chosen. */
   onOpenCommunityTools(callback: () => void): () => void;
+  /** State of the MCP server, how to start the connector, and recent agent activity. */
+  getMcpStatus(): Promise<McpStatusInfo>;
+  /** Turns the MCP server on or off and remembers the choice. */
+  setMcpEnabled(enabled: boolean): Promise<McpStatusInfo>;
+  getMcpActivity(limit: number): Promise<McpActivityEntry[]>;
+  /** The File > Agents (MCP) menu item was chosen. */
+  onOpenAgents(callback: () => void): () => void;
 }
 
 declare global {
@@ -248,4 +281,8 @@ export const desktopBridge: DesktopBridge = {
   saveFileForCommunityTool: (id, suggestedName, content) =>
     bridge().saveFileForCommunityTool(id, suggestedName, content),
   onOpenCommunityTools: (callback) => bridge().onOpenCommunityTools(callback),
+  getMcpStatus: () => bridge().getMcpStatus(),
+  setMcpEnabled: (enabled) => bridge().setMcpEnabled(enabled),
+  getMcpActivity: (limit) => bridge().getMcpActivity(limit),
+  onOpenAgents: (callback) => bridge().onOpenAgents(callback),
 };

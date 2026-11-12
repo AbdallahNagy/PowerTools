@@ -27,6 +27,7 @@ import {
   configureMainWindowChrome,
   getMainWindowOptions,
   registerWindowChromeIpc,
+  setAgentsMenuHandler,
   setCommunityToolsMenuHandler,
   setConnectionsMenuHandlers,
 } from "./windowChrome.js";
@@ -35,6 +36,8 @@ import { startUsageStats } from "./usageStats.js";
 import { BUILT_IN_TOOL_IDS } from "./communityTools/builtInToolIds.js";
 import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
 import { createToolStore } from "./communityTools/toolStore.js";
+import { connectorLaunch } from "./mcp/connectorCommand.js";
+import { registerMcpIpc } from "./mcp/mcpIpc.js";
 import { createMcpService } from "./mcp/mcpService.js";
 import { readSettings, writeSettings } from "./settings.js";
 import { installToolProtocol, registerToolScheme } from "./communityTools/toolProtocol.js";
@@ -233,6 +236,19 @@ app.whenReady().then(async () => {
     const value = readSettings().mcp;
     return value && typeof value === "object" ? (value as { enabled?: boolean }) : {};
   }
+  registerMcpIpc({
+    ipcMain,
+    service: mcpService,
+    getMainWindow: () => mainWindow,
+    connector: () =>
+      connectorLaunch({
+        packaged: !isDev(),
+        platform: process.platform,
+        resourcesPath: process.resourcesPath,
+        appPath: app.getAppPath(),
+        discoveryPath: mcpService.status().discoveryPath,
+      }),
+  });
   app.on("before-quit", () => void mcpService.stop());
   // The quit may not wait for the async stop, so remove the discovery file here as well.
   process.on("exit", () => rmSync(mcpService.status().discoveryPath, { force: true }));
@@ -259,6 +275,12 @@ app.whenReady().then(async () => {
   setCommunityToolsMenuHandler(() => {
     if (!mainWindow.isDestroyed()) {
       mainWindow.webContents.send("open-community-tools");
+    }
+  });
+
+  setAgentsMenuHandler(() => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("open-agents");
     }
   });
 

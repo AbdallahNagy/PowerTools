@@ -86,6 +86,9 @@ describe("createPreloadApi", () => {
     ["getCommunityToolBundleSize", ["contoso.counter"], "get-community-tool-bundle-size", ["contoso.counter"]],
     ["openFileForCommunityTool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]], "open-file-for-community-tool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]]],
     ["saveFileForCommunityTool", ["contoso.counter", "out.csv", "a,b"], "save-file-for-community-tool", ["contoso.counter", "out.csv", "a,b"]],
+    ["getMcpStatus", [], "mcp-get-status", []],
+    ["setMcpEnabled", [true], "mcp-set-enabled", [true]],
+    ["getMcpActivity", [50], "mcp-get-activity", [50]],
   ] as const)(
     "%s invokes %s with the existing arguments",
     async (methodName, methodArgs, expectedChannel, expectedArgs) => {
@@ -171,6 +174,22 @@ describe("createPreloadApi", () => {
     expect(removals).toEqual([{ channel: "open-community-tools", listener }]);
   });
 
+  it("forwards the Agents menu event and unsubscribes the same listener", () => {
+    const { ipcRenderer, listeners, removals } = createIpcRendererFake();
+    const api = createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">);
+    let calls = 0;
+
+    const unsubscribe = api.onOpenAgents(() => {
+      calls += 1;
+    });
+    const listener = listeners.get("open-agents");
+    listener?.({ ignored: true }, undefined);
+    unsubscribe();
+
+    expect(calls).toBe(1);
+    expect(removals).toEqual([{ channel: "open-agents", listener }]);
+  });
+
   it("exposes exactly the declared renderer methods", () => {
     const { ipcRenderer } = createIpcRendererFake();
 
@@ -223,6 +242,10 @@ describe("createPreloadApi", () => {
       "openFileForCommunityTool",
       "saveFileForCommunityTool",
       "onOpenCommunityTools",
+      "getMcpStatus",
+      "setMcpEnabled",
+      "getMcpActivity",
+      "onOpenAgents",
     ]);
   });
 });

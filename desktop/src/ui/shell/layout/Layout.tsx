@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Boxes } from "lucide-react";
+import { useContext, useState } from "react";
+import { Bot, Boxes } from "lucide-react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
 import { useTabs } from "../tabs/useTabs";
@@ -7,6 +7,7 @@ import { ShellShortcutDispatchContext, useShellShortcuts } from "../keyboard/use
 import { ConnectionsProvider } from "../../shared/connections";
 import { openToolRequest } from "../../shared/links/openToolRequest";
 import { StatusBarProvider } from "../../shared/status";
+import { AgentsContext } from "../agents/AgentsContext";
 import { useCommunityTools, useToolRegistry } from "../community-tools/useToolRegistry";
 import ActivityBar from "./ActivityBar";
 import CommandPalette, { type PaletteSection } from "./CommandPalette";
@@ -30,6 +31,7 @@ function ShellCommandPalette({
   const connectionSections = useConnectionCommands();
   const { activityBarTools } = useToolRegistry();
   const { openManager } = useCommunityTools();
+  const { openAgents } = useContext(AgentsContext);
   const allSections: PaletteSection[] = [
     ...connectionSections,
     {
@@ -42,6 +44,19 @@ function ShellCommandPalette({
           tooltip: "Load, review, and remove community tools",
           icon: <Boxes size={16} strokeWidth={1.5} />,
           onRun: openManager,
+        },
+      ],
+    },
+    {
+      id: "agents",
+      label: "Agents",
+      commands: [
+        {
+          id: "agents-mcp",
+          title: "Agents (MCP)…",
+          tooltip: "Let AI agents such as Claude Code use your connections",
+          icon: <Bot size={16} strokeWidth={1.5} />,
+          onRun: openAgents,
         },
       ],
     },

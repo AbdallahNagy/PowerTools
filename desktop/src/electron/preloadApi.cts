@@ -107,6 +107,14 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       ipcRenderer.on("open-community-tools", listener);
       return () => ipcRenderer.removeListener("open-community-tools", listener);
     },
+    getMcpStatus: () => ipcRenderer.invoke("mcp-get-status"),
+    setMcpEnabled: (enabled: boolean) => ipcRenderer.invoke("mcp-set-enabled", enabled),
+    getMcpActivity: (limit: number) => ipcRenderer.invoke("mcp-get-activity", limit),
+    onOpenAgents: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("open-agents", listener);
+      return () => ipcRenderer.removeListener("open-agents", listener);
+    },
   };
 }
 

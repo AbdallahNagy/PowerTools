@@ -50,6 +50,17 @@ type WindowMaximizedChangedListener = Parameters<DesktopBridge["onWindowMaximize
 type ConnectionList = Awaited<ReturnType<DesktopBridge["listConnections"]>>;
 type UpdateStatus = Awaited<ReturnType<DesktopBridge["getUpdateStatus"]>>;
 
+const offlineMcpStatus: Awaited<ReturnType<DesktopBridge["getMcpStatus"]>> = {
+  enabled: false,
+  running: false,
+  port: null,
+  discoveryPath: "/users/test/power-tools/mcp-endpoint.json",
+  error: null,
+  connectorCommand: '"/program files/power-tools/api/PowerTools.API.exe" --mcp-connector',
+  connector: { command: "/program files/power-tools/api/PowerTools.API.exe", args: ["--mcp-connector"] },
+  recent: [],
+};
+
 export type DesktopBridgeOverrides = {
   [Method in keyof DesktopBridge]?: DesktopBridge[Method];
 };
@@ -60,6 +71,7 @@ export interface FakeDesktopBridge extends DesktopBridge {
   emitUpdateStatusChanged(status: UpdateStatus): void;
   emitWindowMaximizedChanged(maximized: boolean): void;
   emitOpenCommunityTools(): void;
+  emitOpenAgents(): void;
 }
 
 export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}): FakeDesktopBridge {
@@ -68,6 +80,7 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
   const updateStatusChangedListeners = new Set<UpdateStatusChangedListener>();
   const windowMaximizedChangedListeners = new Set<WindowMaximizedChangedListener>();
   const openCommunityToolsListeners = new Set<() => void>();
+  const openAgentsListeners = new Set<() => void>();
 
   const bridge: DesktopBridge = {
     createConnectionWindow: async () => undefined,
@@ -132,6 +145,13 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
       openCommunityToolsListeners.add(callback);
       return () => openCommunityToolsListeners.delete(callback);
     },
+    getMcpStatus: async () => offlineMcpStatus,
+    setMcpEnabled: async (enabled) => ({ ...offlineMcpStatus, enabled, running: enabled, port: enabled ? 51234 : null }),
+    getMcpActivity: async () => [],
+    onOpenAgents: (callback) => {
+      openAgentsListeners.add(callback);
+      return () => openAgentsListeners.delete(callback);
+    },
     ...overrides,
   };
 
@@ -151,6 +171,9 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     },
     emitOpenCommunityTools: () => {
       openCommunityToolsListeners.forEach((listener) => listener());
+    },
+    emitOpenAgents: () => {
+      openAgentsListeners.forEach((listener) => listener());
     },
   };
 }
