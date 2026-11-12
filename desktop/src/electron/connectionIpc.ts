@@ -473,5 +473,8 @@ export function registerConnectionIpc({
     broadcastConnections,
     broadcastActive,
     getConnectionForRenderer,
+    resolveConnectionAuth: getConnectionForRenderer,
+    listConnectionSummaries: () => store.summaries(),
+    activeConnectionId: () => store.activeId,
   };
 }
