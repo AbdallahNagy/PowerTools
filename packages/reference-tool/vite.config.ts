@@ -1,4 +1,4 @@
-import { copyFileSync } from "node:fs";
+import { copyFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import tailwindcss from "@tailwindcss/vite";
 import { type Plugin } from "vite";
@@ -9,6 +9,8 @@ function copyPackageFiles(): Plugin {
   return {
     name: "powertools-copy-package-files",
     closeBundle() {
+      // Nothing to copy next to a failed build.
+      if (!existsSync(resolve(__dirname, "dist/index.html"))) return;
       copyFileSync(resolve(__dirname, "powertools-tool.json"), resolve(__dirname, "dist/powertools-tool.json"));
       copyFileSync(resolve(__dirname, "src/icon.svg"), resolve(__dirname, "dist/icon.svg"));
     },

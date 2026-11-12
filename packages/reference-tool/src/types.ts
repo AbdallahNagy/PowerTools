@@ -1,7 +1,8 @@
 /** What the host's `metadata.tables()` returns for each table. */
 export interface TableInfo {
   logicalName: string;
-  displayName: string;
+  /** `null` for tables without a label, such as many relationship tables. */
+  displayName: string | null;
   entitySetName: string;
   primaryIdAttribute: string;
   primaryNameAttribute: string;
@@ -11,7 +12,7 @@ export interface TableInfo {
 /** What the host's `metadata.columns(table)` returns for each column. */
 export interface ColumnInfo {
   logicalName: string;
-  displayName: string;
+  displayName: string | null;
   type: string;
   isCustom: boolean;
   requiredLevel: string;
@@ -19,13 +20,13 @@ export interface ColumnInfo {
 }
 
 /** The display name, or the logical name when the label is empty. */
-export function label(item: { logicalName: string; displayName: string }): string {
-  return item.displayName.trim() ? item.displayName : item.logicalName;
+export function label(item: { logicalName: string; displayName: string | null }): string {
+  return item.displayName?.trim() ? item.displayName : item.logicalName;
 }
 
-export function matches(item: { logicalName: string; displayName: string }, query: string): boolean {
+export function matches(item: { logicalName: string; displayName: string | null }, query: string): boolean {
   const needle = query.trim().toLowerCase();
-  return needle === "" || item.logicalName.toLowerCase().includes(needle) || item.displayName.toLowerCase().includes(needle);
+  return needle === "" || item.logicalName.toLowerCase().includes(needle) || (item.displayName ?? "").toLowerCase().includes(needle);
 }
 
 const REQUIRED_LABELS: Record<string, string> = {

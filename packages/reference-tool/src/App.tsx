@@ -104,12 +104,13 @@ function Explorer({ client }: { client: PowerToolsClient }) {
   }, [client, selected, refreshCount]);
 
   useEffect(() => {
-    void client.shell.setStatus(tables ? `${tables.length} tables` : null).catch(() => undefined);
+    void client.shell.setStatus(tables ? `${tables.length} ${tables.length === 1 ? "table" : "tables"}` : null).catch(() => undefined);
   }, [client, tables]);
 
   const selectTable = useCallback((logicalName: string) => {
     setSelected(logicalName);
     setColumns(null);
+    setColumnsError(null);
     setColumnQuery("");
   }, []);
 

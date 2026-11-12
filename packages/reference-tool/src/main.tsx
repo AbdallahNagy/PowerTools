@@ -4,6 +4,7 @@ import { connect } from "@powertools/sdk";
 import "@powertools/ui/styles.css";
 import "./app.css";
 import { App } from "./App";
+import { ErrorBoundary } from "./ErrorBoundary";
 
 const root = createRoot(document.getElementById("root")!);
 
@@ -11,7 +12,9 @@ connect().then(
   (client) =>
     root.render(
       <StrictMode>
-        <App client={client} />
+        <ErrorBoundary>
+          <App client={client} />
+        </ErrorBoundary>
       </StrictMode>,
     ),
   () => root.render(<p className="p-4 text-fg-muted">Open this tool inside Power Tools.</p>),
