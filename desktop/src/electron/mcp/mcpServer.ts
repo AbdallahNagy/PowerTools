@@ -126,15 +126,17 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
       };
       await reportProgress(0);
 
+      let result: CallToolResult;
+      let resolved: ResolvedConnection | undefined;
       const base = opts.context();
       const ctx: AgentToolContext = {
         ...base,
+        // Remember what a tool resolved, so the log names the connection even when the call fails.
+        resolveConnection: async (name) => (resolved = await base.resolveConnection(name)),
         callSidecar: (conn, method, path, body) => base.callSidecar(conn, method, path, body, extra.signal),
         signal: extra.signal,
       };
 
-      let result: CallToolResult;
-      let resolved: ResolvedConnection | undefined;
       let approval: ActivityEntry["approval"] = "not-needed";
       // Until it is known, a tool that is not plainly a read is logged as the worst case.
       let effect: EffectClass = tool.effect === "read" ? "read" : "destructive";
@@ -143,7 +145,6 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
         if (tool.effect !== "read") {
           // Resolve the connection once, here, so what the user approves is what runs.
           const connection = await ctx.resolveConnection(checked.args.connection as string | undefined);
-          resolved = connection;
           runCtx = { ...ctx, resolveConnection: async () => connection };
           effect = typeof tool.effect === "function" ? await tool.effect(checked.args, runCtx) : tool.effect;
           if (effect !== "read") {

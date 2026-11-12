@@ -129,6 +129,16 @@ describe("MCP server", () => {
     expect(entries[0]).toMatchObject({ outcome: "error", code: "ConnectionNotFound" });
   });
 
+  it("logs the connection of a read that fails in Dataverse", async () => {
+    const { client, fetchFake, entries } = await setup();
+    fetchFake.mockImplementationOnce(
+      async () => new Response(JSON.stringify({ code: "DataverseFault", message: "boom" }), { status: 500 }),
+    );
+    const result = await client.callTool({ name: "metadata_get_table", arguments: { table: "account" } });
+    expect(result.isError).toBe(true);
+    expect(entries[0]).toMatchObject({ outcome: "error", connection: "A · Dev" });
+  });
+
   it("fails further calls after closeAll", async () => {
     const { client, handler } = await setup();
     await handler.closeAll();

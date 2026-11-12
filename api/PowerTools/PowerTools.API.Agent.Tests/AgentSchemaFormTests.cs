@@ -22,7 +22,7 @@ public class AgentSchemaFormTests
         client.Records[("systemform", FormId)] = new Entity("systemform", FormId)
         {
             ["objecttypecode"] = formTable,
-            ["type"] = formType,
+            ["type"] = new OptionSetValue(formType),
             ["formxml"] = AgentFormXmlTests.Form,
         };
         client.Records[("savedquery", ViewId)] = new Entity("savedquery", ViewId)
@@ -100,7 +100,7 @@ public class AgentSchemaFormTests
     public async Task List_forms_reads_main_and_quick_create_forms_with_their_tabs()
     {
         var (service, client) = Make();
-        client.SystemForms.Add(new Entity("systemform", FormId) { ["name"] = "Information", ["type"] = 2, ["formxml"] = AgentFormXmlTests.Form });
+        client.SystemForms.Add(new Entity("systemform", FormId) { ["name"] = "Information", ["type"] = new OptionSetValue(2), ["formxml"] = AgentFormXmlTests.Form });
 
         var result = await service.ListFormsAsync("account", CancellationToken.None);
 

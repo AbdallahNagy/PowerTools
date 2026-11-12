@@ -37,7 +37,7 @@ public sealed partial class AgentSchemaService
                 .Select(row => new FormInfoDto(
                     row.Id,
                     row.GetAttributeValue<string>("name") ?? "",
-                    row.GetAttributeValue<int?>("type") ?? 0,
+                    row.GetAttributeValue<OptionSetValue>("type")?.Value ?? 0,
                     AgentFormXml.ListTabs(row.GetAttributeValue<string>("formxml") ?? "<form/>")))
                 .ToList());
         });
@@ -51,7 +51,7 @@ public sealed partial class AgentSchemaService
             var table = body.Table!.ToLowerInvariant();
 
             var form = await RetrieveAsync("systemform", formId, ["objecttypecode", "type", "formxml"], ct);
-            var type = form.GetAttributeValue<int?>("type");
+            var type = form.GetAttributeValue<OptionSetValue>("type")?.Value;
             if (!string.Equals(form.GetAttributeValue<string>("objecttypecode"), table, StringComparison.OrdinalIgnoreCase)
                 || type is not (MainForm or QuickCreateForm))
             {
