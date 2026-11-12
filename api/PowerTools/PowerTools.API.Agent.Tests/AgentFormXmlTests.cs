@@ -193,6 +193,99 @@ public class AgentFormXmlTests
         Assert.Equal(crlf, edited.Replace(Row(), ""));
     }
 
+    // ── Removing ──────────────────────────────────────────────────────────────
+
+    private const string PhoneRow = """
+
+                        <row>
+                          <cell id="{77777777-7777-7777-7777-777777777777}">
+                            <labels><label description="Phone" languagecode="1033"/></labels>
+                            <control id="telephone1" classid="{4273EDBD-AC1D-40d3-9FB2-095C621B552D}" datafieldname="telephone1"/>
+                          </cell>
+                        </row>
+        """;
+
+    [Fact]
+    public void Removing_an_added_column_gives_back_the_original_form()
+    {
+        var added = Add(tab: "details_tab", section: "notes");
+
+        var removed = AgentFormXml.RemoveColumn(added, "new_rating");
+
+        Assert.Null(removed.Problem);
+        Assert.Equal(Form, removed.Value!.FormXml);
+        Assert.Equal(["Details / Notes"], removed.Value.Places);
+    }
+
+    [Fact]
+    public void Removing_the_only_cell_of_a_row_removes_the_row_and_its_indentation_only()
+    {
+        var lf = Form.ReplaceLineEndings("\n");
+
+        var removed = AgentFormXml.RemoveColumn(lf, "TELEPHONE1").Value!;
+
+        Assert.Equal(lf.Replace(PhoneRow.ReplaceLineEndings("\n"), ""), removed.FormXml);
+        Assert.Contains("datafieldname=\"websiteurl\"", removed.FormXml);
+        Assert.Equal(2, AgentFormXml.ListTabs(removed.FormXml).Count);
+    }
+
+    [Fact]
+    public void Removing_one_cell_of_a_shared_row_keeps_the_row_and_the_other_cell()
+    {
+        var shared = Form.Replace(
+            "<cell id=\"{88888888-8888-8888-8888-888888888888}\">",
+            "<cell id=\"{EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE}\"><control id=\"fax\" datafieldname=\"fax\"/></cell><cell id=\"{88888888-8888-8888-8888-888888888888}\">");
+
+        var removed = AgentFormXml.RemoveColumn(shared, "fax").Value!;
+
+        Assert.Equal(Form, removed.FormXml);
+    }
+
+    [Fact]
+    public void A_column_in_the_body_and_the_header_is_removed_from_both()
+    {
+        var both = Form.Replace("<control id=\"name\"", "<control id=\"ownerid\"").Replace("datafieldname=\"name\"", "datafieldname=\"ownerid\"");
+
+        var removed = AgentFormXml.RemoveColumn(both, "ownerid").Value!;
+
+        Assert.DoesNotContain("ownerid", removed.FormXml);
+        Assert.Equal(["General / Summary", "header"], removed.Places);
+        Assert.Contains("<rows></rows>", removed.FormXml);
+        Assert.NotEmpty(AgentFormXml.ListTabs(removed.FormXml));
+    }
+
+    [Fact]
+    public void The_control_description_of_a_removed_control_goes_with_it()
+    {
+        var described = Form
+            .Replace("<control id=\"websiteurl\"", "<control uniqueid=\"{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}\" id=\"websiteurl\"")
+            .Replace("</form>", "  <controlDescriptions><controlDescription forControl=\"{FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF}\"><customControl/></controlDescription><controlDescription forControl=\"{other}\"/></controlDescriptions>\n</form>");
+
+        var removed = AgentFormXml.RemoveColumn(described, "websiteurl").Value!;
+
+        Assert.DoesNotContain("FFFFFFFF", removed.FormXml);
+        Assert.Contains("<controlDescriptions><controlDescription forControl=\"{other}\"/></controlDescriptions>", removed.FormXml);
+    }
+
+    [Fact]
+    public void A_column_not_on_the_form_is_an_invalid_request()
+    {
+        var result = AgentFormXml.RemoveColumn(Form, "new_missing");
+
+        Assert.Equal("InvalidRequest", result.Problem!.Code);
+        Assert.Contains("not on this form", result.Problem.Message);
+    }
+
+    [Fact]
+    public void Removing_keeps_windows_line_endings()
+    {
+        var crlf = Form.ReplaceLineEndings("\r\n");
+
+        var removed = AgentFormXml.RemoveColumn(crlf, "telephone1").Value!;
+
+        Assert.Equal(crlf.Replace(PhoneRow.ReplaceLineEndings("\r\n"), ""), removed.FormXml);
+    }
+
     [Theory]
     [InlineData("text", "{4273EDBD-AC1D-40d3-9FB2-095C621B552D}")]
     [InlineData("memo", "{E0DECE4B-6FC8-4a8f-A065-082708572369}")]

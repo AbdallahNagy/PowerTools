@@ -85,6 +85,42 @@ public class AgentSchemaFormTests
     }
 
     [Fact]
+    public async Task Remove_column_from_form_updates_formxml_and_adds_the_form_to_the_solution()
+    {
+        var (service, client) = Make();
+
+        var result = await service.RemoveColumnFromFormAsync(new RemoveFormColumnBody
+        {
+            Table = "Account", FormId = FormId.ToString(), Column = "TELEPHONE1", Solution = "Core",
+        }, CancellationToken.None);
+
+        Assert.Null(result.Problem);
+        Assert.Equal(["Details / Notes"], result.Value!.Places);
+        var update = Assert.Single(client.Updated);
+        Assert.Equal(FormId, update.Id);
+        var xml = update.GetAttributeValue<string>("formxml");
+        Assert.DoesNotContain("telephone1", xml);
+        Assert.Contains("datafieldname=\"websiteurl\"", xml);
+        var add = Assert.Single(client.Executed.OfType<AddSolutionComponentRequest>());
+        Assert.Equal((FormId, 60, "Core"), (add.ComponentId, add.ComponentType, add.SolutionUniqueName));
+    }
+
+    [Fact]
+    public async Task Removing_a_column_not_on_the_form_or_from_another_tables_form_changes_nothing()
+    {
+        var (service, client) = Make();
+        var (otherTable, client2) = Make(formTable: "contact");
+
+        var missing = await service.RemoveColumnFromFormAsync(new RemoveFormColumnBody { Table = "account", FormId = FormId.ToString(), Column = "new_x" }, CancellationToken.None);
+        var other = await otherTable.RemoveColumnFromFormAsync(new RemoveFormColumnBody { Table = "account", FormId = FormId.ToString(), Column = "telephone1" }, CancellationToken.None);
+
+        Assert.Equal("InvalidRequest", missing.Problem!.Code);
+        Assert.Equal("InvalidRequest", other.Problem!.Code);
+        Assert.Empty(client.Updated);
+        Assert.Empty(client2.Updated);
+    }
+
+    [Fact]
     public async Task A_missing_form_is_not_found_and_a_bad_id_is_invalid()
     {
         var (service, _) = Make();

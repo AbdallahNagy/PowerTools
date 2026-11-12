@@ -7,6 +7,8 @@ public sealed record FormSectionDto(string Name, string Label);
 
 public sealed record FormTabDto(string Name, string Label, IReadOnlyList<FormSectionDto> Sections);
 
+public sealed record FormColumnRemoval(string FormXml, IReadOnlyList<string> Places);
+
 public sealed record FormInfoDto(Guid Id, string Name, int Type, IReadOnlyList<FormTabDto> Tabs);
 
 /// <summary>Reads and edits systemform.formxml as text, leaving everything it does not touch as it was.</summary>
@@ -85,6 +87,92 @@ public static class AgentFormXml
             $"<row><cell id=\"{{{cellId.ToString().ToUpperInvariant()}}}\"><labels><label description=\"{SecurityElement.Escape(displayName)}\" languagecode=\"{languageCode}\"/></labels>" +
             $"<control id=\"{SecurityElement.Escape(column)}\" classid=\"{classId}\" datafieldname=\"{SecurityElement.Escape(column)}\"/></cell></row>";
         return AgentResult<string>.Ok(AgentXmlSplice.AppendChild(formXml, rows, row));
+    }
+
+    /// <summary>
+    /// Removes every control bound to the column, in the tabs, the header and the footer. A cell that was the only
+    /// one in its row takes the row with it; a cell that shared its row leaves the row and the other cells. Control
+    /// descriptions that point at a removed control go too. Everything else stays byte for byte.
+    /// </summary>
+    public static AgentResult<FormColumnRemoval> RemoveColumn(string formXml, string column)
+    {
+        var doc = AgentXmlSplice.Parse(formXml);
+        var controls = doc.Descendants("control")
+            .Where(control => string.Equals((string?)control.Attribute("datafieldname"), column, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        if (controls.Count == 0)
+            return AgentResult<FormColumnRemoval>.Fail(AgentFaults.InvalidRequest($"Column '{column}' is not on this form."));
+
+        var targets = new List<XElement>();
+        var places = new List<string>();
+        foreach (var control in controls)
+        {
+            var cell = control.Ancestors("cell").FirstOrDefault();
+            if (cell is null)
+                return AgentResult<FormColumnRemoval>.Fail(AgentFaults.InvalidRequest($"Column '{column}' is in a part of the form this tool cannot edit."));
+            var row = cell.Parent;
+            targets.Add(row is not null && row.Name.LocalName == "row" && row.Elements("cell").Count() == 1 ? row : cell);
+            places.Add(PlaceOf(cell));
+
+            var uniqueId = (string?)control.Attribute("uniqueid");
+            if (!string.IsNullOrEmpty(uniqueId))
+            {
+                targets.AddRange(doc.Descendants("controlDescription").Where(description =>
+                    string.Equals((string?)description.Attribute("forControl"), uniqueId, StringComparison.OrdinalIgnoreCase)));
+            }
+        }
+
+        // Cut from the end so earlier offsets stay valid; skip anything inside a range already cut.
+        var ranges = targets.Distinct()
+            .Select(element => RangeOf(formXml, element))
+            .OrderByDescending(range => range.Start)
+            .ToList();
+        var edited = formXml;
+        var floor = int.MaxValue;
+        foreach (var (start, end) in ranges)
+        {
+            if (end > floor) continue;
+            edited = edited.Remove(start, end - start);
+            floor = start;
+        }
+
+        return AgentResult<FormColumnRemoval>.Ok(new FormColumnRemoval(edited, places.Distinct().ToList()));
+    }
+
+    /// <summary>The element's text, plus its line's indentation and line break when it sits on a line of its own.</summary>
+    private static (int Start, int End) RangeOf(string xml, XElement element)
+    {
+        var start = AgentXmlSplice.StartOf(xml, element);
+        var end = AgentXmlSplice.EndOf(xml, element);
+
+        var after = end;
+        while (after < xml.Length && xml[after] is ' ' or '\t') after++;
+        var ownLine = after == xml.Length || xml[after] is '\r' or '\n';
+        var before = start;
+        while (before > 0 && xml[before - 1] is ' ' or '\t') before--;
+        if (ownLine && before > 0 && xml[before - 1] == '\n')
+        {
+            before--;
+            if (before > 0 && xml[before - 1] == '\r') before--;
+            start = before;
+        }
+
+        return (start, end);
+    }
+
+    private static string PlaceOf(XElement cell)
+    {
+        if (cell.Ancestors("header").Any()) return "header";
+        if (cell.Ancestors("footer").Any()) return "footer";
+        var tab = cell.Ancestors("tab").FirstOrDefault();
+        var section = cell.Ancestors("section").FirstOrDefault();
+        return string.Join(" / ", new[] { tab, section }.Where(e => e is not null).Select(e => NameOf(e!)));
+    }
+
+    private static string NameOf(XElement element)
+    {
+        var label = LabelOf(element);
+        return label.Length > 0 ? label : (string?)element.Attribute("name") ?? "";
     }
 
     private static bool Matches(XElement element, string wanted) =>

@@ -64,7 +64,7 @@ describe("stdio connector end to end", () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name)).toContain("connections_list");
-    expect(tools).toHaveLength(53);
+    expect(tools).toHaveLength(54);
 
     const result = await client.callTool({ name: "connections_list", arguments: {} });
     expect(result.isError).toBeFalsy();

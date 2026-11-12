@@ -19,6 +19,17 @@ public sealed class AddViewColumnBody
     public string? Solution { get; set; }
 }
 
+public sealed class RemoveFormColumnBody
+{
+    public string? Table { get; set; }
+    public string? FormId { get; set; }
+    public string? Column { get; set; }
+    public string? Solution { get; set; }
+}
+
 public sealed record ColumnAddedDto(Guid Id, string Column);
+
+/// <summary><paramref name="Places"/> names where the column was: "Tab / Section", "header" or "footer".</summary>
+public sealed record ColumnRemovedDto(Guid Id, string Column, IReadOnlyList<string> Places);
 
 public sealed record ViewListItemDto(Guid Id, string Name, bool IsDefault, IReadOnlyList<string> Columns);

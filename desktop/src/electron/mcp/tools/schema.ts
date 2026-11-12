@@ -461,6 +461,32 @@ export const schemaDeleteRelationship = destructive({
   summarize: (args) => `schema_delete_relationship ${str(args.schemaName)}`,
 });
 
+export const schemaRemoveColumnFromForm = destructive({
+  name: "schema_remove_column_from_form",
+  title: "Remove column from form",
+  description:
+    "Destructive: takes a column off a main or quick create form, wherever it appears there (tabs, header, footer). The column and its data stay. Find form ids with metadata_list_forms; call schema_publish afterwards. Always asks the user.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      connection: connectionProp,
+      table: tableProp,
+      formId: { type: "string", pattern: GUID_PATTERN, description: "The form's GUID, from metadata_list_forms." },
+      column: { type: "string", pattern: NAME_PATTERN, description: "Logical name of the column to take off the form." },
+      solution: solutionProp,
+    },
+    required: ["table", "formId", "column"],
+    additionalProperties: false,
+  },
+  route: "/schema/forms/remove-column",
+  done: "Column removed from the form.",
+  describe: (args) => ({
+    summary: `remove column ${str(args.column)} from a form of ${str(args.table)}`,
+    removes: `column ${str(args.column)} from form ${str(args.formId)} (the column and its data stay)`,
+  }),
+  summarize: (args) => `schema_remove_column_from_form ${str(args.table)}.${str(args.column)}`,
+});
+
 export const SCHEMA_TOOLS: AgentTool[] = [
   schemaCreateTable,
   schemaCreateColumn,
@@ -472,6 +498,7 @@ export const SCHEMA_TOOLS: AgentTool[] = [
   schemaPublish,
   schemaAddColumnToForm,
   schemaAddColumnToView,
+  schemaRemoveColumnFromForm,
   schemaDeleteColumn,
   schemaDeleteTable,
   schemaDeleteRelationship,

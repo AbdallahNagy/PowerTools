@@ -80,6 +80,35 @@ public sealed partial class AgentSchemaService
             return AgentResult<ColumnAddedDto>.Ok(new ColumnAddedDto(formId, attribute.LogicalName));
         });
 
+    /// <summary>
+    /// Takes a column off a form without checking the column exists, so a column that was already deleted can be
+    /// cleaned off a form too.
+    /// </summary>
+    public Task<AgentResult<ColumnRemovedDto>> RemoveColumnFromFormAsync(RemoveFormColumnBody body, CancellationToken ct) =>
+        Guard(async () =>
+        {
+            Require(body.Table, "table");
+            Require(body.Column, "column");
+            var formId = ParseGuid(body.FormId, "formId");
+            var table = body.Table!.ToLowerInvariant();
+
+            var form = await RetrieveAsync("systemform", formId, ["objecttypecode", "type", "formxml"], ct);
+            var type = form.GetAttributeValue<OptionSetValue>("type")?.Value;
+            if (!string.Equals(form.GetAttributeValue<string>("objecttypecode"), table, StringComparison.OrdinalIgnoreCase)
+                || type is not (MainForm or QuickCreateForm))
+            {
+                throw Invalid($"Form {formId} is not a main or quick create form of '{table}'.");
+            }
+
+            var column = body.Column!.ToLowerInvariant();
+            var edited = AgentFormXml.RemoveColumn(form.GetAttributeValue<string>("formxml") ?? "", column);
+            if (edited.Problem is not null) return AgentResult<ColumnRemovedDto>.Fail(edited.Problem);
+
+            await client.UpdateAsync(new Entity("systemform", formId) { ["formxml"] = edited.Value!.FormXml }, ct);
+            await AddToSolutionAsync(body.Solution, formId, SystemFormComponent, ct);
+            return AgentResult<ColumnRemovedDto>.Ok(new ColumnRemovedDto(formId, column, edited.Value.Places));
+        });
+
     // ── Views ────────────────────────────────────────────────────────────────
 
     public Task<AgentResult<IReadOnlyList<ViewListItemDto>>> ListViewsAsync(string? table, CancellationToken ct) =>

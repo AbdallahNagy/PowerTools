@@ -21,6 +21,7 @@ function ctx(callSidecar: (...a: unknown[]) => unknown): AgentToolContext {
 }
 
 type EffectFn = (args: Record<string, unknown>, ctx: AgentToolContext) => Promise<string> | string;
+const GUID = "11111111-1111-1111-1111-111111111111";
 const effectOf = (t: { effect: unknown }) => t.effect as EffectFn;
 
 const registry = createAgentToolRegistry([...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS]);
@@ -200,7 +201,6 @@ describe("schema_publish", () => {
 });
 
 describe("forms and views", () => {
-  const GUID = "11111111-1111-1111-1111-111111111111";
 
   it("lists forms and views as reads with the table in the query", async () => {
     for (const [name, key, route] of [
@@ -247,6 +247,12 @@ describe("schema deletes", () => {
     ["schema_delete_column", { table: "account", column: "new_rating" }, "/api/agent/schema/columns/delete", "column new_rating from account and all its data"],
     ["schema_delete_table", { table: "new_project" }, "/api/agent/schema/tables/delete", "table new_project with all its rows and columns"],
     ["schema_delete_relationship", { schemaName: "new_a_b" }, "/api/agent/schema/relationships/delete", "relationship new_a_b"],
+    [
+      "schema_remove_column_from_form",
+      { table: "account", formId: GUID, column: "new_rating" },
+      "/api/agent/schema/forms/remove-column",
+      `column new_rating from form ${GUID} (the column and its data stay)`,
+    ],
   ])("%s is destructive, says what it removes and posts to its route", async (name, args, route, removes) => {
     const t = tool(name);
     expect(t.effect).toBe("destructive");
@@ -261,6 +267,13 @@ describe("schema deletes", () => {
   it("describes what is being deleted", () => {
     expect(tool("schema_delete_column").describe!({ table: "account", column: "new_rating" }).summary).toBe("delete column new_rating from account");
     expect(tool("schema_delete_table").describe!({ table: "new_project" }).summary).toBe("delete table new_project");
+    expect(tool("schema_remove_column_from_form").describe!({ table: "account", formId: GUID, column: "new_rating" }).summary).toBe(
+      "remove column new_rating from a form of account",
+    );
+  });
+
+  it("refuses a form id that is not a GUID", () => {
+    expect(registry.validate(tool("schema_remove_column_from_form"), { table: "account", formId: "nope", column: "c" }).ok).toBe(false);
   });
 
   it("rejects a bad table name", () => {
