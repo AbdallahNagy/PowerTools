@@ -52,7 +52,8 @@ interface Session {
   streams: number;
 }
 
-function approvalError(outcome: "denied" | "timed-out" | "unavailable"): AgentToolError {
+function approvalError(outcome: "denied" | "timed-out" | "unavailable" | "cancelled"): AgentToolError {
+  if (outcome === "cancelled") return new AgentToolError("Cancelled", "The call was cancelled");
   if (outcome === "denied") {
     return new AgentToolError("ApprovalDenied", "The user denied this action", "Do not retry; ask the user what to do instead.");
   }
@@ -158,6 +159,7 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
                 args: checked.args,
               },
               connection.allowsChanges,
+              extra.signal,
             );
             approval = outcome;
             if (outcome !== "auto" && outcome !== "allowed") throw approvalError(outcome);

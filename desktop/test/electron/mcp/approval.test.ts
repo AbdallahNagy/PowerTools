@@ -31,6 +31,60 @@ function setup(timeoutMs?: number) {
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
+describe("approval cancelled by the client", () => {
+  it("drops a queued request without disturbing the one on screen", async () => {
+    const { gate, presented, dismissed } = setup();
+    const first = gate.decide(draft({ summary: "first" }), false);
+    const controller = new AbortController();
+    const second = gate.decide(draft({ summary: "second" }), false, controller.signal);
+    const third = gate.decide(draft({ summary: "third" }), false);
+
+    controller.abort();
+
+    await expect(second).resolves.toBe("cancelled");
+    expect(dismissed).toEqual([]);
+    gate.respond(presented[0].id, true);
+    await expect(first).resolves.toBe("allowed");
+    expect(presented.map((r) => r.summary)).toEqual(["first", "third"]);
+    gate.respond(presented[1].id, false);
+    await expect(third).resolves.toBe("denied");
+  });
+
+  it("dismisses the dialog on screen and presents the next request", async () => {
+    const { gate, presented, dismissed } = setup();
+    const controller = new AbortController();
+    const first = gate.decide(draft({ summary: "first" }), false, controller.signal);
+    const second = gate.decide(draft({ summary: "second" }), false);
+
+    controller.abort();
+
+    await expect(first).resolves.toBe("cancelled");
+    expect(dismissed).toEqual([presented[0].id]);
+    expect(presented.map((r) => r.summary)).toEqual(["first", "second"]);
+    gate.respond(presented[0].id, true); // the old id no longer counts
+    gate.respond(presented[1].id, true);
+    await expect(second).resolves.toBe("allowed");
+  });
+
+  it("is cancelled at once when the signal is already aborted, and never presented", async () => {
+    const { gate, presented } = setup();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(gate.decide(draft(), false, controller.signal)).resolves.toBe("cancelled");
+    expect(presented).toHaveLength(0);
+  });
+
+  it("ignores an abort after the user answered", async () => {
+    const { gate, presented, dismissed } = setup();
+    const controller = new AbortController();
+    const result = gate.decide(draft(), false, controller.signal);
+    gate.respond(presented[0].id, true);
+    await expect(result).resolves.toBe("allowed");
+    controller.abort();
+    expect(dismissed).toEqual([]);
+  });
+});
+
 describe("approval gate", () => {
   it("lets a change through automatically when the connection allows changes", async () => {
     const { gate, presented } = setup();

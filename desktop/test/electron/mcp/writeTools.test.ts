@@ -10,6 +10,7 @@ import { createAgentToolRegistry } from "../../../src/electron/mcp/registry";
 import { createSidecarCaller } from "../../../src/electron/mcp/sidecarCaller";
 import { READ_TOOLS } from "../../../src/electron/mcp/tools/index";
 import { WRITE_TOOLS } from "../../../src/electron/mcp/tools/recordWrites";
+import { SCHEMA_TOOLS } from "../../../src/electron/mcp/tools/schema";
 import { bypassMsw } from "../../support/loopback";
 
 const TOKEN = "d".repeat(64);
@@ -59,7 +60,7 @@ async function setup(options: { answer?: "allow" | "deny" | "unavailable"; activ
     });
 
   handler = createMcpRequestHandler({
-    registry: createAgentToolRegistry([...READ_TOOLS, ...WRITE_TOOLS]),
+    registry: createAgentToolRegistry([...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS]),
     context: () => ({
       resolveConnection: resolver.resolve,
       callSidecar: createSidecarCaller({ baseUrl: "http://sidecar", secret: "sec", fetch: fetchFake as never, refresh: resolver.refresh }),
@@ -192,6 +193,50 @@ describe("write tools and approval", () => {
     const { call, asked } = await setup({ answer: "allow" });
     await expect(call("records_update", { table: "account", id: "nope", values: {} })).rejects.toMatchObject({ code: -32602 });
     expect(asked).toHaveLength(0);
+  });
+
+  it("takes a call out of the approval queue when the client cancels, and asks about the next", async () => {
+    const asked: ApprovalRequest[] = [];
+    const gate = createApprovalGate({ present: (r) => void asked.push(r), dismiss: () => undefined, attention: () => undefined });
+    const { entries } = await setup({ gate });
+    const controller = new AbortController();
+    const first = client!.callTool({ name: "records_update", arguments: { ...update, connection: "A · Dev" } }, undefined, { signal: controller.signal });
+    const outcome = first.then(() => "done", () => "rejected");
+    const second = client!.callTool({ name: "records_delete", arguments: { table: "account", id: GUID } });
+    await vi.waitFor(() => expect(asked).toHaveLength(1));
+
+    controller.abort();
+
+    expect(await outcome).toBe("rejected");
+    await vi.waitFor(() => expect(asked).toHaveLength(2));
+    expect(entries.find((e) => e.tool === "records_update")).toMatchObject({ approval: "cancelled", outcome: "error", code: "Cancelled" });
+    gate.respond(asked[1].id, false);
+    await second;
+  });
+
+  it("cancels the effect lookup of schema_update_column with the client", async () => {
+    let lookupSignal: AbortSignal | null | undefined;
+    let started!: () => void;
+    const hasStarted = new Promise<void>((resolve) => (started = resolve));
+    const { fetchFake } = await setup({ answer: "allow" });
+    fetchFake.mockImplementation(((_url: string, init: RequestInit) => {
+      lookupSignal = init.signal;
+      started();
+      return new Promise<Response>((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError"))));
+    }) as never);
+    const controller = new AbortController();
+    const call = client!.callTool(
+      { name: "schema_update_column", arguments: { table: "account", column: "new_title", maxLength: 10, connection: "A · Dev" } },
+      undefined,
+      { signal: controller.signal },
+    ).then(() => "done", () => "rejected");
+    await hasStarted;
+    expect(lookupSignal?.aborted).toBe(false);
+
+    controller.abort();
+
+    await vi.waitFor(() => expect(lookupSignal?.aborted).toBe(true));
+    expect(await call).toBe("rejected");
   });
 
   it("asks twice, in sequence, for two parallel deletes", async () => {

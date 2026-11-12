@@ -8,7 +8,7 @@ export interface ActivityEntry {
   tool: string;
   connection: string | null;
   effect: EffectClass;
-  approval: "not-needed" | "auto" | "allowed" | "denied" | "timed-out" | "unavailable";
+  approval: "not-needed" | "auto" | "allowed" | "denied" | "timed-out" | "unavailable" | "cancelled";
   outcome: "ok" | "error";
   code?: string;
   summary: string;

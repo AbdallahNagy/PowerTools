@@ -11,7 +11,7 @@ export interface ApprovalRequest {
   args: Record<string, unknown>;
 }
 
-export type ApprovalOutcome = "auto" | "allowed" | "denied" | "timed-out" | "unavailable";
+export type ApprovalOutcome = "auto" | "allowed" | "denied" | "timed-out" | "unavailable" | "cancelled";
 
 export interface ApprovalGateDeps {
   present(req: ApprovalRequest): void;
@@ -23,7 +23,8 @@ export interface ApprovalGateDeps {
 }
 
 export interface ApprovalGate {
-  decide(req: Omit<ApprovalRequest, "id">, connectionAllowsChanges: boolean): Promise<ApprovalOutcome>;
+  /** `signal` is the client's: aborting it takes the request out of the queue or off the screen. */
+  decide(req: Omit<ApprovalRequest, "id">, connectionAllowsChanges: boolean, signal?: AbortSignal): Promise<ApprovalOutcome>;
   respond(id: string, allow: boolean): void;
   failAll(outcome: "unavailable"): void;
 }
@@ -32,6 +33,7 @@ interface Pending {
   request: ApprovalRequest;
   resolve(outcome: ApprovalOutcome): void;
   timer?: ReturnType<typeof setTimeout>;
+  stopListening?: () => void;
 }
 
 /**
@@ -54,20 +56,28 @@ export function createApprovalGate(deps: ApprovalGateDeps): ApprovalGate {
     const index = queue.indexOf(entry);
     if (index < 0) return;
     queue.splice(index, 1);
+    entry.stopListening?.();
     if (entry.timer) {
       clearTimeout(entry.timer);
       // It was on screen; take it down (a no-op if the user answered it).
-      if (outcome === "timed-out" || outcome === "unavailable") deps.dismiss(entry.request.id);
+      if (outcome === "timed-out" || outcome === "unavailable" || outcome === "cancelled") deps.dismiss(entry.request.id);
     }
     entry.resolve(outcome);
     presentHead();
   }
 
   return {
-    decide(req, connectionAllowsChanges) {
+    decide(req, connectionAllowsChanges, signal) {
+      if (signal?.aborted) return Promise.resolve("cancelled");
       if (req.effect === "change" && connectionAllowsChanges) return Promise.resolve("auto");
       return new Promise<ApprovalOutcome>((resolve) => {
-        queue.push({ request: { ...req, id: randomUUID() }, resolve });
+        const entry: Pending = { request: { ...req, id: randomUUID() }, resolve };
+        if (signal) {
+          const onAbort = () => finish(entry, "cancelled");
+          signal.addEventListener("abort", onAbort, { once: true });
+          entry.stopListening = () => signal.removeEventListener("abort", onAbort);
+        }
+        queue.push(entry);
         presentHead();
       });
     },
@@ -82,6 +92,7 @@ export function createApprovalGate(deps: ApprovalGateDeps): ApprovalGate {
     failAll(outcome) {
       for (const entry of [...queue]) {
         queue.splice(queue.indexOf(entry), 1);
+        entry.stopListening?.();
         if (entry.timer) {
           clearTimeout(entry.timer);
           deps.dismiss(entry.request.id);
