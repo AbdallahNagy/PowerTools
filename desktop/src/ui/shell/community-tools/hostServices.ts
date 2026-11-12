@@ -1,5 +1,5 @@
 import { isAxiosError } from "axios";
-import type { ErrorCode, ToolError } from "@powertools/sdk/protocol";
+import type { ConnectionSnapshot, ErrorCode, ToolError } from "@powertools/sdk/protocol";
 
 import { desktopBridge } from "../../platform/desktopBridge";
 import { api } from "../../shared/api/client";
@@ -49,6 +49,17 @@ function isReplayable(method: "GET" | "POST", path: string): boolean {
   return method === "GET" || path.endsWith("/data/retrieve") || path.endsWith("/data/fetch");
 }
 
+/** What a tool is told about its connection: a display name and a kind, never an id or a URL. */
+export function connectionSnapshot(
+  connection: { displayName: string; crmType: ConnectionSnapshot["kind"] } | null,
+): ConnectionSnapshot | null {
+  return connection ? { displayName: connection.displayName, kind: connection.crmType } : null;
+}
+
+// Storage is read-modify-write on the whole file, so run one operation at a time per tool. The chain is
+// per tool id, not per tab: two tabs of one tool write the same file and must not lose each other's updates.
+const storageChains = new Map<string, Promise<unknown>>();
+
 export function createHostServices(input: {
   toolId: string;
   toolName: string;
@@ -63,11 +74,14 @@ export function createHostServices(input: {
 }): BrokerServices {
   const { toolId, getConnection, openInBrowser, toast } = input;
 
-  // Storage is read-modify-write on the whole object, so run one operation at a time.
-  let storageChain: Promise<unknown> = Promise.resolve();
   function storageOp<T>(work: () => Promise<T>): Promise<T> {
-    const run = storageChain.then(work);
-    storageChain = run.catch(() => undefined);
+    const run = (storageChains.get(toolId) ?? Promise.resolve()).then(work);
+    const settled = run.catch(() => undefined);
+    storageChains.set(toolId, settled);
+    // Forget an idle chain so the map does not keep a promise for every tool ever opened.
+    void settled.then(() => {
+      if (storageChains.get(toolId) === settled) storageChains.delete(toolId);
+    });
     return run.catch(() => {
       throw { ...INTERNAL };
     });
@@ -75,8 +89,7 @@ export function createHostServices(input: {
 
   return {
     getConnection() {
-      const connection = getConnection();
-      return connection ? { displayName: connection.displayName, kind: connection.crmType } : null;
+      return connectionSnapshot(getConnection());
     },
 
     connectionKey() {

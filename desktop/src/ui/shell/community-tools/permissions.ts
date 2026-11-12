@@ -92,7 +92,7 @@ function has(record: object, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(record, key);
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return Object.prototype.toString.call(value) === "[object Object]";
 }
 

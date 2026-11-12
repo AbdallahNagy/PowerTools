@@ -43,16 +43,18 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
   const error = actionError ?? loadError;
 
   // Every action ends with a refresh so the registry and this list show the same state.
+  // An action that returns false changed nothing (a cancelled folder picker), so there is nothing to re-read.
   const run = async (action: () => Promise<unknown>) => {
     setWorking(true);
     setActionError(null);
+    let changed = true;
     try {
-      await action();
+      changed = (await action()) !== false;
     } catch (failure) {
       setActionError(bridgeErrorMessage(failure));
       setReviewId(null);
     }
-    await refresh();
+    if (changed) await refresh();
     setWorking(false);
   };
 
@@ -77,7 +79,7 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
             variant="secondary"
             size="sm"
             disabled={working}
-            onClick={() => void run(() => desktopBridge.addCommunityToolFromFolder())}
+            onClick={() => void run(async () => (await desktopBridge.addCommunityToolFromFolder()) !== null)}
           >
             <FolderOpen size={14} aria-hidden="true" />
             Load from folder…
@@ -93,6 +95,9 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
             {tools.map((tool) => {
               const status = statusOf(tool);
               const manifest = tool.manifest;
+              const name = toolName(tool);
+              // The badge already says "Folder not found"; do not say it twice.
+              const problems = tool.status === "ready" ? [] : tool.errors.filter((message) => message !== status.label);
               return (
                 <li key={tool.id} className="flex flex-col gap-2 p-3">
                   <div className="flex min-w-0 items-center gap-2">
@@ -100,10 +105,15 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
                     {manifest ? <span className="shrink-0 text-xs text-fg-muted">{manifest.version}</span> : null}
                     <Badge tone={status.tone}>{status.label}</Badge>
                   </div>
-                  {manifest ? <p className="min-w-0 truncate text-xs text-fg-muted">{manifest.publisher.name}</p> : null}
-                  {tool.status !== "ready" && tool.errors.length > 0 ? (
+                  {manifest ? (
+                    <p className="min-w-0 truncate text-xs text-fg-muted">{manifest.publisher.name}</p>
+                  ) : (
+                    // Without a manifest the folder is the only thing that tells two rows apart.
+                    <p className="min-w-0 break-all text-xs text-fg-muted">{tool.folder}</p>
+                  )}
+                  {problems.length > 0 ? (
                     <ul className="flex flex-col gap-0.5 text-xs text-danger">
-                      {tool.errors.map((message, index) => (
+                      {problems.map((message, index) => (
                         <li key={index} className="break-words">
                           {message}
                         </li>
@@ -112,17 +122,24 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
                   ) : null}
                   <div className="flex flex-wrap justify-end gap-2">
                     {tool.status === "ready" && !tool.consentGranted ? (
-                      <Button size="sm" disabled={working} onClick={() => setReviewId(tool.id)}>
+                      <Button size="sm" disabled={working} aria-label={`Review permissions for ${name}`} onClick={() => setReviewId(tool.id)}>
                         Review permissions
                       </Button>
                     ) : null}
-                    <Button variant="secondary" size="sm" disabled={working} onClick={() => void run(async () => undefined)}>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={working}
+                      aria-label={`Reload ${name}`}
+                      onClick={() => void run(async () => undefined)}
+                    >
                       Reload
                     </Button>
                     <Button
                       variant="danger"
                       size="sm"
                       disabled={working}
+                      aria-label={`Remove ${name}`}
                       onClick={() => void run(() => desktopBridge.removeCommunityTool(tool.id))}
                     >
                       Remove
@@ -158,9 +175,12 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
             <ReviewSection title="Messages" empty="No messages" mono>
               {reviewTool.manifest.messages}
             </ReviewSection>
-            <ReviewSection title="Network hosts" empty="No network hosts" mono>
+            <ReviewSection title="Network hosts" empty="No hosts declared" mono>
               {reviewTool.manifest.network}
             </ReviewSection>
+            <p className="text-xs text-fg-muted">
+              Power Tools limits which hosts a tool can call, but cannot fully block network access.
+            </p>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" disabled={granting} onClick={() => setReviewId(null)}>
                 Cancel

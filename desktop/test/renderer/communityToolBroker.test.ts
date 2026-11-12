@@ -221,11 +221,34 @@ describe("community tool broker", () => {
     expect(JSON.stringify(ctx.received)).not.toContain("secret");
   });
 
+  it("passes a ToolError-shaped rejection through only from the sidecar, not from other services", async () => {
+    const shaped = { code: "DataverseFault", message: "from a local service" };
+    const ctx = track(setup({ services: { copyText: vi.fn(async () => { throw shaped; }), confirm: vi.fn(async () => { throw shaped; }) } }));
+    for (const [id, method, args] of [[1, "shell.copyText", { text: "x" }], [2, "shell.confirm", { title: "T", message: "M" }]] as const) {
+      expect(await ctx.call(id, method, args)).toEqual({ id, ok: false, error: { code: "Internal", message: "The host could not complete the request." } });
+    }
+  });
+
   it("passes ToolError-shaped sidecar rejections through", async () => {
     const callSidecar = vi.fn(async () => { throw { code: "DataverseFault", message: "Bad", dataverseCode: -2147220891, extra: "hidden" }; });
     const ctx = track(setup({ services: { callSidecar } }));
     const response = await ctx.call(1, "data.delete", { table: "a", id: "1" });
     expect(response).toEqual({ id: 1, ok: false, error: { code: "DataverseFault", message: "Bad", dataverseCode: -2147220891 } });
+  });
+
+  it("still runs calls when maxInFlight is not a usable number", async () => {
+    for (const maxInFlight of [Number.NaN, Number.POSITIVE_INFINITY, 0, -3]) {
+      const ctx = track(setup({ maxInFlight }));
+      expect(await ctx.call(1, "data.delete", { table: "a", id: "1" }), String(maxInFlight)).toMatchObject({ ok: true });
+    }
+  });
+
+  it("hands every toast type to the host, including warning", async () => {
+    const ctx = track(setup());
+    for (const [n, type] of ["info", "success", "warning", "error"].entries()) {
+      await ctx.call(n + 1, "shell.toast", { type, message: "m" });
+      expect(ctx.services.toast).toHaveBeenLastCalledWith(type, "m");
+    }
   });
 
   it("routes shell and storage calls to the services", async () => {
@@ -374,12 +397,28 @@ describe("community tool broker", () => {
       expect(ctx.services.saveFile).not.toHaveBeenCalled();
     });
 
-    it("still runs those four when the tab is active", async () => {
+    it("cancels shell.copyText, shell.openRecord and shell.openSolution", async () => {
+      const ctx = inactive();
+      expect(await ctx.call(1, "shell.copyText", { text: "x" })).toMatchObject(cancelled);
+      expect(await ctx.call(2, "shell.openRecord", { table: "account", id: "1" })).toMatchObject(cancelled);
+      expect(await ctx.call(3, "shell.openSolution", { solutionId: "22222222-2222-2222-2222-222222222222" })).toMatchObject(cancelled);
+      expect(ctx.services.copyText).not.toHaveBeenCalled();
+      expect(ctx.services.openRecord).not.toHaveBeenCalled();
+      expect(ctx.services.openSolution).not.toHaveBeenCalled();
+    });
+
+    it("still runs all of those when the tab is active", async () => {
       const ctx = track(setup());
       await ctx.call(1, "shell.shortcut", { key: "w", code: "KeyW", ctrlKey: true, shiftKey: false });
       await ctx.call(2, "shell.confirm", { title: "T", message: "M" });
       await ctx.call(3, "shell.openFile", { filters: [] });
       await ctx.call(4, "shell.saveFile", { suggestedName: "a", content: "c" });
+      await ctx.call(5, "shell.copyText", { text: "x" });
+      await ctx.call(6, "shell.openRecord", { table: "account", id: "1" });
+      await ctx.call(7, "shell.openSolution", { solutionId: "22222222-2222-2222-2222-222222222222" });
+      expect(ctx.services.copyText).toHaveBeenCalled();
+      expect(ctx.services.openRecord).toHaveBeenCalled();
+      expect(ctx.services.openSolution).toHaveBeenCalled();
       expect(ctx.services.dispatchShortcut).toHaveBeenCalled();
       expect(ctx.services.confirm).toHaveBeenCalled();
       expect(ctx.services.openFile).toHaveBeenCalled();

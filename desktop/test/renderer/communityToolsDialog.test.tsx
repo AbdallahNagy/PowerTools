@@ -67,6 +67,25 @@ describe("community tools dialog", () => {
     expect(within(dialog).queryByText("Review permissions")).not.toBeInTheDocument();
   });
 
+  it("says Folder not found once, names the folder, and does not call the row a tool name it lacks", async () => {
+    renderManager([{ ...missing, id: "C:\\tools\\gone", folder: "C:\\tools\\gone", manifest: null, errors: ["Folder not found"] }]);
+
+    const dialog = await screen.findByRole("dialog", { name: "Community tools" });
+    expect(await within(dialog).findAllByText("Folder not found")).toHaveLength(1);
+    expect(within(dialog).getByText("C:\\tools\\gone")).toBeInTheDocument();
+  });
+
+  it("gives each row's buttons names that say which tool they act on", async () => {
+    renderManager([unreviewed, communityTool("acme.other", {}, "Other tool")]);
+
+    const dialog = await screen.findByRole("dialog", { name: "Community tools" });
+    for (const name of ["New tool", "Other tool"]) {
+      expect(within(dialog).getByRole("button", { name: `Reload ${name}` })).toBeInTheDocument();
+      expect(within(dialog).getByRole("button", { name: `Remove ${name}` })).toBeInTheDocument();
+    }
+    expect(within(dialog).getByRole("button", { name: "Review permissions for New tool" })).toBeInTheDocument();
+  });
+
   it("shows name, version, and publisher as text only", async () => {
     const hostile = communityTool("acme.evil", {}, "<img src=x onerror=alert(1)>");
     renderManager([hostile]);
@@ -128,6 +147,19 @@ describe("community tools dialog", () => {
     }
   });
 
+  it("does not read an empty host list as a guarantee", async () => {
+    renderManager([unreviewed]);
+
+    fireEvent.click(await screen.findByText("Review permissions"));
+    const review = await screen.findByRole("dialog", { name: "Review permissions" });
+
+    expect(within(review).getByText("No hosts declared")).toBeInTheDocument();
+    expect(within(review).queryByText("No network hosts")).not.toBeInTheDocument();
+    expect(
+      within(review).getByText("Power Tools limits which hosts a tool can call, but cannot fully block network access."),
+    ).toBeInTheDocument();
+  });
+
   it("shows a 200-character host, message, tool name, and publisher in full in the review modal", async () => {
     const host = `${"a".repeat(60)}.${"b".repeat(60)}.${"c".repeat(70)}.example.com`;
     const message = "Message_" + "M".repeat(150);
@@ -176,7 +208,7 @@ describe("community tools dialog", () => {
     const { calls } = renderManager([communityTool("acme.demo")]);
 
     expect(await screen.findByText("Demo tool")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove Demo tool" }));
 
     await waitFor(() => expect(screen.queryByText("Demo tool")).not.toBeInTheDocument());
     expect(calls.remove).toHaveBeenCalledWith("acme.demo");
@@ -189,7 +221,7 @@ describe("community tools dialog", () => {
     const before = calls.list.mock.calls.length;
 
     setTools([communityTool("acme.demo", {}, "Renamed tool")]);
-    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reload Demo tool" }));
 
     expect(await screen.findByText("Renamed tool")).toBeInTheDocument();
     expect(calls.list.mock.calls.length).toBeGreaterThan(before);
@@ -202,7 +234,9 @@ describe("community tools dialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Load from folder…/ }));
     await waitFor(() => expect(calls.add).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole("button", { name: /Load from folder…/ })).toBeEnabled());
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(calls.list.mock.calls.length).toBe(before);
 
     const added = communityTool("acme.added", { consentGranted: false }, "Added tool");
     calls.add.mockResolvedValueOnce(added);

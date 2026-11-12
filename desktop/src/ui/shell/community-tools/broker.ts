@@ -9,7 +9,7 @@ import {
   type ToolError,
   type ToolResponse,
 } from "@powertools/sdk/protocol";
-import { authorize } from "./permissions";
+import { authorize, isRecord } from "./permissions";
 
 export interface BrokerServices {
   getConnection(): ConnectionSnapshot | null;
@@ -19,7 +19,7 @@ export interface BrokerServices {
   isActive(): boolean;
   /** Runs against the connection named by `connectionKey`, not the live one. Rejects with ToolError-shaped objects. */
   callSidecar(method: "GET" | "POST", path: string, body: unknown, connectionKey: string | null): Promise<unknown>;
-  toast(type: "info" | "success" | "error", message: string): void;
+  toast(type: "info" | "success" | "warning" | "error", message: string): void;
   setStatus(text: string | null): void;
   confirm(title: string, message: string): Promise<boolean>;
   openRecord(table: string, id: string): void;
@@ -52,6 +52,16 @@ const ERROR_CODES: Record<ErrorCode, true> = {
 
 type Args = Record<string, unknown>;
 
+/** Shell calls with a visible effect: a tool whose tab is not the active tab may not make them. */
+const BACKGROUND_REFUSED: ReadonlySet<MethodName> = new Set<MethodName>([
+  "shell.confirm",
+  "shell.openFile",
+  "shell.saveFile",
+  "shell.copyText",
+  "shell.openRecord",
+  "shell.openSolution",
+]);
+
 class RequestError extends Error {
   readonly toolError: ToolError;
   constructor(toolError: ToolError) {
@@ -63,10 +73,6 @@ class RequestError extends Error {
 const fail = (code: ErrorCode, message: string) => new RequestError({ code, message });
 
 // ---- Validation of untrusted input ----
-
-function isRecord(value: unknown): value is Args {
-  return Object.prototype.toString.call(value) === "[object Object]";
-}
 
 const isText = (value: unknown): value is string => typeof value === "string" && value !== "";
 const GUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -135,13 +141,18 @@ function isSidecarMethod(method: MethodName): boolean {
 }
 
 function toToolError(error: unknown): ToolError {
-  if (error instanceof RequestError) return error.toolError;
+  return error instanceof RequestError ? error.toolError : INTERNAL;
+}
+
+/** A sidecar rejection: a ToolError-shaped object passes through with only its known fields; anything else is Internal. */
+function fromSidecar(error: unknown): RequestError {
+  if (error instanceof RequestError) return error;
   if (isRecord(error) && typeof error.code === "string" && Object.prototype.hasOwnProperty.call(ERROR_CODES, error.code) && typeof error.message === "string") {
     const passed: ToolError = { code: error.code as ErrorCode, message: error.message };
     if (typeof error.dataverseCode === "number") passed.dataverseCode = error.dataverseCode;
-    return passed;
+    return new RequestError(passed);
   }
-  return INTERNAL;
+  return new RequestError(INTERNAL);
 }
 
 // ---- Sidecar routing ----
@@ -149,8 +160,13 @@ function toToolError(error: unknown): ToolError {
 const enc = encodeURIComponent;
 
 async function runSidecar(services: BrokerServices, method: MethodName, a: Args, key: string | null): Promise<unknown> {
-  const post = (route: string) => services.callSidecar("POST", `${API}/data/${route}`, a, key);
-  const get = (path: string) => services.callSidecar("GET", `${API}/metadata/tables${path}`, undefined, key);
+  // Only errors from the sidecar call itself may carry a code and message to the tool.
+  const call = (verb: "GET" | "POST", path: string, body: unknown): Promise<unknown> =>
+    services.callSidecar(verb, path, body, key).catch((error: unknown) => {
+      throw fromSidecar(error);
+    });
+  const post = (route: string) => call("POST", `${API}/data/${route}`, a);
+  const get = (path: string) => call("GET", `${API}/metadata/tables${path}`, undefined);
   switch (method) {
     case "data.retrieve": return post("retrieve");
     case "data.fetchXml": return post("fetch");
@@ -181,7 +197,7 @@ async function runSidecar(services: BrokerServices, method: MethodName, a: Args,
 async function runLocal(services: BrokerServices, method: MethodName, a: Args): Promise<unknown> {
   switch (method) {
     case "connection.get": return services.getConnection();
-    case "shell.toast": services.toast(a.type === "warning" ? "info" : (a.type as "info" | "success" | "error"), a.message as string); return undefined;
+    case "shell.toast": services.toast(a.type as "info" | "success" | "warning" | "error", a.message as string); return undefined;
     case "shell.setStatus": services.setStatus(a.text as string | null); return undefined;
     case "shell.confirm": return (await services.confirm(a.title as string, a.message as string)) === true;
     case "shell.openRecord": services.openRecord(a.table as string, a.id as string); return undefined;
@@ -212,7 +228,8 @@ export function createBroker(input: {
   dispose(): void;
 } {
   const { manifest, port, services } = input;
-  const maxInFlight = Math.max(1, input.maxInFlight ?? DEFAULT_MAX_IN_FLIGHT);
+  const requested = input.maxInFlight;
+  const maxInFlight = typeof requested === "number" && Number.isFinite(requested) ? Math.max(1, Math.floor(requested)) : DEFAULT_MAX_IN_FLIGHT;
   let disposed = false;
   let running = 0;
   const queue: Array<{ run(): void; cancel(error: RequestError): void }> = [];
@@ -280,7 +297,7 @@ export function createBroker(input: {
     if (!isSidecarMethod(method)) {
       if (!services.isActive()) {
         if (method === "shell.shortcut") return undefined;
-        if (method === "shell.confirm" || method === "shell.openFile" || method === "shell.saveFile") throw NOT_ACTIVE();
+        if (BACKGROUND_REFUSED.has(method)) throw NOT_ACTIVE();
       }
       return runLocal(services, method, args);
     }

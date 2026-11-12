@@ -1,12 +1,7 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import {
-  CONNECT_MESSAGE,
-  PROTOCOL_VERSION,
-  type ConnectionSnapshot,
-  type ReadyMessage,
-} from "@powertools/sdk/protocol";
+import { CONNECT_MESSAGE, PROTOCOL_VERSION, type ReadyMessage } from "@powertools/sdk/protocol";
 
-import type { LoadedCommunityTool } from "../../platform/desktopBridge";
+import { desktopBridge, type LoadedCommunityTool } from "../../platform/desktopBridge";
 import { useConnection, useOpenInBrowser, useTabConnection } from "../../shared/connections";
 import { useToolStatus } from "../../shared/status";
 import { Button, EmptyState, Modal, ToastProvider, useToast } from "../../shared/ui";
@@ -14,7 +9,8 @@ import { ShellShortcutDispatchContext } from "../keyboard/useShellShortcuts";
 import { TabProviderContext } from "../tabs/TabProviderContext";
 import { useToolRuntime } from "../tool-runtime/useToolRuntime";
 import { createBroker } from "./broker";
-import { createHostServices } from "./hostServices";
+import { connectionSnapshot, createHostServices } from "./hostServices";
+import { CommunityToolsContext } from "./CommunityToolsContext";
 import { FORWARDED_SHORTCUTS, readThemeSnapshot } from "./themeSnapshot";
 
 const HANDSHAKE_TIMEOUT_MS = 10_000;
@@ -30,10 +26,6 @@ interface PendingConfirm {
   resolve: (confirmed: boolean) => void;
 }
 
-function snapshotOf(info: { displayName: string; crmType: ConnectionSnapshot["kind"] } | null): ConnectionSnapshot | null {
-  return info ? { displayName: info.displayName, kind: info.crmType } : null;
-}
-
 type Broker = ReturnType<typeof createBroker>;
 
 function isHello(data: unknown): data is { type: "hello"; protocolVersion: number } {
@@ -47,8 +39,15 @@ function isHello(data: unknown): data is { type: "hello"; protocolVersion: numbe
 
 export function CommunityToolFrame({ tool }: { tool: LoadedCommunityTool }) {
   const manifest = tool.manifest;
+  const { refresh } = useContext(CommunityToolsContext);
   if (!manifest) {
-    return <EmptyState title="This tool did not start" description="Its manifest could not be read." />;
+    return (
+      <EmptyState
+        title="This tool did not start"
+        description="Its manifest could not be read."
+        action={<Button onClick={() => void refresh()}>Reload</Button>}
+      />
+    );
   }
   // Built-in tools each bring their own toast provider; the shell supplies none, so the frame does.
   return (
@@ -182,14 +181,20 @@ function ManifestFrame({
         type: "ready",
         protocolVersion: PROTOCOL_VERSION,
         theme: readThemeSnapshot(),
-        connection: snapshotOf(live.current.connection),
+        connection: connectionSnapshot(live.current.connection),
         shortcuts: FORWARDED_SHORTCUTS,
       };
       port.postMessage(ready);
       session = createBroker({ manifest, port, services });
       brokerRef.current = session;
-      console.info(
-        `[community-tool] ${manifest.id} handshake after ${Math.round(performance.now() - startedAtRef.current)} ms`,
+      const handshakeMs = Math.round(performance.now() - startedAtRef.current);
+      // The size is logged next to the handshake time, which the spec asks for so authors can see both.
+      void desktopBridge.getCommunityToolBundleSize(manifest.id).then(
+        ({ bytes, files }) =>
+          console.info(
+            `[community-tool] ${manifest.id} handshake after ${handshakeMs} ms, bundle ${(bytes / 1024).toFixed(0)} KB in ${files} files`,
+          ),
+        () => console.info(`[community-tool] ${manifest.id} handshake after ${handshakeMs} ms`),
       );
     };
 
@@ -209,7 +214,7 @@ function ManifestFrame({
 
   const connectionKey = connection ? `${connection.displayName}|${connection.crmType}` : "";
   useEffect(() => {
-    brokerRef.current?.notifyConnection(snapshotOf(live.current.connection));
+    brokerRef.current?.notifyConnection(connectionSnapshot(live.current.connection));
   }, [connectionKey]);
 
   // An open confirmation must not outlive the frame.

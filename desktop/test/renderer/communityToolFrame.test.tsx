@@ -8,6 +8,7 @@ import { CommunityToolFrame } from "../../src/ui/shell/community-tools/Community
 import { FORWARDED_SHORTCUTS } from "../../src/ui/shell/community-tools/themeSnapshot";
 import { TabProviderContext, type TabContextValue } from "../../src/ui/shell/tabs/TabProviderContext";
 import { ToolRuntimeContext } from "../../src/ui/shell/tool-runtime/ToolRuntimeContext";
+import type { DesktopBridgeOverrides } from "../support/desktopBridge";
 import { renderWithProviders } from "../support/render";
 
 const tool: LoadedCommunityTool = {
@@ -42,24 +43,31 @@ function StatusProbe() {
 function renderFrame(
   dispatch: ((keys: { key: string; code?: string; ctrlKey: boolean; shiftKey: boolean }) => void) | null = null,
   activeTabId: string | null = null,
+  options: { tool?: LoadedCommunityTool; bridgeOverrides?: DesktopBridgeOverrides } = {},
 ) {
-  const frame = (
-    <ToolRuntimeContext.Provider value={{ toolId: tool.id, instanceId: "tab-1", connectionId: null }}>
-      <CommunityToolFrame tool={tool} />
-    </ToolRuntimeContext.Provider>
-  );
-  return renderWithProviders(
-    <StatusBarProvider>
-      <ShellShortcutDispatchContext.Provider value={dispatch}>
-        {activeTabId === null ? (
-          frame
-        ) : (
-          <TabProviderContext.Provider value={{ activeTabId } as TabContextValue}>{frame}</TabProviderContext.Provider>
-        )}
-        <StatusProbe />
-      </ShellShortcutDispatchContext.Provider>
-    </StatusBarProvider>,
-  );
+  const shown = options.tool ?? tool;
+  // `showFrame` lets a test remove the frame while the status probe stays mounted.
+  const tree = (showFrame: boolean) => {
+    const frame = showFrame ? (
+      <ToolRuntimeContext.Provider value={{ toolId: shown.id, instanceId: "tab-1", connectionId: null }}>
+        <CommunityToolFrame tool={shown} />
+      </ToolRuntimeContext.Provider>
+    ) : null;
+    return (
+      <StatusBarProvider>
+        <ShellShortcutDispatchContext.Provider value={dispatch}>
+          {activeTabId === null || frame === null ? (
+            frame
+          ) : (
+            <TabProviderContext.Provider value={{ activeTabId } as TabContextValue}>{frame}</TabProviderContext.Provider>
+          )}
+          <StatusProbe />
+        </ShellShortcutDispatchContext.Provider>
+      </StatusBarProvider>
+    );
+  };
+  const view = renderWithProviders(tree(true), { bridgeOverrides: options.bridgeOverrides });
+  return { ...view, removeFrame: () => view.rerender(tree(false)) };
 }
 
 /** Fires the frame's load and captures the port the host transfers to it. */
@@ -161,8 +169,8 @@ describe("CommunityToolFrame", () => {
     port.close();
   });
 
-  it("shows status text as plain text, truncated, and clears it on unmount", async () => {
-    const { unmount } = renderFrame();
+  it("shows status text as plain text, truncated, and clears it when the frame goes away", async () => {
+    const { removeFrame, unmount } = renderFrame();
     const { port } = loadFrame();
     const ready = nextMessage(port);
     port.postMessage({ type: "hello", protocolVersion: 1 });
@@ -174,7 +182,45 @@ describe("CommunityToolFrame", () => {
     expect(probe.textContent).toHaveLength(200);
     expect(probe.querySelector("b")).toBeNull();
     port.close();
+    removeFrame();
+    await waitFor(() => expect(screen.getByRole("status", { name: "status items" }).textContent).toBe(""));
     unmount();
+  });
+
+  it("logs the bundle size next to the handshake time", async () => {
+    const getCommunityToolBundleSize = vi.fn(async () => ({ bytes: 2048 * 3, files: 7 }));
+    renderFrame(null, null, { bridgeOverrides: { getCommunityToolBundleSize } });
+    const { port } = loadFrame();
+    const ready = nextMessage(port);
+    port.postMessage({ type: "hello", protocolVersion: 1 });
+    await ready;
+
+    await waitFor(() =>
+      expect(console.info).toHaveBeenCalledWith(expect.stringMatching(/acme\.demo handshake after \d+ ms, bundle 6 KB in 7 files/)),
+    );
+    expect(getCommunityToolBundleSize).toHaveBeenCalledWith("acme.demo");
+    port.close();
+  });
+
+  it("still logs the handshake when the bundle size cannot be read", async () => {
+    const getCommunityToolBundleSize = vi.fn(async () => {
+      throw new Error("gone");
+    });
+    renderFrame(null, null, { bridgeOverrides: { getCommunityToolBundleSize } });
+    const { port } = loadFrame();
+    const ready = nextMessage(port);
+    port.postMessage({ type: "hello", protocolVersion: 1 });
+    await ready;
+
+    await waitFor(() => expect(console.info).toHaveBeenCalledWith(expect.stringMatching(/acme\.demo handshake after \d+ ms$/)));
+    port.close();
+  });
+
+  it("offers Reload when the tool has no readable manifest", async () => {
+    renderFrame(null, null, { tool: { ...tool, manifest: null } });
+
+    expect(screen.getByText("This tool did not start")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reload" })).toBeInTheDocument();
   });
 
   it("resolves a confirmation with the user's choice and with false on unmount", async () => {

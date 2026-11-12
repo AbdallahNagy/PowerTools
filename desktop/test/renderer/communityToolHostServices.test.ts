@@ -202,6 +202,31 @@ describe("community tool host services", () => {
     expect(stored).toEqual({ b: 2 });
   });
 
+  it("shows a warning toast as a warning, not as info", () => {
+    const { built, showToast } = services();
+    built.toast("warning", "Careful");
+    expect(showToast).toHaveBeenCalledWith("Careful", "warning");
+  });
+
+  it("keeps two tabs of the same tool from losing each other's storage updates", async () => {
+    let stored: Record<string, unknown> = {};
+    const bridge = {
+      readCommunityToolStorage: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return { ...stored };
+      },
+      writeCommunityToolStorage: async (_id: string, data: Record<string, unknown>) => {
+        stored = data;
+      },
+    };
+    const first = services({ bridge }).built;
+    const second = services({ bridge }).built;
+
+    await Promise.all([first.storage.set("a", 1), second.storage.set("b", 2), first.storage.set("c", 3), second.storage.remove("a")]);
+
+    expect(stored).toEqual({ b: 2, c: 3 });
+  });
+
   it("lists exactly the five forwarded shell shortcuts", () => {
     const matched = FORWARDED_SHORTCUTS.map((spec) =>
       matchShellShortcut({ key: spec.key, ctrlKey: spec.ctrl, shiftKey: spec.shift, metaKey: false, altKey: false }),
