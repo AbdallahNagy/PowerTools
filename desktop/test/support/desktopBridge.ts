@@ -59,6 +59,11 @@ const offlineMcpStatus: Awaited<ReturnType<DesktopBridge["getMcpStatus"]>> = {
   connectorCommand: '"/program files/power-tools/api/PowerTools.API.exe" --mcp-connector',
   connector: { command: "/program files/power-tools/api/PowerTools.API.exe", args: ["--mcp-connector"] },
   recent: [],
+  groups: [
+    { group: "connections", enabled: true, tools: 1 },
+    { group: "metadata", enabled: true, tools: 7 },
+    { group: "records", enabled: true, tools: 8 },
+  ],
 };
 
 export type DesktopBridgeOverrides = {
@@ -148,6 +153,10 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     getMcpStatus: async () => offlineMcpStatus,
     setMcpEnabled: async (enabled) => ({ ...offlineMcpStatus, enabled, running: enabled, port: enabled ? 51234 : null }),
     getMcpActivity: async () => [],
+    setMcpGroup: async (group, enabled) => ({
+      ...offlineMcpStatus,
+      groups: offlineMcpStatus.groups.map((g) => (g.group === group ? { ...g, enabled } : g)),
+    }),
     onMcpApprovalPresent: () => () => undefined,
     onMcpApprovalDismiss: () => () => undefined,
     respondMcpApproval: async () => undefined,

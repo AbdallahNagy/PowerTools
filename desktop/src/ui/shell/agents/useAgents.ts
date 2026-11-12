@@ -9,6 +9,7 @@ export interface AgentsState {
   busy: boolean;
   error: string | null;
   setEnabled(enabled: boolean): Promise<void>;
+  setGroup(group: string, enabled: boolean): Promise<void>;
   refresh(): Promise<void>;
 }
 
@@ -46,10 +47,11 @@ export function useAgents(active: boolean): AgentsState {
 
   const refresh = useCallback(() => run(() => desktopBridge.getMcpStatus()), [run]);
   const setEnabled = useCallback((enabled: boolean) => run(() => desktopBridge.setMcpEnabled(enabled)), [run]);
+  const setGroup = useCallback((group: string, enabled: boolean) => run(() => desktopBridge.setMcpGroup(group, enabled)), [run]);
 
   useEffect(() => {
     if (active) void refresh();
   }, [active, refresh]);
 
-  return { status, busy, error, setEnabled, refresh };
+  return { status, busy, error, setEnabled, setGroup, refresh };
 }

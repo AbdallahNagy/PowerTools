@@ -119,6 +119,8 @@ export interface McpStatusInfo {
   connectorCommand: string;
   connector: { command: string; args: string[] };
   recent: McpActivityEntry[];
+  /** Every tool group, with whether it is on and how many tools it has. */
+  groups: Array<{ group: string; enabled: boolean; tools: number }>;
 }
 
 /** A community tool's validated powertools-tool.json. Mirrors src/electron/communityTools/manifest.ts. */
@@ -225,6 +227,8 @@ export interface DesktopBridge {
   /** Turns the MCP server on or off and remembers the choice. */
   setMcpEnabled(enabled: boolean): Promise<McpStatusInfo>;
   getMcpActivity(limit: number): Promise<McpActivityEntry[]>;
+  /** Turns a group of agent tools on or off. */
+  setMcpGroup(group: string, enabled: boolean): Promise<McpStatusInfo>;
   /** The File > Agents (MCP) menu item was chosen. */
   onOpenAgents(callback: () => void): () => void;
   /** An agent call needs the user's answer. */
@@ -301,6 +305,7 @@ export const desktopBridge: DesktopBridge = {
   getMcpStatus: () => bridge().getMcpStatus(),
   setMcpEnabled: (enabled) => bridge().setMcpEnabled(enabled),
   getMcpActivity: (limit) => bridge().getMcpActivity(limit),
+  setMcpGroup: (group, enabled) => bridge().setMcpGroup(group, enabled),
   onOpenAgents: (callback) => bridge().onOpenAgents(callback),
   onMcpApprovalPresent: (callback) => bridge().onMcpApprovalPresent(callback),
   onMcpApprovalDismiss: (callback) => bridge().onMcpApprovalDismiss(callback),

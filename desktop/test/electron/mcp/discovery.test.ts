@@ -103,6 +103,41 @@ describe("createMcpService", () => {
     expect(noSession.status).toBe(400);
   });
 
+  it("lists every group with its tool count, all on by default", () => {
+    const s = makeService();
+    const groups = s.status().groups;
+    expect(groups.map((g) => g.group)).toEqual(["connections", "metadata", "records", "schema", "solutions", "plugins", "envvars"]);
+    expect(groups.every((g) => g.enabled && g.tools > 0)).toBe(true);
+    expect(groups.find((g) => g.group === "records")!.tools).toBeGreaterThanOrEqual(8);
+  });
+
+  it("switches a group off and on, and tells a running session", async () => {
+    const s = makeService();
+    expect(s.setGroup("plugins", false).groups.find((g) => g.group === "plugins")!.enabled).toBe(false);
+    expect(s.status().groups.find((g) => g.group === "schema")!.enabled).toBe(true);
+    expect(s.setGroup("plugins", true).groups.find((g) => g.group === "plugins")!.enabled).toBe(true);
+    expect(() => s.setGroup("nonsense" as never, false)).toThrow();
+  });
+
+  it("keeps the toggles in the settings store it is given", () => {
+    let saved: Record<string, boolean> = { schema: false };
+    service = createMcpService({
+      userDataPath: dir,
+      sidecar: { baseUrl: "http://127.0.0.1:1", secret: "s" },
+      connections: { resolveConnectionAuth: async () => ({ error: "none" }), listConnectionSummaries: () => [], activeConnectionId: () => null },
+      appVersion: "1.0.0",
+      readEnabled: () => false,
+      writeEnabled: () => undefined,
+      readGroups: () => saved,
+      writeGroups: (groups) => {
+        saved = groups as Record<string, boolean>;
+      },
+    });
+    expect(service.status().groups.find((g) => g.group === "schema")!.enabled).toBe(false);
+    service.setGroup("solutions", false);
+    expect(saved).toEqual({ schema: false, solutions: false });
+  });
+
   it("reports a start failure without throwing", async () => {
     const s = makeService();
     // A file where the userData folder should be makes writing discovery fail.

@@ -9,12 +9,16 @@ type Handler = (event: unknown, ...args: unknown[]) => Promise<unknown>;
 function setup() {
   const handlers = new Map<string, Handler>();
   const mainContents = { id: 1 };
-  const status: McpStatus = { enabled: false, running: false, port: null, discoveryPath: "C:\\u\\mcp-endpoint.json", error: null };
+  const status: McpStatus = { enabled: false, running: false, port: null, discoveryPath: "C:\\u\\mcp-endpoint.json", error: null, groups: [] };
   const service = {
     status: vi.fn(() => status),
     setEnabled: vi.fn(async (enabled: boolean) => ({ ...status, enabled, running: enabled, port: enabled ? 5000 : null })),
     recentActivity: vi.fn(async () => []),
     respondApproval: vi.fn(),
+    setGroup: vi.fn((group: string, enabled: boolean) => ({
+      ...status,
+      groups: [{ group: group as never, enabled, tools: 3 }],
+    })),
   };
   registerMcpIpc({
     ipcMain: { handle: (channel: string, handler: Handler) => void handlers.set(channel, handler) } as never,
@@ -63,6 +67,28 @@ describe("mcp IPC", () => {
     const { call, mainContents, service } = setup();
     await call("mcp-get-activity", mainContents, 20);
     expect(service.recentActivity).toHaveBeenCalledWith(20);
+  });
+});
+
+describe("mcp group IPC", () => {
+  it("switches a group and returns the new status", async () => {
+    const { call, mainContents, service } = setup();
+    const info = (await call("mcp-set-group", mainContents, "schema", false)) as { groups: Array<{ group: string; enabled: boolean }> };
+    expect(service.setGroup).toHaveBeenCalledWith("schema", false);
+    expect(info.groups).toEqual([{ group: "schema", enabled: false, tools: 3 }]);
+  });
+
+  it.each(["", "nonsense", "__proto__", 5, null])("rejects the group %j", async (group) => {
+    const { call, mainContents, service } = setup();
+    await expect(call("mcp-set-group", mainContents, group, true)).rejects.toThrow(/Group must be one of/);
+    expect(service.setGroup).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-boolean and a foreign sender", async () => {
+    const { call, mainContents, service } = setup();
+    await expect(call("mcp-set-group", mainContents, "schema", "off")).rejects.toThrow(/true or false/);
+    await expect(call("mcp-set-group", { id: 2 }, "schema", true)).rejects.toThrow(/main window/);
+    expect(service.setGroup).not.toHaveBeenCalled();
   });
 });
 

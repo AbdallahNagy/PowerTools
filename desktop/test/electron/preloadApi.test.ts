@@ -89,6 +89,7 @@ describe("createPreloadApi", () => {
     ["getMcpStatus", [], "mcp-get-status", []],
     ["setMcpEnabled", [true], "mcp-set-enabled", [true]],
     ["getMcpActivity", [50], "mcp-get-activity", [50]],
+    ["setMcpGroup", ["schema", false], "mcp-set-group", ["schema", false]],
     ["respondMcpApproval", ["req-1", true], "mcp-approval-respond", ["req-1", true]],
   ] as const)(
     "%s invokes %s with the existing arguments",
@@ -269,6 +270,7 @@ describe("createPreloadApi", () => {
       "getMcpStatus",
       "setMcpEnabled",
       "getMcpActivity",
+      "setMcpGroup",
       "onMcpApprovalPresent",
       "onMcpApprovalDismiss",
       "respondMcpApproval",

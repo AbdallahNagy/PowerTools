@@ -68,7 +68,7 @@ interface AgentsDialogProps {
 }
 
 export function AgentsDialog({ open, onClose }: AgentsDialogProps) {
-  const { status, busy, error, setEnabled, refresh } = useAgents(open);
+  const { status, busy, error, setEnabled, setGroup, refresh } = useAgents(open);
   const state = statusOf(status);
   const enabled = status?.running === true || (status?.enabled === true && !status.error);
 
@@ -103,6 +103,31 @@ export function AgentsDialog({ open, onClose }: AgentsDialogProps) {
           <h3 className="text-sm font-medium text-fg-strong">Connect a client</h3>
           <Snippet label="Claude Code" text={claudeCodeCommand(status)} />
           <Snippet label="Claude Desktop and VS Code" text={clientConfigJson(status)} />
+        </section>
+      ) : null}
+
+      {status ? (
+        <section className="flex flex-col gap-2" aria-label="Tool groups">
+          <h3 className="text-sm font-medium text-fg-strong">Tool groups</h3>
+          <p className="text-xs text-fg-muted">Turn a group off to stop offering its tools to agents. Connected agents are told right away.</p>
+          <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+            {status.groups.map((entry) => (
+              <li key={entry.group}>
+                <label className="flex items-center gap-2 text-sm text-fg">
+                  <Checkbox
+                    checked={entry.enabled}
+                    disabled={busy}
+                    onChange={(next) => void setGroup(entry.group, next)}
+                    aria-label={`${entry.group} tools`}
+                  />
+                  <span className="font-mono">{entry.group}</span>
+                  <span className="text-xs text-fg-muted">
+                    {entry.tools} {entry.tools === 1 ? "tool" : "tools"}
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 

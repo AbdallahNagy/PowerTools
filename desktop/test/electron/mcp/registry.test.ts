@@ -55,6 +55,21 @@ describe("createAgentToolRegistry", () => {
     ).toThrow(/describe/);
   });
 
+  it("hides the tools of a disabled group from list and get, and counts every group", () => {
+    const off = new Set<string>(["schema"]);
+    const registry = createAgentToolRegistry(
+      [tool({ name: "a", group: "metadata" }), tool({ name: "b", group: "schema" }), tool({ name: "c", group: "schema" })],
+      { isGroupEnabled: (group) => !off.has(group) },
+    );
+    expect(registry.list().map((t) => t.name)).toEqual(["a"]);
+    expect(registry.get("b")).toBeUndefined();
+    expect(registry.get("a")).toBeDefined();
+    expect(registry.groups().find((g) => g.group === "schema")!.tools).toBe(2);
+    expect(registry.groups().map((g) => g.group)).toEqual(["connections", "metadata", "records", "schema", "solutions", "plugins", "envvars"]);
+    off.delete("schema");
+    expect(registry.list().map((t) => t.name)).toEqual(["a", "b", "c"]);
+  });
+
   it("validates arguments and names the field", () => {
     const registry = createAgentToolRegistry([tool()]);
     const t = registry.get("demo_tool")!;

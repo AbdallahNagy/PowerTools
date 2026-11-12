@@ -73,9 +73,12 @@ export interface JsonSchemaObject {
   additionalProperties: false;
 }
 
+export const AGENT_TOOL_GROUPS = ["connections", "metadata", "records", "schema", "solutions", "plugins", "envvars"] as const;
+export type AgentToolGroup = (typeof AGENT_TOOL_GROUPS)[number];
+
 export interface AgentTool {
   name: string;
-  group: "connections" | "metadata" | "records" | "schema" | "solutions" | "plugins" | "envvars";
+  group: AgentToolGroup;
   title: string;
   description: string;
   inputSchema: JsonSchemaObject;

@@ -110,6 +110,7 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
     getMcpStatus: () => ipcRenderer.invoke("mcp-get-status"),
     setMcpEnabled: (enabled: boolean) => ipcRenderer.invoke("mcp-set-enabled", enabled),
     getMcpActivity: (limit: number) => ipcRenderer.invoke("mcp-get-activity", limit),
+    setMcpGroup: (group: string, enabled: boolean) => ipcRenderer.invoke("mcp-set-group", group, enabled),
     onMcpApprovalPresent: (callback: (request: any) => void) => {
       const listener = (_: unknown, request: any) => callback(request);
       ipcRenderer.on("mcp-approval-present", listener);

@@ -15,6 +15,7 @@ import { PLUGIN_TOOLS } from "./tools/plugins.js";
 import { SCHEMA_TOOLS } from "./tools/schema.js";
 import { SOLUTION_TOOLS } from "./tools/solutions.js";
 import type { SidecarAuth } from "../sidecarHeaders.js";
+import { AGENT_TOOL_GROUPS, type AgentToolGroup } from "./types.js";
 
 export const MCP_INSTRUCTIONS = `Power Tools works on the user's Dataverse environments with their own sign-in.
 - Every tool accepts "connection" (a saved connection's display name; see connections_list). Omit it to use the connection active in Power Tools.
@@ -27,6 +28,8 @@ export interface McpStatus {
   port: number | null;
   discoveryPath: string;
   error: string | null;
+  /** Every group, with whether its tools are offered and how many it has. */
+  groups: Array<{ group: AgentToolGroup; enabled: boolean; tools: number }>;
 }
 
 export interface McpServiceDeps {
@@ -40,6 +43,9 @@ export interface McpServiceDeps {
   appVersion: string;
   readEnabled(): boolean;
   writeEnabled(value: boolean): void;
+  /** A group missing from the saved record is on. Defaults to keeping them in memory. */
+  readGroups?(): Partial<Record<AgentToolGroup, boolean>>;
+  writeGroups?(groups: Partial<Record<AgentToolGroup, boolean>>): void;
   /** Defaults to a log under the user data folder. */
   log?: ActivityLog;
   fetch?: typeof fetch;
@@ -61,6 +67,8 @@ export interface McpService {
   start(): Promise<void>;
   stop(): Promise<void>;
   setEnabled(value: boolean): Promise<McpStatus>;
+  /** Switches a group of tools on or off and tells connected clients the list changed. */
+  setGroup(group: AgentToolGroup, enabled: boolean): McpStatus;
   status(): McpStatus;
 }
 
@@ -78,7 +86,12 @@ export function createMcpService(deps: McpServiceDeps): McpService {
     fetch: deps.fetch,
     refresh: resolver.refresh,
   });
-  const registry = createAgentToolRegistry([...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS, ...SOLUTION_TOOLS, ...PLUGIN_TOOLS, ...ENVVAR_TOOLS]);
+  let memoryGroups: Partial<Record<AgentToolGroup, boolean>> = {};
+  const readGroups = () => (deps.readGroups ? deps.readGroups() : memoryGroups);
+  const registry = createAgentToolRegistry(
+    [...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS, ...SOLUTION_TOOLS, ...PLUGIN_TOOLS, ...ENVVAR_TOOLS],
+    { isGroupEnabled: (group) => readGroups()[group] !== false },
+  );
   const approvalUi = deps.approvalUi ?? {
     present: () => queueMicrotask(() => gate.failAll("unavailable")),
     dismiss: () => undefined,
@@ -148,6 +161,7 @@ export function createMcpService(deps: McpServiceDeps): McpService {
       port: host?.port ?? null,
       discoveryPath,
       error,
+      groups: registry.groups().map(({ group, tools }) => ({ group, enabled: readGroups()[group] !== false, tools })),
     };
   }
 
@@ -160,6 +174,14 @@ export function createMcpService(deps: McpServiceDeps): McpService {
     async setEnabled(value) {
       deps.writeEnabled(value);
       await enqueue(value ? doStart : doStop);
+      return status();
+    },
+    setGroup(group, enabled) {
+      if (!AGENT_TOOL_GROUPS.includes(group)) throw new Error("Unknown tool group");
+      const next = { ...readGroups(), [group]: enabled };
+      if (deps.writeGroups) deps.writeGroups(next);
+      else memoryGroups = next;
+      handler?.notifyToolsChanged();
       return status();
     },
     status,

@@ -16,6 +16,10 @@ const OFF: McpStatusInfo = {
   connectorCommand: '"/program files/power-tools/api/PowerTools.API.exe" --mcp-connector',
   connector: { command: "/program files/power-tools/api/PowerTools.API.exe", args: ["--mcp-connector"] },
   recent: [],
+  groups: [
+    { group: "connections", enabled: true, tools: 1 },
+    { group: "schema", enabled: false, tools: 13 },
+  ],
 };
 
 function OpenButton() {
@@ -80,6 +84,23 @@ describe("Agents dialog", () => {
     expect(await screen.findByText("metadata_get_table")).toBeInTheDocument();
     expect(screen.getByText("A · Dev")).toBeInTheDocument();
     expect(document.body.textContent ?? "").not.toMatch(/[0-9a-f]{64}/);
+  });
+
+  it("shows a checkbox per group with its tool count, and switches one", async () => {
+    const setMcpGroup = vi.fn(async (group: string, enabled: boolean): Promise<McpStatusInfo> => ({
+      ...OFF,
+      groups: OFF.groups.map((g) => (g.group === group ? { ...g, enabled } : g)),
+    }));
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpGroup } });
+    const schema = await screen.findByRole("checkbox", { name: "schema tools" });
+    expect(schema).not.toBeChecked();
+    expect(screen.getByText("13 tools")).toBeInTheDocument();
+    expect(screen.getByText("1 tool")).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "connections tools" })).toBeChecked();
+    await waitFor(() => expect(schema).not.toBeDisabled());
+    fireEvent.click(schema);
+    await waitFor(() => expect(setMcpGroup).toHaveBeenCalledWith("schema", true));
+    await waitFor(() => expect(screen.getByRole("checkbox", { name: "schema tools" })).toBeChecked());
   });
 
   it("reloads the status when Refresh is pressed", async () => {

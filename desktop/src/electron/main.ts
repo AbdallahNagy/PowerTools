@@ -232,6 +232,11 @@ app.whenReady().then(async () => {
     appVersion: app.getVersion(),
     readEnabled: () => mcpSettings().enabled === true,
     writeEnabled: (enabled) => writeSettings({ mcp: { ...mcpSettings(), enabled } }),
+    readGroups: () => {
+      const saved = mcpSettings().groups;
+      return saved && typeof saved === "object" ? saved : {};
+    },
+    writeGroups: (groups) => writeSettings({ mcp: { ...mcpSettings(), groups } }),
     approvalUi: createApprovalWindow({
       getWindow: () => mainWindow,
       notify: (onClick) => {
@@ -245,9 +250,9 @@ app.whenReady().then(async () => {
       onUnavailable: () => mcpService.failApprovals(),
     }),
   });
-  function mcpSettings(): { enabled?: boolean } {
+  function mcpSettings(): { enabled?: boolean; groups?: Record<string, boolean> } {
     const value = readSettings().mcp;
-    return value && typeof value === "object" ? (value as { enabled?: boolean }) : {};
+    return value && typeof value === "object" ? (value as { enabled?: boolean; groups?: Record<string, boolean> }) : {};
   }
   registerMcpIpc({
     ipcMain,

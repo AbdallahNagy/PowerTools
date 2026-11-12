@@ -1,6 +1,7 @@
 import { bypassMsw } from "../../support/loopback";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { ToolListChangedNotificationSchema } from "@modelcontextprotocol/sdk/types.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { ActivityEntry, ActivityLog } from "../../../src/electron/mcp/activityLog";
 import { createConnectionResolver } from "../../../src/electron/mcp/connections";
@@ -132,6 +133,45 @@ describe("MCP server", () => {
     const { client, handler } = await setup();
     await handler.closeAll();
     await expect(client.callTool({ name: "connections_list", arguments: {} })).rejects.toBeDefined();
+  });
+});
+
+describe("MCP group toggles", () => {
+  it("drops a disabled group from tools/list and answers Unknown tool, then announces the change", async () => {
+    bypassMsw();
+    const off = new Set<string>();
+    handler = createMcpRequestHandler({
+      registry: createAgentToolRegistry(READ_TOOLS, { isGroupEnabled: (group) => !off.has(group) }),
+      context: () => ({} as never),
+      log: { append: async () => undefined, recent: async () => [], prune: async () => undefined },
+      gate: { decide: async () => "auto" },
+      instructions: "x",
+    });
+    host = await startHttpHost({ port: 0, tokens: () => [TOKEN], handle: handler.handle });
+    client = new Client({ name: "toggle", version: "1" });
+    let changed = 0;
+    client.setNotificationHandler(ToolListChangedNotificationSchema, async () => {
+      changed += 1;
+    });
+    await client.connect(
+      new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${host.port}/mcp`), {
+        requestInit: { headers: { Authorization: `Bearer ${TOKEN}` } },
+      }),
+    );
+    expect((await client.listTools()).tools.map((t) => t.name)).toContain("metadata_get_table");
+    await new Promise((resolve) => setTimeout(resolve, 100)); // let the client open its notification stream
+
+    off.add("metadata");
+    handler.notifyToolsChanged();
+    await vi.waitFor(() => expect(changed).toBe(1));
+
+    const names = (await client.listTools()).tools.map((t) => t.name);
+    expect(names).not.toContain("metadata_get_table");
+    expect(names).toContain("connections_list");
+    await expect(client.callTool({ name: "metadata_get_table", arguments: { table: "account" } })).rejects.toMatchObject({
+      code: -32602,
+      message: expect.stringContaining("Unknown tool"),
+    });
   });
 });
 

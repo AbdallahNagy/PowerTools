@@ -4,6 +4,7 @@ import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import type { ActivityEntry } from "./activityLog.js";
 import { connectorCommandLine, type ConnectorLaunch } from "./connectorCommand.js";
 import type { McpService, McpStatus } from "./mcpService.js";
+import { AGENT_TOOL_GROUPS, type AgentToolGroup } from "./types.js";
 
 export type McpStatusInfo = McpStatus & {
   connectorCommand: string;
@@ -13,7 +14,7 @@ export type McpStatusInfo = McpStatus & {
 
 export interface McpIpcDeps {
   ipcMain: Pick<IpcMain, "handle">;
-  service: Pick<McpService, "status" | "setEnabled" | "recentActivity" | "respondApproval">;
+  service: Pick<McpService, "status" | "setEnabled" | "setGroup" | "recentActivity" | "respondApproval">;
   getMainWindow: () => BrowserWindow | null;
   connector: () => ConnectorLaunch;
 }
@@ -47,6 +48,15 @@ export function registerMcpIpc({ ipcMain, service, getMainWindow, connector }: M
     assertMainWindow(event);
     if (typeof enabled !== "boolean") throw new Error("Enabled must be true or false");
     return statusInfo(await service.setEnabled(enabled));
+  });
+
+  ipcMain.handle("mcp-set-group", async (event, group: unknown, enabled: unknown) => {
+    assertMainWindow(event);
+    if (typeof group !== "string" || !AGENT_TOOL_GROUPS.includes(group as AgentToolGroup)) {
+      throw new Error("Group must be one of: " + AGENT_TOOL_GROUPS.join(", "));
+    }
+    if (typeof enabled !== "boolean") throw new Error("Enabled must be true or false");
+    return statusInfo(service.setGroup(group as AgentToolGroup, enabled));
   });
 
   ipcMain.handle("mcp-approval-respond", async (event, id: unknown, allow: unknown) => {
