@@ -49,16 +49,23 @@ public static class AgentFaults
         return new AgentProblem(problem.Status, problem.Code, problem.Message, problem.DataverseCode);
     }
 
+    private static readonly HashSet<string> DataverseCodes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "DataverseFault", "PrivilegeDenied", "NotAvailable", "Timeout", "ServiceProtection", "layers_not_supported",
+    };
+
     /// <summary>
-    /// Maps a problem from an existing tool service. Its local checks (400, 409) are bad arguments;
-    /// 429 is throttling; the rest are Dataverse failures.
+    /// Maps a problem from an existing tool service. 404 is not found and 429 is throttling. Dataverse failures stay
+    /// Dataverse failures; the service's own checks (bad input, conflicts, dependencies) are bad arguments.
     /// </summary>
     public static AgentProblem FromExternal(int status, string code, string message) =>
-        status == StatusCodes.Status429TooManyRequests
-            ? new AgentProblem(status, "Throttled", message)
-            : status is StatusCodes.Status400BadRequest or StatusCodes.Status409Conflict && code != "DataverseFault"
-                ? new AgentProblem(StatusCodes.Status400BadRequest, InvalidRequestCode, message)
-                : new AgentProblem(status, "DataverseFault", message);
+        status == StatusCodes.Status404NotFound
+            ? new AgentProblem(status, NotFoundCode, message)
+            : status == StatusCodes.Status429TooManyRequests
+                ? new AgentProblem(status, "Throttled", message)
+                : DataverseCodes.Contains(code) || status >= StatusCodes.Status500InternalServerError
+                    ? new AgentProblem(status, "DataverseFault", message)
+                    : new AgentProblem(StatusCodes.Status400BadRequest, InvalidRequestCode, message);
 
     public static AgentProblem FromLookup(PolymorphicLookupProblem problem) =>
         problem.Status == StatusCodes.Status400BadRequest

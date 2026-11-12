@@ -36,7 +36,7 @@ public sealed class FakeAgentClient : IAgentClient
             "organization" => [new Entity("organization") { ["languagecode"] = LanguageCode }],
             "savedquery" => SavedQueries,
             "systemform" => SystemForms,
-            var other when ByEntity.TryGetValue(other, out var found) => found,
+            var other when ByEntity.TryGetValue(other, out var found) => found.Where(row => EqualConditionsMatch(expression, row)).ToList(),
             _ => [],
         };
         return Task.FromResult(new EntityCollection(rows));
@@ -69,6 +69,16 @@ public sealed class FakeAgentClient : IAgentClient
         Deleted.Add((table, id));
         return Task.CompletedTask;
     }
+
+    /// <summary>Applies the Equal conditions of a query to a row, the way the tests need them.</summary>
+    private static bool EqualConditionsMatch(QueryExpression query, Entity row) =>
+        query.Criteria.Conditions
+            .Where(c => c.Operator == ConditionOperator.Equal && c.Values.Count == 1 && row.Contains(c.AttributeName))
+            .All(c => row[c.AttributeName] switch
+            {
+                EntityReference reference => reference.Id.Equals(c.Values[0]),
+                var other => Equals(other, c.Values[0]),
+            });
 
     private static bool Matches(QueryExpression query, Entity row)
     {

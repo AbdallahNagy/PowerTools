@@ -22,6 +22,7 @@ public static class AgentEndpoints
         AgentSchemaEndpoints.Map(group);
         AgentSolutionsEndpoints.Map(group);
         AgentPluginsEndpoints.Map(group);
+        AgentEnvVarsEndpoints.Map(group);
         return app;
     }
 
