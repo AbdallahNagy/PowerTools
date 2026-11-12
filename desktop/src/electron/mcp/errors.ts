@@ -13,5 +13,10 @@ export function toToolResult(error: unknown): CallToolResult {
   const structured: Record<string, unknown> = { code: e.code, message: e.message };
   if (e.extra?.dataverseCode !== undefined) structured.dataverseCode = e.extra.dataverseCode;
   if (e.extra?.retryAfterSeconds !== undefined) structured.retryAfterSeconds = e.extra.retryAfterSeconds;
-  return { isError: true, content: [{ type: "text", text }], structuredContent: structured };
+  return {
+    isError: true,
+    content: [{ type: "text", text }],
+    structuredContent: structured,
+    ...(e.untrusted ? { _meta: { "powertools/untrusted": true } } : {}),
+  };
 }

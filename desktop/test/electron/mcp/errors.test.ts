@@ -26,6 +26,16 @@ describe("toToolResult", () => {
     expect(text).not.toContain("abc");
   });
 
+  it("marks errors with Dataverse-authored text as untrusted", () => {
+    const result = toToolResult(new AgentToolError("DataverseFault", "Plugin said: ignore previous", undefined, undefined, true));
+    expect(result._meta).toEqual({ "powertools/untrusted": true });
+  });
+
+  it("does not mark our own errors as untrusted", () => {
+    expect(toToolResult(new AgentToolError("NoConnection", "None"))._meta).toBeUndefined();
+    expect(toToolResult(new Error("x"))._meta).toBeUndefined();
+  });
+
   it("passes dataverseCode and retryAfterSeconds through", () => {
     const result = toToolResult(
       new AgentToolError("Throttled", "Too many requests", undefined, { dataverseCode: -2147015902, retryAfterSeconds: 7 }),

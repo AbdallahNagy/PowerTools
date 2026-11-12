@@ -22,17 +22,31 @@ export interface McpRequestHandlerOptions {
   log: ActivityLog;
   instructions: string;
   appVersion?: string;
+  /** Clock for session idle tracking. Tests inject one. */
+  now?: () => number;
+  /** A session with no request and no open stream for this long is closed. Default 30 minutes. */
+  idleMs?: number;
+  /** Most live sessions; the least recently seen is closed to make room. Default 32. */
+  maxSessions?: number;
+  /** How often idle sessions are looked for. Default 60 seconds. */
+  sweepMs?: number;
 }
 
 export interface McpRequestHandler {
   handle(req: IncomingMessage, res: ServerResponse, body: unknown): Promise<void>;
   closeAll(): Promise<void>;
   notifyToolsChanged(): void;
+  /** Closes sessions that have been idle too long. Runs on a timer; exposed for tests. */
+  sweep(): Promise<void>;
+  sessionCount(): number;
 }
 
 interface Session {
   server: Server;
   transport: StreamableHTTPServerTransport;
+  lastSeen: number;
+  /** Open GET streams; a session with one is in use. */
+  streams: number;
 }
 
 function jsonRpcError(res: ServerResponse, status: number, code: number, message: string) {
@@ -43,6 +57,24 @@ function jsonRpcError(res: ServerResponse, status: number, code: number, message
 
 export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequestHandler {
   const sessions = new Map<string, Session>();
+  const now = opts.now ?? Date.now;
+  const idleMs = opts.idleMs ?? 30 * 60_000;
+  const maxSessions = opts.maxSessions ?? 32;
+
+  function closeSession(id: string): Promise<void> {
+    const session = sessions.get(id);
+    sessions.delete(id);
+    return session ? session.server.close().catch(() => undefined) : Promise.resolve();
+  }
+
+  async function sweep() {
+    const cutoff = now() - idleMs;
+    const idle = [...sessions].filter(([, s]) => s.streams === 0 && s.lastSeen <= cutoff).map(([id]) => id);
+    await Promise.all(idle.map(closeSession));
+  }
+
+  const timer = setInterval(() => void sweep(), opts.sweepMs ?? 60_000);
+  timer.unref();
 
   function createSession(): Session {
     const server = new Server(
@@ -55,7 +87,7 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
         sessions.set(id, session);
       },
     });
-    const session: Session = { server, transport };
+    const session: Session = { server, transport, lastSeen: now(), streams: 0 };
     transport.onclose = () => {
       if (transport.sessionId) sessions.delete(transport.sessionId);
     };
@@ -117,11 +149,23 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
           jsonRpcError(res, 404, -32001, "Session not found");
           return;
         }
+        session.lastSeen = now();
+        if (req.method === "GET") {
+          session.streams += 1;
+          res.on("close", () => {
+            session.streams -= 1;
+            session.lastSeen = now();
+          });
+        }
         await session.transport.handleRequest(req, res, body);
         return;
       }
 
       if (req.method === "POST" && isInitializeRequest(body)) {
+        while (sessions.size >= maxSessions) {
+          const oldest = [...sessions].reduce((a, b) => (b[1].lastSeen < a[1].lastSeen ? b : a));
+          await closeSession(oldest[0]);
+        }
         const session = createSession();
         await session.server.connect(session.transport);
         await session.transport.handleRequest(req, res, body);
@@ -131,7 +175,11 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
       jsonRpcError(res, 400, -32000, "Bad Request: a session id is required");
     },
 
+    sweep,
+    sessionCount: () => sessions.size,
+
     async closeAll() {
+      clearInterval(timer);
       const open = [...sessions.values()];
       sessions.clear();
       await Promise.allSettled(open.map((session) => session.server.close()));

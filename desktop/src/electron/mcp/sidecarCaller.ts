@@ -54,7 +54,7 @@ async function toError(response: Response): Promise<AgentToolError> {
     const seconds = retryAfterSeconds(response, message);
     if (seconds !== undefined) extra.retryAfterSeconds = seconds;
   }
-  return new AgentToolError(code, message, undefined, extra);
+  return new AgentToolError(code, message, undefined, extra, true);
 }
 
 export function createSidecarCaller(deps: SidecarCallerDeps): SidecarCall {

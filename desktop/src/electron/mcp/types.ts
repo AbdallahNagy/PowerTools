@@ -16,18 +16,22 @@ export class AgentToolError extends Error {
   readonly code: AgentErrorCode;
   readonly hint?: string;
   readonly extra?: { dataverseCode?: number; retryAfterSeconds?: number };
+  /** True when the message text came from Dataverse and so may carry text written by other people. */
+  readonly untrusted: boolean;
 
   constructor(
     code: AgentErrorCode,
     message: string,
     hint?: string,
     extra?: { dataverseCode?: number; retryAfterSeconds?: number },
+    untrusted = false,
   ) {
     super(message);
     this.name = "AgentToolError";
     this.code = code;
     this.hint = hint;
     this.extra = extra;
+    this.untrusted = untrusted;
   }
 }
 

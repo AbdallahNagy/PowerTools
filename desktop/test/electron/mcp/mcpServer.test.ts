@@ -131,3 +131,72 @@ describe("MCP server", () => {
     await expect(client.callTool({ name: "connections_list", arguments: {} })).rejects.toBeDefined();
   });
 });
+
+describe("MCP session limits", () => {
+  async function connect(port: number, name: string) {
+    const c = new Client({ name, version: "1" });
+    await c.connect(
+      new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`), {
+        requestInit: { headers: { Authorization: `Bearer ${TOKEN}` } },
+      }),
+    );
+    return c;
+  }
+
+  async function limited(extra: { idleMs?: number; maxSessions?: number }) {
+    bypassMsw();
+    let clock = 0;
+    handler = createMcpRequestHandler({
+      registry: createAgentToolRegistry(READ_TOOLS),
+      context: () => ({} as never),
+      log: { append: async () => undefined, recent: async () => [], prune: async () => undefined },
+      instructions: "x",
+      now: () => clock,
+      ...extra,
+    });
+    host = await startHttpHost({ port: 0, tokens: () => [TOKEN], handle: handler.handle });
+    return { port: host.port, advance: (ms: number) => void (clock += ms) };
+  }
+
+  it("closes a session that has been idle too long and has no open stream", async () => {
+    const { port, advance } = await limited({ idleMs: 1000 });
+    // Initialize by hand with plain fetch so no GET stream is held open.
+    const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${TOKEN}`, "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-03-26", capabilities: {}, clientInfo: { name: "idle", version: "1" } } }),
+    });
+    await res.text();
+    expect(handler!.sessionCount()).toBe(1);
+    advance(500);
+    await handler!.sweep();
+    expect(handler!.sessionCount()).toBe(1);
+    advance(600);
+    await handler!.sweep();
+    expect(handler!.sessionCount()).toBe(0);
+  });
+
+  it("keeps an idle session that has an open stream", async () => {
+    const { port, advance } = await limited({ idleMs: 1000 });
+    client = await connect(port, "streaming");
+    await vi.waitFor(() => expect(handler!.sessionCount()).toBe(1));
+    await new Promise((r) => setTimeout(r, 100)); // let the client open its GET stream
+    advance(5000);
+    await handler!.sweep();
+    expect(handler!.sessionCount()).toBe(1);
+  });
+
+  it("closes the least recently seen session when the cap is reached", async () => {
+    const { port, advance } = await limited({ maxSessions: 2 });
+    const a = await connect(port, "a");
+    advance(10);
+    const b = await connect(port, "b");
+    advance(10);
+    await b.listTools(); // b is now more recent than a
+    const c = await connect(port, "c");
+    expect(handler!.sessionCount()).toBe(2);
+    await expect(a.listTools()).rejects.toBeDefined();
+    await expect(b.listTools()).resolves.toBeDefined();
+    await Promise.all([a, b, c].map((x) => x.close().catch(() => undefined)));
+  });
+});

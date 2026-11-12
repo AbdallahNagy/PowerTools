@@ -15,7 +15,7 @@ namespace PowerTools.API.Mcp;
 public static class McpConnector
 {
     public const string OfflineMessage =
-        "Power Tools is not running or its MCP server is off. Start Power Tools and turn on Settings → Agents (MCP); the tools will appear automatically.";
+        "Power Tools is not running or its MCP server is off. Start Power Tools and turn it on under File → Agents (MCP)…; the tools will appear automatically.";
 
     public static async Task<int> RunAsync(string[] args, Stream stdin, Stream stdout, CancellationToken ct)
     {

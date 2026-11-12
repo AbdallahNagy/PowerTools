@@ -37,6 +37,13 @@ describe("createSidecarCaller", () => {
     });
   });
 
+  it("flags errors built from the sidecar's message as untrusted, and others not", async () => {
+    const withBody = createSidecarCaller({ baseUrl: "http://x", secret: "s", fetch: vi.fn(async () => json(400, { code: "InvalidRequest", message: "bad" })) as never });
+    await expect(withBody(conn, "GET", "/p")).rejects.toMatchObject({ untrusted: true });
+    const noBody = createSidecarCaller({ baseUrl: "http://x", secret: "s", fetch: vi.fn(async () => new Response("<html>", { status: 500 })) as never });
+    await expect(noBody(conn, "GET", "/p")).rejects.toMatchObject({ untrusted: false });
+  });
+
   it("maps PermissionDenied to DataverseFault", async () => {
     const fetchFake = vi.fn(async () => json(403, { code: "PermissionDenied", message: "No" }));
     const call = createSidecarCaller({ baseUrl: "http://x", secret: "s", fetch: fetchFake as never });
