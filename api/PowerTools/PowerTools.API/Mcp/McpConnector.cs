@@ -40,7 +40,12 @@ public static class McpConnector
         private readonly TimeSpan _poll;
         private readonly StreamWriter _out;
         private readonly object _outLock = new();
-        private readonly HttpClient _http = new() { Timeout = Timeout.InfiniteTimeSpan };
+        // Connecting to a closed loopback port takes about two seconds on Windows, and far longer when the machine is
+        // busy. A live app accepts at once, so a short connect timeout only speeds up noticing that it has gone.
+        private readonly HttpClient _http = new(new SocketsHttpHandler { ConnectTimeout = TimeSpan.FromSeconds(1) })
+        {
+            Timeout = Timeout.InfiniteTimeSpan,
+        };
         private readonly CancellationTokenSource _lifetime;
         private readonly SemaphoreSlim _gate = new(1, 1);
 
@@ -319,6 +324,11 @@ public static class McpConnector
             {
                 return (Outcome.Reconnect, 0);
             }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                // The connect timeout, not a shutdown.
+                return (Outcome.Reconnect, 0);
+            }
 
             using (response)
             {
@@ -360,6 +370,14 @@ public static class McpConnector
             {
                 while (!ct.IsCancellationRequested)
                 {
+                    // The app deletes the discovery file when it stops, and rewrites it when it starts again. If it no
+                    // longer names this endpoint, the stream is gone for good; no need to try connecting to find out.
+                    if (ReadEndpoint() != endpoint)
+                    {
+                        await ReconnectAsync(generation);
+                        return;
+                    }
+
                     var lost = false;
                     try
                     {
@@ -378,6 +396,7 @@ public static class McpConnector
                         }
                     }
                     catch (HttpRequestException) { lost = true; }
+                    catch (OperationCanceledException) when (!ct.IsCancellationRequested) { lost = true; }
                     catch (IOException) { }
 
                     if (lost)
