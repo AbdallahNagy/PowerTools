@@ -16,6 +16,7 @@ public sealed class FakeAgentClient : IAgentClient
     public List<Entity> Solutions { get; } = [];
     public List<Entity> SavedQueries { get; } = [];
     public List<Entity> SystemForms { get; } = [];
+    public Dictionary<string, List<Entity>> ByEntity { get; } = new(StringComparer.OrdinalIgnoreCase);
     public int LanguageCode { get; set; } = 1033;
 
     public Task<OrganizationResponse> ExecuteAsync(OrganizationRequest request, CancellationToken cancellationToken)
@@ -35,6 +36,7 @@ public sealed class FakeAgentClient : IAgentClient
             "organization" => [new Entity("organization") { ["languagecode"] = LanguageCode }],
             "savedquery" => SavedQueries,
             "systemform" => SystemForms,
+            var other when ByEntity.TryGetValue(other, out var found) => found,
             _ => [],
         };
         return Task.FromResult(new EntityCollection(rows));

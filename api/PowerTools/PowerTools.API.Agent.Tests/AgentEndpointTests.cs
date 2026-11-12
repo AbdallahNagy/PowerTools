@@ -26,6 +26,7 @@ public sealed class AgentEndpointTests : IAsyncLifetime
         builder.Services.AddSingleton<DataverseClientFactory>();
         builder.Services.AddSingleton<IConnectionStore, InMemoryConnectionStore>();
         builder.Services.AddScoped<DataverseContextFilter>();
+        builder.Services.AddSingleton<PowerTools.API.Tools.PluginRegistration.Inspection.IPluginAssemblyInspector>(new FakeInspector());
         builder.Services.AddSingleton<IAgentClientSource>(new FixedClientSource(fake));
         builder.Services.AddSingleton<PowerTools.API.Tools.SolutionLayers.ISolutionLayersCache>(_ => new PowerTools.API.Tools.SolutionLayers.SolutionLayersCache());
         app = builder.Build();
