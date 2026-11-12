@@ -24,6 +24,14 @@ function clientConfigJson(status: McpStatusInfo): string {
   );
 }
 
+function vsCodeConfigJson(status: McpStatusInfo): string {
+  return JSON.stringify(
+    { servers: { powertools: { type: "stdio", command: status.connector.command, args: status.connector.args } } },
+    null,
+    2,
+  );
+}
+
 function Snippet({ label, text }: { label: string; text: string }) {
   const [copied, setCopied] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -183,7 +191,8 @@ export function AgentsDialog({ open, onClose }: AgentsDialogProps) {
         <section className="flex flex-col gap-3" aria-label="Connect a client">
           <h3 className="text-sm font-medium text-fg-strong">Connect a client</h3>
           <Snippet label="Claude Code" text={claudeCodeCommand(status)} />
-          <Snippet label="Claude Desktop and VS Code" text={clientConfigJson(status)} />
+          <Snippet label="Claude Desktop" text={clientConfigJson(status)} />
+          <Snippet label="VS Code (.vscode/mcp.json)" text={vsCodeConfigJson(status)} />
         </section>
       ) : null}
 

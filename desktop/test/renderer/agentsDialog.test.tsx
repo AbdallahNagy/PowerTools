@@ -67,6 +67,9 @@ describe("Agents dialog", () => {
     expect(code.textContent).toContain("--mcp-connector");
     const json = screen.getByText(/"mcpServers"/);
     expect(json.textContent).toContain("--mcp-connector");
+    const vscode = screen.getByText(/"servers"/);
+    expect(vscode.textContent).toContain('"type": "stdio"');
+    expect(vscode.textContent).toContain("--mcp-connector");
   });
 
   it("lists recent activity without ids or tokens", async () => {

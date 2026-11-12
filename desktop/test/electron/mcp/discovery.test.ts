@@ -108,7 +108,16 @@ describe("createMcpService", () => {
     const groups = s.status().groups;
     expect(groups.map((g) => g.group)).toEqual(["connections", "metadata", "records", "schema", "solutions", "plugins", "envvars"]);
     expect(groups.every((g) => g.enabled && g.tools > 0)).toBe(true);
-    expect(groups.find((g) => g.group === "records")!.tools).toBeGreaterThanOrEqual(8);
+    // The v1 catalog: 53 tools. A change here means the user guide and the catalog section of the spec need a look.
+    expect(Object.fromEntries(groups.map((g) => [g.group, g.tools]))).toEqual({
+      connections: 1,
+      metadata: 7,
+      records: 8,
+      schema: 13,
+      solutions: 10,
+      plugins: 10,
+      envvars: 4,
+    });
   });
 
   it("switches a group off and on, and tells a running session", async () => {
