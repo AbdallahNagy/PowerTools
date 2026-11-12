@@ -52,7 +52,7 @@ export interface AgentToolContext {
 
 export interface JsonSchemaObject {
   type: "object";
-  properties: Record<string, unknown>;
+  properties: Record<string, object>;
   required?: string[];
   additionalProperties: false;
 }
