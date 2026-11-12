@@ -1,3 +1,4 @@
+using System.Text.Json;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Utils;
@@ -15,32 +16,15 @@ public static class CommunityToolEndpoints
         var group = app.MapGroup("/api/community-tools")
             .AddEndpointFilter<DataverseContextFilter>();
 
-        group.MapPost("/data/retrieve", async (RetrieveRecordRequest body, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            ToHttp(await Service(ctx, factory).RetrieveAsync(body, ct)));
-
-        group.MapPost("/data/fetch", async (FetchRecordsRequest body, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            ToHttp(await Service(ctx, factory).FetchAsync(body, ct)));
-
-        group.MapPost("/data/create", async (CreateRecordRequest body, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            ToHttp(await Service(ctx, factory).CreateAsync(body, ct)));
-
-        group.MapPost("/data/update", async (UpdateRecordRequest body, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            ToHttp(await Service(ctx, factory).UpdateAsync(body, ct)));
-
-        group.MapPost("/data/delete", async (DeleteRecordRequest body, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            ToHttp(await Service(ctx, factory).DeleteAsync(body, ct)));
-
-        group.MapPost("/data/associate", async (RelateRecordsRequest body, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            ToHttp(await Service(ctx, factory).AssociateAsync(body, ct)));
-
-        group.MapPost("/data/disassociate", async (RelateRecordsRequest body, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            ToHttp(await Service(ctx, factory).DisassociateAsync(body, ct)));
-
-        group.MapPost("/data/execute", async (ExecuteMessageRequest body, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            ToHttp(await Service(ctx, factory).ExecuteAsync(body, ct)));
-
-        group.MapPost("/data/batch", async (BatchRequest body, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            ToHttp(await Service(ctx, factory).BatchAsync(body, ct)));
+        Post<RetrieveRecordRequest, DataRecordDto>(group, "/data/retrieve", (service, body, ct) => service.RetrieveAsync(body, ct));
+        Post<FetchRecordsRequest, FetchPageDto>(group, "/data/fetch", (service, body, ct) => service.FetchAsync(body, ct));
+        Post<CreateRecordRequest, CreatedRecordDto>(group, "/data/create", (service, body, ct) => service.CreateAsync(body, ct));
+        Post<UpdateRecordRequest, EmptyResultDto>(group, "/data/update", (service, body, ct) => service.UpdateAsync(body, ct));
+        Post<DeleteRecordRequest, EmptyResultDto>(group, "/data/delete", (service, body, ct) => service.DeleteAsync(body, ct));
+        Post<RelateRecordsRequest, EmptyResultDto>(group, "/data/associate", (service, body, ct) => service.AssociateAsync(body, ct));
+        Post<RelateRecordsRequest, EmptyResultDto>(group, "/data/disassociate", (service, body, ct) => service.DisassociateAsync(body, ct));
+        Post<ExecuteMessageRequest, ExecuteResultDto>(group, "/data/execute", (service, body, ct) => service.ExecuteAsync(body, ct));
+        Post<BatchRequest, BatchResultDto>(group, "/data/batch", (service, body, ct) => service.BatchAsync(body, ct));
 
         group.MapGet("/metadata/tables", async (HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
             ToHttp(await Service(ctx, factory).GetTablesAsync(ct)));
@@ -65,11 +49,50 @@ public static class CommunityToolEndpoints
         return app;
     }
 
+    /// <summary>
+    /// Reads the JSON body here instead of letting minimal-API binding do it, so a malformed or missing body
+    /// answers with the same { code, message } shape as every other failure.
+    /// </summary>
+    private static void Post<TRequest, TResult>(
+        RouteGroupBuilder group,
+        string route,
+        Func<CommunityToolService, TRequest, CancellationToken, Task<CommunityToolResult<TResult>>> call)
+        where TRequest : class =>
+        group.MapPost(route, async (HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
+        {
+            TRequest? body;
+            try
+            {
+                body = await JsonSerializer.DeserializeAsync<TRequest>(ctx.Request.Body, JsonSerializerOptions.Web, ct);
+            }
+            catch (Exception ex) when (ex is JsonException or BadHttpRequestException or NotSupportedException)
+            {
+                return InvalidBody("The request body is not valid JSON for this operation.");
+            }
+
+            return body is null
+                ? InvalidBody("The request body must be a JSON object.")
+                : ToHttp(await call(Service(ctx, factory), body, ct));
+        });
+
+    private static IResult InvalidBody(string message) =>
+        Results.Json(CommunityToolFaults.InvalidRequest(message).ToError(), statusCode: StatusCodes.Status400BadRequest);
+
     private static CommunityToolService Service(HttpContext ctx, DataverseClientFactory factory) =>
-        new(new DataverseCommunityToolClient(ctx.CreateDataverseClient(factory)));
+        new(ctx.RequestServices.GetService<ICommunityToolClientSource>()?.Create(ctx)
+            ?? new DataverseCommunityToolClient(ctx.CreateDataverseClient(factory)));
 
     private static IResult ToHttp<T>(CommunityToolResult<T> result) =>
         result.Problem is null
             ? Results.Ok(result.Value)
             : Results.Json(result.Problem.ToError(), statusCode: result.Problem.Status);
+}
+
+/// <summary>
+/// Supplies the Dataverse client for a request. The sidecar registers none and uses the connection from the
+/// request headers; tests register one to drive the routes without an environment.
+/// </summary>
+public interface ICommunityToolClientSource
+{
+    ICommunityToolClient Create(HttpContext context);
 }

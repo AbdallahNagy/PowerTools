@@ -56,17 +56,19 @@ public sealed record CommunityToolErrorDto(
     string Message,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? DataverseCode = null);
 
+/// <summary>DisplayName is empty, never null, for a table that has no label.</summary>
 public sealed record TableInfoDto(
     string LogicalName,
-    string? DisplayName,
+    string DisplayName,
     string? EntitySetName,
     string? PrimaryIdAttribute,
     string? PrimaryNameAttribute,
     bool IsCustom);
 
+/// <summary>DisplayName is empty, never null, for a column that has no label.</summary>
 public sealed record ColumnInfoDto(
     string LogicalName,
-    string? DisplayName,
+    string DisplayName,
     string Type,
     bool IsCustom,
     string RequiredLevel,

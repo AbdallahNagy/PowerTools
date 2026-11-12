@@ -30,6 +30,9 @@ public static class CommunityToolFaults
     /// <summary>0x80040217: the requested object does not exist.</summary>
     public const int ObjectDoesNotExist = AttributeExplorerFaults.ObjectDoesNotExist;
 
+    /// <summary>0x80041102: the table name is not in the metadata cache, which is how an unknown table fails on a data call.</summary>
+    public const int EntityNotInMetadataCache = -2147217150;
+
     /// <summary>Service protection: number of requests, execution time, concurrent requests.</summary>
     public const int NumberOfRequestsLimitExceeded = -2147015902;
     public const int TimeLimitExceeded = -2147015903;
@@ -62,7 +65,7 @@ public static class CommunityToolFaults
             return new CommunityToolProblem(StatusCodes.Status429TooManyRequests, ThrottledCode, message, code);
         }
 
-        var missing = code == ObjectDoesNotExist || (metadata && AttributeExplorerFaults.IsTableNotFound(exception));
+        var missing = code is ObjectDoesNotExist or EntityNotInMetadataCache || (metadata && AttributeExplorerFaults.IsTableNotFound(exception));
         return new CommunityToolProblem(
             missing ? StatusCodes.Status404NotFound : StatusCodes.Status502BadGateway,
             DataverseFaultCode,

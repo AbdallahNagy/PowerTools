@@ -149,7 +149,10 @@ public sealed partial class CommunityToolService(ICommunityToolClient client)
                 batch.Requests.Add(BatchOperation(operations[index], $"operations[{index}]"));
 
             var response = (ExecuteMultipleResponse)await client.ExecuteAsync(batch, cancellationToken);
-            var items = response.Responses.ToDictionary(item => item.RequestIndex);
+            // A repeated index keeps its first item rather than failing the whole batch.
+            var items = new Dictionary<int, ExecuteMultipleResponseItem>();
+            foreach (var item in response.Responses)
+                items.TryAdd(item.RequestIndex, item);
             var results = Enumerable.Range(0, operations.Count)
                 .Select(index => items.TryGetValue(index, out var item)
                     ? BatchItem(item)
@@ -181,7 +184,7 @@ public sealed partial class CommunityToolService(ICommunityToolClient client)
                 return AttributeExplorerMapper.Attributes(metadata)
                     .Select(column => new ColumnInfoDto(
                         column.LogicalName,
-                        column.DisplayName,
+                        column.DisplayName ?? "",
                         ColumnType(column),
                         column.IsCustom,
                         column.RequiredLevel,
@@ -351,7 +354,7 @@ public sealed partial class CommunityToolService(ICommunityToolClient client)
     private static TableInfoDto ToTableInfo(TableDto table) =>
         new(
             table.LogicalName,
-            table.DisplayName,
+            table.DisplayName ?? "",
             table.EntitySetName,
             table.PrimaryIdAttribute,
             table.PrimaryNameAttribute,

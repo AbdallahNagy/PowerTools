@@ -64,6 +64,23 @@ public sealed class CommunityToolValueCodecTests
         Assert.Equal(1.5d, Assert.IsType<double>(real));
     }
 
+    [Theory]
+    [InlineData(double.NaN)]
+    [InlineData(double.PositiveInfinity)]
+    [InlineData(double.NegativeInfinity)]
+    public void Non_finite_numbers_encode_to_null_because_json_cannot_hold_them(double value)
+    {
+        Assert.Null(CommunityToolValueCodec.Encode(value));
+        Assert.Null(CommunityToolValueCodec.Encode((float)value));
+        Assert.Equal(1.5d, CommunityToolValueCodec.Encode(1.5d));
+    }
+
+    [Fact]
+    public void Byte_arrays_encode_to_base64_strings()
+    {
+        Assert.Equal("AAEC/w==", CommunityToolValueCodec.Encode(new byte[] { 0, 1, 2, 255 }));
+    }
+
     [Fact]
     public void Untagged_numbers_keep_int_and_decimal()
     {

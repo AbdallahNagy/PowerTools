@@ -470,6 +470,55 @@ public sealed class CommunityToolServiceTests
     }
 
     [Fact]
+    public async Task Tables_and_columns_without_a_label_have_an_empty_display_name_not_null()
+    {
+        var table = Builders.Table("adx_invitation_redeemedcontacts");
+        var column = Builders.Attribute(new StringAttributeMetadata(), "adx_hidden");
+        Builders.SetInternal(table, nameof(EntityMetadata.Attributes), new AttributeMetadata[] { column });
+        var fake = new FakeCommunityToolClient();
+        fake.Tables.Add(table);
+        fake.ByName["adx_invitation_redeemedcontacts"] = table;
+
+        var tables = await new CommunityToolService(fake).GetTablesAsync(None);
+        var columns = await new CommunityToolService(fake).GetColumnsAsync("adx_invitation_redeemedcontacts", None);
+
+        Assert.Equal("", Assert.Single(tables.Value!).DisplayName);
+        Assert.Equal("", Assert.Single(columns.Value!).DisplayName);
+    }
+
+    [Fact]
+    public async Task Batch_with_a_repeated_request_index_keeps_the_first_item()
+    {
+        var fake = new FakeCommunityToolClient
+        {
+            OnExecute = _ => BatchResponse(
+                new ExecuteMultipleResponseItem { RequestIndex = 0, Response = new DeleteResponse() },
+                new ExecuteMultipleResponseItem { RequestIndex = 0, Response = new DeleteResponse() }),
+        };
+
+        var result = await new CommunityToolService(fake).BatchAsync(
+            Json.Body<BatchRequest>($$"""{"operations":[{"op":"delete","table":"account","id":"{{Guid.NewGuid()}}"}]}"""),
+            None);
+
+        Assert.Null(result.Problem);
+        Assert.True(Assert.Single(result.Value!.Responses).Ok);
+    }
+
+    [Fact]
+    public async Task A_table_unknown_to_the_metadata_cache_is_404_on_a_data_call()
+    {
+        // Seen live: Retrieve on a table that does not exist fails with 0x80041102, not 0x80040217.
+        var fake = new FakeCommunityToolClient { Throw = FakeCommunityToolClient.Fault(CommunityToolFaults.EntityNotInMetadataCache, "The entity with a name = 'nope' was not found in the MetadataCache.") };
+
+        var result = await new CommunityToolService(fake).RetrieveAsync(
+            Json.Body<RetrieveRecordRequest>($$"""{"table":"nope","id":"{{Guid.NewGuid()}}","columns":["name"]}"""),
+            None);
+
+        Assert.Equal(404, result.Problem!.Status);
+        Assert.Equal(CommunityToolFaults.EntityNotInMetadataCache, result.Problem.DataverseCode);
+    }
+
+    [Fact]
     public async Task Missing_table_is_404()
     {
         var result = await new CommunityToolService(new FakeCommunityToolClient()).GetTableAsync("nope", None);

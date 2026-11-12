@@ -220,13 +220,17 @@ public static class CommunityToolValueCodec
 
     /// <summary>
     /// Encodes one SDK value into a JSON-serializable value. Unknown types become their ToString().
+    /// Byte arrays become base64 strings; NaN and the infinities, which JSON cannot hold, become null.
     /// </summary>
     public static object? Encode(object? value) =>
         value switch
         {
             null => null,
             AliasedValue aliased => Encode(aliased.Value),
-            string or bool or int or long or decimal or double or float => value,
+            double number => double.IsFinite(number) ? number : null,
+            float number => float.IsFinite(number) ? number : null,
+            byte[] bytes => Convert.ToBase64String(bytes),
+            string or bool or int or long or decimal => value,
             Guid id => Tagged("Guid", ("value", Id(id))),
             DateTime date => Tagged("DateTime", ("value", FormatDateTime(date))),
             EntityReference reference => EncodeReference(reference),
