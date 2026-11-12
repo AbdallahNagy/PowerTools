@@ -1,5 +1,5 @@
 import { dataverseResult } from "../results.js";
-import type { AgentTool, AgentToolContext } from "../types.js";
+import { AgentToolError, type AgentTool, type AgentToolContext } from "../types.js";
 
 const BASE = "/api/community-tools/metadata/tables";
 const NAME_PATTERN = "^[a-z_][a-z0-9_]*$";
@@ -135,20 +135,29 @@ export const metadataGetChoices: AgentTool = {
   group: "metadata",
   title: "Get choices",
   description:
-    "Lists the choice (option set) values and labels of a choice, status or state column of a Dataverse table. Read-only.",
+    "Lists the choice (option set) values and labels of a column (give table and column) or of a global choice (give choice). Read-only.",
   inputSchema: {
     type: "object",
     properties: {
       connection,
-      table,
-      column: { type: "string", pattern: NAME_PATTERN, description: "Column logical name, for example statuscode." },
+      table: { ...table, description: "Table logical name, with column. Leave out when giving choice." },
+      column: { type: "string", pattern: NAME_PATTERN, description: "Column logical name, with table, for example statuscode." },
+      choice: { type: "string", description: "Name of a global choice. Use instead of table and column." },
     },
-    required: ["table", "column"],
     additionalProperties: false,
   },
   effect: "read",
-  summarize: (args) => `metadata_get_choices ${String(args.table)}.${String(args.column)}`,
+  summarize: (args) => `metadata_get_choices ${args.choice ? String(args.choice) : `${String(args.table)}.${String(args.column)}`}`,
   async run(args, ctx) {
+    const byName = typeof args.choice === "string";
+    const byColumn = typeof args.table === "string" && typeof args.column === "string";
+    if (byName === byColumn) {
+      throw new AgentToolError("InvalidRequest", "Give either choice, or table and column");
+    }
+    if (byName) {
+      const { conn, data } = await get(args, ctx, `/api/agent/metadata/choices/${enc(args.choice as string)}`);
+      return dataverseResult(`Choices of ${String(args.choice)}.`, { choices: data }, conn.displayName);
+    }
     const path = `${BASE}/${enc(args.table as string)}/columns/${enc(args.column as string)}/choices`;
     const { conn, data } = await get(args, ctx, path);
     return dataverseResult(`Choices of ${String(args.table)}.${String(args.column)}.`, { choices: data }, conn.displayName);

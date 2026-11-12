@@ -67,6 +67,41 @@ public sealed class AgentEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Schema_route_without_a_publisher_answers_400_with_the_choices_and_writes_nothing()
+    {
+        var (status, body) = await Post("/api/agent/schema/tables",
+            """{"schemaName":"new_Project","displayName":"Project","pluralName":"Projects","ownership":"user"}""");
+
+        Assert.Equal(HttpStatusCode.BadRequest, status);
+        Assert.Equal("PublisherRequired", body.GetProperty("code").GetString());
+        Assert.Contains("contoso (new)", body.GetProperty("message").GetString());
+        Assert.Empty(fake.Executed);
+    }
+
+    [Fact]
+    public async Task Schema_route_creates_a_choice_and_answers_its_name_and_id()
+    {
+        var id = Guid.NewGuid();
+        fake.OnExecute = _ => Responses.Of<Microsoft.Xrm.Sdk.Messages.CreateOptionSetResponse>(("OptionSetId", id));
+
+        var (status, body) = await Post("/api/agent/schema/choices",
+            """{"schemaName":"new_colors","displayName":"Colors","solution":"Core","options":[{"label":"Red"}]}""");
+
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal("new_colors", body.GetProperty("name").GetString());
+        Assert.Equal(id, body.GetProperty("metadataId").GetGuid());
+    }
+
+    [Fact]
+    public async Task A_malformed_body_answers_the_shared_error_shape()
+    {
+        var (status, body) = await Post("/api/agent/schema/tables", "{nope");
+
+        Assert.Equal(HttpStatusCode.BadRequest, status);
+        Assert.Equal("InvalidRequest", body.GetProperty("code").GetString());
+    }
+
+    [Fact]
     public async Task Without_a_connection_the_filter_refuses()
     {
         using var bare = new HttpClient { BaseAddress = new Uri(app.Urls.First()) };
