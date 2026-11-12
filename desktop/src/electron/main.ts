@@ -3,7 +3,8 @@ import "./devUserData.js";
 // Must load next so Sentry hooks the app before anything else runs.
 import "./sentry.js";
 import { spawn } from "child_process";
-import { access, mkdir, readFile, realpath, stat, writeFile } from "fs/promises";
+import { join } from "path";
+import { access, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile } from "fs/promises";
 import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
@@ -147,12 +148,36 @@ app.whenReady().then(async () => {
     builtInToolIds: BUILT_IN_TOOL_IDS,
     fs: {
       readText: (path) => readFile(path, "utf-8"),
-      writeText: (path, content) => writeFile(path, content, "utf-8"),
+      // Write beside the file and rename over it, so a crash mid-write cannot leave a truncated state file.
+      writeText: async (path, content) => {
+        const temporary = `${path}.${process.pid}.tmp`;
+        await writeFile(temporary, content, "utf-8");
+        try {
+          await rename(temporary, path);
+        } catch (error) {
+          await rm(temporary, { force: true });
+          throw error;
+        }
+      },
       exists: (path) => access(path).then(() => true, () => false),
       mkdir: async (path) => {
         await mkdir(path, { recursive: true });
       },
       size: async (path) => (await stat(path)).size,
+      realpath: (path) => realpath(path),
+      remove: (path) => rm(path, { force: true }),
+      fileSizes: async (folder) => {
+        const sizes: number[] = [];
+        const walk = async (directory: string): Promise<void> => {
+          for (const entry of await readdir(directory, { withFileTypes: true })) {
+            const path = join(directory, entry.name);
+            if (entry.isDirectory()) await walk(path);
+            else if (entry.isFile()) sizes.push((await stat(path)).size);
+          }
+        };
+        await walk(folder);
+        return sizes;
+      },
     },
   });
   installToolProtocol({

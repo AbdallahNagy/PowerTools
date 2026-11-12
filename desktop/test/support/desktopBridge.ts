@@ -125,6 +125,7 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     grantCommunityToolConsent: async () => undefined,
     readCommunityToolStorage: async () => ({}),
     writeCommunityToolStorage: async () => undefined,
+    getCommunityToolBundleSize: async () => ({ bytes: 0, files: 0 }),
     openFileForCommunityTool: async () => null,
     saveFileForCommunityTool: async () => false,
     onOpenCommunityTools: (callback) => {

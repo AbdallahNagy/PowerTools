@@ -32,10 +32,13 @@ export const MANIFEST_PERMISSIONS: readonly string[] = [
 /** Wrapper messages a tool may never run; the broker and the sidecar refuse them too. */
 const FORBIDDEN_MESSAGES: readonly string[] = ["executemultiple", "executetransaction", "executeasync"];
 
-const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.[a-z0-9]+(-[a-z0-9]+)*$/;
+export const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*\.[a-z0-9]+(-[a-z0-9]+)*$/;
 const VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/;
 const HOST_VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)/;
-const MESSAGE_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
+// Starts with a letter and stops at 200 characters, which is what the sidecar accepts.
+const MESSAGE_PATTERN = /^[A-Za-z][A-Za-z0-9_]{0,199}$/;
+// Windows treats these as devices when they start a file name, even with an extension (con.x.json).
+const RESERVED_FILE_NAME = /^(con|prn|aux|nul|com[0-9]|lpt[0-9])$/;
 const HOST_LABEL = "[A-Za-z0-9]([A-Za-z0-9-]*[A-Za-z0-9])?";
 // At least two labels: rules out "localhost", intranet names, and IPv6 literals.
 const DOMAIN_PATTERN = new RegExp(`^${HOST_LABEL}(\\.${HOST_LABEL})+$`);
@@ -65,10 +68,21 @@ function compareVersions(a: [number, number, number], b: [number, number, number
   return 0;
 }
 
-/** A path inside the package: relative, forward slashes only, no `..` segment, no scheme or drive. */
+/** A path inside the package: relative, forward slashes only, every segment a name (no `.`, `..`, or empty), no scheme, drive, or NUL. */
 function isPackagePath(path: string): boolean {
-  if (path.length === 0 || path.includes("\\") || path.includes(":") || path.startsWith("/")) return false;
-  return !path.split("/").includes("..");
+  if (path.length === 0 || path.includes("\\") || path.includes(":") || path.includes("\0")) return false;
+  return path.split("/").every((segment) => segment !== "" && segment !== "." && segment !== "..");
+}
+
+/** Drops repeats, keeping the first spelling; `same` decides when two entries are the same. */
+function unique(list: string[], same: (entry: string) => string = (entry) => entry): string[] {
+  const seen = new Set<string>();
+  return list.filter((entry) => {
+    const key = same(entry);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function parseManifest(json: unknown, hostVersion: string): ManifestResult {
@@ -101,6 +115,9 @@ export function parseManifest(json: unknown, hostVersion: string): ManifestResul
 
   const id = requiredString("id");
   if (id && !ID_PATTERN.test(id)) errors.push(`id: "${id}" must be publisher.tool-name in lowercase kebab segments`);
+  else if (id && RESERVED_FILE_NAME.test(id.slice(0, id.indexOf(".")))) {
+    errors.push(`id: "${id}" cannot start with a name Windows reserves for devices`);
+  }
 
   const name = requiredString("name");
   const description = requiredString("description");
@@ -171,9 +188,10 @@ export function parseManifest(json: unknown, hostVersion: string): ManifestResul
       icon,
       entry,
       minHostVersion,
-      permissions,
-      messages,
-      network,
+      permissions: unique(permissions),
+      // Message names are not case sensitive in Dataverse, so two spellings are one message.
+      messages: unique(messages, (message) => message.toLowerCase()),
+      network: unique(network, (host) => host.toLowerCase()),
       allowMultipleInstances,
     },
   };

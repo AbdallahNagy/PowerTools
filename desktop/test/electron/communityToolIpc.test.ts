@@ -24,7 +24,8 @@ const MANIFEST: CommunityToolManifest = {
   allowMultipleInstances: true,
 };
 
-function setup() {
+function setup(options: { consented?: boolean; permissions?: string[] } = {}) {
+  const manifest = { ...MANIFEST, permissions: options.permissions ?? MANIFEST.permissions };
   const handlers = new Map<string, Handler>();
   const mainContents = { id: 1 };
   const otherContents = { id: 2 };
@@ -34,9 +35,9 @@ function setup() {
     folder: FOLDER,
     status: "ready" as const,
     errors: [],
-    manifest: MANIFEST,
+    manifest,
     iconDataUrl: null,
-    consentGranted: true,
+    consentGranted: options.consented ?? true,
   };
   const store = {
     list: vi.fn(async () => [loaded]),
@@ -44,7 +45,9 @@ function setup() {
     remove: vi.fn(async () => undefined),
     grantConsent: vi.fn(async () => undefined),
     folderFor: (id: string) => (id === TOOL_ID ? FOLDER : null),
-    manifestFor: (id: string) => (id === TOOL_ID ? MANIFEST : null),
+    manifestFor: (id: string) => (id === TOOL_ID ? manifest : null),
+    isConsented: (id: string) => id === TOOL_ID && (options.consented ?? true),
+    bundleSize: vi.fn(async () => ({ bytes: 1234, files: 3 })),
     readStorage: vi.fn(async () => ({ count: 1 })),
     writeStorage: vi.fn(async () => undefined),
   };
@@ -85,6 +88,7 @@ describe("community tool IPC", () => {
       "grant-community-tool-consent",
       "read-community-tool-storage",
       "write-community-tool-storage",
+      "get-community-tool-bundle-size",
       "open-file-for-community-tool",
       "save-file-for-community-tool",
     ]);
@@ -169,6 +173,49 @@ describe("community tool IPC", () => {
 
     dialogs.chooseSaveFile.mockResolvedValueOnce(null);
     await expect(call("save-file-for-community-tool", TOOL_ID, "out.csv", "a,b")).resolves.toBe(false);
+  });
+
+  it("refuses storage, files and the bundle size for a tool whose permissions were not reviewed", async () => {
+    const { call, store, dialogs } = setup({ consented: false });
+
+    for (const [channel, args] of [
+      ["read-community-tool-storage", [TOOL_ID]],
+      ["write-community-tool-storage", [TOOL_ID, {}]],
+      ["get-community-tool-bundle-size", [TOOL_ID]],
+      ["open-file-for-community-tool", [TOOL_ID, []]],
+      ["save-file-for-community-tool", [TOOL_ID, "a.txt", "x"]],
+    ] as const) {
+      await expect(Promise.resolve().then(() => call(channel, ...args)), channel).rejects.toThrow("has not been reviewed");
+    }
+    expect(store.readStorage).not.toHaveBeenCalled();
+    expect(store.writeStorage).not.toHaveBeenCalled();
+    expect(dialogs.chooseOpenFile).not.toHaveBeenCalled();
+    expect(dialogs.chooseSaveFile).not.toHaveBeenCalled();
+    // Reviewing the permissions is what consent means, so granting still works.
+    await call("grant-community-tool-consent", TOOL_ID);
+    expect(store.grantConsent).toHaveBeenCalledWith(TOOL_ID);
+  });
+
+  it("refuses file dialogs for a tool that does not declare the files permission", async () => {
+    const { call, dialogs } = setup({ permissions: ["data:read"] });
+
+    await expect(Promise.resolve().then(() => call("open-file-for-community-tool", TOOL_ID, []))).rejects.toThrow(
+      "not allowed to use files",
+    );
+    await expect(
+      Promise.resolve().then(() => call("save-file-for-community-tool", TOOL_ID, "a.txt", "x")),
+    ).rejects.toThrow("not allowed to use files");
+    expect(dialogs.chooseOpenFile).not.toHaveBeenCalled();
+    expect(dialogs.chooseSaveFile).not.toHaveBeenCalled();
+    // Storage needs no permission of its own.
+    await expect(call("read-community-tool-storage", TOOL_ID)).resolves.toEqual({ count: 1 });
+  });
+
+  it("reports the bundle size of a reviewed tool", async () => {
+    const { call, store } = setup();
+
+    await expect(call("get-community-tool-bundle-size", TOOL_ID)).resolves.toEqual({ bytes: 1234, files: 3 });
+    expect(store.bundleSize).toHaveBeenCalledWith(TOOL_ID);
   });
 
   it("refuses to save a file for an unknown tool", async () => {

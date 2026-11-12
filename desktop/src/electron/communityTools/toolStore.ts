@@ -2,7 +2,7 @@
 // All file access is injected, and there is no Electron import, so it stays unit-testable.
 import { createHash } from "node:crypto";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { parseManifest, type CommunityToolManifest } from "./manifest.js";
+import { ID_PATTERN, parseManifest, type CommunityToolManifest } from "./manifest.js";
 
 export const MANIFEST_FILE = "powertools-tool.json";
 const STATE_FILE = "community-tools.json";
@@ -32,6 +32,12 @@ export interface ToolStoreFs {
   mkdir(path: string): Promise<void>;
   /** Size in bytes. */
   size(path: string): Promise<number>;
+  /** Resolves symlinks; rejects when the path does not exist. */
+  realpath(path: string): Promise<string>;
+  /** Deletes a file; no error when it does not exist. */
+  remove(path: string): Promise<void>;
+  /** Sizes in bytes of every file under the folder, at any depth. */
+  fileSizes(folder: string): Promise<number[]>;
 }
 
 export interface ToolStoreDeps {
@@ -43,12 +49,23 @@ export interface ToolStoreDeps {
 
 export type ToolStore = ReturnType<typeof createToolStore>;
 
+interface Grant {
+  id: string;
+  /** Hash of the reviewed permission set; empty for a folder that was added but not yet reviewed. */
+  hash: string;
+}
+
 interface StoreState {
   folders: string[];
+  /** Consent by tool id alone, as older versions wrote it. Read, never added to. */
   consent: Record<string, string>;
   /** Manifest id by folder, so consent can be cleared when the folder is gone. Absent in older files. */
   ids: Record<string, string>;
+  /** Consent by folder: the id and permission set the user reviewed in that folder. */
+  grants: Record<string, Grant>;
 }
+
+const emptyState = (): StoreState => ({ folders: [], consent: {}, ids: {}, grants: {} });
 
 /** SHA-256 of the sorted permission, message, and network lists. */
 export function consentHash(manifest: Pick<CommunityToolManifest, "permissions" | "messages" | "network">): string {
@@ -68,7 +85,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function parseState(text: string): StoreState {
   try {
     const value: unknown = JSON.parse(text);
-    if (!isRecord(value)) return { folders: [], consent: {}, ids: {} };
+    if (!isRecord(value)) return emptyState();
     const folders = Array.isArray(value.folders) ? value.folders.filter((f): f is string => typeof f === "string") : [];
     const consent: Record<string, string> = {};
     if (isRecord(value.consent)) {
@@ -82,14 +99,42 @@ function parseState(text: string): StoreState {
         if (typeof id === "string") ids[folder] = id;
       }
     }
-    return { folders, consent, ids };
+    const grants: Record<string, Grant> = {};
+    if (isRecord(value.grants)) {
+      for (const [folder, grant] of Object.entries(value.grants)) {
+        if (isRecord(grant) && typeof grant.id === "string" && typeof grant.hash === "string") {
+          grants[folder] = { id: grant.id, hash: grant.hash };
+        }
+      }
+    }
+    return { folders, consent, ids, grants };
   } catch {
-    return { folders: [], consent: {}, ids: {} };
+    return emptyState();
   }
+}
+
+function isOutside(folder: string, path: string): boolean {
+  const inside = relative(folder, path);
+  return inside.length === 0 || inside.startsWith("..") || isAbsolute(inside);
 }
 
 function duplicateIdError(id: string): string {
   return `A tool with id "${id}" is already loaded`;
+}
+
+/**
+ * Whether the user reviewed this exact permission set for this tool in this folder.
+ * A folder with a grant entry is decided by it alone. For a folder without one, consent an older version
+ * stored by id counts only when this is the one folder recorded with that id (or, in a file that recorded
+ * no ids at all, the id is unclaimed), so a different folder that reuses an id never inherits it.
+ */
+function isGranted(state: StoreState, folder: string, id: string, hash: string): boolean {
+  const grant = state.grants[folder];
+  if (grant) return grant.id === id && grant.hash !== "" && grant.hash === hash;
+  if (state.consent[id] !== hash) return false;
+  const recorded = Object.values(state.ids).filter((recordedId) => recordedId === id).length;
+  const own = state.ids[folder];
+  return own === undefined ? recorded === 0 : own === id && recorded === 1;
 }
 
 export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs }: ToolStoreDeps) {
@@ -98,12 +143,21 @@ export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs 
   // Ready tools from the last list(), by id.
   let ready = new Map<string, LoadedCommunityTool>();
 
+  // Operations that read and write the state file or the ready map run one at a time, in call order, so a slow
+  // list() that started first cannot overwrite what a later addFolder() recorded.
+  let queue: Promise<unknown> = Promise.resolve();
+  function serial<T>(work: () => Promise<T>): Promise<T> {
+    const run = queue.then(work);
+    queue = run.catch(() => undefined);
+    return run;
+  }
+
   async function readState(): Promise<StoreState> {
-    if (!(await fs.exists(statePath))) return { folders: [], consent: {}, ids: {} };
+    if (!(await fs.exists(statePath))) return emptyState();
     try {
       return parseState(await fs.readText(statePath));
     } catch {
-      return { folders: [], consent: {}, ids: {} };
+      return emptyState();
     }
   }
 
@@ -118,17 +172,20 @@ export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs 
 
   async function readIcon(folder: string, icon: string): Promise<string> {
     const iconPath = resolve(folder, icon);
-    const inside = relative(folder, iconPath);
-    if (inside.length === 0 || inside.startsWith("..") || isAbsolute(inside)) {
-      throw new Error(`icon: "${icon}" must be a relative path inside the package`);
-    }
+    if (isOutside(folder, iconPath)) throw new Error(`icon: "${icon}" must be a relative path inside the package`);
     if (!(await fs.exists(iconPath))) throw new Error(`icon: "${icon}" not found`);
+    // A symlink inside the folder can point anywhere, so check where the file really is.
+    if (isOutside(await fs.realpath(folder), await fs.realpath(iconPath))) {
+      throw new Error(`icon: "${icon}" must be a file inside the package`);
+    }
     if ((await fs.size(iconPath)) > MAX_ICON_BYTES) throw new Error("Icon is larger than 256 KB");
     const svg = await fs.readText(iconPath);
+    // The file may have grown since it was measured.
+    if (Buffer.byteLength(svg, "utf8") > MAX_ICON_BYTES) throw new Error("Icon is larger than 256 KB");
     return `data:image/svg+xml;base64,${Buffer.from(svg, "utf8").toString("base64")}`;
   }
 
-  async function loadFolder(folder: string, consent: Record<string, string>): Promise<LoadedCommunityTool> {
+  async function loadFolder(folder: string, state: StoreState): Promise<LoadedCommunityTool> {
     if (!(await fs.exists(folder))) return failed(folder, "missing", ["Folder not found"]);
 
     const manifestPath = join(folder, MANIFEST_FILE);
@@ -159,7 +216,7 @@ export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs 
       errors: [],
       manifest,
       iconDataUrl,
-      consentGranted: consent[manifest.id] === consentHash(manifest),
+      consentGranted: isGranted(state, folder, manifest.id, consentHash(manifest)),
     };
   }
 
@@ -168,7 +225,7 @@ export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs 
     const taken = new Set(builtInToolIds);
     const tools: LoadedCommunityTool[] = [];
     for (const folder of state.folders) {
-      const tool = await loadFolder(folder, state.consent);
+      const tool = await loadFolder(folder, state);
       if (tool.status === "ready" && taken.has(tool.id)) {
         tools.push(failed(folder, "invalid", [duplicateIdError(tool.id)]));
         continue;
@@ -192,55 +249,77 @@ export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs 
 
   return {
     /** Re-reads every remembered folder and its manifest. */
-    async list(): Promise<LoadedCommunityTool[]> {
-      return loadAll(await readState());
+    list(): Promise<LoadedCommunityTool[]> {
+      return serial(async () => loadAll(await readState()));
     },
 
-    async addFolder(folderInput: string): Promise<LoadedCommunityTool> {
-      const folder = resolve(folderInput);
-      const state = await readState();
-      const current = await loadAll(state);
+    addFolder(folderInput: string): Promise<LoadedCommunityTool> {
+      return serial(async () => {
+        const folder = resolve(folderInput);
+        const state = await readState();
+        const current = await loadAll(state);
 
-      const existing = current.find((tool) => tool.folder === folder);
-      if (existing) return existing;
+        const existing = current.find((tool) => tool.folder === folder);
+        if (existing) return existing;
 
-      const tool = await loadFolder(folder, state.consent);
-      if (tool.status === "ready" && (builtInToolIds.includes(tool.id) || ready.has(tool.id))) {
-        throw new Error(duplicateIdError(tool.id));
-      }
+        // A new folder starts unreviewed, whatever an older folder with the same id was granted.
+        const tool = await loadFolder(folder, { ...state, grants: { ...state.grants, [folder]: { id: "", hash: "" } } });
+        if (tool.status === "ready" && (builtInToolIds.includes(tool.id) || ready.has(tool.id))) {
+          throw new Error(duplicateIdError(tool.id));
+        }
 
-      const ids = tool.status === "ready" ? { ...state.ids, [folder]: tool.id } : state.ids;
-      await writeState({ ...state, folders: [...state.folders, folder], ids });
-      if (tool.status === "ready") ready.set(tool.id, tool);
-      return tool;
-    },
-
-    /** Forgets a tool by id (or by folder for a tool without a valid manifest) and its consent. */
-    async remove(id: string): Promise<void> {
-      const state = await readState();
-      const tools = await loadAll(state);
-      const tool = tools.find((entry) => entry.id === id);
-      if (!tool) return;
-      // A missing or broken folder has no readable manifest, so use the id recorded when it was added.
-      const consentId = tool.manifest?.id ?? state.ids[tool.folder] ?? id;
-      const stillUsed = tools.some((entry) => entry !== tool && entry.status === "ready" && entry.id === consentId);
-      const consent = { ...state.consent };
-      if (!stillUsed) delete consent[consentId];
-      const ids = { ...state.ids };
-      delete ids[tool.folder];
-      await writeState({ folders: state.folders.filter((folder) => folder !== tool.folder), consent, ids });
-      ready.delete(id);
-    },
-
-    async grantConsent(id: string): Promise<void> {
-      const tool = requireReady(id);
-      const state = await readState();
-      await writeState({
-        ...state,
-        consent: { ...state.consent, [id]: consentHash(tool.manifest!) },
-        ids: { ...state.ids, [tool.folder]: id },
+        const isReady = tool.status === "ready";
+        await writeState({
+          ...state,
+          folders: [...state.folders, folder],
+          ids: isReady ? { ...state.ids, [folder]: tool.id } : state.ids,
+          grants: isReady ? { ...state.grants, [folder]: { id: tool.id, hash: "" } } : state.grants,
+        });
+        if (isReady) ready.set(tool.id, tool);
+        return tool;
       });
-      ready.set(id, { ...tool, consentGranted: true });
+    },
+
+    /** Forgets a tool by id (or by folder for a tool without a valid manifest), its consent, and its stored settings. */
+    remove(id: string): Promise<void> {
+      return serial(async () => {
+        const state = await readState();
+        const tools = await loadAll(state);
+        const tool = tools.find((entry) => entry.id === id);
+        if (!tool) return;
+        // A missing or broken folder has no readable manifest, so use the id recorded when it was added.
+        const toolId = tool.manifest?.id ?? state.ids[tool.folder] ?? state.grants[tool.folder]?.id ?? id;
+        const consent = { ...state.consent };
+        const ids = { ...state.ids };
+        const grants = { ...state.grants };
+        delete ids[tool.folder];
+        delete grants[tool.folder];
+        // Consent kept by id alone belongs to no folder in particular; drop it once no folder claims the id.
+        const stillUsed = Object.values(ids).includes(toolId);
+        if (!stillUsed) delete consent[toolId];
+        await writeState({ folders: state.folders.filter((folder) => folder !== tool.folder), consent, ids, grants });
+        ready.delete(id);
+        if (!stillUsed && ID_PATTERN.test(toolId)) await fs.remove(join(storageDir, `${toolId}.json`));
+      });
+    },
+
+    grantConsent(id: string): Promise<void> {
+      return serial(async () => {
+        const tool = requireReady(id);
+        const state = await readState();
+        await writeState({
+          ...state,
+          ids: { ...state.ids, [tool.folder]: id },
+          grants: { ...state.grants, [tool.folder]: { id, hash: consentHash(tool.manifest!) } },
+        });
+        ready.set(id, { ...tool, consentGranted: true });
+      });
+    },
+
+    /** Total size of the tool's folder in bytes, and how many files it holds. */
+    async bundleSize(id: string): Promise<{ bytes: number; files: number }> {
+      const sizes = await fs.fileSizes(requireReady(id).folder);
+      return { bytes: sizes.reduce((total, size) => total + size, 0), files: sizes.length };
     },
 
     /** Folder of a ready tool, for the protocol handler. */

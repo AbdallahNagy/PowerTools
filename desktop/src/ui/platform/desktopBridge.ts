@@ -175,6 +175,8 @@ export interface DesktopBridge {
   /** Rejects above 1 MB serialized. */
   writeCommunityToolStorage(id: string, data: Record<string, unknown>): Promise<void>;
   /** Asks for a file and reads it as text. `null` when the user cancels. */
+  /** Total size of the tool's folder, for the load log. */
+  getCommunityToolBundleSize(id: string): Promise<{ bytes: number; files: number }>;
   openFileForCommunityTool(id: string, filters: CommunityToolFileFilter[]): Promise<CommunityToolOpenFileResult | null>;
   /** Asks where to save and writes the text. `false` when the user cancels. */
   saveFileForCommunityTool(id: string, suggestedName: string, content: string): Promise<boolean>;
@@ -241,6 +243,7 @@ export const desktopBridge: DesktopBridge = {
   grantCommunityToolConsent: (id) => bridge().grantCommunityToolConsent(id),
   readCommunityToolStorage: (id) => bridge().readCommunityToolStorage(id),
   writeCommunityToolStorage: (id, data) => bridge().writeCommunityToolStorage(id, data),
+  getCommunityToolBundleSize: (id) => bridge().getCommunityToolBundleSize(id),
   openFileForCommunityTool: (id, filters) => bridge().openFileForCommunityTool(id, filters),
   saveFileForCommunityTool: (id, suggestedName, content) =>
     bridge().saveFileForCommunityTool(id, suggestedName, content),

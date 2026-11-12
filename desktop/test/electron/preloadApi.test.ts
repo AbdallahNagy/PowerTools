@@ -83,6 +83,7 @@ describe("createPreloadApi", () => {
     ["grantCommunityToolConsent", ["contoso.counter"], "grant-community-tool-consent", ["contoso.counter"]],
     ["readCommunityToolStorage", ["contoso.counter"], "read-community-tool-storage", ["contoso.counter"]],
     ["writeCommunityToolStorage", ["contoso.counter", { count: 1 }], "write-community-tool-storage", ["contoso.counter", { count: 1 }]],
+    ["getCommunityToolBundleSize", ["contoso.counter"], "get-community-tool-bundle-size", ["contoso.counter"]],
     ["openFileForCommunityTool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]], "open-file-for-community-tool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]]],
     ["saveFileForCommunityTool", ["contoso.counter", "out.csv", "a,b"], "save-file-for-community-tool", ["contoso.counter", "out.csv", "a,b"]],
   ] as const)(
@@ -218,6 +219,7 @@ describe("createPreloadApi", () => {
       "grantCommunityToolConsent",
       "readCommunityToolStorage",
       "writeCommunityToolStorage",
+      "getCommunityToolBundleSize",
       "openFileForCommunityTool",
       "saveFileForCommunityTool",
       "onOpenCommunityTools",

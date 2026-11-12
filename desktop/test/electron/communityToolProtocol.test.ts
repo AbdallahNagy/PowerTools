@@ -1,4 +1,4 @@
-import { join, resolve } from "path";
+import { join, resolve, sep } from "path";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { CommunityToolManifest } from "../../src/electron/communityTools/manifest";
 
@@ -146,7 +146,7 @@ describe("resolveToolRequest", () => {
     const response = await resolveToolRequest(url, deps);
     expect(response.status).toBe(403);
     expect(response.body).toBeNull();
-    expect(response.headers["X-Content-Type-Options"]).toBe("nosniff");
+    expect(response.headers).toEqual({ "Content-Security-Policy": "default-src 'none'", "X-Content-Type-Options": "nosniff" });
     expect(deps.readFile).not.toHaveBeenCalled();
   });
 
@@ -168,10 +168,30 @@ describe("resolveToolRequest", () => {
     expect(response.body?.toString("utf8")).toBe("real");
   });
 
-  it("returns 404 for an unknown tool id", async () => {
+  it("returns 404 for an unknown tool id, with a policy that allows nothing", async () => {
     const response = await resolveToolRequest("pt-tool://nobody.here/index.html", fakeDeps());
     expect(response.status).toBe(404);
-    expect(response.headers["X-Content-Type-Options"]).toBe("nosniff");
+    expect(response.headers).toEqual({ "Content-Security-Policy": "default-src 'none'", "X-Content-Type-Options": "nosniff" });
+  });
+
+  it("compares paths without regard to case on Windows", async () => {
+    // Windows paths only make sense with the Windows separator.
+    if (sep !== "\\") return;
+    const platform = vi.spyOn(process, "platform", "get").mockReturnValue("win32");
+    try {
+      const deps = fakeDeps({ files: { [join(FOLDER, "index.html")]: "<p>hi</p>" } });
+      // The real path of the file comes back in a different case than the folder's.
+      deps.realpath.mockImplementation(async (path: string) => (path === FOLDER ? FOLDER : join(FOLDER.toUpperCase(), "index.html")));
+      deps.readFile.mockResolvedValue(Buffer.from("<p>hi</p>"));
+      const response = await resolveToolRequest("pt-tool://acme.demo/index.html", deps);
+      expect(response.status).toBe(200);
+
+      // Case matters on other systems, so the same paths are two different places there.
+      platform.mockReturnValue("linux");
+      expect((await resolveToolRequest("pt-tool://acme.demo/index.html", deps)).status).toBe(403);
+    } finally {
+      platform.mockRestore();
+    }
   });
 
   it("returns 404 for a missing file", async () => {

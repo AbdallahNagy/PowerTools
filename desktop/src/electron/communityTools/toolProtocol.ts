@@ -46,6 +46,9 @@ const CONTENT_TYPES: Record<string, string> = {
 };
 
 // Never add the bare `pt-tool:` scheme here: it would let a tool load or fetch another tool's files.
+// connect-src lists only `https://<host>` for hosts the manifest names. Never loosen it to a bare `https:`
+// or a wildcard, and never to http:, ws:, or a loopback address: that is how a tool would reach the sidecar
+// or the rest of the machine's network.
 export function toolPolicy(manifest: Pick<CommunityToolManifest, "network">): string {
   const connect = manifest.network.length === 0 ? "'none'" : manifest.network.map((host) => `https://${host}`).join(" ");
   return [
@@ -62,8 +65,13 @@ export function toolPolicy(manifest: Pick<CommunityToolManifest, "network">): st
   ].join("; ");
 }
 
+/** A refusal carries a policy too, so even an error page cannot run or load anything. */
 function failure(status: number): ToolResponse {
-  return { status, headers: { "X-Content-Type-Options": "nosniff" }, body: null };
+  return {
+    status,
+    headers: { "Content-Security-Policy": "default-src 'none'", "X-Content-Type-Options": "nosniff" },
+    body: null,
+  };
 }
 
 const comparable = (path: string) => (process.platform === "win32" ? path.toLowerCase() : path);

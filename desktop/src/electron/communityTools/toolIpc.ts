@@ -85,6 +85,20 @@ export function registerCommunityToolIpc({ ipcMain, store, getMainWindow, dialog
     await store.remove(id);
   });
 
+  /** The id of a ready tool whose current permission set the user has reviewed, or throws. */
+  function consentedToolId(id: unknown): string {
+    const toolId = readyToolId(id);
+    if (!store.isConsented(toolId)) throw new Error("Community tool has not been reviewed");
+    return toolId;
+  }
+
+  /** As above, and the manifest must declare the `files` permission. */
+  function fileToolId(id: unknown): string {
+    const toolId = consentedToolId(id);
+    if (!store.manifestFor(toolId)?.permissions.includes("files")) throw new Error("This tool is not allowed to use files");
+    return toolId;
+  }
+
   ipcMain.handle("grant-community-tool-consent", (event, id: unknown) => {
     mainWindowFor(event);
     return store.grantConsent(readyToolId(id));
@@ -92,19 +106,24 @@ export function registerCommunityToolIpc({ ipcMain, store, getMainWindow, dialog
 
   ipcMain.handle("read-community-tool-storage", (event, id: unknown) => {
     mainWindowFor(event);
-    return store.readStorage(readyToolId(id));
+    return store.readStorage(consentedToolId(id));
   });
 
   ipcMain.handle("write-community-tool-storage", (event, id: unknown, data: unknown) => {
     mainWindowFor(event);
-    const toolId = readyToolId(id);
+    const toolId = consentedToolId(id);
     if (!isRecord(data)) throw new Error("Tool storage must be an object");
     return store.writeStorage(toolId, data);
   });
 
+  ipcMain.handle("get-community-tool-bundle-size", (event, id: unknown) => {
+    mainWindowFor(event);
+    return store.bundleSize(consentedToolId(id));
+  });
+
   ipcMain.handle("open-file-for-community-tool", async (event, id: unknown, filters: unknown) => {
     const window = mainWindowFor(event);
-    readyToolId(id);
+    fileToolId(id);
     const path = await dialogs.chooseOpenFile(window, parseFileFilters(filters));
     if (!path) return null;
     if ((await files.size(path)) > MAX_OPEN_FILE_BYTES) return { error: "File is larger than 20 MB" };
@@ -115,7 +134,7 @@ export function registerCommunityToolIpc({ ipcMain, store, getMainWindow, dialog
     "save-file-for-community-tool",
     async (event, id: unknown, suggestedName: unknown, content: unknown) => {
       const window = mainWindowFor(event);
-      readyToolId(id);
+      fileToolId(id);
       if (typeof content !== "string") throw new Error("File content must be text");
       const path = await dialogs.chooseSaveFile(window, plainFileName(suggestedName));
       if (!path) return false;

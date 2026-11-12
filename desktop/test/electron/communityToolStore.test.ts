@@ -1,4 +1,4 @@
-import { join, resolve } from "node:path";
+import { join, resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 import { consentHash, createToolStore, type ToolStoreFs } from "../../src/electron/communityTools/toolStore";
 
@@ -10,8 +10,12 @@ const ICON = '<svg xmlns="http://www.w3.org/2000/svg"/>';
 function createMemoryFs() {
   const files = new Map<string, string>();
   const dirs = new Set<string>();
+  /** Where a path really is, for paths that are symlinks. */
+  const links = new Map<string, string>();
+  const delays: { readText?: Promise<void> } = {};
   const fs: ToolStoreFs = {
     readText: async (path) => {
+      await delays.readText;
       const content = files.get(path);
       if (content === undefined) throw new Error(`ENOENT: ${path}`);
       return content;
@@ -24,8 +28,14 @@ function createMemoryFs() {
       dirs.add(path);
     },
     size: async (path) => Buffer.byteLength(files.get(path) ?? "", "utf8"),
+    realpath: async (path) => links.get(path) ?? path,
+    remove: async (path) => {
+      files.delete(path);
+    },
+    fileSizes: async (folder) =>
+      [...files].filter(([path]) => path.startsWith(folder + sep)).map(([, content]) => Buffer.byteLength(content, "utf8")),
   };
-  return { fs, files, dirs };
+  return { fs, files, dirs, links, delays };
 }
 
 function manifest(overrides: Record<string, unknown> = {}) {
@@ -79,6 +89,7 @@ describe("community tool store", () => {
       folders: [folder],
       consent: {},
       ids: { [folder]: "contoso.record-counter" },
+      grants: { [folder]: { id: "contoso.record-counter", hash: "" } },
     });
     expect(store.folderFor("contoso.record-counter")).toBe(folder);
     expect(store.manifestFor("contoso.record-counter")?.id).toBe("contoso.record-counter");
@@ -94,6 +105,137 @@ describe("community tool store", () => {
 
     writeTool("counter", { permissions: ["data:read", "data:write"] });
     expect((await store.list())[0].consentGranted).toBe(false);
+  });
+
+  it("does not give a new folder the consent of an older folder that used the same id", async () => {
+    const { store, writeTool, files, dirs } = setup();
+    const older = writeTool("older");
+    await store.addFolder(older);
+    await store.grantConsent("contoso.record-counter");
+    dirs.delete(older);
+    files.delete(join(older, "powertools-tool.json"));
+    expect((await store.list())[0]).toMatchObject({ status: "missing" });
+
+    const added = await store.addFolder(writeTool("newer"));
+
+    expect(added).toMatchObject({ status: "ready", consentGranted: false });
+    expect(store.isConsented("contoso.record-counter")).toBe(false);
+    // Still unreviewed after the next refresh, and reviewing it grants only that folder.
+    expect((await store.list()).find((tool) => tool.status === "ready")).toMatchObject({ consentGranted: false });
+    await store.grantConsent("contoso.record-counter");
+    expect((await store.list()).find((tool) => tool.status === "ready")).toMatchObject({ consentGranted: true });
+  });
+
+  it("keeps consent per folder when the same folder is reloaded", async () => {
+    const { store, writeTool } = setup();
+    const folder = writeTool("counter");
+    await store.addFolder(folder);
+    await store.grantConsent("contoso.record-counter");
+
+    expect((await store.list())[0]).toMatchObject({ folder, consentGranted: true });
+  });
+
+  describe("consent in a state file written before folders were bound to it", () => {
+    const hash = consentHash({ permissions: ["data:read"], messages: [], network: [] });
+
+    it("counts for the one folder recorded with that id", async () => {
+      const { store, writeTool, files } = setup();
+      const folder = writeTool("counter");
+      files.set(STATE_FILE, JSON.stringify({ folders: [folder], consent: { "contoso.record-counter": hash }, ids: { [folder]: "contoso.record-counter" } }));
+
+      expect((await store.list())[0]).toMatchObject({ consentGranted: true });
+    });
+
+    it("counts for the only folder when no ids were recorded at all", async () => {
+      const { store, writeTool, files } = setup();
+      const folder = writeTool("counter");
+      files.set(STATE_FILE, JSON.stringify({ folders: [folder], consent: { "contoso.record-counter": hash } }));
+
+      expect((await store.list())[0]).toMatchObject({ consentGranted: true });
+    });
+
+    it("does not count when two folders were recorded with the same id", async () => {
+      const { store, writeTool, files, dirs } = setup();
+      const missing = join(ROOT, "gone");
+      dirs.delete(missing);
+      const folder = writeTool("counter");
+      files.set(
+        STATE_FILE,
+        JSON.stringify({
+          folders: [missing, folder],
+          consent: { "contoso.record-counter": hash },
+          ids: { [missing]: "contoso.record-counter", [folder]: "contoso.record-counter" },
+        }),
+      );
+
+      const tools = await store.list();
+      expect(tools.find((tool) => tool.status === "ready")).toMatchObject({ consentGranted: false });
+    });
+
+    it("does not count for a folder recorded under a different id", async () => {
+      const { store, writeTool, files } = setup();
+      const folder = writeTool("counter");
+      files.set(STATE_FILE, JSON.stringify({ folders: [folder], consent: { "contoso.record-counter": hash }, ids: { [folder]: "contoso.other" } }));
+
+      expect((await store.list())[0]).toMatchObject({ consentGranted: false });
+    });
+  });
+
+  it("does not drop a tool added while the startup list is still reading", async () => {
+    const { store, writeTool, files, delays } = setup();
+    const first = writeTool("first", { id: "contoso.first" });
+    files.set(STATE_FILE, JSON.stringify({ folders: [first], ids: { [first]: "contoso.first" } }));
+    let release!: () => void;
+    delays.readText = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const startup = store.list();
+    const second = writeTool("second", { id: "contoso.second" });
+    const adding = store.addFolder(second);
+    delays.readText = undefined;
+    release();
+    await Promise.all([startup, adding]);
+
+    expect(store.folderFor("contoso.first")).toBe(first);
+    expect(store.folderFor("contoso.second")).toBe(second);
+    expect((await store.list()).map((tool) => tool.id)).toEqual(["contoso.first", "contoso.second"]);
+  });
+
+  it("refuses an icon that is a link to a file outside the folder", async () => {
+    const { store, writeTool, links, files } = setup();
+    const folder = writeTool("counter");
+    const outside = join(ROOT, "elsewhere", "secret.svg");
+    files.set(outside, ICON);
+    links.set(join(folder, "icon.svg"), outside);
+
+    const tool = await store.addFolder(folder);
+
+    expect(tool).toMatchObject({ status: "invalid", iconDataUrl: null });
+    expect(tool.errors[0]).toContain("must be a file inside the package");
+  });
+
+  it("reports the total size of the folder", async () => {
+    const { store, writeTool, files } = setup();
+    const folder = writeTool("counter");
+    files.set(join(folder, "app", "index.js"), "x".repeat(1000));
+    await store.addFolder(folder);
+
+    const expected = Buffer.byteLength(JSON.stringify(manifest()), "utf8") + Buffer.byteLength(ICON) + 1000;
+    await expect(store.bundleSize("contoso.record-counter")).resolves.toEqual({ bytes: expected, files: 3 });
+    await expect(store.bundleSize("contoso.unknown")).rejects.toThrow("Community tool not found");
+  });
+
+  it("deletes the stored settings of a tool when it is removed", async () => {
+    const { store, writeTool, files } = setup();
+    await store.addFolder(writeTool("counter"));
+    await store.writeStorage("contoso.record-counter", { count: 3 });
+    const storageFile = join(USER_DATA, "community-tool-data", "contoso.record-counter.json");
+    expect(files.has(storageFile)).toBe(true);
+
+    await store.remove("contoso.record-counter");
+
+    expect(files.has(storageFile)).toBe(false);
   });
 
   it("hashes the sorted permission, message and network lists", () => {
@@ -185,7 +327,7 @@ describe("community tool store", () => {
     await store.remove("contoso.record-counter");
 
     expect(await store.list()).toEqual([]);
-    expect(JSON.parse(files.get(STATE_FILE) ?? "")).toEqual({ folders: [], consent: {}, ids: {} });
+    expect(JSON.parse(files.get(STATE_FILE) ?? "")).toEqual({ folders: [], consent: {}, ids: {}, grants: {} });
     expect(store.folderFor("contoso.record-counter")).toBeNull();
   });
 
@@ -200,7 +342,7 @@ describe("community tool store", () => {
 
     await store.remove(gone);
 
-    expect(JSON.parse(files.get(STATE_FILE) ?? "")).toEqual({ folders: [], consent: {}, ids: {} });
+    expect(JSON.parse(files.get(STATE_FILE) ?? "")).toEqual({ folders: [], consent: {}, ids: {}, grants: {} });
     const other = await store.addFolder(writeTool("other"));
     expect(other).toMatchObject({ id: "contoso.record-counter", status: "ready", consentGranted: false });
     expect(store.isConsented("contoso.record-counter")).toBe(false);

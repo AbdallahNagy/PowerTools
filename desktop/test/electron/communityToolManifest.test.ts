@@ -79,6 +79,19 @@ describe("parseManifest", () => {
     ["permissions", { permissions: "data:read" }],
     ["messages", { messages: ["Who Am I"] }],
     ["messages", { messages: ["1WhoAmI"] }],
+    ["messages", { messages: ["_WhoAmI"] }],
+    ["messages", { messages: ["A".repeat(201)] }],
+    ["icon", { icon: "." }],
+    ["icon", { icon: "assets//icon.svg" }],
+    ["icon", { icon: "./icon.svg" }],
+    ["entry", { entry: "." }],
+    ["entry", { entry: "app/" }],
+    ["entry", { entry: "app//index.html" }],
+    ["entry", { entry: "app/./index.html" }],
+    ["entry", { entry: "index.html\0" }],
+    ["id", { id: "con.tool" }],
+    ["id", { id: "com1.tool" }],
+    ["id", { id: "lpt9.tool" }],
     ["network", { network: ["https://api.contoso.example"] }],
     ["network", { network: ["api.contoso.example/path"] }],
     ["network", { network: ["*.contoso.example"] }],
@@ -86,7 +99,7 @@ describe("parseManifest", () => {
   ])("reports %s for %j", (field, overrides) => {
     const errors = errorsFor(overrides);
     expect(errors).toHaveLength(1);
-    expect(errors[0]).toContain(field);
+    expect(errors[0].startsWith(`${field}: `)).toBe(true);
   });
 
   it.each(["ExecuteMultiple", "ExecuteTransaction", "ExecuteAsync"])("rejects the wrapper message %s", (message) => {
@@ -121,6 +134,29 @@ describe("parseManifest", () => {
       HOST_VERSION,
     );
     expect(result.ok).toBe(true);
+  });
+
+  it("keeps each permission, message and host once", () => {
+    const result = parseManifest(
+      {
+        ...validManifest(),
+        permissions: ["data:read", "metadata:read", "data:read"],
+        messages: ["WhoAmI", "whoami", "RetrieveVersion", "WhoAmI"],
+        network: ["api.contoso.example", "API.contoso.example"],
+      },
+      HOST_VERSION,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.manifest.permissions).toEqual(["data:read", "metadata:read"]);
+      expect(result.manifest.messages).toEqual(["WhoAmI", "RetrieveVersion"]);
+      expect(result.manifest.network).toEqual(["api.contoso.example"]);
+    }
+  });
+
+  it("accepts a device-like name that is not the first part of the id", () => {
+    expect(parseManifest({ ...validManifest(), id: "contoso.con" }, HOST_VERSION).ok).toBe(true);
+    expect(parseManifest({ ...validManifest(), id: "console.tool" }, HOST_VERSION).ok).toBe(true);
   });
 
   it("compares minHostVersion numerically per segment", () => {

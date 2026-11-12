@@ -97,6 +97,7 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
     readCommunityToolStorage: (id: string) => ipcRenderer.invoke("read-community-tool-storage", id),
     writeCommunityToolStorage: (id: string, data: Record<string, unknown>) =>
       ipcRenderer.invoke("write-community-tool-storage", id, data),
+    getCommunityToolBundleSize: (id: string) => ipcRenderer.invoke("get-community-tool-bundle-size", id),
     openFileForCommunityTool: (id: string, filters: Array<{ name: string; extensions: string[] }>) =>
       ipcRenderer.invoke("open-file-for-community-tool", id, filters),
     saveFileForCommunityTool: (id: string, suggestedName: string, content: string) =>
