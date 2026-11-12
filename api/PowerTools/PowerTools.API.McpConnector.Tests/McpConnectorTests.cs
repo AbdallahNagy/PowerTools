@@ -34,9 +34,11 @@ public sealed class ConnectorHarness : IAsyncDisposable
 
     public void Send(JsonNode message) => _input.WriteLine(message.ToJsonString());
 
-    public async Task<JsonNode> ReadAsync()
+    public Task<JsonNode> ReadAsync() => ReadAsync(Timeout);
+
+    public async Task<JsonNode> ReadAsync(TimeSpan timeout)
     {
-        var line = await _lines.ReadLineAsync().WaitAsync(Timeout);
+        var line = await _lines.ReadLineAsync().WaitAsync(timeout);
         Assert.NotNull(line);
         AllLines.Add(line);
         return JsonNode.Parse(line)!;
@@ -258,6 +260,32 @@ public class McpConnectorTests
         Assert.Equal(5, error["id"]!.GetValue<int>());
         Assert.Equal(-32000, error["error"]!["code"]!.GetValue<int>());
         AssertAllJson(h);
+    }
+
+    [Fact]
+    public async Task A_request_in_flight_when_the_app_vanishes_is_answered_within_three_seconds()
+    {
+        await using var app = await FakeMcpApp.StartAsync();
+        app.AllowPushStream = false;
+        app.HangToolCalls = true;
+        await using var h = new ConnectorHarness();
+        h.WriteDiscovery(app.Port);
+        h.Send(ConnectorHarness.Initialize(1));
+        await h.ReadAsync();
+        h.Send(ConnectorHarness.Initialized());
+
+        // The app has the request and will never answer it. Then it stops, which removes the discovery file.
+        h.Send(ConnectorHarness.Request(9, "tools/call"));
+        await WaitForAsync(() => app.Count("tools/call") == 1);
+        File.Delete(h.DiscoveryPath);
+
+        var within = TimeSpan.FromSeconds(3);
+        var first = await h.ReadAsync(within);
+        var second = first["id"] is null ? await h.ReadAsync(within) : first;
+        Assert.Equal(9, second["id"]!.GetValue<int>());
+        Assert.Equal(-32000, second["error"]!["code"]!.GetValue<int>());
+        // Exactly one answer for the request.
+        Assert.Equal(1, h.AllLines.Count(l => JsonNode.Parse(l)!["id"]?.GetValue<int>() == 9));
     }
 
     [Fact]

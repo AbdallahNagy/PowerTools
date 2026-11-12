@@ -33,6 +33,9 @@ public sealed class FakeMcpApp : IAsyncDisposable
     /// <summary>False answers the server-to-client GET with 405, as an app without a push stream would.</summary>
     public bool AllowPushStream { get; set; } = true;
 
+    /// <summary>True makes tools/call wait forever, like an app that accepted the request and then stopped.</summary>
+    public bool HangToolCalls { get; set; }
+
     private FakeMcpApp(WebApplication app, int port)
     {
         _app = app;
@@ -129,6 +132,13 @@ public sealed class FakeMcpApp : IAsyncDisposable
         if (message?["id"] is null)
         {
             ctx.Response.StatusCode = 202;
+            return;
+        }
+
+        if (HangToolCalls && method == "tools/call")
+        {
+            try { await Task.Delay(Timeout.Infinite, ctx.RequestAborted); }
+            catch (OperationCanceledException) { }
             return;
         }
 

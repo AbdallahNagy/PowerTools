@@ -34,6 +34,8 @@ public static class McpConnector
 
     private enum Outcome { Ok, Reconnect, Error }
 
+    private static readonly TimeSpan WatchInterval = TimeSpan.FromMilliseconds(250);
+
     private sealed class Relay : IAsyncDisposable
     {
         private readonly string _discoveryPath;
@@ -104,7 +106,8 @@ public static class McpConnector
             catch (OperationCanceledException) { }
 
             // stdin closed: let relays already in flight finish, then stop the background work.
-            await Task.WhenAll(pending);
+            // A relay that is still waiting after five seconds is given up on, so the process can always exit.
+            await Task.WhenAny(Task.WhenAll(pending), Task.Delay(5000));
             _lifetime.Cancel();
             await Task.WhenAny(poller, Task.Delay(1000));
             await Task.WhenAny(_sseTask, Task.Delay(1000));
@@ -309,9 +312,48 @@ public static class McpConnector
             return request;
         }
 
+        /// <summary>
+        /// Sends one message and relays the answer. A request can legitimately take minutes, so it has no time limit; but
+        /// while it waits, the discovery file is watched. The app deletes it when it stops, so a file that no longer names
+        /// this endpoint means nobody is going to answer, and the request is given up on at once instead of hanging.
+        /// </summary>
         private async Task<(Outcome, int)> PostAsync(
             (int Port, string Token) endpoint, string? sessionId, JsonNode message, bool emit,
             Action<string>? onSession, CancellationToken ct)
+        {
+            using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+            var watcher = WatchEndpointAsync(endpoint, linked);
+            try
+            {
+                return await PostCoreAsync(endpoint, sessionId, message, emit, onSession, ct, linked.Token);
+            }
+            finally
+            {
+                linked.Cancel();
+                await watcher;
+            }
+        }
+
+        private async Task WatchEndpointAsync((int Port, string Token) endpoint, CancellationTokenSource request)
+        {
+            try
+            {
+                while (true)
+                {
+                    await Task.Delay(WatchInterval, request.Token);
+                    if (ReadEndpoint() != endpoint)
+                    {
+                        request.Cancel();
+                        return;
+                    }
+                }
+            }
+            catch (OperationCanceledException) { }
+        }
+
+        private async Task<(Outcome, int)> PostCoreAsync(
+            (int Port, string Token) endpoint, string? sessionId, JsonNode message, bool emit,
+            Action<string>? onSession, CancellationToken outer, CancellationToken ct)
         {
             using var request = NewRequest(HttpMethod.Post, endpoint, sessionId, "application/json, text/event-stream");
             request.Content = new StringContent(message.ToJsonString(), Encoding.UTF8, "application/json");
@@ -324,9 +366,9 @@ public static class McpConnector
             {
                 return (Outcome.Reconnect, 0);
             }
-            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            catch (OperationCanceledException) when (!outer.IsCancellationRequested)
             {
-                // The connect timeout, not a shutdown.
+                // The connect timeout, or the app went away while this waited; not a shutdown.
                 return (Outcome.Reconnect, 0);
             }
 
@@ -355,6 +397,10 @@ public static class McpConnector
                     }
                 }
                 catch (IOException)
+                {
+                    return (Outcome.Reconnect, status);
+                }
+                catch (OperationCanceledException) when (!outer.IsCancellationRequested)
                 {
                     return (Outcome.Reconnect, status);
                 }
