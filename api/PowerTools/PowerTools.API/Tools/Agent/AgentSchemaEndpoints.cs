@@ -20,6 +20,10 @@ internal static class AgentSchemaEndpoints
         AgentEndpoints.Post<AddFormColumnBody, ColumnAddedDto>(group, "/schema/forms/add-column", (c, b, ct) => new AgentSchemaService(c).AddColumnToFormAsync(b, ct));
         AgentEndpoints.Post<AddViewColumnBody, ColumnAddedDto>(group, "/schema/views/add-column", (c, b, ct) => new AgentSchemaService(c).AddColumnToViewAsync(b, ct));
 
+        AgentEndpoints.Post<DeleteColumnBody, DeletedDto>(group, "/schema/columns/delete", (c, b, ct) => new AgentSchemaService(c).DeleteColumnAsync(b, ct));
+        AgentEndpoints.Post<DeleteTableBody, DeletedDto>(group, "/schema/tables/delete", (c, b, ct) => new AgentSchemaService(c).DeleteTableAsync(b, ct));
+        AgentEndpoints.Post<DeleteRelationshipBody, DeletedDto>(group, "/schema/relationships/delete", (c, b, ct) => new AgentSchemaService(c).DeleteRelationshipAsync(b, ct));
+
         group.MapGet("/metadata/forms", async (string? table, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
             AgentEndpoints.ToHttp(await new AgentSchemaService(AgentEndpoints.Client(ctx, factory)).ListFormsAsync(table, ct)));
 

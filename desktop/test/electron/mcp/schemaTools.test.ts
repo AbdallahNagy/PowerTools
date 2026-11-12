@@ -241,3 +241,29 @@ describe("forms and views", () => {
     expect(registry.validate(tool("schema_add_column_to_view"), { table: "account", viewId: GUID, column: "c", width: 200 }).ok).toBe(true);
   });
 });
+
+describe("schema deletes", () => {
+  it.each([
+    ["schema_delete_column", { table: "account", column: "new_rating" }, "/api/agent/schema/columns/delete", "column new_rating from account and all its data"],
+    ["schema_delete_table", { table: "new_project" }, "/api/agent/schema/tables/delete", "table new_project with all its rows and columns"],
+    ["schema_delete_relationship", { schemaName: "new_a_b" }, "/api/agent/schema/relationships/delete", "relationship new_a_b"],
+  ])("%s is destructive, says what it removes and posts to its route", async (name, args, route, removes) => {
+    const t = tool(name);
+    expect(t.effect).toBe("destructive");
+    expect(t.description).toContain("Destructive:");
+    expect(t.describe!(args).removes).toBe(removes);
+    expect(registry.list().find((x) => x.name === name)!.annotations?.destructiveHint).toBe(true);
+    const call = vi.fn(async () => ({ name: "x" }));
+    await t.run({ ...args, connection: "A · Dev" }, ctx(call));
+    expect(call).toHaveBeenCalledWith(conn, "POST", route, args);
+  });
+
+  it("describes what is being deleted", () => {
+    expect(tool("schema_delete_column").describe!({ table: "account", column: "new_rating" }).summary).toBe("delete column new_rating from account");
+    expect(tool("schema_delete_table").describe!({ table: "new_project" }).summary).toBe("delete table new_project");
+  });
+
+  it("rejects a bad table name", () => {
+    expect(registry.validate(tool("schema_delete_table"), { table: "Bad Name" }).ok).toBe(false);
+  });
+});

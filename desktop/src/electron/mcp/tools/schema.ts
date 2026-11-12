@@ -377,6 +377,89 @@ export const schemaAddColumnToView = change({
   summarize: (args) => `schema_add_column_to_view ${str(args.table)}.${str(args.column)}`,
 });
 
+function destructive(
+  tool: Pick<AgentTool, "name" | "title" | "description" | "inputSchema" | "describe" | "summarize"> & { route: string; done: string },
+): AgentTool {
+  return {
+    name: tool.name,
+    group: "schema",
+    title: tool.title,
+    description: tool.description,
+    inputSchema: tool.inputSchema,
+    effect: "destructive",
+    describe: tool.describe,
+    summarize: tool.summarize,
+    async run(args, ctx) {
+      const { conn, data } = await postAgent(args, ctx, tool.route);
+      return dataverseResult(tool.done, { result: data }, conn.displayName);
+    },
+  };
+}
+
+export const schemaDeleteColumn = destructive({
+  name: "schema_delete_column",
+  title: "Delete column",
+  description: "Destructive: deletes a column and all its data from a table. It cannot be undone. Always asks the user.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      connection: connectionProp,
+      table: tableProp,
+      column: { type: "string", pattern: NAME_PATTERN, description: "Logical name of the column to delete." },
+    },
+    required: ["table", "column"],
+    additionalProperties: false,
+  },
+  route: "/schema/columns/delete",
+  done: "Column deleted.",
+  describe: (args) => ({
+    summary: `delete column ${str(args.column)} from ${str(args.table)}`,
+    removes: `column ${str(args.column)} from ${str(args.table)} and all its data`,
+  }),
+  summarize: (args) => `schema_delete_column ${str(args.table)}.${str(args.column)}`,
+});
+
+export const schemaDeleteTable = destructive({
+  name: "schema_delete_table",
+  title: "Delete table",
+  description: "Destructive: deletes a custom table with all its rows and columns. System tables are refused. It cannot be undone. Always asks the user.",
+  inputSchema: {
+    type: "object",
+    properties: { connection: connectionProp, table: tableProp },
+    required: ["table"],
+    additionalProperties: false,
+  },
+  route: "/schema/tables/delete",
+  done: "Table deleted.",
+  describe: (args) => ({
+    summary: `delete table ${str(args.table)}`,
+    removes: `table ${str(args.table)} with all its rows and columns`,
+  }),
+  summarize: (args) => `schema_delete_table ${str(args.table)}`,
+});
+
+export const schemaDeleteRelationship = destructive({
+  name: "schema_delete_relationship",
+  title: "Delete relationship",
+  description: "Destructive: deletes a relationship by schema name. For a lookup relationship the lookup column goes with it. It cannot be undone. Always asks the user.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      connection: connectionProp,
+      schemaName: { type: "string", minLength: 1, description: "Schema name of the relationship to delete." },
+    },
+    required: ["schemaName"],
+    additionalProperties: false,
+  },
+  route: "/schema/relationships/delete",
+  done: "Relationship deleted.",
+  describe: (args) => ({
+    summary: `delete relationship ${str(args.schemaName)}`,
+    removes: `relationship ${str(args.schemaName)}`,
+  }),
+  summarize: (args) => `schema_delete_relationship ${str(args.schemaName)}`,
+});
+
 export const SCHEMA_TOOLS: AgentTool[] = [
   schemaCreateTable,
   schemaCreateColumn,
@@ -388,4 +471,7 @@ export const SCHEMA_TOOLS: AgentTool[] = [
   schemaPublish,
   schemaAddColumnToForm,
   schemaAddColumnToView,
+  schemaDeleteColumn,
+  schemaDeleteTable,
+  schemaDeleteRelationship,
 ];

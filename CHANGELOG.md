@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - Community tools: load a tool from a local folder (File > Community tools).
 - An optional MCP server (off by default, File > Agents (MCP)…) that lets AI agents such as Claude Code read Dataverse metadata and records through your Power Tools connections.
 - Agents can now create, update and delete records, relate records and run Dataverse messages. Every change asks you in Power Tools first. A connection can allow non-destructive changes without asking (Manage connections); deletions and other destructive changes always ask.
+- Agents can now change schema: create tables, columns, lookups, many-to-many relationships and choices, update columns, add columns to forms and views, publish, and delete columns, tables and relationships. New components need a solution or publisher so their prefix is known. Deletions always ask.
 
 ## [1.3.0] - 2026-11-03
 
