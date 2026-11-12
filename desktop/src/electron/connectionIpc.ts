@@ -82,6 +82,7 @@ export function parseDescriptionPatch(value: unknown): DescriptionPatch {
   if ("organization" in input) patch.organization = cleanText(input.organization);
   if ("environment" in input) patch.environment = cleanText(input.environment);
   if ("browser" in input) patch.browser = input.browser as DescriptionPatch["browser"];
+  if (typeof input.agentChangesWithoutAsking === "boolean") patch.agentChangesWithoutAsking = input.agentChangesWithoutAsking;
   return patch;
 }
 

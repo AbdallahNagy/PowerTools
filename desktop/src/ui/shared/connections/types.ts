@@ -34,6 +34,8 @@ export interface ConnectionSummary extends ConnectionDescription {
   crmType: "online" | "onpremise";
   /** Imported on-premises connection whose password has not been entered yet. */
   needsPassword: boolean;
+  /** Agents may make non-destructive changes here without asking. Destructive ones always ask. */
+  agentChangesWithoutAsking?: boolean;
 }
 
 export type EnvironmentKind = "dev" | "test" | "uat" | "staging" | "production" | "other";
@@ -48,6 +50,7 @@ export interface ConnectionInfo extends ConnectionSummary {
 }
 
 export interface ConnectionUpdate extends Partial<ConnectionDescription> {
+  agentChangesWithoutAsking?: boolean;
   /** New password for an on-premises connection. */
   password?: string;
 }
