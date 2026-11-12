@@ -20,6 +20,7 @@ public static class AgentEndpoints
             await Run(async () => AgentPublishers.ToDtos(await AgentPublishers.ListAsync(Client(ctx, factory), ct))));
 
         AgentSchemaEndpoints.Map(group);
+        AgentSolutionsEndpoints.Map(group);
         return app;
     }
 
@@ -55,6 +56,14 @@ public static class AgentEndpoints
         string route,
         Func<IAgentClient, TRequest, CancellationToken, Task<AgentResult<TResult>>> call)
         where TRequest : class =>
+        PostWith<TRequest, TResult>(group, route, (ctx, factory, body, ct) => call(Client(ctx, factory), body, ct));
+
+    /// <summary>Like <see cref="Post{TRequest,TResult}"/>, for services that need more than the client.</summary>
+    internal static void PostWith<TRequest, TResult>(
+        RouteGroupBuilder group,
+        string route,
+        Func<HttpContext, DataverseClientFactory, TRequest, CancellationToken, Task<AgentResult<TResult>>> call)
+        where TRequest : class =>
         group.MapPost(route, async (HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
         {
             TRequest? body;
@@ -70,7 +79,7 @@ public static class AgentEndpoints
             if (body is null) return ToHttp(AgentFaults.InvalidRequest("The request body must be a JSON object."));
             try
             {
-                return ToHttp(await call(Client(ctx, factory), body, ct));
+                return ToHttp(await call(ctx, factory, body, ct));
             }
             catch (Exception ex)
             {

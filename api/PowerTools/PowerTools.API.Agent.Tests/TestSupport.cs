@@ -31,6 +31,7 @@ public sealed class FakeAgentClient : IAgentClient
         {
             "publisher" => Publishers,
             "solution" => Solutions.Where(row => Matches(expression, row)).ToList(),
+            "solutioncomponent" => SolutionComponents,
             "organization" => [new Entity("organization") { ["languagecode"] = LanguageCode }],
             "savedquery" => SavedQueries,
             "systemform" => SystemForms,
@@ -50,10 +51,30 @@ public sealed class FakeAgentClient : IAgentClient
         return Task.CompletedTask;
     }
 
+    public List<Entity> Created { get; } = [];
+    public List<(string Table, Guid Id)> Deleted { get; } = [];
+    public List<Entity> SolutionComponents { get; } = [];
+    public Func<Entity, Guid>? OnCreate { get; set; }
+
+    public Task<Guid> CreateAsync(Entity entity, CancellationToken cancellationToken)
+    {
+        Created.Add(entity);
+        return Task.FromResult(OnCreate?.Invoke(entity) ?? Guid.NewGuid());
+    }
+
+    public Task DeleteAsync(string table, Guid id, CancellationToken cancellationToken)
+    {
+        Deleted.Add((table, id));
+        return Task.CompletedTask;
+    }
+
     private static bool Matches(QueryExpression query, Entity row)
     {
-        var wanted = query.Criteria.Conditions.FirstOrDefault(c => c.AttributeName == "uniquename")?.Values.FirstOrDefault();
-        return wanted is null || string.Equals(row.GetAttributeValue<string>("uniquename"), wanted.ToString(), StringComparison.Ordinal);
+        var wanted = query.Criteria.Conditions.FirstOrDefault(c => c.AttributeName == "uniquename" && c.Operator == ConditionOperator.Equal)?.Values.FirstOrDefault();
+        if (wanted is not null && !string.Equals(row.GetAttributeValue<string>("uniquename"), wanted.ToString(), StringComparison.Ordinal))
+            return false;
+        var parent = query.Criteria.Conditions.FirstOrDefault(c => c.AttributeName == "parentsolutionid" && c.Operator == ConditionOperator.Equal)?.Values.FirstOrDefault();
+        return parent is null || row.GetAttributeValue<EntityReference>("parentsolutionid")?.Id.Equals(parent) == true;
     }
 
     public static FaultException<OrganizationServiceFault> Fault(int code, string message) =>

@@ -22,7 +22,8 @@ public static class SolutionComponentsMoverQueries
                 "version",
                 "uniquename",
                 "friendlyname",
-                "ismanaged"),
+                "ismanaged",
+                "parentsolutionid"),
         };
         query.Criteria.AddCondition("isvisible", ConditionOperator.Equal, true);
         query.Criteria.AddCondition("uniquename", ConditionOperator.NotEqual, "Default");
