@@ -48,8 +48,21 @@ _Avoid_: Palette variable, CSS var
 The optional set of framework-neutral controls a **Community tool** may use to look like Power Tools, styled only through **Theme tokens**.
 _Avoid_: Component library, design system
 
+**Agent tool**:
+An operation the Power Tools MCP server publishes to AI agents.
+_Avoid_: MCP tool, command
+
+**Agent tool group**:
+A named set of **Agent tools** the user can switch on or off, such as `metadata` or `schema`.
+_Avoid_: Category
+
+**Effect class**:
+Read, change or destructive, decided by Power Tools for every **Agent tool** call. It sets whether the user must approve.
+_Avoid_: Risk level, hint
+
 ## Relationships
 
 - A **Community tool** has a UI and may ship **Tool workers**
 - A user installs, updates, disables and uninstalls **Community tools** through the **Catalog**
 - Power Tools gives every **Community tool** the current **Theme tokens**; using them or the **Community UI kit** is the tool's choice
+- Power Tools, never the **Agent tool**, decides a call's **Effect class**
