@@ -33,6 +33,9 @@ export function createAgentToolRegistry(tools: AgentTool[]): AgentToolRegistry {
     if (!EFFECT_MARKERS.some((marker) => tool.description.includes(marker))) {
       throw new Error(`Description of "${tool.name}" must state its effect class`);
     }
+    if (tool.effect !== "read" && !tool.describe) {
+      throw new Error(`"${tool.name}" can change the environment, so it needs a describe() for the approval dialog`);
+    }
     byName.set(tool.name, tool);
   }
 

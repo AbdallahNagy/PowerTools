@@ -49,6 +49,7 @@ async function setup() {
       listConnections: resolver.list,
     }),
     log,
+    gate: { decide: async () => "auto" },
     instructions: MCP_INSTRUCTIONS,
     appVersion: "1.0.0",
   });
@@ -151,6 +152,7 @@ describe("MCP session limits", () => {
       context: () => ({} as never),
       log: { append: async () => undefined, recent: async () => [], prune: async () => undefined },
       instructions: "x",
+      gate: { decide: async () => "auto" },
       now: () => clock,
       ...extra,
     });

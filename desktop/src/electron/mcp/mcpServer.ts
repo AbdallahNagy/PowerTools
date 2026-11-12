@@ -11,15 +11,18 @@ import {
   type CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { EffectClass } from "../communityTools/messageEffects.js";
-import type { ActivityLog } from "./activityLog.js";
+import type { ActivityEntry, ActivityLog } from "./activityLog.js";
+import type { ApprovalGate } from "./approval.js";
 import { toToolResult } from "./errors.js";
 import type { AgentToolRegistry } from "./registry.js";
-import type { AgentToolContext } from "./types.js";
+import { AgentToolError, type AgentToolContext, type ResolvedConnection } from "./types.js";
 
 export interface McpRequestHandlerOptions {
   registry: AgentToolRegistry;
   context: () => Omit<AgentToolContext, "signal">;
   log: ActivityLog;
+  /** Decides whether a call that is not a read may run. */
+  gate: Pick<ApprovalGate, "decide">;
   instructions: string;
   appVersion?: string;
   /** Clock for session idle tracking. Tests inject one. */
@@ -47,6 +50,16 @@ interface Session {
   lastSeen: number;
   /** Open GET streams; a session with one is in use. */
   streams: number;
+}
+
+function approvalError(outcome: "denied" | "timed-out" | "unavailable"): AgentToolError {
+  if (outcome === "denied") {
+    return new AgentToolError("ApprovalDenied", "The user denied this action", "Do not retry; ask the user what to do instead.");
+  }
+  if (outcome === "timed-out") {
+    return new AgentToolError("ApprovalTimedOut", "The user did not answer in time", "Ask the user to look at Power Tools.");
+  }
+  return new AgentToolError("ApprovalUnavailable", "Power Tools could not ask the user", "Ask the user to look at Power Tools.");
 }
 
 function jsonRpcError(res: ServerResponse, status: number, code: number, message: string) {
@@ -108,13 +121,41 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
       };
 
       let result: CallToolResult;
+      let resolved: ResolvedConnection | undefined;
+      let approval: ActivityEntry["approval"] = "not-needed";
+      // Until it is known, a tool that is not plainly a read is logged as the worst case.
+      let effect: EffectClass = tool.effect === "read" ? "read" : "destructive";
       try {
-        result = await tool.run(checked.args, ctx);
+        let runCtx = ctx;
+        if (tool.effect !== "read") {
+          // Resolve the connection once, here, so what the user approves is what runs.
+          const connection = await ctx.resolveConnection(checked.args.connection as string | undefined);
+          resolved = connection;
+          runCtx = { ...ctx, resolveConnection: async () => connection };
+          effect = typeof tool.effect === "function" ? await tool.effect(checked.args, runCtx) : tool.effect;
+          if (effect !== "read") {
+            const described = tool.describe?.(checked.args) ?? { summary: tool.title };
+            const outcome = await opts.gate.decide(
+              {
+                tool: tool.name,
+                title: tool.title,
+                connection: connection.displayName,
+                effect,
+                summary: described.summary,
+                ...(described.removes ? { removes: described.removes } : {}),
+                args: checked.args,
+              },
+              connection.allowsChanges,
+            );
+            approval = outcome;
+            if (outcome !== "auto" && outcome !== "allowed") throw approvalError(outcome);
+          }
+        }
+        result = await tool.run(checked.args, runCtx);
       } catch (error) {
         result = toToolResult(error);
       }
 
-      const effect: EffectClass = typeof tool.effect === "function" ? tool.effect(checked.args) : tool.effect;
       const structured = result.structuredContent as { connection?: unknown; code?: unknown } | undefined;
       const failed = result.isError === true;
       try {
@@ -122,9 +163,9 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
           time: new Date().toISOString(),
           client: server.getClientVersion()?.name ?? null,
           tool: tool.name,
-          connection: !failed && typeof structured?.connection === "string" ? structured.connection : null,
+          connection: resolved?.displayName ?? (!failed && typeof structured?.connection === "string" ? structured.connection : null),
           effect,
-          approval: "not-needed",
+          approval,
           outcome: failed ? "error" : "ok",
           ...(failed && typeof structured?.code === "string" ? { code: structured.code } : {}),
           summary: tool.summarize?.(checked.args) ?? tool.name,

@@ -90,7 +90,7 @@ export interface McpActivityEntry {
   tool: string;
   connection: string | null;
   effect: "read" | "change" | "destructive";
-  approval: "not-needed";
+  approval: "not-needed" | "auto" | "allowed" | "denied" | "timed-out" | "unavailable";
   outcome: "ok" | "error";
   code?: string;
   summary: string;

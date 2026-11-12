@@ -5,6 +5,7 @@ import type { ResolvedConnection } from "../../../src/electron/mcp/types";
 const conn: ResolvedConnection = {
   displayName: "A · Dev",
   auth: { id: "id-dev", envUrl: "https://a.crm.dynamics.com", crmType: "online", token: "SECRET-TOKEN" },
+  allowsChanges: false,
 };
 
 function json(status: number, body: unknown, headers: Record<string, string> = {}) {

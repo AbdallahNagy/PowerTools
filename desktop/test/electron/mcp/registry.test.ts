@@ -40,10 +40,19 @@ describe("createAgentToolRegistry", () => {
   it("accepts each effect marker", () => {
     expect(() =>
       createAgentToolRegistry([
-        tool({ name: "a", description: "Changes the environment.", effect: "change" }),
-        tool({ name: "b", description: "Destructive: removes it.", effect: "destructive" }),
+        tool({ name: "a", description: "Changes the environment.", effect: "change", describe: () => ({ summary: "x" }) }),
+        tool({ name: "b", description: "Destructive: removes it.", effect: "destructive", describe: () => ({ summary: "x" }) }),
       ]),
     ).not.toThrow();
+  });
+
+  it("requires a describe() for any tool that is not plainly a read", () => {
+    expect(() =>
+      createAgentToolRegistry([tool({ description: "Changes the environment.", effect: "change" })]),
+    ).toThrow(/describe/);
+    expect(() =>
+      createAgentToolRegistry([tool({ description: "Changes the environment.", effect: () => "change" })]),
+    ).toThrow(/describe/);
   });
 
   it("validates arguments and names the field", () => {
@@ -59,8 +68,8 @@ describe("createAgentToolRegistry", () => {
   it("lists annotations that match the effect", () => {
     const registry = createAgentToolRegistry([
       tool({ name: "r" }),
-      tool({ name: "c", description: "Changes the environment.", effect: "change" }),
-      tool({ name: "d", description: "Destructive: removes.", effect: "destructive" }),
+      tool({ name: "c", description: "Changes the environment.", effect: "change", describe: () => ({ summary: "x" }) }),
+      tool({ name: "d", description: "Destructive: removes.", effect: "destructive", describe: () => ({ summary: "x" }) }),
     ]);
     const [r, c, d] = registry.list();
     expect(r.annotations).toMatchObject({ readOnlyHint: true, idempotentHint: true });

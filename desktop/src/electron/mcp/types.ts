@@ -10,6 +10,9 @@ export type AgentErrorCode =
   | "DataverseFault"
   | "Throttled"
   | "Cancelled"
+  | "ApprovalDenied"
+  | "ApprovalTimedOut"
+  | "ApprovalUnavailable"
   | "Internal";
 
 export class AgentToolError extends Error {
@@ -38,6 +41,8 @@ export class AgentToolError extends Error {
 export interface ResolvedConnection {
   displayName: string;
   auth: SidecarAuth;
+  /** The connection's "let agents make non-destructive changes without asking" switch. */
+  allowsChanges: boolean;
 }
 
 export interface ConnectionListing {
@@ -69,12 +74,18 @@ export interface JsonSchemaObject {
 
 export interface AgentTool {
   name: string;
-  group: "connections" | "metadata" | "records";
+  group: "connections" | "metadata" | "records" | "schema" | "solutions" | "plugins" | "envvars";
   title: string;
   description: string;
   inputSchema: JsonSchemaObject;
   outputSchema?: JsonSchemaObject;
-  effect: EffectClass | ((args: Record<string, unknown>) => EffectClass);
+  /**
+   * Decided in main, never by the agent. A function sees the arguments and the connection the call will use,
+   * and may throw an AgentToolError (for example InvalidRequest for a message that is never allowed).
+   */
+  effect: EffectClass | ((args: Record<string, unknown>, ctx: AgentToolContext) => EffectClass | Promise<EffectClass>);
+  /** What the approval dialog says. Required for a tool whose effect can be other than read. */
+  describe?(args: Record<string, unknown>): { summary: string; removes?: string };
   /** Short, argument-free description for the activity log. Defaults to the tool name. */
   summarize?(args: Record<string, unknown>): string;
   run(args: Record<string, unknown>, ctx: AgentToolContext): Promise<CallToolResult>;

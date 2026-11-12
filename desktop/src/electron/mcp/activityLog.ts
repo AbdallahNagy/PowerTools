@@ -8,8 +8,7 @@ export interface ActivityEntry {
   tool: string;
   connection: string | null;
   effect: EffectClass;
-  /** Widens in phase 3, when changes and destructive calls can ask the user. */
-  approval: "not-needed";
+  approval: "not-needed" | "auto" | "allowed" | "denied" | "timed-out" | "unavailable";
   outcome: "ok" | "error";
   code?: string;
   summary: string;

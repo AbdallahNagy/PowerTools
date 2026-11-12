@@ -9,6 +9,7 @@ import { createMcpRequestHandler, type McpRequestHandler } from "./mcpServer.js"
 import { createAgentToolRegistry } from "./registry.js";
 import { createSidecarCaller } from "./sidecarCaller.js";
 import { READ_TOOLS } from "./tools/index.js";
+import { WRITE_TOOLS } from "./tools/recordWrites.js";
 import type { SidecarAuth } from "../sidecarHeaders.js";
 
 export const MCP_INSTRUCTIONS = `Power Tools works on the user's Dataverse environments with their own sign-in.
@@ -73,7 +74,7 @@ export function createMcpService(deps: McpServiceDeps): McpService {
     fetch: deps.fetch,
     refresh: resolver.refresh,
   });
-  const registry = createAgentToolRegistry(READ_TOOLS);
+  const registry = createAgentToolRegistry([...READ_TOOLS, ...WRITE_TOOLS]);
   const approvalUi = deps.approvalUi ?? {
     present: () => queueMicrotask(() => gate.failAll("unavailable")),
     dismiss: () => undefined,
@@ -105,6 +106,7 @@ export function createMcpService(deps: McpServiceDeps): McpService {
           listConnections: resolver.list,
         }),
         log,
+        gate,
         instructions: MCP_INSTRUCTIONS,
         appVersion: deps.appVersion,
       });

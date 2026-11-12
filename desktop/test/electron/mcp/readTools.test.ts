@@ -6,6 +6,7 @@ import { AgentToolError, type AgentToolContext, type ResolvedConnection } from "
 const conn: ResolvedConnection = {
   displayName: "A · Dev",
   auth: { id: "id", envUrl: "https://a", crmType: "online", token: "t" },
+  allowsChanges: false,
 };
 
 function ctx(callSidecar: (...a: unknown[]) => unknown, overrides: Partial<AgentToolContext> = {}): AgentToolContext {

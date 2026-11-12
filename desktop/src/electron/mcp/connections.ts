@@ -8,6 +8,7 @@ export interface ConnectionSummaryLike {
   legacyName: string | null;
   envUrl: string;
   crmType: "online" | "onpremise";
+  agentChangesWithoutAsking?: boolean;
 }
 
 /** Mirrors `connectionDisplayName` in src/ui/shared/connections/connectionNaming.ts. Keep the two in step. */
@@ -45,7 +46,7 @@ export function createConnectionResolver(deps: ConnectionResolverDeps): Connecti
   const named = () =>
     deps.summaries().map((summary) => ({ summary, displayName: connectionDisplayName(summary) }));
 
-  async function authFor(id: string, displayName: string): Promise<ResolvedConnection> {
+  async function authFor(id: string, displayName: string, allowsChanges: boolean): Promise<ResolvedConnection> {
     const auth = await deps.resolveAuth(id);
     if ("error" in auth) {
       if (SIGN_IN_PATTERN.test(auth.error)) {
@@ -57,7 +58,7 @@ export function createConnectionResolver(deps: ConnectionResolverDeps): Connecti
       }
       throw new AgentToolError("NoConnection", auth.error);
     }
-    return { displayName, auth };
+    return { displayName, auth, allowsChanges };
   }
 
   return {
@@ -73,7 +74,7 @@ export function createConnectionResolver(deps: ConnectionResolverDeps): Connecti
             'Ask the user to connect in Power Tools, or pass "connection".',
           );
         }
-        return authFor(active.summary.id, active.displayName);
+        return authFor(active.summary.id, active.displayName, active.summary.agentChangesWithoutAsking === true);
       }
       const wanted = name.trim().toLowerCase();
       const matches = all.filter((entry) => entry.displayName.toLowerCase() === wanted);
@@ -84,9 +85,15 @@ export function createConnectionResolver(deps: ConnectionResolverDeps): Connecti
           `Valid names: ${all.map((entry) => entry.displayName).join(", ")}`,
         );
       }
-      return authFor(matches[0].summary.id, matches[0].displayName);
+      return authFor(matches[0].summary.id, matches[0].displayName, matches[0].summary.agentChangesWithoutAsking === true);
     },
-    refresh: (conn) => authFor(conn.auth.id, conn.displayName),
+    // Re-read the switch too, so a refresh never keeps a stale permission.
+    refresh: (conn) =>
+      authFor(
+        conn.auth.id,
+        conn.displayName,
+        deps.summaries().find((s) => s.id === conn.auth.id)?.agentChangesWithoutAsking === true,
+      ),
     list() {
       const activeId = deps.activeId();
       return named().map(({ summary, displayName }) => ({
