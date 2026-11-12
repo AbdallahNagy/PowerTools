@@ -21,10 +21,15 @@ export function clampPageSize(value: unknown): number {
 
 /** A result built from Dataverse content, marked as untrusted. */
 export function dataverseResult(summary: string, data: Record<string, unknown>, connection: string): CallToolResult {
-  const text = `${UNTRUSTED_PREFIX}\nConnection: ${connection}\n${summary}\n${JSON.stringify(data)}`;
+  const json = JSON.stringify(data);
+  const text = `${UNTRUSTED_PREFIX}\nConnection: ${connection}\n${summary}\n${json}`;
+  // The structured copy is capped like the text, so a wide page never becomes a huge response.
+  const structuredContent = Buffer.byteLength(json, "utf8") > MAX_TEXT_BYTES
+    ? { connection, truncated: true, note: TRUNCATION_NOTE }
+    : { connection, ...data };
   return {
     content: [{ type: "text", text: truncateText(text) }],
-    structuredContent: { connection, ...data },
+    structuredContent,
     _meta: { "powertools/untrusted": true },
   };
 }
