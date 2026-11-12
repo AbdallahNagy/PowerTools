@@ -3,6 +3,7 @@ import "./devUserData.js";
 // Must load next so Sentry hooks the app before anything else runs.
 import "./sentry.js";
 import { spawn } from "child_process";
+import { rmSync } from "fs";
 import { join } from "path";
 import { access, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile } from "fs/promises";
 import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
@@ -34,6 +35,8 @@ import { startUsageStats } from "./usageStats.js";
 import { BUILT_IN_TOOL_IDS } from "./communityTools/builtInToolIds.js";
 import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
 import { createToolStore } from "./communityTools/toolStore.js";
+import { createMcpService } from "./mcp/mcpService.js";
+import { readSettings, writeSettings } from "./settings.js";
 import { installToolProtocol, registerToolScheme } from "./communityTools/toolProtocol.js";
 
 const { autoUpdater } = electronUpdater;
@@ -217,6 +220,23 @@ app.whenReady().then(async () => {
       writeText: (path, content) => writeFile(path, content, "utf-8"),
     },
   });
+
+  const mcpService = createMcpService({
+    userDataPath: app.getPath("userData"),
+    sidecar: sidecarHandle,
+    connections: connectionIpc,
+    appVersion: app.getVersion(),
+    readEnabled: () => mcpSettings().enabled === true,
+    writeEnabled: (enabled) => writeSettings({ mcp: { ...mcpSettings(), enabled } }),
+  });
+  function mcpSettings(): { enabled?: boolean } {
+    const value = readSettings().mcp;
+    return value && typeof value === "object" ? (value as { enabled?: boolean }) : {};
+  }
+  app.on("before-quit", () => void mcpService.stop());
+  // The quit may not wait for the async stop, so remove the discovery file here as well.
+  process.on("exit", () => rmSync(mcpService.status().discoveryPath, { force: true }));
+  if (mcpSettings().enabled === true) void mcpService.start();
 
   function broadcastUpdateStatus(status: UpdateStatus) {
     updateStatus = status;

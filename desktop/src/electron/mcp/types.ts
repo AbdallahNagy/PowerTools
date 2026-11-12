@@ -45,7 +45,13 @@ export interface ConnectionListing {
 
 export interface AgentToolContext {
   resolveConnection(name: string | undefined): Promise<ResolvedConnection>;
-  callSidecar(conn: ResolvedConnection, method: "GET" | "POST", path: string, body?: unknown): Promise<unknown>;
+  callSidecar(
+    conn: ResolvedConnection,
+    method: "GET" | "POST",
+    path: string,
+    body?: unknown,
+    signal?: AbortSignal,
+  ): Promise<unknown>;
   listConnections(): ConnectionListing[];
   signal: AbortSignal;
 }
