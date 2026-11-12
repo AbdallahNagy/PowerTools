@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { join } from "node:path";
-import type { ActivityLog } from "./activityLog.js";
+import { createActivityLog, type ActivityEntry, type ActivityLog } from "./activityLog.js";
 import { createConnectionResolver, type ConnectionSummaryLike } from "./connections.js";
 import { deleteDiscovery, writeDiscovery } from "./discovery.js";
 import { startHttpHost, type HttpHost } from "./httpHost.js";
@@ -34,27 +34,23 @@ export interface McpServiceDeps {
   appVersion: string;
   readEnabled(): boolean;
   writeEnabled(value: boolean): void;
-  /** Defaults to a log that keeps nothing. */
+  /** Defaults to a log under the user data folder. */
   log?: ActivityLog;
   fetch?: typeof fetch;
 }
 
 export interface McpService {
+  /** The most recent activity entries, newest first. */
+  recentActivity(limit: number): Promise<ActivityEntry[]>;
   start(): Promise<void>;
   stop(): Promise<void>;
   setEnabled(value: boolean): Promise<McpStatus>;
   status(): McpStatus;
 }
 
-const NULL_LOG: ActivityLog = {
-  append: async () => undefined,
-  recent: async () => [],
-  prune: async () => undefined,
-};
-
 export function createMcpService(deps: McpServiceDeps): McpService {
   const discoveryPath = join(deps.userDataPath, "mcp-endpoint.json");
-  const log = deps.log ?? NULL_LOG;
+  const log = deps.log ?? createActivityLog(join(deps.userDataPath, "mcp-activity"));
   const resolver = createConnectionResolver({
     summaries: deps.connections.listConnectionSummaries,
     activeId: deps.connections.activeConnectionId,
@@ -133,6 +129,7 @@ export function createMcpService(deps: McpServiceDeps): McpService {
   }
 
   return {
+    recentActivity: (limit) => log.recent(limit),
     start: () => enqueue(doStart),
     stop: () => enqueue(doStop),
     async setEnabled(value) {
