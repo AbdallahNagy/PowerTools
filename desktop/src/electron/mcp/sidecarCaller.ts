@@ -24,6 +24,9 @@ const MAPPED_CODES: Record<string, AgentErrorCode> = {
   Throttled: "Throttled",
   Cancelled: "Cancelled",
   InvalidRequest: "InvalidRequest",
+  // The agent routes say NotFound for a missing solution or publisher; to the agent that is a bad argument.
+  NotFound: "InvalidRequest",
+  PublisherRequired: "PublisherRequired",
   Internal: "Internal",
 };
 
@@ -54,7 +57,8 @@ async function toError(response: Response): Promise<AgentToolError> {
     const seconds = retryAfterSeconds(response, message);
     if (seconds !== undefined) extra.retryAfterSeconds = seconds;
   }
-  return new AgentToolError(code, message, undefined, extra, true);
+  const hint = code === "PublisherRequired" ? "Ask the user which publisher to use." : undefined;
+  return new AgentToolError(code, message, hint, extra, true);
 }
 
 export function createSidecarCaller(deps: SidecarCallerDeps): SidecarCall {

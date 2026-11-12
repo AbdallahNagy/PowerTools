@@ -13,6 +13,7 @@ export type AgentErrorCode =
   | "ApprovalDenied"
   | "ApprovalTimedOut"
   | "ApprovalUnavailable"
+  | "PublisherRequired"
   | "Internal";
 
 export class AgentToolError extends Error {

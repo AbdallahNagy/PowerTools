@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using PowerTools.API.Filters;
 using PowerTools.API.Mcp;
+using PowerTools.API.Tools.Agent;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.AttributeExplorer;
 using PowerTools.API.Tools.BulkWorkflowExecution;
@@ -127,6 +128,7 @@ app.MapTranslatorEndpoints();
 app.MapSolutionLayersEndpoints();
 app.MapEnvironmentVariablesEndpoints();
 app.MapCommunityToolEndpoints();
+app.MapAgentEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would

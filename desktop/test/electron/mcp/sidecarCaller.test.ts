@@ -45,6 +45,22 @@ describe("createSidecarCaller", () => {
     await expect(noBody(conn, "GET", "/p")).rejects.toMatchObject({ untrusted: false });
   });
 
+  it("maps NotFound to InvalidRequest", async () => {
+    const fetchFake = vi.fn(async () => json(404, { code: "NotFound", message: "Solution 'X' was not found." }));
+    const call = createSidecarCaller({ baseUrl: "http://x", secret: "s", fetch: fetchFake as never });
+    await expect(call(conn, "POST", "/api/agent/schema/tables", {})).rejects.toMatchObject({ code: "InvalidRequest" });
+  });
+
+  it("passes PublisherRequired through with its hint", async () => {
+    const fetchFake = vi.fn(async () => json(400, { code: "PublisherRequired", message: "A publisher is required. Publishers: contoso (new)." }));
+    const call = createSidecarCaller({ baseUrl: "http://x", secret: "s", fetch: fetchFake as never });
+    await expect(call(conn, "POST", "/api/agent/schema/tables", {})).rejects.toMatchObject({
+      code: "PublisherRequired",
+      message: "A publisher is required. Publishers: contoso (new).",
+      hint: "Ask the user which publisher to use.",
+    });
+  });
+
   it("maps PermissionDenied to DataverseFault", async () => {
     const fetchFake = vi.fn(async () => json(403, { code: "PermissionDenied", message: "No" }));
     const call = createSidecarCaller({ baseUrl: "http://x", secret: "s", fetch: fetchFake as never });
