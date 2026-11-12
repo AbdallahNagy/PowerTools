@@ -298,6 +298,7 @@ export const schemaUpdateColumn: AgentTool = {
 export const schemaPublish: AgentTool = {
   name: "schema_publish",
   group: "schema",
+  reportsProgress: true,
   title: "Publish customizations",
   description:
     "Publishes customizations so schema, form and view changes take effect. Give tables to publish only those; with none it publishes everything. Changes the environment.",

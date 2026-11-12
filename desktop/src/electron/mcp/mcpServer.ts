@@ -113,6 +113,18 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
       const checked = opts.registry.validate(tool, request.params.arguments);
       if (!checked.ok) throw new McpError(ErrorCode.InvalidParams, checked.message);
 
+      // A client that sent a progress token wants to hear about long operations, at the start and at the end.
+      const progressToken = tool.reportsProgress ? extra._meta?.progressToken : undefined;
+      const reportProgress = async (progress: number) => {
+        if (progressToken === undefined) return;
+        try {
+          await extra.sendNotification({ method: "notifications/progress", params: { progressToken, progress, total: 1 } });
+        } catch {
+          // The client may have gone; progress is only a courtesy.
+        }
+      };
+      await reportProgress(0);
+
       const base = opts.context();
       const ctx: AgentToolContext = {
         ...base,
@@ -155,6 +167,8 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
       } catch (error) {
         result = toToolResult(error);
       }
+
+      await reportProgress(1);
 
       const structured = result.structuredContent as { connection?: unknown; code?: unknown } | undefined;
       const failed = result.isError === true;

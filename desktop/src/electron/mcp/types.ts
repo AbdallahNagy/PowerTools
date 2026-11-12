@@ -88,6 +88,8 @@ export interface AgentTool {
    * and may throw an AgentToolError (for example InvalidRequest for a message that is never allowed).
    */
   effect: EffectClass | ((args: Record<string, unknown>, ctx: AgentToolContext) => EffectClass | Promise<EffectClass>);
+  /** A long operation: report progress to a client that asked for it with a progress token. */
+  reportsProgress?: boolean;
   /** What the approval dialog says. Required for a tool whose effect can be other than read. */
   describe?(args: Record<string, unknown>): { summary: string; removes?: string };
   /** Short, argument-free description for the activity log. Defaults to the tool name. */

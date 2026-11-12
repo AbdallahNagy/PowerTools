@@ -49,7 +49,10 @@ function read(
 
 function write(
   effect: "change" | "destructive",
-  tool: Pick<AgentTool, "name" | "title" | "description" | "inputSchema" | "describe" | "summarize"> & { route: string; done: string },
+  tool: Pick<AgentTool, "name" | "title" | "description" | "inputSchema" | "describe" | "summarize" | "reportsProgress"> & {
+    route: string;
+    done: string;
+  },
 ): AgentTool {
   return {
     name: tool.name,
@@ -58,6 +61,7 @@ function write(
     description: tool.description,
     inputSchema: tool.inputSchema,
     effect,
+    reportsProgress: tool.reportsProgress,
     describe: tool.describe,
     summarize: tool.summarize,
     async run(args, ctx) {
@@ -164,6 +168,7 @@ export const solutionsCreate = write("change", {
 
 export const solutionsCreatePatch = write("change", {
   name: "solutions_create_patch",
+  reportsProgress: true,
   title: "Create solution patch",
   description: "Creates a patch of an unmanaged solution. The version defaults to one build above the parent and its patches. Changes the environment.",
   inputSchema: {
@@ -235,6 +240,7 @@ export const solutionsRemoveComponent = write("destructive", {
 
 export const solutionsClone = write("destructive", {
   name: "solutions_clone",
+  reportsProgress: true,
   title: "Clone solution",
   description: "Destructive: clones a solution as a new version and rolls up its patches, which removes them. Always asks the user.",
   inputSchema: {

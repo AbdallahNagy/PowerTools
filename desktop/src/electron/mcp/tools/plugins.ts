@@ -159,6 +159,7 @@ export function createPluginTools(files: PluginFiles = NODE_FILES): AgentTool[] 
   const registerAssembly: AgentTool = {
     name: "plugins_register_assembly",
     group: "plugins",
+    reportsProgress: true,
     title: "Register plug-in assembly",
     description:
       "Registers a plug-in assembly from a .dll on this computer (sandbox, database) and its plug-in types. Give solution to add it to one. Changes the environment.",
@@ -188,6 +189,7 @@ export function createPluginTools(files: PluginFiles = NODE_FILES): AgentTool[] 
   const updateAssembly: AgentTool = {
     name: "plugins_update_assembly",
     group: "plugins",
+    reportsProgress: true,
     title: "Update plug-in assembly",
     description:
       "Destructive: replaces the code of a registered assembly with a .dll on this computer. Types missing from it are refused. Always asks the user.",
