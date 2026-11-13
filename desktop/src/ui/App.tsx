@@ -3,6 +3,7 @@ import { HashRouter, Routes, Route } from "react-router-dom";
 import ConnectionWindow from "./shell/connection-windows/ConnectionWindow";
 import ConnectionDetailsWindow from "./shell/connection-windows/ConnectionDetailsWindow";
 import ConnectionManagerWindow from "./shell/connection-windows/ConnectionManagerWindow";
+import { AgentsProvider } from "./shell/agents/AgentsProvider";
 import { CommunityToolsProvider } from "./shell/community-tools/CommunityToolsProvider";
 import { TabProvider } from "./shell/tabs/TabContext";
 import { PrimaryActionProvider } from "./shared/keyboard";
@@ -10,6 +11,7 @@ import { PrimaryActionProvider } from "./shared/keyboard";
 function App() {
   return (
     <CommunityToolsProvider>
+    <AgentsProvider>
     <TabProvider>
       <PrimaryActionProvider>
         <HashRouter>
@@ -28,6 +30,7 @@ function App() {
         </HashRouter>
       </PrimaryActionProvider>
     </TabProvider>
+    </AgentsProvider>
     </CommunityToolsProvider>
   );
 }

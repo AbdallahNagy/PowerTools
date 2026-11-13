@@ -8,7 +8,7 @@ import {
 } from "./connectionTypes.js";
 import type { PersistedConnection, PersistedState, RawPersistedState } from "./storage.js";
 
-export type DescriptionPatch = Partial<ConnectionDescription>;
+export type DescriptionPatch = Partial<ConnectionDescription> & { agentChangesWithoutAsking?: boolean };
 
 export type StoreResult<T> =
   | { success: true; value: T }
@@ -71,6 +71,7 @@ function readPersistedConnection(
     organization,
     environment,
     browser: cleanBrowser(raw.browser),
+    ...(raw.agentChangesWithoutAsking === true ? { agentChangesWithoutAsking: true } : {}),
     ...(legacyName && !(organization && environment) ? { legacyName } : {}),
   };
 
@@ -158,6 +159,7 @@ export function toConnectionSummary(conn: StoredConnection): ConnectionSummary {
     envUrl: conn.envUrl,
     crmType: conn.crmType,
     needsPassword: conn.crmType === "onpremise" && conn.needsPassword === true,
+    agentChangesWithoutAsking: conn.agentChangesWithoutAsking === true,
   };
 }
 
@@ -213,6 +215,10 @@ export function createConnectionStore({
     if ("organization" in patch) next.organization = cleanText(patch.organization);
     if ("environment" in patch) next.environment = cleanText(patch.environment);
     if ("browser" in patch) next.browser = cleanBrowser(patch.browser);
+    if ("agentChangesWithoutAsking" in patch) {
+      if (patch.agentChangesWithoutAsking === true) next.agentChangesWithoutAsking = true;
+      else delete next.agentChangesWithoutAsking;
+    }
     if (isDescribed(next)) delete next.legacyName;
     return next;
   }

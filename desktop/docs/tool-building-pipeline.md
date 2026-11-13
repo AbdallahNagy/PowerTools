@@ -62,6 +62,10 @@ Corrections, privileges, and limits. Include online versus on-premises behavior,
 
 Screens, empty and error states, and what not to build. This section is written from the capability list in `### What it does` only.
 
+### Agent tools
+
+Which agent tools the tool adds to the Power Tools MCP server, so AI agents can do the same work without a screen. List each as `<group>_<verb>_<noun>` in one of the groups `connections`, `metadata`, `records`, `schema`, `solutions`, `plugins` or `envvars`, with its effect class (read, change or destructive) and the `/api/agent` route that backs it. Write `None.` when the tool adds none, such as a tool that only shows data agents can already read. Power Tools decides the effect class, never the tool, and a destructive tool always asks the user. The developer implements what this section lists; see `desktop/docs/mcp-server.md`.
+
 ### Implementation notes and test evidence
 
 What the developer changed, which checks ran, and the results.

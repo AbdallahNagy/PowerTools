@@ -1,4 +1,7 @@
 import type { MethodName, Permission } from "@powertools/sdk/protocol";
+import { FORBIDDEN_MESSAGES, MESSAGE_PERMISSION } from "../../../electron/communityTools/messageEffects";
+
+export { FORBIDDEN_MESSAGES, MESSAGE_PERMISSION };
 
 /**
  * Which permission each protocol method needs. "per-message" and "per-operation"
@@ -33,46 +36,6 @@ export const METHOD_PERMISSION: Record<MethodName, Permission | null | "per-mess
   "storage.set": null,
   "storage.remove": null,
 };
-
-/** Permission implied by each known Dataverse message. A message missing here is allowed only if declared. */
-export const MESSAGE_PERMISSION: Record<string, Permission | null> = {
-  WhoAmI: null,
-  RetrieveVersion: null,
-  RetrieveCurrentOrganization: null,
-  RetrieveEntity: "metadata:read",
-  RetrieveAllEntities: "metadata:read",
-  RetrieveAttribute: "metadata:read",
-  Retrieve: "data:read",
-  RetrieveMultiple: "data:read",
-  Create: "data:write",
-  Update: "data:write",
-  Upsert: "data:write",
-  Associate: "data:write",
-  Disassociate: "data:write",
-  Merge: "data:write",
-  Delete: "data:delete",
-  PublishXml: "metadata:write",
-  PublishAllXml: "metadata:write",
-  CreateEntity: "metadata:write",
-  UpdateEntity: "metadata:write",
-  CreateAttribute: "metadata:write",
-  UpdateAttribute: "metadata:write",
-  CreateOneToMany: "metadata:write",
-  CreateManyToMany: "metadata:write",
-  DeleteEntity: "metadata:write",
-  DeleteAttribute: "metadata:write",
-  SetState: "data:write",
-  Assign: "data:write",
-  GrantAccess: "data:write",
-  RevokeAccess: "data:write",
-  AddMembersTeam: "data:write",
-  RemoveMembersTeam: "data:write",
-  ExecuteWorkflow: "data:write",
-  BulkDelete: "data:delete",
-};
-
-/** Lower case; compared case-insensitively. Wrapper messages that can carry other requests past the per-message check. Never allowed. */
-export const FORBIDDEN_MESSAGES: readonly string[] = ["executemultiple", "executetransaction", "executeasync"];
 
 // Dataverse does not distinguish message names by case, so neither does the lookup.
 const MESSAGE_PERMISSION_BY_LOWER = new Map(

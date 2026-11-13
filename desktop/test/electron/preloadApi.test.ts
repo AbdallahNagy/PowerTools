@@ -86,6 +86,14 @@ describe("createPreloadApi", () => {
     ["getCommunityToolBundleSize", ["contoso.counter"], "get-community-tool-bundle-size", ["contoso.counter"]],
     ["openFileForCommunityTool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]], "open-file-for-community-tool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]]],
     ["saveFileForCommunityTool", ["contoso.counter", "out.csv", "a,b"], "save-file-for-community-tool", ["contoso.counter", "out.csv", "a,b"]],
+    ["getMcpStatus", [], "mcp-get-status", []],
+    ["setMcpEnabled", [true], "mcp-set-enabled", [true]],
+    ["getMcpActivity", [50], "mcp-get-activity", [50]],
+    ["setMcpGroup", ["schema", false], "mcp-set-group", ["schema", false]],
+    ["setMcpHttp", [{ enabled: true, port: 48000 }], "mcp-set-http", [{ enabled: true, port: 48000 }]],
+    ["copyMcpHttpConfig", [], "mcp-copy-http-config", []],
+    ["regenerateMcpHttpToken", [], "mcp-regenerate-http-token", []],
+    ["respondMcpApproval", ["req-1", true], "mcp-approval-respond", ["req-1", true]],
   ] as const)(
     "%s invokes %s with the existing arguments",
     async (methodName, methodArgs, expectedChannel, expectedArgs) => {
@@ -171,6 +179,45 @@ describe("createPreloadApi", () => {
     expect(removals).toEqual([{ channel: "open-community-tools", listener }]);
   });
 
+  it("forwards the Agents menu event and unsubscribes the same listener", () => {
+    const { ipcRenderer, listeners, removals } = createIpcRendererFake();
+    const api = createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">);
+    let calls = 0;
+
+    const unsubscribe = api.onOpenAgents(() => {
+      calls += 1;
+    });
+    const listener = listeners.get("open-agents");
+    listener?.({ ignored: true }, undefined);
+    unsubscribe();
+
+    expect(calls).toBe(1);
+    expect(removals).toEqual([{ channel: "open-agents", listener }]);
+  });
+
+  it("forwards approval requests and dismissals and unsubscribes the same listeners", () => {
+    const { ipcRenderer, listeners, removals } = createIpcRendererFake();
+    const api = createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">);
+    const requests: unknown[] = [];
+    const dismissed: string[] = [];
+
+    const offPresent = api.onMcpApprovalPresent((request) => requests.push(request));
+    const offDismiss = api.onMcpApprovalDismiss((id) => dismissed.push(id));
+    const presentListener = listeners.get("mcp-approval-present");
+    const dismissListener = listeners.get("mcp-approval-dismiss");
+    presentListener?.({ ignored: true }, { id: "r1" });
+    dismissListener?.({ ignored: true }, "r1");
+    offPresent();
+    offDismiss();
+
+    expect(requests).toEqual([{ id: "r1" }]);
+    expect(dismissed).toEqual(["r1"]);
+    expect(removals).toEqual([
+      { channel: "mcp-approval-present", listener: presentListener },
+      { channel: "mcp-approval-dismiss", listener: dismissListener },
+    ]);
+  });
+
   it("exposes exactly the declared renderer methods", () => {
     const { ipcRenderer } = createIpcRendererFake();
 
@@ -223,6 +270,17 @@ describe("createPreloadApi", () => {
       "openFileForCommunityTool",
       "saveFileForCommunityTool",
       "onOpenCommunityTools",
+      "getMcpStatus",
+      "setMcpEnabled",
+      "getMcpActivity",
+      "setMcpGroup",
+      "setMcpHttp",
+      "copyMcpHttpConfig",
+      "regenerateMcpHttpToken",
+      "onMcpApprovalPresent",
+      "onMcpApprovalDismiss",
+      "respondMcpApproval",
+      "onOpenAgents",
     ]);
   });
 });

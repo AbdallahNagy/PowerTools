@@ -9,6 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - Community tools: load a tool from a local folder (File > Community tools).
+- **MCP server for AI agents.** An optional server (off by default; turn it on under File > Agents (MCP)…) that lets agents such as Claude Code, Claude Desktop and VS Code work on your Dataverse environments with your own sign-in. Agents can read metadata and records; create, update and delete records and run Dataverse messages; create and change tables, columns, lookups, relationships and choices, add columns to forms and views, remove columns from forms and views, and publish; manage solutions, patches, components and layers; register plug-in assemblies, steps and images; and manage environment variables. Power Tools decides what needs your approval, not the agent: reads run, changes ask unless you allow non-destructive changes for that connection (Manage connections), and deletions and other destructive changes always ask. Clients connect through a small command or, as an option, a fixed local HTTP port. You can switch each group of tools off, and a local activity log shows what agents did. See [the MCP server guide](desktop/docs/mcp-server.md).
 
 ## [1.3.0] - 2026-11-03
 

@@ -635,6 +635,7 @@ public sealed class SolutionComponentsMoverService(
             InstalledOn = FormatInstalledOn(entity),
             Version = entity.GetAttributeValue<string>("version") ?? "",
             IsManaged = entity.GetAttributeValue<bool?>("ismanaged") ?? false,
+            IsPatch = entity.GetAttributeValue<EntityReference>("parentsolutionid") is not null,
         };
     }
 

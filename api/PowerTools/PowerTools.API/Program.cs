@@ -1,5 +1,7 @@
 using System.Diagnostics;
 using PowerTools.API.Filters;
+using PowerTools.API.Mcp;
+using PowerTools.API.Tools.Agent;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.AttributeExplorer;
 using PowerTools.API.Tools.BulkWorkflowExecution;
@@ -18,6 +20,15 @@ using PowerTools.API.Tools.Translator;
 using PowerTools.API.Tools.WorkflowActivities;
 using PowerTools.API.Tools.PluginRegistration.Inspection;
 using PowerTools.API.Tools.PluginRegistration.Services;
+
+// ── stdio connector mode ─────────────────────────────────────────────────────
+// An MCP client starts this executable with --mcp-connector to reach the desktop app's MCP server.
+// It never starts the sidecar web host.
+if (args.Contains("--mcp-connector"))
+{
+    Environment.ExitCode = await McpConnector.RunAsync(args, Console.OpenStandardInput(), Console.OpenStandardOutput(), CancellationToken.None);
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -117,6 +128,7 @@ app.MapTranslatorEndpoints();
 app.MapSolutionLayersEndpoints();
 app.MapEnvironmentVariablesEndpoints();
 app.MapCommunityToolEndpoints();
+app.MapAgentEndpoints();
 
 // ── Parent-process watchdog ──────────────────────────────────────────────────
 // If Electron crashes or is killed without a clean shutdown, the OS would

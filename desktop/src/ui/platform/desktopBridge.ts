@@ -83,6 +83,48 @@ export interface ImportConnectionsResult extends DesktopOperationResult {
   imported?: number;
 }
 
+/** One agent tool call in the activity log. Mirrors src/electron/mcp/activityLog.ts. */
+export interface McpActivityEntry {
+  time: string;
+  client: string | null;
+  tool: string;
+  connection: string | null;
+  effect: "read" | "change" | "destructive";
+  approval: "not-needed" | "auto" | "allowed" | "denied" | "timed-out" | "unavailable" | "cancelled";
+  outcome: "ok" | "error";
+  code?: string;
+  summary: string;
+}
+
+/** An agent call waiting for the user. Mirrors ApprovalRequest in src/electron/mcp/approval.ts. */
+export interface McpApprovalRequest {
+  id: string;
+  tool: string;
+  title: string;
+  connection: string;
+  effect: "change" | "destructive";
+  summary: string;
+  removes?: string;
+  args: Record<string, unknown>;
+}
+
+/** The MCP server's state for the Agents dialog. Mirrors McpStatusInfo in src/electron/mcp/mcpIpc.ts. */
+export interface McpStatusInfo {
+  enabled: boolean;
+  running: boolean;
+  port: number | null;
+  discoveryPath: string;
+  error: string | null;
+  /** The connector launch as one pasteable line. */
+  connectorCommand: string;
+  connector: { command: string; args: string[] };
+  recent: McpActivityEntry[];
+  /** Every tool group, with whether it is on and how many tools it has. */
+  groups: Array<{ group: string; enabled: boolean; tools: number }>;
+  /** The direct HTTP option. The token is never part of it. */
+  http: { enabled: boolean; port: number };
+}
+
 /** A community tool's validated powertools-tool.json. Mirrors src/electron/communityTools/manifest.ts. */
 export interface CommunityToolManifest {
   manifestVersion: 1;
@@ -182,6 +224,26 @@ export interface DesktopBridge {
   saveFileForCommunityTool(id: string, suggestedName: string, content: string): Promise<boolean>;
   /** The File > Community tools menu item was chosen. */
   onOpenCommunityTools(callback: () => void): () => void;
+  /** State of the MCP server, how to start the connector, and recent agent activity. */
+  getMcpStatus(): Promise<McpStatusInfo>;
+  /** Turns the MCP server on or off and remembers the choice. */
+  setMcpEnabled(enabled: boolean): Promise<McpStatusInfo>;
+  getMcpActivity(limit: number): Promise<McpActivityEntry[]>;
+  /** Turns a group of agent tools on or off. */
+  setMcpGroup(group: string, enabled: boolean): Promise<McpStatusInfo>;
+  /** Turns the direct HTTP option on or off and sets its port. */
+  setMcpHttp(http: { enabled: boolean; port: number }): Promise<McpStatusInfo>;
+  /** Copies the direct HTTP client config to the clipboard. Main does the copying; no token comes back. */
+  copyMcpHttpConfig(): Promise<void>;
+  /** Replaces the HTTP token. Clients using the old config stop working. */
+  regenerateMcpHttpToken(): Promise<McpStatusInfo>;
+  /** The File > Agents (MCP) menu item was chosen. */
+  onOpenAgents(callback: () => void): () => void;
+  /** An agent call needs the user's answer. */
+  onMcpApprovalPresent(callback: (request: McpApprovalRequest) => void): () => void;
+  /** An approval request was answered elsewhere or gave up; take its dialog down. */
+  onMcpApprovalDismiss(callback: (id: string) => void): () => void;
+  respondMcpApproval(id: string, allow: boolean): Promise<void>;
 }
 
 declare global {
@@ -248,4 +310,15 @@ export const desktopBridge: DesktopBridge = {
   saveFileForCommunityTool: (id, suggestedName, content) =>
     bridge().saveFileForCommunityTool(id, suggestedName, content),
   onOpenCommunityTools: (callback) => bridge().onOpenCommunityTools(callback),
+  getMcpStatus: () => bridge().getMcpStatus(),
+  setMcpEnabled: (enabled) => bridge().setMcpEnabled(enabled),
+  getMcpActivity: (limit) => bridge().getMcpActivity(limit),
+  setMcpGroup: (group, enabled) => bridge().setMcpGroup(group, enabled),
+  setMcpHttp: (http) => bridge().setMcpHttp(http),
+  copyMcpHttpConfig: () => bridge().copyMcpHttpConfig(),
+  regenerateMcpHttpToken: () => bridge().regenerateMcpHttpToken(),
+  onOpenAgents: (callback) => bridge().onOpenAgents(callback),
+  onMcpApprovalPresent: (callback) => bridge().onMcpApprovalPresent(callback),
+  onMcpApprovalDismiss: (callback) => bridge().onMcpApprovalDismiss(callback),
+  respondMcpApproval: (id, allow) => bridge().respondMcpApproval(id, allow),
 };

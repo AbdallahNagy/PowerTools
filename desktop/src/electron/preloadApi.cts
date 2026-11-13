@@ -107,6 +107,29 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       ipcRenderer.on("open-community-tools", listener);
       return () => ipcRenderer.removeListener("open-community-tools", listener);
     },
+    getMcpStatus: () => ipcRenderer.invoke("mcp-get-status"),
+    setMcpEnabled: (enabled: boolean) => ipcRenderer.invoke("mcp-set-enabled", enabled),
+    getMcpActivity: (limit: number) => ipcRenderer.invoke("mcp-get-activity", limit),
+    setMcpGroup: (group: string, enabled: boolean) => ipcRenderer.invoke("mcp-set-group", group, enabled),
+    setMcpHttp: (http: { enabled: boolean; port: number }) => ipcRenderer.invoke("mcp-set-http", http),
+    copyMcpHttpConfig: () => ipcRenderer.invoke("mcp-copy-http-config"),
+    regenerateMcpHttpToken: () => ipcRenderer.invoke("mcp-regenerate-http-token"),
+    onMcpApprovalPresent: (callback: (request: any) => void) => {
+      const listener = (_: unknown, request: any) => callback(request);
+      ipcRenderer.on("mcp-approval-present", listener);
+      return () => ipcRenderer.removeListener("mcp-approval-present", listener);
+    },
+    onMcpApprovalDismiss: (callback: (id: string) => void) => {
+      const listener = (_: unknown, id: string) => callback(id);
+      ipcRenderer.on("mcp-approval-dismiss", listener);
+      return () => ipcRenderer.removeListener("mcp-approval-dismiss", listener);
+    },
+    respondMcpApproval: (id: string, allow: boolean) => ipcRenderer.invoke("mcp-approval-respond", id, allow),
+    onOpenAgents: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("open-agents", listener);
+      return () => ipcRenderer.removeListener("open-agents", listener);
+    },
   };
 }
 

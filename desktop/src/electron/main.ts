@@ -3,9 +3,10 @@ import "./devUserData.js";
 // Must load next so Sentry hooks the app before anything else runs.
 import "./sentry.js";
 import { spawn } from "child_process";
+import { rmSync } from "fs";
 import { join } from "path";
 import { access, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile } from "fs/promises";
-import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, net, Notification, safeStorage, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
 import { getAppIconPath, getPreloadPath } from "./pathResolver.js";
@@ -26,6 +27,7 @@ import {
   configureMainWindowChrome,
   getMainWindowOptions,
   registerWindowChromeIpc,
+  setAgentsMenuHandler,
   setCommunityToolsMenuHandler,
   setConnectionsMenuHandlers,
 } from "./windowChrome.js";
@@ -34,6 +36,12 @@ import { startUsageStats } from "./usageStats.js";
 import { BUILT_IN_TOOL_IDS } from "./communityTools/builtInToolIds.js";
 import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
 import { createToolStore } from "./communityTools/toolStore.js";
+import { connectorLaunch } from "./mcp/connectorCommand.js";
+import { registerMcpIpc } from "./mcp/mcpIpc.js";
+import { createApprovalWindow } from "./mcp/approvalWindow.js";
+import { createHttpTokenStore } from "./mcp/httpToken.js";
+import { createMcpService } from "./mcp/mcpService.js";
+import { readSettings, writeSettings } from "./settings.js";
 import { installToolProtocol, registerToolScheme } from "./communityTools/toolProtocol.js";
 
 const { autoUpdater } = electronUpdater;
@@ -218,6 +226,57 @@ app.whenReady().then(async () => {
     },
   });
 
+  const mcpService = createMcpService({
+    userDataPath: app.getPath("userData"),
+    sidecar: sidecarHandle,
+    connections: connectionIpc,
+    appVersion: app.getVersion(),
+    readEnabled: () => mcpSettings().enabled === true,
+    writeEnabled: (enabled) => writeSettings({ mcp: { ...mcpSettings(), enabled } }),
+    readGroups: () => {
+      const saved = mcpSettings().groups;
+      return saved && typeof saved === "object" ? saved : {};
+    },
+    writeGroups: (groups) => writeSettings({ mcp: { ...mcpSettings(), groups } }),
+    readHttp: () => mcpSettings().http ?? {},
+    writeHttp: (http) => writeSettings({ mcp: { ...mcpSettings(), http } }),
+    httpToken: createHttpTokenStore(join(app.getPath("userData"), "mcp-http-token.bin"), safeStorage),
+    clipboard: { writeText: (text) => clipboard.writeText(text) },
+    approvalUi: createApprovalWindow({
+      getWindow: () => mainWindow,
+      notify: (onClick) => {
+        const notification = new Notification({
+          title: "Power Tools",
+          body: "An agent is waiting for your approval",
+        });
+        notification.on("click", onClick);
+        notification.show();
+      },
+      onUnavailable: () => mcpService.failApprovals(),
+    }),
+  });
+  function mcpSettings(): { enabled?: boolean; groups?: Record<string, boolean>; http?: { enabled?: boolean; port?: number } } {
+    const value = readSettings().mcp;
+    return value && typeof value === "object" ? (value as ReturnType<typeof mcpSettings>) : {};
+  }
+  registerMcpIpc({
+    ipcMain,
+    service: mcpService,
+    getMainWindow: () => mainWindow,
+    connector: () =>
+      connectorLaunch({
+        packaged: !isDev(),
+        platform: process.platform,
+        resourcesPath: process.resourcesPath,
+        appPath: app.getAppPath(),
+        discoveryPath: mcpService.status().discoveryPath,
+      }),
+  });
+  app.on("before-quit", () => void mcpService.stop());
+  // The quit may not wait for the async stop, so remove the discovery file here as well.
+  process.on("exit", () => rmSync(mcpService.status().discoveryPath, { force: true }));
+  if (mcpSettings().enabled === true) void mcpService.start();
+
   function broadcastUpdateStatus(status: UpdateStatus) {
     updateStatus = status;
     mainWindow.webContents.send("update-status-changed", status);
@@ -242,6 +301,12 @@ app.whenReady().then(async () => {
     }
   });
 
+  setAgentsMenuHandler(() => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("open-agents");
+    }
+  });
+
   await connectionIpc.registerRestoredOnPremises();
 
   const mainWindow = new BrowserWindow(getMainWindowOptions({
@@ -254,6 +319,7 @@ app.whenReady().then(async () => {
     show: false,
   }));
   configureMainWindowChrome(mainWindow);
+  mainWindow.on("closed", () => mcpService.failApprovals());
   mainWindow.maximize();
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
