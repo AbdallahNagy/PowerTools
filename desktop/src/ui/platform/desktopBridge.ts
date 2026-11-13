@@ -83,6 +83,45 @@ export interface ImportConnectionsResult extends DesktopOperationResult {
   imported?: number;
 }
 
+/** A community tool's validated powertools-tool.json. Mirrors src/electron/communityTools/manifest.ts. */
+export interface CommunityToolManifest {
+  manifestVersion: 1;
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  publisher: { name: string; url?: string };
+  icon: string;
+  entry: string;
+  minHostVersion: string;
+  permissions: string[];
+  messages: string[];
+  network: string[];
+  allowMultipleInstances: boolean;
+}
+
+/** A remembered community tool folder. Mirrors src/electron/communityTools/toolStore.ts. */
+export interface LoadedCommunityTool {
+  /** Manifest id, or the folder path when there is no valid manifest. */
+  id: string;
+  folder: string;
+  status: "ready" | "invalid" | "missing";
+  errors: string[];
+  manifest: CommunityToolManifest | null;
+  /** data:image/svg+xml;base64,... */
+  iconDataUrl: string | null;
+  /** True when the user consented to the tool's current permissions, messages, and network hosts. */
+  consentGranted: boolean;
+}
+
+export interface CommunityToolFileFilter {
+  name: string;
+  extensions: string[];
+}
+
+/** A file a community tool opened: its name and text, never its path. */
+export type CommunityToolOpenFileResult = { name: string; content: string } | { error: string };
+
 export interface DesktopBridge {
   createConnectionWindow(): Promise<void>;
   saveConnectionData(data: ConnectionInput): Promise<DesktopOperationResult>;
@@ -126,6 +165,23 @@ export interface DesktopBridge {
   closeWindow(): Promise<void>;
   isWindowMaximized(): Promise<boolean>;
   onWindowMaximizedChanged(callback: (maximized: boolean) => void): () => void;
+  /** Re-reads every remembered community tool folder and manifest. */
+  listCommunityTools(): Promise<LoadedCommunityTool[]>;
+  /** Asks for a folder and remembers it. `null` when the user cancels. */
+  addCommunityToolFromFolder(): Promise<LoadedCommunityTool | null>;
+  removeCommunityTool(id: string): Promise<void>;
+  grantCommunityToolConsent(id: string): Promise<void>;
+  readCommunityToolStorage(id: string): Promise<Record<string, unknown>>;
+  /** Rejects above 1 MB serialized. */
+  writeCommunityToolStorage(id: string, data: Record<string, unknown>): Promise<void>;
+  /** Asks for a file and reads it as text. `null` when the user cancels. */
+  /** Total size of the tool's folder, for the load log. */
+  getCommunityToolBundleSize(id: string): Promise<{ bytes: number; files: number }>;
+  openFileForCommunityTool(id: string, filters: CommunityToolFileFilter[]): Promise<CommunityToolOpenFileResult | null>;
+  /** Asks where to save and writes the text. `false` when the user cancels. */
+  saveFileForCommunityTool(id: string, suggestedName: string, content: string): Promise<boolean>;
+  /** The File > Community tools menu item was chosen. */
+  onOpenCommunityTools(callback: () => void): () => void;
 }
 
 declare global {
@@ -181,4 +237,15 @@ export const desktopBridge: DesktopBridge = {
   closeWindow: () => bridge().closeWindow(),
   isWindowMaximized: () => bridge().isWindowMaximized(),
   onWindowMaximizedChanged: (callback) => bridge().onWindowMaximizedChanged(callback),
+  listCommunityTools: () => bridge().listCommunityTools(),
+  addCommunityToolFromFolder: () => bridge().addCommunityToolFromFolder(),
+  removeCommunityTool: (id) => bridge().removeCommunityTool(id),
+  grantCommunityToolConsent: (id) => bridge().grantCommunityToolConsent(id),
+  readCommunityToolStorage: (id) => bridge().readCommunityToolStorage(id),
+  writeCommunityToolStorage: (id, data) => bridge().writeCommunityToolStorage(id, data),
+  getCommunityToolBundleSize: (id) => bridge().getCommunityToolBundleSize(id),
+  openFileForCommunityTool: (id, filters) => bridge().openFileForCommunityTool(id, filters),
+  saveFileForCommunityTool: (id, suggestedName, content) =>
+    bridge().saveFileForCommunityTool(id, suggestedName, content),
+  onOpenCommunityTools: (callback) => bridge().onOpenCommunityTools(callback),
 };

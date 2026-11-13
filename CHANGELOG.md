@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- Community tools: load a tool from a local folder (File > Community tools).
+
 ## [1.3.0] - 2026-11-03
 
 ### Added

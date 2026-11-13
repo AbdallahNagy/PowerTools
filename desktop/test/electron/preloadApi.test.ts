@@ -77,6 +77,15 @@ describe("createPreloadApi", () => {
     ["toggleMaximizeWindow", [], "window-toggle-maximize", []],
     ["closeWindow", [], "window-close", []],
     ["isWindowMaximized", [], "window-is-maximized", []],
+    ["listCommunityTools", [], "list-community-tools", []],
+    ["addCommunityToolFromFolder", [], "add-community-tool-from-folder", []],
+    ["removeCommunityTool", ["contoso.counter"], "remove-community-tool", ["contoso.counter"]],
+    ["grantCommunityToolConsent", ["contoso.counter"], "grant-community-tool-consent", ["contoso.counter"]],
+    ["readCommunityToolStorage", ["contoso.counter"], "read-community-tool-storage", ["contoso.counter"]],
+    ["writeCommunityToolStorage", ["contoso.counter", { count: 1 }], "write-community-tool-storage", ["contoso.counter", { count: 1 }]],
+    ["getCommunityToolBundleSize", ["contoso.counter"], "get-community-tool-bundle-size", ["contoso.counter"]],
+    ["openFileForCommunityTool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]], "open-file-for-community-tool", ["contoso.counter", [{ name: "CSV", extensions: ["csv"] }]]],
+    ["saveFileForCommunityTool", ["contoso.counter", "out.csv", "a,b"], "save-file-for-community-tool", ["contoso.counter", "out.csv", "a,b"]],
   ] as const)(
     "%s invokes %s with the existing arguments",
     async (methodName, methodArgs, expectedChannel, expectedArgs) => {
@@ -146,6 +155,22 @@ describe("createPreloadApi", () => {
     expect(removals).toEqual([{ channel: "window-maximized-changed", listener }]);
   });
 
+  it("forwards the Community tools menu event and unsubscribes the same listener", () => {
+    const { ipcRenderer, listeners, removals } = createIpcRendererFake();
+    const api = createPreloadApi(ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">);
+    let calls = 0;
+
+    const unsubscribe = api.onOpenCommunityTools(() => {
+      calls += 1;
+    });
+    const listener = listeners.get("open-community-tools");
+    listener?.({ ignored: true }, undefined);
+    unsubscribe();
+
+    expect(calls).toBe(1);
+    expect(removals).toEqual([{ channel: "open-community-tools", listener }]);
+  });
+
   it("exposes exactly the declared renderer methods", () => {
     const { ipcRenderer } = createIpcRendererFake();
 
@@ -188,6 +213,16 @@ describe("createPreloadApi", () => {
       "closeWindow",
       "isWindowMaximized",
       "onWindowMaximizedChanged",
+      "listCommunityTools",
+      "addCommunityToolFromFolder",
+      "removeCommunityTool",
+      "grantCommunityToolConsent",
+      "readCommunityToolStorage",
+      "writeCommunityToolStorage",
+      "getCommunityToolBundleSize",
+      "openFileForCommunityTool",
+      "saveFileForCommunityTool",
+      "onOpenCommunityTools",
     ]);
   });
 });

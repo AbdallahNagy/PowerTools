@@ -183,7 +183,10 @@ describe("window chrome", () => {
       onImportConnections: vi.fn(),
       onExportConnections: vi.fn(),
     };
-    const template = createApplicationMenuTemplate(undefined, undefined, undefined, undefined, handlers);
+    const onOpenCommunityTools = vi.fn();
+    const template = createApplicationMenuTemplate(undefined, undefined, undefined, undefined, handlers, {
+      onOpenCommunityTools,
+    });
     const file = template.find((item) => item.label === "File");
     const items = file?.submenu as Electron.MenuItemConstructorOptions[];
 
@@ -194,12 +197,15 @@ describe("window chrome", () => {
       "Import Connections…",
       "Export Connections…",
       "separator",
+      "Community tools…",
+      "separator",
       process.platform === "darwin" ? "close" : "quit",
     ]);
     for (const item of items.filter((entry) => entry.click)) {
       (item.click as () => void)();
     }
     expect(Object.values(handlers).every((handler) => handler.mock.calls.length === 1)).toBe(true);
+    expect(onOpenCommunityTools).toHaveBeenCalledOnce();
   });
 
   it("leaves Ctrl+W free so the shell can close the active tab", async () => {

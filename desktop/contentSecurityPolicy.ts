@@ -21,7 +21,8 @@ export function buildContentSecurityPolicy({ dev }: { dev: boolean }): string {
     "object-src": ["'none'"],
     "base-uri": ["'none'"],
     "form-action": ["'none'"],
-    "frame-src": ["'none'"],
+    // Community tools run in sandboxed frames served from their own pt-tool:// origin.
+    "frame-src": ["pt-tool:"],
   };
 
   return Object.entries(directives)

@@ -37,6 +37,7 @@ vi.mock("electron", () => {
   return {
     app: {
       getVersion: () => "0.0.0-test",
+      getPath: () => "/nonexistent-user-data",
       isPackaged: false,
       on: vi.fn(),
       quit: vi.fn(),
@@ -54,6 +55,7 @@ vi.mock("electron", () => {
       getApplicationMenu: vi.fn(() => ({ items: [] })),
       buildFromTemplate: vi.fn((template: unknown) => template),
     },
+    protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
     shell: { openExternal: vi.fn() },
   };
 });
