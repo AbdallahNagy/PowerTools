@@ -24,7 +24,7 @@ const GUID = "11111111-1111-1111-1111-111111111111";
 
 describe("solution tools", () => {
   it("builds a valid registry", () => {
-    expect(registry.list()).toHaveLength(10);
+    expect(registry.list()).toHaveLength(11);
   });
 
   it.each(["solutions_list", "solutions_list_components", "solutions_list_publishers", "solutions_list_layers"])(
@@ -109,5 +109,29 @@ describe("solution tools", () => {
     expect(registry.validate(tool("solutions_clone"), { solution: "Core", version: "2.0.0.0" }).ok).toBe(true);
     expect(registry.validate(tool("solutions_create"), { uniqueName: "bad name", displayName: "x" }).ok).toBe(false);
     expect(registry.validate(tool("solutions_list_layers"), { componentType: 1, componentId: "nope" }).ok).toBe(false);
+  });
+});
+
+describe("solution tool results", () => {
+  it("flattens the component list", async () => {
+    const call = vi.fn(async () => ({ components: [{ componentId: GUID, componentType: 80, typeName: "Model-driven App" }], truncated: false }));
+    const result = await tool("solutions_list_components").run({ solution: "Core" }, ctx(call));
+    expect(result.structuredContent).toMatchObject({ components: [{ componentType: 80 }], truncated: false });
+  });
+
+  it("leaves the layer JSON out unless asked", async () => {
+    const layers = { componentId: GUID, layers: [{ order: 1, name: "Active", changes: "{...}", componentJson: "{...}" }] };
+    const call = vi.fn(async () => layers);
+    const lean = await tool("solutions_list_layers").run({ componentType: 26, componentId: GUID }, ctx(call));
+    expect((lean.structuredContent as { layers: typeof layers }).layers.layers[0]).toEqual({ order: 1, name: "Active" });
+    const full = await tool("solutions_list_layers").run({ componentType: 26, componentId: GUID, includeChanges: true }, ctx(call));
+    expect((full.structuredContent as { layers: typeof layers }).layers).toEqual(layers);
+  });
+
+  it("deletes a solution as a destructive call", async () => {
+    expect(tool("solutions_delete").effect).toBe("destructive");
+    const call = vi.fn(async () => ({ uniqueName: "Core" }));
+    await tool("solutions_delete").run({ solution: "Core" }, ctx(call));
+    expect(call).toHaveBeenCalledWith(conn, "POST", "/api/agent/solutions/delete", { solution: "Core" });
   });
 });

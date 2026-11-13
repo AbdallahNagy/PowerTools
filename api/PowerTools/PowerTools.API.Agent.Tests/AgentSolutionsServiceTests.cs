@@ -312,4 +312,48 @@ public class AgentSolutionsServiceTests
         var request = Assert.IsType<RemoveSolutionComponentRequest>(Assert.Single(client.Executed));
         Assert.Equal((id, 26, "Core"), (request.ComponentId, request.ComponentType, request.SolutionUniqueName));
     }
+
+    [Fact]
+    public async Task Delete_solution_deletes_an_unmanaged_solution_and_refuses_managed_and_system_ones()
+    {
+        var (service, client) = Make();
+        client.Solutions.Add(new Entity("solution", Guid.NewGuid()) { ["uniquename"] = "Default", ["ismanaged"] = false, ["isvisible"] = false });
+
+        var deleted = await service.DeleteAsync(new DeleteSolutionBody { Solution = "Core" }, CancellationToken.None);
+        var managed = await service.DeleteAsync(new DeleteSolutionBody { Solution = "Vendor" }, CancellationToken.None);
+        var system = await service.DeleteAsync(new DeleteSolutionBody { Solution = "Default" }, CancellationToken.None);
+        var missing = await service.DeleteAsync(new DeleteSolutionBody { Solution = "Nope" }, CancellationToken.None);
+
+        Assert.Null(deleted.Problem);
+        Assert.Equal(("Core", CoreId), (deleted.Value!.UniqueName, deleted.Value.Id));
+        Assert.Equal([("solution", CoreId)], client.Deleted);
+        Assert.Equal("InvalidRequest", managed.Problem!.Code);
+        Assert.Equal("InvalidRequest", system.Problem!.Code);
+        Assert.Equal("NotFound", missing.Problem!.Code);
+    }
+
+    [Fact]
+    public async Task Create_patch_reports_the_name_dataverse_gave_the_patch()
+    {
+        var (service, client) = Make();
+        client.Records[("solution", PatchId)] = new Entity("solution", PatchId) { ["uniquename"] = "Core_Patch_aaaaaaaa" };
+
+        var result = await service.CreatePatchAsync(new CreatePatchBody { Solution = "Core" }, CancellationToken.None);
+
+        Assert.Equal("Core_Patch_aaaaaaaa", result.Value!.UniqueName);
+    }
+
+    [Fact]
+    public async Task Components_are_named_by_number_or_by_the_environments_component_definitions()
+    {
+        var (service, client) = Make();
+        client.SolutionComponents.Add(new Entity("solutioncomponent") { ["objectid"] = Guid.NewGuid(), ["componenttype"] = new OptionSetValue(80) });
+        client.SolutionComponents.Add(new Entity("solutioncomponent") { ["objectid"] = Guid.NewGuid(), ["componenttype"] = new OptionSetValue(10088) });
+        client.SolutionComponents.Add(new Entity("solutioncomponent") { ["objectid"] = Guid.NewGuid(), ["componenttype"] = new OptionSetValue(10999) });
+        client.ByEntity["solutioncomponentdefinition"] = [new Entity("solutioncomponentdefinition") { ["name"] = "AppSetting", ["solutioncomponenttype"] = 10088 }];
+
+        var result = await service.ListComponentsAsync("Core", null, CancellationToken.None);
+
+        Assert.Equal(["AppModule", "AppSetting", null], result.Value!.Components.Select(c => c.TypeName));
+    }
 }

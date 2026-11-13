@@ -94,4 +94,40 @@ public class AgentSchemaDeleteTests
         Assert.Equal("DataverseFault", result.Problem!.Code);
         Assert.Equal(-2147220891, result.Problem.DataverseCode);
     }
+
+    private static (AgentSchemaService Service, FakeAgentClient Client) WithChoice(bool global = true, bool custom = true, bool managed = false)
+    {
+        var set = new OptionSetMetadata { Name = "new_colors", IsGlobal = global, IsCustomOptionSet = custom };
+        Responses.SetInternal(set, nameof(OptionSetMetadata.IsManaged), managed);
+        var client = Data.Client();
+        client.OnExecute = request => request is RetrieveOptionSetRequest
+            ? Responses.Of<RetrieveOptionSetResponse>(("OptionSetMetadata", set))
+            : new OrganizationResponse();
+        return (new AgentSchemaService(client), client);
+    }
+
+    [Fact]
+    public async Task Delete_choice_deletes_a_custom_global_choice()
+    {
+        var (service, client) = WithChoice();
+
+        var result = await service.DeleteChoiceAsync(new DeleteChoiceBody { Choice = "new_colors" }, CancellationToken.None);
+
+        Assert.Null(result.Problem);
+        Assert.Equal("new_colors", Assert.Single(client.Executed.OfType<DeleteOptionSetRequest>()).Name);
+    }
+
+    [Theory]
+    [InlineData(true, false, false)]
+    [InlineData(true, true, true)]
+    [InlineData(false, true, false)]
+    public async Task Delete_choice_refuses_system_managed_or_local_choices(bool global, bool custom, bool managed)
+    {
+        var (service, client) = WithChoice(global, custom, managed);
+
+        var result = await service.DeleteChoiceAsync(new DeleteChoiceBody { Choice = "new_colors" }, CancellationToken.None);
+
+        Assert.Equal("InvalidRequest", result.Problem!.Code);
+        Assert.Empty(client.Executed.OfType<DeleteOptionSetRequest>());
+    }
 }

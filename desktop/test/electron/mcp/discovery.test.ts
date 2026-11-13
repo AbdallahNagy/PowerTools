@@ -113,8 +113,8 @@ describe("createMcpService", () => {
       connections: 1,
       metadata: 7,
       records: 8,
-      schema: 14,
-      solutions: 10,
+      schema: 15,
+      solutions: 11,
       plugins: 10,
       envvars: 4,
     });

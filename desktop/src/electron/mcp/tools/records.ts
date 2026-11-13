@@ -42,6 +42,21 @@ export const recordsQuery: AgentTool = {
   },
 };
 
+/**
+ * Keeps the columns that were asked for. Dataverse adds some on its own (the primary id, the currency of money
+ * columns) and leaves out empty ones; an asked-for column without a value comes back as null.
+ */
+export function onlyColumns(record: unknown, columns: unknown): unknown {
+  if (!record || typeof record !== "object" || !Array.isArray(columns)) return record;
+  const row = record as { values?: Record<string, unknown>; formatted?: Record<string, unknown> };
+  const wanted = columns.map((c) => String(c).toLowerCase());
+  const values = Object.fromEntries(wanted.map((c) => [c, row.values?.[c] ?? null]));
+  const formatted = Object.fromEntries(
+    Object.entries(row.formatted ?? {}).filter(([key]) => wanted.includes(key.toLowerCase())),
+  );
+  return { ...row, values, formatted };
+}
+
 export const recordsGet: AgentTool = {
   name: "records_get",
   group: "records",
@@ -78,6 +93,6 @@ export const recordsGet: AgentTool = {
       id: args.id,
       columns: args.columns,
     });
-    return dataverseResult(`Record of ${String(args.table)}.`, { record }, conn.displayName);
+    return dataverseResult(`Record of ${String(args.table)}.`, { record: onlyColumns(record, args.columns) }, conn.displayName);
   },
 };

@@ -162,6 +162,47 @@ describe("plug-in tools", () => {
     expect(call).toHaveBeenLastCalledWith(conn, "GET", "/api/agent/plugins/catalog");
   });
 
+  it("leaves system assemblies out of the list unless asked", async () => {
+    const { tool } = tools(fakeFiles().files);
+    const catalog = {
+      assemblies: [{ id: "a1", isSystem: true }, { id: "a2", isSystem: false }, { id: "a3", isSystem: false, publicKeyToken: "31BF3856AD364E35" }],
+      types: [{ id: "t1", assemblyId: "a1" }, { id: "t2", assemblyId: "a2" }],
+      steps: [{ id: "s1", pluginTypeId: "t1" }, { id: "s2", pluginTypeId: "t2" }],
+      images: [{ id: "i1", stepId: "s1" }, { id: "i2", stepId: "s2" }],
+    };
+    const call = vi.fn(async () => catalog);
+    const custom = await tool("plugins_list").run({}, ctx(call));
+    expect(custom.structuredContent).toMatchObject({
+      catalog: { assemblies: [{ id: "a2" }], types: [{ id: "t2" }], steps: [{ id: "s2" }], images: [{ id: "i2" }] },
+    });
+    const all = await tool("plugins_list").run({ includeSystem: true }, ctx(call));
+    expect((all.structuredContent as { catalog: typeof catalog }).catalog.assemblies).toHaveLength(3);
+  });
+
+  it("narrows step options to the message, table and user asked for", async () => {
+    const { tool } = tools(fakeFiles().files);
+    const options = {
+      messages: [{ id: "m1", name: "Create" }, { id: "m2", name: "Update" }],
+      filters: [
+        { id: "f1", messageId: "m1", primaryEntity: "account" },
+        { id: "f2", messageId: "m2", primaryEntity: "account" },
+        { id: "f3", messageId: "m2", primaryEntity: "contact" },
+      ],
+      users: [{ id: "u1", fullName: "Ada Lovelace" }, { id: "u2", fullName: "Alan Turing" }],
+    };
+    const call = vi.fn(async () => options);
+    const run = async (args: Record<string, unknown>) =>
+      (await tool("plugins_get_step_options").run(args, ctx(call))).structuredContent as Record<string, unknown>;
+
+    expect(await run({})).toMatchObject({ messages: options.messages, filters: [], users: [] });
+    expect(await run({ message: "update", table: "Contact" })).toMatchObject({
+      messages: [{ id: "m2" }],
+      filters: [{ id: "f3" }],
+    });
+    expect(await run({ table: "account" })).toMatchObject({ messages: options.messages, filters: [{ id: "f1" }, { id: "f2" }] });
+    expect(await run({ user: "lovelace" })).toMatchObject({ users: [{ id: "u1" }] });
+  });
+
   it("posts step and image changes to their routes without the id in the body", async () => {
     const { tool } = tools(fakeFiles().files);
     const step = { name: "S", pluginTypeId: GUID, messageId: GUID, stage: 20, mode: 0 };

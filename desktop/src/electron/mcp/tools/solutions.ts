@@ -95,10 +95,12 @@ export const solutionsList = read({
   summarize: () => "solutions_list",
 });
 
-export const solutionsListComponents = read({
+export const solutionsListComponents: AgentTool = {
   name: "solutions_list_components",
+  group: "solutions",
   title: "List solution components",
-  description: "Lists the components of a solution (up to 500) with component type and id. Filter with componentType. Read-only.",
+  description:
+    "Lists the components of a solution (up to 500) with component type number, type name and id. Filter with componentType. Read-only.",
   inputSchema: {
     type: "object",
     properties: {
@@ -109,10 +111,20 @@ export const solutionsListComponents = read({
     required: ["solution"],
     additionalProperties: false,
   },
-  path: (args) => `/solutions/${enc(str(args.solution))}/components${query({ componentType: args.componentType })}`,
-  key: "components",
+  effect: "read",
   summarize: (args) => `solutions_list_components ${str(args.solution)}`,
-});
+  async run(args, ctx) {
+    const path = `/solutions/${enc(str(args.solution))}/components${query({ componentType: args.componentType })}`;
+    const { conn, data } = await getAgent(args, ctx, path);
+    const body = (data ?? {}) as { components?: unknown[]; truncated?: boolean };
+    const components = body.components ?? [];
+    return dataverseResult(
+      `${components.length} component(s) of ${str(args.solution)}.`,
+      { components, truncated: body.truncated === true },
+      conn.displayName,
+    );
+  },
+};
 
 export const solutionsListPublishers = read({
   name: "solutions_list_publishers",
@@ -124,24 +136,48 @@ export const solutionsListPublishers = read({
   summarize: () => "solutions_list_publishers",
 });
 
-export const solutionsListLayers = read({
+interface LayerList {
+  layers?: Record<string, unknown>[] | null;
+  [key: string]: unknown;
+}
+
+/** Each layer carries the component's full JSON twice; that is only sent when asked for. */
+export function trimLayers(data: unknown, includeChanges: boolean): unknown {
+  if (includeChanges || !data || typeof data !== "object") return data;
+  const list = data as LayerList;
+  return {
+    ...list,
+    layers: (list.layers ?? []).map((layer) =>
+      Object.fromEntries(Object.entries(layer).filter(([key]) => key !== "changes" && key !== "componentJson")),
+    ),
+  };
+}
+
+export const solutionsListLayers: AgentTool = {
   name: "solutions_list_layers",
+  group: "solutions",
   title: "List solution layers",
-  description: "Lists the solution layers of one component, top layer first, and whether the Active layer can be removed. Read-only.",
+  description:
+    "Lists the solution layers of one component, top layer first, and whether the Active layer can be removed. Set includeChanges to also get each layer's changed properties as JSON, which can be large. Read-only.",
   inputSchema: {
     type: "object",
     properties: {
       connection: connectionProp,
       componentType: { type: "integer", minimum: 1, description: "Component type number." },
       componentId: componentIdProp,
+      includeChanges: { type: "boolean", description: "Include each layer's changes and component JSON. Default false." },
     },
     required: ["componentType", "componentId"],
     additionalProperties: false,
   },
-  path: (args) => `/solutions/layers${query({ componentType: args.componentType, componentId: args.componentId })}`,
-  key: "layers",
+  effect: "read",
   summarize: () => "solutions_list_layers",
-});
+  async run(args, ctx) {
+    const path = `/solutions/layers${query({ componentType: args.componentType, componentId: args.componentId })}`;
+    const { conn, data } = await getAgent(args, ctx, path);
+    return dataverseResult("List solution layers.", { layers: trimLayers(data, args.includeChanges === true) }, conn.displayName);
+  },
+};
 
 export const solutionsCreate = write("change", {
   name: "solutions_create",
@@ -286,6 +322,26 @@ export const solutionsRemoveActiveLayer = write("destructive", {
   summarize: () => "solutions_remove_active_layer",
 });
 
+export const solutionsDelete = write("destructive", {
+  name: "solutions_delete",
+  title: "Delete solution",
+  description:
+    "Destructive: deletes an unmanaged solution. Its components stay in the environment; only the solution and its component list go. Managed and system solutions are refused. It cannot be undone. Always asks the user.",
+  inputSchema: {
+    type: "object",
+    properties: { connection: connectionProp, solution: solutionProp },
+    required: ["solution"],
+    additionalProperties: false,
+  },
+  route: "/solutions/delete",
+  done: "Solution deleted.",
+  describe: (args) => ({
+    summary: `delete solution ${str(args.solution)}`,
+    removes: `solution ${str(args.solution)} (its components stay in the environment)`,
+  }),
+  summarize: (args) => `solutions_delete ${str(args.solution)}`,
+});
+
 export const SOLUTION_TOOLS: AgentTool[] = [
   solutionsList,
   solutionsListComponents,
@@ -297,4 +353,5 @@ export const SOLUTION_TOOLS: AgentTool[] = [
   solutionsRemoveComponent,
   solutionsClone,
   solutionsRemoveActiveLayer,
+  solutionsDelete,
 ];

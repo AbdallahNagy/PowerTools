@@ -46,6 +46,13 @@ public sealed class SolutionComponentBody
     public bool? AddRequiredComponents { get; set; }
 }
 
+public sealed class DeleteSolutionBody
+{
+    public string? Solution { get; set; }
+}
+
+public sealed record SolutionDeletedDto(string UniqueName, Guid Id);
+
 public sealed class RemoveActiveLayerBody
 {
     public int? ComponentType { get; set; }
@@ -114,15 +121,18 @@ public sealed partial class AgentSolutionsService(IAgentClient client, ISolution
             query.Orders.Add(new OrderExpression("componenttype", OrderType.Ascending));
 
             var rows = await client.RetrieveMultipleAsync(query, ct);
-            var components = rows.Entities
-                .Take(MaxComponents)
+            static int TypeOf(Entity row) =>
+                row.GetAttributeValue<OptionSetValue>("componenttype")?.Value ?? row.GetAttributeValue<int?>("componenttype") ?? 0;
+            var kept = rows.Entities.Take(MaxComponents).ToList();
+            var names = await ComponentTypeNamesAsync(kept.Select(TypeOf), ct);
+            var components = kept
                 .Select(row =>
                 {
-                    var type = row.GetAttributeValue<OptionSetValue>("componenttype")?.Value ?? row.GetAttributeValue<int?>("componenttype") ?? 0;
+                    var type = TypeOf(row);
                     return new SolutionComponentDto(
                         (row.GetAttributeValue<Guid?>("objectid") ?? Guid.Empty).ToString("D"),
                         type,
-                        ComponentLayerNames.LayerName(type, null));
+                        names.GetValueOrDefault(type));
                 })
                 .ToList();
             return AgentResult<SolutionComponentsDto>.Ok(new SolutionComponentsDto(components, rows.Entities.Count > MaxComponents));
@@ -190,7 +200,11 @@ public sealed partial class AgentSolutionsService(IAgentClient client, ISolution
                 },
                 ct);
             var id = response.Results.TryGetValue("SolutionId", out var raw) && raw is Guid guid ? guid : Guid.Empty;
-            var unique = response.Results.TryGetValue("UniqueName", out var name) && name is string text ? text : $"{body.Solution}_Patch{version.Replace('.', '_')}";
+            // Dataverse names the patch itself (for example Core_Patch_1a2b3c4d), so read the name back.
+            var unique = id == Guid.Empty ? null : await UniqueNameOfAsync(id, ct);
+            unique ??= response.Results.TryGetValue("UniqueName", out var name) && name is string text
+                ? text
+                : $"{body.Solution}_Patch{version.Replace('.', '_')}";
             return AgentResult<SolutionCreatedDto>.Ok(new SolutionCreatedDto(unique, id, version));
         });
 
@@ -313,6 +327,67 @@ public sealed partial class AgentSolutionsService(IAgentClient client, ISolution
         throw Invalid("Give componentId, or table (for a table) or table and column (for a column).");
     }
 
+    // ── Delete ───────────────────────────────────────────────────────────────
+
+    private static readonly HashSet<string> SystemSolutions = new(StringComparer.OrdinalIgnoreCase) { "Default", "Active", "Basic" };
+
+    /// <summary>
+    /// Deletes an unmanaged solution. Its components stay in the environment; only the solution goes. Managed
+    /// solutions are refused, because deleting one uninstalls everything in it.
+    /// </summary>
+    public Task<AgentResult<SolutionDeletedDto>> DeleteAsync(DeleteSolutionBody body, CancellationToken ct) =>
+        Guard(async () =>
+        {
+            Require(body.Solution, "solution");
+            var solution = await RequireSolutionAsync(body.Solution!, ct);
+            var uniqueName = solution.GetAttributeValue<string>("uniquename") ?? body.Solution!.Trim();
+            if (SystemSolutions.Contains(uniqueName) || solution.GetAttributeValue<bool?>("isvisible") == false)
+                throw Invalid($"Solution '{uniqueName}' is a system solution and cannot be deleted.");
+            if (solution.GetAttributeValue<bool?>("ismanaged") == true)
+                throw Invalid($"Solution '{uniqueName}' is managed. Deleting it would uninstall its components; do that in the maker portal.");
+
+            await client.DeleteAsync("solution", solution.Id, ct);
+            return AgentResult<SolutionDeletedDto>.Ok(new SolutionDeletedDto(uniqueName, solution.Id));
+        });
+
+    /// <summary>
+    /// Names component types: the documented ones by number, the rest (solution-aware tables, numbered above
+    /// 10000 and different in every environment) from solutioncomponentdefinition. A type it cannot name stays out.
+    /// </summary>
+    private async Task<Dictionary<int, string>> ComponentTypeNamesAsync(IEnumerable<int> types, CancellationToken ct)
+    {
+        var names = new Dictionary<int, string>();
+        var unknown = new List<int>();
+        foreach (var type in types.Distinct())
+        {
+            var known = type == ModelDrivenAppType ? ComponentLayerNames.AppModuleName : ComponentLayerNames.ClassicLayerName(type);
+            if (known is not null) names[type] = known;
+            else unknown.Add(type);
+        }
+
+        if (unknown.Count == 0) return names;
+        try
+        {
+            var query = new QueryExpression("solutioncomponentdefinition") { NoLock = true, ColumnSet = new ColumnSet("name", "solutioncomponenttype") };
+            query.Criteria.AddCondition("solutioncomponenttype", ConditionOperator.In, unknown.Cast<object>().ToArray());
+            foreach (var row in (await client.RetrieveMultipleAsync(query, ct)).Entities)
+            {
+                var number = row.GetAttributeValue<int?>("solutioncomponenttype") ?? row.GetAttributeValue<OptionSetValue>("solutioncomponenttype")?.Value;
+                var name = row.GetAttributeValue<string>("name");
+                if (number is int value && !string.IsNullOrWhiteSpace(name)) names[value] = name;
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // solutioncomponentdefinition is not a documented table; without it those types stay unnamed.
+        }
+
+        return names;
+    }
+
+    /// <summary>Model-driven apps (appmodule) are component type 80.</summary>
+    private const int ModelDrivenAppType = 80;
+
     // ── Layers ───────────────────────────────────────────────────────────────
 
     public Task<AgentResult<LayersResponse>> RemoveActiveLayerAsync(RemoveActiveLayerBody body, CancellationToken ct) =>
@@ -337,10 +412,23 @@ public sealed partial class AgentSolutionsService(IAgentClient client, ISolution
         {
             NoLock = true,
             TopCount = 1,
-            ColumnSet = new ColumnSet("uniquename", "friendlyname", "version", "ismanaged", "parentsolutionid"),
+            ColumnSet = new ColumnSet("uniquename", "friendlyname", "version", "ismanaged", "parentsolutionid", "isvisible"),
         };
         query.Criteria.AddCondition("uniquename", ConditionOperator.Equal, uniqueName.Trim());
         return (await client.RetrieveMultipleAsync(query, ct)).Entities.FirstOrDefault();
+    }
+
+    private async Task<string?> UniqueNameOfAsync(Guid solutionId, CancellationToken ct)
+    {
+        try
+        {
+            var row = await client.RetrieveAsync("solution", solutionId, new ColumnSet("uniquename"), ct);
+            return row.GetAttributeValue<string>("uniquename");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            return null;
+        }
     }
 
     private async Task<Entity> RequireSolutionAsync(string uniqueName, CancellationToken ct) =>

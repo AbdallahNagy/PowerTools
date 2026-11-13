@@ -56,6 +56,36 @@ public class AgentSchemaFormTests
     }
 
     [Fact]
+    public async Task Form_and_view_edits_start_from_the_unpublished_xml()
+    {
+        var (service, client) = Make();
+
+        await service.AddColumnToFormAsync(
+            new AddFormColumnBody { Table = "account", FormId = FormId.ToString(), Column = "new_amount", Tab = "details_tab", Section = "notes" },
+            CancellationToken.None);
+        await service.AddColumnToViewAsync(
+            new AddViewColumnBody { Table = "account", ViewId = ViewId.ToString(), Column = "new_amount" }, CancellationToken.None);
+
+        var reads = client.Executed.OfType<RetrieveUnpublishedRequest>().Select(r => r.Target.LogicalName).ToList();
+        Assert.Equal(["systemform", "savedquery"], reads);
+    }
+
+    [Fact]
+    public async Task Edits_of_one_record_wait_for_each_other_and_other_records_do_not()
+    {
+        var id = Guid.NewGuid();
+        var first = await EditLock.HoldAsync(id, CancellationToken.None);
+        var second = EditLock.HoldAsync(id, CancellationToken.None);
+        var other = EditLock.HoldAsync(Guid.NewGuid(), CancellationToken.None);
+
+        Assert.True(other.IsCompleted);
+        Assert.False(second.IsCompleted);
+        first.Dispose();
+        (await second.WaitAsync(TimeSpan.FromSeconds(5))).Dispose();
+        (await other).Dispose();
+    }
+
+    [Fact]
     public async Task A_form_of_another_table_or_type_is_refused_without_an_update()
     {
         var (otherTable, client1) = Make(formTable: "contact");

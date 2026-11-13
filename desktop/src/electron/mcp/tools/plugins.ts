@@ -113,6 +113,68 @@ async function getAgent(args: Record<string, unknown>, ctx: AgentToolContext, pa
   return { conn, data: await ctx.callSidecar(conn, "GET", `${AGENT_API}${path}`) };
 }
 
+interface Catalog {
+  assemblies?: { id: string; isSystem?: boolean; publicKeyToken?: string | null }[];
+  types?: { id: string; assemblyId: string; isSystem?: boolean }[];
+  steps?: { id: string; pluginTypeId: string; isSystem?: boolean }[];
+  images?: { id: string; stepId: string }[];
+}
+
+/** The key Microsoft signs its own plug-in assemblies with. Many of them are not marked as system. */
+export const MICROSOFT_PUBLIC_KEY_TOKEN = "31bf3856ad364e35";
+
+/** Drops Microsoft's assemblies (system, or signed with Microsoft's key) and system types and steps, with everything under them. */
+export function withoutSystem(catalog: Catalog | null | undefined): Catalog {
+  const assemblies = (catalog?.assemblies ?? []).filter(
+    (a) => a.isSystem !== true && (a.publicKeyToken ?? "").toLowerCase() !== MICROSOFT_PUBLIC_KEY_TOKEN,
+  );
+  const assemblyIds = new Set(assemblies.map((a) => a.id));
+  const types = (catalog?.types ?? []).filter((t) => t.isSystem !== true && assemblyIds.has(t.assemblyId));
+  const typeIds = new Set(types.map((t) => t.id));
+  const steps = (catalog?.steps ?? []).filter((s) => s.isSystem !== true && typeIds.has(s.pluginTypeId));
+  const stepIds = new Set(steps.map((s) => s.id));
+  const images = (catalog?.images ?? []).filter((i) => stepIds.has(i.stepId));
+  return { assemblies, types, steps, images };
+}
+
+interface StepOptions {
+  messages?: { id: string; name: string }[];
+  filters?: { id: string; messageId: string; primaryEntity?: string | null; secondaryEntity?: string | null; availability?: number }[];
+  users?: { id: string; fullName: string }[];
+}
+
+/**
+ * Keeps the step options to what was asked. Every message and filter of an environment is far over the result
+ * cap, so filters come only for a message or table, and users only for a name search.
+ */
+export function narrowStepOptions(options: StepOptions | null | undefined, args: Record<string, unknown>) {
+  const same = (a: unknown, b: unknown) => String(a ?? "").toLowerCase() === String(b ?? "").toLowerCase();
+  const message = typeof args.message === "string" && args.message.trim() ? args.message.trim() : undefined;
+  const table = typeof args.table === "string" && args.table.trim() ? args.table.trim() : undefined;
+  const user = typeof args.user === "string" && args.user.trim() ? args.user.trim().toLowerCase() : undefined;
+
+  let messages = options?.messages ?? [];
+  if (message) messages = messages.filter((m) => same(m.name, message));
+  let filters: StepOptions["filters"] = [];
+  if (message || table) {
+    const messageIds = new Set(messages.map((m) => m.id));
+    filters = (options?.filters ?? []).filter(
+      (f) => (!message || messageIds.has(f.messageId)) && (!table || same(f.primaryEntity, table)),
+    );
+    if (table) {
+      const used = new Set(filters.map((f) => f.messageId));
+      messages = messages.filter((m) => used.has(m.id));
+    }
+  }
+  const users = user ? (options?.users ?? []).filter((u) => (u.fullName ?? "").toLowerCase().includes(user)) : [];
+  return {
+    messages: message || table ? messages : messages.map((m) => ({ id: m.id, name: m.name })),
+    filters,
+    users,
+    ...(message || table ? {} : { hint: "Give message and/or table to get filter ids, and user to find users." }),
+  };
+}
+
 /** The plug-in tools. The file system is a parameter so the path rules can be tested without files. */
 export function createPluginTools(files: PluginFiles = NODE_FILES): AgentTool[] {
   const pluginsList: AgentTool = {
@@ -120,7 +182,7 @@ export function createPluginTools(files: PluginFiles = NODE_FILES): AgentTool[] 
     group: "plugins",
     title: "List plug-ins",
     description:
-      "Lists registered plug-in assemblies, types, steps and images. Narrow with assembly (name contains), table (primary table) or message. Read-only.",
+      "Lists registered plug-in assemblies, types, steps and images. Narrow with assembly (name contains), table (primary table) or message. Microsoft's own assemblies are left out unless includeSystem is true. Read-only.",
     inputSchema: {
       type: "object",
       properties: {
@@ -128,6 +190,7 @@ export function createPluginTools(files: PluginFiles = NODE_FILES): AgentTool[] 
         assembly: { type: "string", description: "Keep assemblies whose name contains this text." },
         table: { type: "string", description: "Keep steps on this table (logical name)." },
         message: { type: "string", description: "Keep steps for this message, for example Create." },
+        includeSystem: { type: "boolean", description: "Also list Microsoft's assemblies and their steps. Default false." },
       },
       additionalProperties: false,
     },
@@ -138,7 +201,8 @@ export function createPluginTools(files: PluginFiles = NODE_FILES): AgentTool[] 
         .filter((key) => typeof args[key] === "string" && args[key] !== "")
         .map((key) => `${key}=${enc(str(args[key]))}`);
       const { conn, data } = await getAgent(args, ctx, `/plugins/catalog${pairs.length ? `?${pairs.join("&")}` : ""}`);
-      return dataverseResult("Plug-in catalog.", { catalog: data }, conn.displayName);
+      const catalog = args.includeSystem === true ? data : withoutSystem(data as Catalog);
+      return dataverseResult("Plug-in catalog.", { catalog }, conn.displayName);
     },
   };
 
@@ -146,13 +210,23 @@ export function createPluginTools(files: PluginFiles = NODE_FILES): AgentTool[] 
     name: "plugins_get_step_options",
     group: "plugins",
     title: "Get step options",
-    description: "Lists the SDK messages, message filters (tables) and users a plug-in step can use, with their ids. Read-only.",
-    inputSchema: { type: "object", properties: { connection: connectionProp }, additionalProperties: false },
+    description:
+      "Lists the SDK messages a plug-in step can use, with their ids. Give message and/or table to also get the matching message filters (the filterId for a table), and user to find users to impersonate. Read-only.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        connection: connectionProp,
+        message: { type: "string", description: "Message name, for example Update. Keeps that message and its filters." },
+        table: { type: "string", description: "Table logical name. Keeps the filters (and messages) for that table." },
+        user: { type: "string", description: "Text in a user's full name. Without it no users are listed." },
+      },
+      additionalProperties: false,
+    },
     effect: "read",
     summarize: () => "plugins_get_step_options",
     async run(args, ctx) {
       const { conn, data } = await getAgent(args, ctx, "/plugins/step-options");
-      return dataverseResult("Step options.", { options: data }, conn.displayName);
+      return dataverseResult("Step options.", narrowStepOptions(data as StepOptions, args), conn.displayName);
     },
   };
 

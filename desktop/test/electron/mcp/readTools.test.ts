@@ -71,7 +71,7 @@ describe("READ_TOOLS", () => {
     const wide = { records: Array.from({ length: 500 }, () => ({ id: "x", values: { big: "y".repeat(2000) } })), moreRecords: true };
     const result = await tool("records_query").run({ fetchXml: "<fetch/>" }, ctx(async () => wide));
     expect(Buffer.byteLength((result.content[0] as { text: string }).text, "utf8")).toBeLessThanOrEqual(102400);
-    expect(JSON.stringify(result.structuredContent).length).toBeLessThan(102400);
+    expect(result.structuredContent).toBeUndefined();
   });
 
   it("marks Dataverse results untrusted but not connections_list", async () => {
@@ -82,6 +82,17 @@ describe("READ_TOOLS", () => {
     const list = await tool("connections_list").run({}, ctx(async () => null));
     expect(list._meta).toBeUndefined();
     expect(structured(list).connections).toHaveLength(1);
+  });
+
+  it("returns only the asked-for columns from records_get, with null for empty ones", async () => {
+    const row = {
+      logicalName: "account",
+      id: "x",
+      values: { name: "A", accountid: "x", transactioncurrencyid: { $type: "EntityReference" } },
+      formatted: { transactioncurrencyid: "EGP", name: "A" },
+    };
+    const rec = await tool("records_get").run({ table: "account", id: "x", columns: ["name", "revenue"] }, ctx(async () => row));
+    expect(structured(rec).record).toEqual({ logicalName: "account", id: "x", values: { name: "A", revenue: null }, formatted: { name: "A" } });
   });
 
   it("lets resolver errors propagate unchanged", async () => {

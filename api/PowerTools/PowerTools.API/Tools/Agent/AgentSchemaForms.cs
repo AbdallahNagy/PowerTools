@@ -1,3 +1,4 @@
+using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
@@ -50,7 +51,8 @@ public sealed partial class AgentSchemaService
             var formId = ParseGuid(body.FormId, "formId");
             var table = body.Table!.ToLowerInvariant();
 
-            var form = await RetrieveAsync("systemform", formId, ["objecttypecode", "type", "formxml"], ct);
+            using var hold = await EditLock.HoldAsync(formId, ct);
+            var form = await RetrieveUnpublishedAsync("systemform", formId, ["objecttypecode", "type", "formxml"], ct);
             var type = form.GetAttributeValue<OptionSetValue>("type")?.Value;
             if (!string.Equals(form.GetAttributeValue<string>("objecttypecode"), table, StringComparison.OrdinalIgnoreCase)
                 || type is not (MainForm or QuickCreateForm))
@@ -92,7 +94,8 @@ public sealed partial class AgentSchemaService
             var formId = ParseGuid(body.FormId, "formId");
             var table = body.Table!.ToLowerInvariant();
 
-            var form = await RetrieveAsync("systemform", formId, ["objecttypecode", "type", "formxml"], ct);
+            using var hold = await EditLock.HoldAsync(formId, ct);
+            var form = await RetrieveUnpublishedAsync("systemform", formId, ["objecttypecode", "type", "formxml"], ct);
             var type = form.GetAttributeValue<OptionSetValue>("type")?.Value;
             if (!string.Equals(form.GetAttributeValue<string>("objecttypecode"), table, StringComparison.OrdinalIgnoreCase)
                 || type is not (MainForm or QuickCreateForm))
@@ -133,7 +136,8 @@ public sealed partial class AgentSchemaService
             if (width is < 10 or > 1000) throw Invalid("width must be from 10 to 1000.");
             var table = body.Table!.ToLowerInvariant();
 
-            var view = await RetrieveAsync("savedquery", viewId, ["returnedtypecode", "layoutxml", "fetchxml"], ct);
+            using var hold = await EditLock.HoldAsync(viewId, ct);
+            var view = await RetrieveUnpublishedAsync("savedquery", viewId, ["returnedtypecode", "layoutxml", "fetchxml"], ct);
             if (!string.Equals(view.GetAttributeValue<string>("returnedtypecode"), table, StringComparison.OrdinalIgnoreCase))
                 throw Invalid($"View {viewId} is not a system view of '{table}'.");
 
@@ -154,11 +158,18 @@ public sealed partial class AgentSchemaService
 
     // ── Helpers ──────────────────────────────────────────────────────────────
 
-    private async Task<Entity> RetrieveAsync(string table, Guid id, string[] columns, CancellationToken ct)
+    /// <summary>
+    /// Reads a form or view as it stands, published or not. A plain Retrieve gives the published XML, so an edit
+    /// made since the last publish would be lost when the next edit writes the whole XML back.
+    /// </summary>
+    private async Task<Entity> RetrieveUnpublishedAsync(string table, Guid id, string[] columns, CancellationToken ct)
     {
         try
         {
-            return await client.RetrieveAsync(table, id, new ColumnSet(columns), ct);
+            var response = (RetrieveUnpublishedResponse)await client.ExecuteAsync(
+                new RetrieveUnpublishedRequest { Target = new EntityReference(table, id), ColumnSet = new ColumnSet(columns) },
+                ct);
+            return response.Entity;
         }
         catch (System.ServiceModel.FaultException<OrganizationServiceFault> ex)
             when (ex.Detail.ErrorCode == unchecked((int)0x80040217))

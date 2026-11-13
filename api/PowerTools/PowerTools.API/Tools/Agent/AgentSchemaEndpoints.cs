@@ -23,6 +23,7 @@ internal static class AgentSchemaEndpoints
 
         AgentEndpoints.Post<DeleteColumnBody, DeletedDto>(group, "/schema/columns/delete", (c, b, ct) => new AgentSchemaService(c).DeleteColumnAsync(b, ct));
         AgentEndpoints.Post<DeleteTableBody, DeletedDto>(group, "/schema/tables/delete", (c, b, ct) => new AgentSchemaService(c).DeleteTableAsync(b, ct));
+        AgentEndpoints.Post<DeleteChoiceBody, DeletedDto>(group, "/schema/choices/delete", (c, b, ct) => new AgentSchemaService(c).DeleteChoiceAsync(b, ct));
         AgentEndpoints.Post<DeleteRelationshipBody, DeletedDto>(group, "/schema/relationships/delete", (c, b, ct) => new AgentSchemaService(c).DeleteRelationshipAsync(b, ct));
 
         group.MapGet("/metadata/forms", async (string? table, HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>

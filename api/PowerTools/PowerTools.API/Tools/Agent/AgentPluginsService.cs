@@ -129,7 +129,10 @@ public sealed class AgentPluginsService(IAgentClient client, IPluginAssemblyInsp
                 new AssemblyRegisterRequest(RegistrationOptionValues.IsolationSandbox, RegistrationOptionValues.SourceDatabase),
                 capabilities,
                 ct);
-            await AddToSolutionAsync(body.Solution, result.Id, RegistrationOptionValues.ComponentTypePluginAssembly, ct);
+            await AddToSolutionOrUndoAsync(
+                body.Solution, result.Id, RegistrationOptionValues.ComponentTypePluginAssembly,
+                // Deleting the assembly deletes the plug-in types registered with it.
+                () => client.DeleteAsync("pluginassembly", result.Id, CancellationToken.None), ct);
             return AgentResult<MutationResultDto>.Ok(result);
         });
 
@@ -148,7 +151,10 @@ public sealed class AgentPluginsService(IAgentClient client, IPluginAssemblyInsp
         Guard(async () =>
         {
             var result = await new StepService(Gateway).CreateAsync(body.ToDraft(), ct);
-            await AddToSolutionAsync(body.Solution, result.Id, RegistrationOptionValues.ComponentTypeSdkMessageProcessingStep, ct);
+            await AddToSolutionOrUndoAsync(
+                body.Solution, result.Id, RegistrationOptionValues.ComponentTypeSdkMessageProcessingStep,
+                // Unregistering also removes the secure configuration the step may have been created with.
+                () => new UnregisterService(Gateway).UnregisterStepAsync(result.Id, CancellationToken.None), ct);
             return AgentResult<MutationResultDto>.Ok(result);
         });
 
@@ -206,18 +212,42 @@ public sealed class AgentPluginsService(IAgentClient client, IPluginAssemblyInsp
         return (Path.GetFileName(fileName), bytes);
     }
 
-    private async Task AddToSolutionAsync(string? solution, Guid componentId, int componentType, CancellationToken ct)
+    /// <summary>
+    /// Adds what was just registered to the solution. When that fails (a solution with patches, a managed one, a
+    /// typo) the registration is undone, so a failed call never leaves a component outside the solution.
+    /// </summary>
+    private async Task AddToSolutionOrUndoAsync(
+        string? solution, Guid componentId, int componentType, Func<Task> undo, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(solution)) return;
-        await client.ExecuteAsync(
-            new AddSolutionComponentRequest
+        try
+        {
+            await client.ExecuteAsync(
+                new AddSolutionComponentRequest
+                {
+                    ComponentId = componentId,
+                    ComponentType = componentType,
+                    SolutionUniqueName = solution.Trim(),
+                    AddRequiredComponents = false,
+                },
+                ct);
+        }
+        catch (Exception addFailure)
+        {
+            try
             {
-                ComponentId = componentId,
-                ComponentType = componentType,
-                SolutionUniqueName = solution.Trim(),
-                AddRequiredComponents = false,
-            },
-            ct);
+                await undo();
+            }
+            catch (Exception undoFailure)
+            {
+                throw new AgentProblemException(AgentFaults.InvalidRequest(
+                    $"It was registered (id {componentId}) but could not be added to solution '{solution.Trim()}': "
+                    + $"{AgentFaults.From(addFailure).Message} Undoing the registration failed too: "
+                    + $"{AgentFaults.From(undoFailure).Message} Unregister it by hand."));
+            }
+
+            throw;
+        }
     }
 
     private static async Task<AgentResult<T>> Guard<T>(Func<Task<AgentResult<T>>> work)

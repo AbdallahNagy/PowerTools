@@ -248,6 +248,7 @@ public class AgentSchemaServiceTests
         Assert.Null(result.Problem);
         var attribute = Assert.IsType<PicklistAttributeMetadata>(Only<CreateAttributeRequest>(client).Attribute);
         Assert.Equal([100000000, 100000001, 5], attribute.OptionSet.Options.Select(o => o.Value!.Value));
+        Assert.False(attribute.OptionSet.IsGlobal);
         Assert.Equal(["Hot", "Warm", "Cold"], attribute.OptionSet.Options.Select(o => Label(o.Label)));
     }
 
@@ -459,7 +460,10 @@ public class AgentSchemaServiceTests
     [Fact]
     public async Task Add_option_takes_a_global_choice_or_a_table_and_column()
     {
-        var (service, client) = Make(request => Responses.Of<InsertOptionValueResponse>(("NewOptionValue", 42)));
+        var local = new PicklistAttributeMetadata { LogicalName = "new_rating", OptionSet = new OptionSetMetadata { IsGlobal = false } };
+        var (service, client) = Make(request => request is RetrieveAttributeRequest
+            ? Responses.Of<RetrieveAttributeResponse>(("AttributeMetadata", local))
+            : Responses.Of<InsertOptionValueResponse>(("NewOptionValue", 42)));
 
         var byName = await service.AddChoiceOptionAsync(new AddChoiceOptionBody { Choice = "new_colors", Label = "Green" }, CancellationToken.None);
         var byColumn = await service.AddChoiceOptionAsync(new AddChoiceOptionBody { Table = "account", Column = "new_rating", Label = "Cold", Value = 7 }, CancellationToken.None);
@@ -471,6 +475,45 @@ public class AgentSchemaServiceTests
         Assert.Equal("new_rating", requests[1].AttributeLogicalName);
         Assert.Equal(7, requests[1].Value);
         Assert.Equal("Cold", Label(requests[1].Label));
+    }
+
+    [Fact]
+    public async Task Add_option_on_a_column_with_a_global_choice_adds_it_to_that_choice()
+    {
+        var column = new PicklistAttributeMetadata { LogicalName = "new_rating", OptionSet = new OptionSetMetadata { IsGlobal = true, Name = "new_ratings" } };
+        var (service, client) = Make(request => request is RetrieveAttributeRequest
+            ? Responses.Of<RetrieveAttributeResponse>(("AttributeMetadata", column))
+            : Responses.Of<InsertOptionValueResponse>(("NewOptionValue", 3)));
+
+        var result = await service.AddChoiceOptionAsync(new AddChoiceOptionBody { Table = "account", Column = "new_rating", Label = "Hot" }, CancellationToken.None);
+
+        Assert.Null(result.Problem);
+        var request = Only<InsertOptionValueRequest>(client);
+        Assert.Equal("new_ratings", request.OptionSetName);
+        Assert.Null(request.EntityLogicalName);
+    }
+
+    [Fact]
+    public async Task Add_option_in_a_solution_numbers_from_the_publisher_prefix_and_skips_used_values()
+    {
+        var set = new OptionSetMetadata(new OptionMetadataCollection
+        {
+            new(new Label("A", 1033), 100000000),
+            new(new Label("B", 1033), 100000001),
+        }) { Name = "new_colors", IsGlobal = true };
+        var (service, client) = Make(request => request switch
+        {
+            RetrieveOptionSetRequest => Responses.Of<RetrieveOptionSetResponse>(("OptionSetMetadata", set)),
+            _ => Responses.Of<InsertOptionValueResponse>(("NewOptionValue", 100000002)),
+        });
+
+        var result = await service.AddChoiceOptionAsync(
+            new AddChoiceOptionBody { Choice = "new_colors", Label = "C", Solution = "Core" }, CancellationToken.None);
+
+        Assert.Null(result.Problem);
+        var request = Only<InsertOptionValueRequest>(client);
+        Assert.Equal(100000002, request.Value);
+        Assert.Equal("Core", request.SolutionUniqueName);
     }
 
     [Fact]

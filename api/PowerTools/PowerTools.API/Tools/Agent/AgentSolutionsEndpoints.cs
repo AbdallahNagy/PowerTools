@@ -22,6 +22,7 @@ internal static class AgentSolutionsEndpoints
         Post<CloneSolutionBody, SolutionCreatedDto>(group, "/solutions/clone", (s, b, ct) => s.CloneAsync(b, ct));
         Post<SolutionComponentBody, SolutionComponentChangedDto>(group, "/solutions/components/add", (s, b, ct) => s.AddComponentAsync(b, ct));
         Post<SolutionComponentBody, SolutionComponentChangedDto>(group, "/solutions/components/remove", (s, b, ct) => s.RemoveComponentAsync(b, ct));
+        Post<DeleteSolutionBody, SolutionDeletedDto>(group, "/solutions/delete", (s, b, ct) => s.DeleteAsync(b, ct));
         Post<RemoveActiveLayerBody, LayersResponse>(group, "/solutions/layers/remove-active", (s, b, ct) => s.RemoveActiveLayerAsync(b, ct));
     }
 

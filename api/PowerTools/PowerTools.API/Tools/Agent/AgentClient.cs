@@ -30,6 +30,12 @@ public interface IAgentClient :
     Task UpdateAsync(Entity entity, CancellationToken cancellationToken);
 
     Task DeleteAsync(string table, Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Sends a Web API request (path relative to /api/data/v9.2/) and answers the response body. For the few
+    /// changes the SDK accepts but does not apply, such as a column's required level.
+    /// </summary>
+    Task<string> WebApiAsync(HttpMethod method, string path, string? body, IReadOnlyDictionary<string, string>? headers, CancellationToken cancellationToken);
 }
 
 public sealed class DataverseAgentClient(IOrganizationServiceAsync2 service) : IAgentClient
@@ -51,6 +57,27 @@ public sealed class DataverseAgentClient(IOrganizationServiceAsync2 service) : I
 
     public Task DeleteAsync(string table, Guid id, CancellationToken cancellationToken) =>
         service.DeleteAsync(table, id, cancellationToken);
+
+    public async Task<string> WebApiAsync(
+        HttpMethod method, string path, string? body, IReadOnlyDictionary<string, string>? headers, CancellationToken cancellationToken)
+    {
+        if (service is not ServiceClient web)
+            throw new NotSupportedException("This connection cannot send Web API requests.");
+
+        var custom = (headers ?? new Dictionary<string, string>())
+            .ToDictionary(pair => pair.Key, pair => new List<string> { pair.Value });
+        // ExecuteWebRequest is synchronous; keep it off the request thread.
+        var response = await Task.Run(
+            () => web.ExecuteWebRequest(method, path, body ?? "", custom, "application/json", cancellationToken),
+            cancellationToken);
+        if (response is null)
+            throw new InvalidOperationException(web.LastError is { Length: > 0 } error ? error : "The Web API request failed.");
+
+        var text = response.Content is null ? "" : await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Web API {method} {path} failed ({(int)response.StatusCode}): {text}");
+        return text;
+    }
 }
 
 /// <summary>Supplies the Dataverse client for a request. Tests register one to drive the routes without an environment.</summary>

@@ -22,6 +22,16 @@ public sealed class FakeAgentClient : IAgentClient
     public Task<OrganizationResponse> ExecuteAsync(OrganizationRequest request, CancellationToken cancellationToken)
     {
         Executed.Add(request);
+        // Unpublished reads come from the same records as plain reads.
+        if (request is Microsoft.Crm.Sdk.Messages.RetrieveUnpublishedRequest unpublished)
+        {
+            var target = unpublished.Target;
+            if (!Records.TryGetValue((target.LogicalName, target.Id), out var row))
+                throw Fault(unchecked((int)0x80040217), $"{target.LogicalName} {target.Id} does not exist.");
+            var response = new Microsoft.Crm.Sdk.Messages.RetrieveUnpublishedResponse { Results = new ParameterCollection { ["Entity"] = row } };
+            return Task.FromResult<OrganizationResponse>(response);
+        }
+
         return Task.FromResult(OnExecute(request));
     }
 
@@ -68,6 +78,16 @@ public sealed class FakeAgentClient : IAgentClient
     {
         Deleted.Add((table, id));
         return Task.CompletedTask;
+    }
+
+    public List<(HttpMethod Method, string Path, string? Body, IReadOnlyDictionary<string, string>? Headers)> WebCalls { get; } = [];
+    public Func<HttpMethod, string, string?, string> OnWebApi { get; set; } = (_, _, _) => "{}";
+
+    public Task<string> WebApiAsync(
+        HttpMethod method, string path, string? body, IReadOnlyDictionary<string, string>? headers, CancellationToken cancellationToken)
+    {
+        WebCalls.Add((method, path, body, headers));
+        return Task.FromResult(OnWebApi(method, path, body));
     }
 
     /// <summary>Applies the Equal conditions of a query to a row, the way the tests need them.</summary>

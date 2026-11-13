@@ -80,6 +80,22 @@ public class AgentPluginsServiceTests
     }
 
     [Fact]
+    public async Task Register_assembly_is_undone_when_it_cannot_be_added_to_the_solution()
+    {
+        var (service, client, _) = Make();
+        client.OnExecute = request => request is AddSolutionComponentRequest
+            ? throw FakeAgentClient.Fault(unchecked((int)0x80048538), "Cannot modify solution because it has patches.")
+            : new OrganizationResponse();
+
+        var result = await service.RegisterAssemblyAsync(
+            new RegisterAssemblyBody { FileName = "a.dll", ContentBase64 = Base64, Solution = "Core" }, CancellationToken.None);
+
+        Assert.NotNull(result.Problem);
+        Assert.Contains("patches", result.Problem!.Message);
+        Assert.Equal([("pluginassembly", AssemblyId)], client.Deleted);
+    }
+
+    [Fact]
     public async Task The_agent_path_creates_the_same_assembly_as_the_stream_path_of_the_existing_service()
     {
         var (service, agentClient, _) = Make();

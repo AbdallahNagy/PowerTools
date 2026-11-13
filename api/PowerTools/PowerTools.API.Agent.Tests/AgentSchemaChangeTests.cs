@@ -27,13 +27,15 @@ public class AgentSchemaChangeTests
         new() { LogicalName = "new_title", SchemaName = "new_Title", MaxLength = maxLength, MetadataId = ColumnId };
 
     [Fact]
-    public async Task Update_column_sets_the_given_fields_and_merges_labels()
+    public async Task Update_column_without_a_required_level_sends_only_the_changed_fields_through_the_sdk()
     {
-        var (service, client) = Make(Text());
+        var column = Text();
+        column.DisplayName = new Label("Old", 1033);
+        var (service, client) = Make(column);
 
         var result = await service.UpdateColumnAsync(new UpdateColumnBody
         {
-            Table = "account", Column = "new_title", DisplayName = "Title", Description = "The title", RequiredLevel = "recommended", MaxLength = 300,
+            Table = "account", Column = "new_title", DisplayName = "Title", Description = "The title", MaxLength = 300,
         }, CancellationToken.None);
 
         Assert.Null(result.Problem);
@@ -41,12 +43,77 @@ public class AgentSchemaChangeTests
         var request = Assert.Single(client.Executed.OfType<UpdateAttributeRequest>());
         Assert.True(request.MergeLabels);
         Assert.Equal("account", request.EntityName);
-        var attribute = Assert.IsType<StringAttributeMetadata>(request.Attribute);
-        Assert.Equal(300, attribute.MaxLength);
-        Assert.Equal("Title", attribute.DisplayName.LocalizedLabels.Single().Label);
-        Assert.Equal(1033, attribute.DisplayName.LocalizedLabels.Single().LanguageCode);
-        Assert.Equal("The title", attribute.Description.LocalizedLabels.Single().Label);
-        Assert.Equal(AttributeRequiredLevel.Recommended, attribute.RequiredLevel.Value);
+        var sent = Assert.IsType<StringAttributeMetadata>(request.Attribute);
+        Assert.NotSame(column, sent);
+        Assert.Equal((ColumnId, "new_title", "new_Title"), (sent.MetadataId!.Value, sent.LogicalName, sent.SchemaName));
+        Assert.Equal(300, sent.MaxLength);
+        Assert.Equal("Title", sent.DisplayName.LocalizedLabels.Single().Label);
+        Assert.Equal("The title", sent.Description.LocalizedLabels.Single().Label);
+        Assert.Null(sent.RequiredLevel);
+        Assert.Empty(client.WebCalls);
+    }
+
+    [Fact]
+    public async Task Update_column_changes_the_required_level_with_a_web_api_put_of_the_whole_definition()
+    {
+        var column = Text(200);
+        column.DisplayName = new Label("Unpublished title", 1033);
+        column.RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.None);
+        var (service, client) = Make(column);
+        client.OnWebApi = (method, _, _) => method == HttpMethod.Get
+            ? """{"@odata.context":"x","LogicalName":"new_title","MaxLength":100,"RequiredLevel":{"Value":"None","CanBeChanged":true,"ManagedPropertyLogicalName":"canmodifyrequirementlevelsettings"},"DisplayName":{"LocalizedLabels":[{"Label":"Published title","LanguageCode":1033}],"UserLocalizedLabel":{"Label":"Published title","LanguageCode":1033}},"Description":{"LocalizedLabels":[]}}"""
+            : "";
+
+        var result = await service.UpdateColumnAsync(
+            new UpdateColumnBody { Table = "account", Column = "new_title", RequiredLevel = "required", Description = "Why", Solution = "Core" },
+            CancellationToken.None);
+
+        Assert.Null(result.Problem);
+        Assert.Empty(client.Executed.OfType<UpdateAttributeRequest>());
+        Assert.Equal(2, client.WebCalls.Count);
+        var get = client.WebCalls[0];
+        Assert.Equal((HttpMethod.Get, "EntityDefinitions(LogicalName='account')/Attributes(LogicalName='new_title')/Microsoft.Dynamics.CRM.StringAttributeMetadata"), (get.Method, get.Path));
+        var put = client.WebCalls[1];
+        Assert.Equal((HttpMethod.Put, "EntityDefinitions(LogicalName='account')/Attributes(LogicalName='new_title')"), (put.Method, put.Path));
+        Assert.Equal("true", put.Headers!["MSCRM.MergeLabels"]);
+        Assert.Equal("Core", put.Headers!["MSCRM.SolutionUniqueName"]);
+        var body = System.Text.Json.Nodes.JsonNode.Parse(put.Body!)!.AsObject();
+        Assert.False(body.ContainsKey("@odata.context"));
+        Assert.Equal("#Microsoft.Dynamics.CRM.StringAttributeMetadata", (string?)body["@odata.type"]);
+        Assert.Equal("ApplicationRequired", (string?)body["RequiredLevel"]!["Value"]);
+        Assert.Equal("Unpublished title", (string?)body["DisplayName"]!["LocalizedLabels"]![0]!["Label"]);
+        Assert.Equal("Why", (string?)body["Description"]!["LocalizedLabels"]![0]!["Label"]);
+        Assert.Equal(200, (int?)body["MaxLength"]);
+        Assert.Single(client.Executed.OfType<AddSolutionComponentRequest>());
+    }
+
+    [Fact]
+    public async Task Update_column_to_the_same_required_level_changes_nothing()
+    {
+        var column = Text();
+        column.RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.Recommended);
+        var (service, client) = Make(column);
+
+        var result = await service.UpdateColumnAsync(
+            new UpdateColumnBody { Table = "account", Column = "new_title", RequiredLevel = "recommended" }, CancellationToken.None);
+
+        Assert.Null(result.Problem);
+        Assert.Empty(client.WebCalls);
+        Assert.Empty(client.Executed.OfType<UpdateAttributeRequest>());
+    }
+
+    [Fact]
+    public async Task Update_column_refuses_a_required_level_the_column_does_not_allow_to_change()
+    {
+        var column = Text();
+        column.RequiredLevel = new AttributeRequiredLevelManagedProperty(AttributeRequiredLevel.None) { CanBeChanged = false };
+        var (service, client) = Make(column);
+
+        var result = await service.UpdateColumnAsync(
+            new UpdateColumnBody { Table = "account", Column = "new_title", RequiredLevel = "required" }, CancellationToken.None);
+
+        Assert.Equal("InvalidRequest", result.Problem!.Code);
+        Assert.Empty(client.Executed.OfType<UpdateAttributeRequest>());
     }
 
     [Fact]
@@ -57,7 +124,7 @@ public class AgentSchemaChangeTests
         await service.UpdateColumnAsync(new UpdateColumnBody { Table = "account", Column = "new_title", DisplayName = "Title", Solution = "Core" }, CancellationToken.None);
 
         var request = Assert.Single(client.Executed.OfType<UpdateAttributeRequest>());
-        Assert.Equal(200, ((StringAttributeMetadata)request.Attribute).MaxLength);
+        Assert.Null(((StringAttributeMetadata)request.Attribute).MaxLength);
         Assert.Equal("Core", request.SolutionUniqueName);
         var add = Assert.Single(client.Executed.OfType<AddSolutionComponentRequest>());
         Assert.Equal(ColumnId, add.ComponentId);

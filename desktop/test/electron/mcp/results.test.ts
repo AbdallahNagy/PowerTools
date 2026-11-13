@@ -4,6 +4,7 @@ import {
   dataverseResult,
   MAX_TEXT_BYTES,
   plainResult,
+  TRUNCATION_NOTE,
   truncateText,
   UNTRUSTED_PREFIX,
 } from "../../../src/electron/mcp/results";
@@ -15,7 +16,7 @@ describe("truncateText", () => {
 
   it("caps long text and adds the note", () => {
     const out = truncateText("x".repeat(200 * 1024));
-    expect(out.endsWith("[truncated: narrow the query or request a smaller page]")).toBe(true);
+    expect(out.endsWith(TRUNCATION_NOTE)).toBe(true);
     expect(Buffer.byteLength(out, "utf8")).toBeLessThanOrEqual(MAX_TEXT_BYTES);
   });
 
@@ -42,6 +43,14 @@ describe("results", () => {
     expect(r._meta?.["powertools/untrusted"]).toBe(true);
     expect((r.content[0] as { text: string }).text.startsWith(UNTRUSTED_PREFIX)).toBe(true);
     expect(r.structuredContent).toEqual({ connection: "A · Dev", rows: [1] });
+  });
+
+  it("drops the structured copy of a too-large result so clients read the capped text", () => {
+    const r = dataverseResult("big", { rows: ["x".repeat(200 * 1024)] }, "A · Dev");
+    expect(r.structuredContent).toBeUndefined();
+    const text = (r.content[0] as { text: string }).text;
+    expect(text).toContain('"rows":["xxx');
+    expect(text.endsWith(TRUNCATION_NOTE)).toBe(true);
   });
 
   it("does not mark plain results", () => {

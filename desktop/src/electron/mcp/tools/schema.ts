@@ -349,7 +349,7 @@ export const schemaAddColumnToForm = change({
     additionalProperties: false,
   },
   route: "/schema/forms/add-column",
-  done: "Column added to the form.",
+  done: "Column added to the form. Call schema_publish for the table to make it visible.",
   describe: (args) => ({ summary: `add column ${str(args.column)} to a ${str(args.table)} form` }),
   summarize: (args) => `schema_add_column_to_form ${str(args.table)}.${str(args.column)}`,
 });
@@ -373,7 +373,7 @@ export const schemaAddColumnToView = change({
     additionalProperties: false,
   },
   route: "/schema/views/add-column",
-  done: "Column added to the view.",
+  done: "Column added to the view. Call schema_publish for the table to make it visible.",
   describe: (args) => ({ summary: `add column ${str(args.column)} to a ${str(args.table)} view` }),
   summarize: (args) => `schema_add_column_to_view ${str(args.table)}.${str(args.column)}`,
 });
@@ -461,6 +461,29 @@ export const schemaDeleteRelationship = destructive({
   summarize: (args) => `schema_delete_relationship ${str(args.schemaName)}`,
 });
 
+export const schemaDeleteChoice = destructive({
+  name: "schema_delete_choice",
+  title: "Delete global choice",
+  description:
+    "Destructive: deletes a custom global choice (option set). Dataverse refuses one that columns still use; system and managed choices are refused. It cannot be undone. Always asks the user.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      connection: connectionProp,
+      choice: { type: "string", minLength: 1, description: "Name of the global choice to delete." },
+    },
+    required: ["choice"],
+    additionalProperties: false,
+  },
+  route: "/schema/choices/delete",
+  done: "Choice deleted.",
+  describe: (args) => ({
+    summary: `delete global choice ${str(args.choice)}`,
+    removes: `global choice ${str(args.choice)} and its options`,
+  }),
+  summarize: (args) => `schema_delete_choice ${str(args.choice)}`,
+});
+
 export const schemaRemoveColumnFromForm = destructive({
   name: "schema_remove_column_from_form",
   title: "Remove column from form",
@@ -479,7 +502,7 @@ export const schemaRemoveColumnFromForm = destructive({
     additionalProperties: false,
   },
   route: "/schema/forms/remove-column",
-  done: "Column removed from the form.",
+  done: "Column removed from the form. Call schema_publish for the table to make it visible.",
   describe: (args) => ({
     summary: `remove column ${str(args.column)} from a form of ${str(args.table)}`,
     removes: `column ${str(args.column)} from form ${str(args.formId)} (the column and its data stay)`,
@@ -502,4 +525,5 @@ export const SCHEMA_TOOLS: AgentTool[] = [
   schemaDeleteColumn,
   schemaDeleteTable,
   schemaDeleteRelationship,
+  schemaDeleteChoice,
 ];

@@ -279,6 +279,7 @@ Class: R read, C change, D destructive. Backend: **CT** existing `/api/community
 | `schema_delete_column` | D | Delete a column | NEW |
 | `schema_delete_table` | D | Delete a custom table | NEW |
 | `schema_delete_relationship` | D | Delete a relationship | SVC (PolymorphicLookup) + NEW |
+| `schema_delete_choice` | D | Delete a custom global choice | NEW |
 | **solutions** | | | |
 | `solutions_list` | R | Solutions (unmanaged filter, patches flagged) | SVC (Mover) |
 | `solutions_list_components` | R | Components of a solution, by type | SVC (Mover / Layers) |
@@ -290,6 +291,7 @@ Class: R read, C change, D destructive. Backend: **CT** existing `/api/community
 | `solutions_clone` | D | Roll up patches into a new version (`CloneAsSolution` deletes the patches) | NEW |
 | `solutions_list_layers` | R | Solution layers of a component | SVC (Layers) |
 | `solutions_remove_active_layer` | D | Remove a component's unmanaged active layer | SVC (Layers) |
+| `solutions_delete` | D | Delete an unmanaged solution (components stay) | NEW |
 | **plugins** | | | |
 | `plugins_list` | R | Assemblies, types, steps and images, filterable | SVC (PluginRegistration catalog) |
 | `plugins_get_step_options` | R | Valid messages and tables for a step | SVC |

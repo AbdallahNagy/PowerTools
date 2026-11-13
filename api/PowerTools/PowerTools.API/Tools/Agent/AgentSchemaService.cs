@@ -188,7 +188,12 @@ public sealed partial class AgentSchemaService(IAgentClient client)
             return new OptionSetMetadata { Name = existing.Name, IsGlobal = true, MetadataId = existing.MetadataId };
         }
 
-        return new OptionSetMetadata(BuildOptions(body.Options!, publisher, language)) { OptionSetType = OptionSetType.Picklist };
+        // Dataverse refuses a local option set unless IsGlobal is stated as false.
+        return new OptionSetMetadata(BuildOptions(body.Options!, publisher, language))
+        {
+            IsGlobal = false,
+            OptionSetType = OptionSetType.Picklist,
+        };
     }
 
     /// <summary>Values the caller left out count up from <c>OptionValuePrefix * 10000</c>, in the order given.</summary>
@@ -365,15 +370,43 @@ public sealed partial class AgentSchemaService(IAgentClient client)
             if (byName == byColumn) throw Invalid("Give either choice, or table and column.");
 
             var language = await RequireLanguageAsync(ct);
-            var request = new InsertOptionValueRequest { Label = Text(body.Label!, language), Value = body.Value };
+            var request = new InsertOptionValueRequest
+            {
+                Label = Text(body.Label!, language),
+                Value = body.Value,
+                SolutionUniqueName = NullIfBlank(body.Solution),
+            };
+            OptionSetMetadata? existing = null;
             if (byName)
             {
                 request.OptionSetName = body.Choice;
             }
             else
             {
-                request.EntityLogicalName = body.Table!.ToLowerInvariant();
-                request.AttributeLogicalName = body.Column!.ToLowerInvariant();
+                var attribute = await RetrieveColumnAsync(body.Table!, body.Column!, ct);
+                existing = (attribute as EnumAttributeMetadata)?.OptionSet
+                    ?? throw Invalid($"Column '{body.Column}' is not a choice column.");
+                if (existing.IsGlobal == true && !string.IsNullOrWhiteSpace(existing.Name))
+                {
+                    // Dataverse refuses to reach a global choice through a column; add to the choice itself.
+                    request.OptionSetName = existing.Name;
+                }
+                else
+                {
+                    request.EntityLogicalName = body.Table!.ToLowerInvariant();
+                    request.AttributeLogicalName = body.Column!.ToLowerInvariant();
+                }
+            }
+
+            if (request.Value is null && !string.IsNullOrWhiteSpace(body.Solution))
+            {
+                // Number the option from the solution publisher's prefix, as the maker portal does.
+                var publisher = await RequirePublisherAsync(body.Solution, null, ct);
+                existing ??= await RetrieveChoiceAsync(body.Choice!, ct);
+                var used = existing.Options.Select(option => option.Value).OfType<int>().ToHashSet();
+                var next = checked(publisher.OptionValuePrefix * 10000);
+                while (used.Contains(next)) next++;
+                request.Value = next;
             }
 
             var response = await client.ExecuteAsync(request, ct);

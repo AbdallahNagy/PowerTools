@@ -20,6 +20,11 @@ public sealed class DeleteRelationshipBody
     public string? SchemaName { get; set; }
 }
 
+public sealed class DeleteChoiceBody
+{
+    public string? Choice { get; set; }
+}
+
 public sealed record DeletedDto(string Name);
 
 public sealed partial class AgentSchemaService
@@ -51,6 +56,20 @@ public sealed partial class AgentSchemaService
 
             await client.ExecuteAsync(new DeleteEntityRequest { LogicalName = table }, ct);
             return AgentResult<DeletedDto>.Ok(new DeletedDto(table));
+        });
+
+    /// <summary>Deletes a custom global choice. Dataverse refuses one that columns still use.</summary>
+    public Task<AgentResult<DeletedDto>> DeleteChoiceAsync(DeleteChoiceBody body, CancellationToken ct) =>
+        Guard(async () =>
+        {
+            Require(body.Choice, "choice");
+            var set = await RetrieveChoiceAsync(body.Choice!, ct);
+            if (set.IsGlobal != true) throw Invalid($"'{body.Choice}' is not a global choice.");
+            if (set.IsCustomOptionSet != true) throw Invalid($"Choice '{set.Name}' is not a custom choice, so it cannot be deleted.");
+            if (set.IsManaged == true) throw Invalid($"Choice '{set.Name}' is managed; remove the solution that brought it instead.");
+
+            await client.ExecuteAsync(new DeleteOptionSetRequest { Name = set.Name }, ct);
+            return AgentResult<DeletedDto>.Ok(new DeletedDto(set.Name!));
         });
 
     public Task<AgentResult<DeletedDto>> DeleteRelationshipAsync(DeleteRelationshipBody body, CancellationToken ct) =>
