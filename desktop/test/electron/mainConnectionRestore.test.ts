@@ -57,6 +57,11 @@ vi.mock("electron", () => {
     },
     protocol: { registerSchemesAsPrivileged: vi.fn(), handle: vi.fn() },
     shell: { openExternal: vi.fn() },
+    safeStorage: {
+      isEncryptionAvailable: () => false,
+      encryptString: vi.fn(),
+      decryptString: vi.fn(),
+    },
   };
 });
 
