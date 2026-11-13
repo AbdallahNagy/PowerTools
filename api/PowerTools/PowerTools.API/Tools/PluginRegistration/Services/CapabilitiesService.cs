@@ -6,9 +6,11 @@ namespace PowerTools.API.Tools.PluginRegistration.Services;
 
 public sealed class CapabilitiesService(ICurrentConnection connection)
 {
-    public CapabilitiesDto Get()
+    public CapabilitiesDto Get() => For(connection.Context is OnlineConnectionContext);
+
+    /// <summary>What an online or on-premises environment allows.</summary>
+    public static CapabilitiesDto For(bool isOnline)
     {
-        var isOnline = connection.Context is OnlineConnectionContext;
         return isOnline
             ? new CapabilitiesDto(
                 true,

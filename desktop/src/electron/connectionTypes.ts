@@ -34,6 +34,8 @@ export type ConnectionDescription = {
 
 type ConnectionMeta = ConnectionDescription & {
   id: string;
+  /** Agents may make non-destructive changes on this connection without asking. Absent means off. */
+  agentChangesWithoutAsking?: boolean;
   /** Name from before organizations existed. Kept only until organization and environment are set. */
   legacyName?: string;
 };
@@ -65,4 +67,5 @@ export type ConnectionSummary = ConnectionDescription & {
   envUrl: string;
   crmType: CrmType;
   needsPassword: boolean;
+  agentChangesWithoutAsking: boolean;
 };

@@ -9,6 +9,11 @@ test("packaged renderer policy forbids eval and inline scripts", () => {
   expect(policy).not.toMatch(/unsafe-eval/);
   expect(policy).toMatch(/connect-src 'self' http:\/\/127\.0\.0\.1:\*(;|$)/);
   expect(policy).toMatch(/object-src 'none'/);
+  expect(policy).toMatch(/frame-src pt-tool:(;|$)/);
+});
+
+test("dev renderer policy also frames community tools only", () => {
+  expect(buildContentSecurityPolicy({ dev: true })).toMatch(/frame-src pt-tool:(;|$)/);
 });
 
 test("dev renderer policy allows the Vite preamble and HMR socket without eval", () => {

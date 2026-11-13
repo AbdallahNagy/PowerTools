@@ -1,5 +1,6 @@
 import axios, { AxiosError } from "axios";
 import type { AxiosRequestConfig } from "axios";
+import { sidecarAuthHeaders } from "../../../electron/sidecarHeaders";
 import { desktopBridge } from "../../platform/desktopBridge";
 
 interface CachedAuth {
@@ -135,21 +136,12 @@ api.interceptors.request.use(async (config) => {
     ? await loadTargetAuth(config.meta.connectionId)
     : await loadAuth();
 
-  if (auth.crmType === "online") {
-    config.headers.set("Authorization", `Bearer ${auth.token}`);
-    config.headers.set("X-Environment-Url", auth.envUrl);
-  } else {
-    // The sidecar keys on-premises connections by id; the header name predates ids.
-    config.headers.set("X-Connection-Name", auth.id);
-  }
+  for (const [name, value] of Object.entries(sidecarAuthHeaders(auth))) config.headers.set(name, value);
 
   if (config.meta?.targetConnectionId) {
     const target = await loadTargetAuth(config.meta.targetConnectionId);
-    if (target.crmType === "online") {
-      config.headers.set("X-Target-Authorization", `Bearer ${target.token}`);
-      config.headers.set("X-Target-Environment-Url", target.envUrl);
-    } else {
-      config.headers.set("X-Target-Connection-Name", target.id);
+    for (const [name, value] of Object.entries(sidecarAuthHeaders(target, "Target-"))) {
+      config.headers.set(name, value);
     }
   }
 

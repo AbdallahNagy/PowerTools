@@ -9,7 +9,7 @@ import {
   type ConnectionSummary,
   type ImportPreview,
 } from "../../shared/connections";
-import { Alert, Badge, Button, Field, Input, Modal, SearchInput } from "../../shared/ui";
+import { Alert, Badge, Button, Checkbox, Field, Input, Modal, SearchInput } from "../../shared/ui";
 import { ConnectionGroupList, ProductionBadge } from "../connections/ConnectionGroupList";
 import { ConnectionDescriptionFields } from "./ConnectionDescriptionFields";
 import {
@@ -212,6 +212,7 @@ interface ConnectionEditorProps {
 function ConnectionEditor({ connection, connections, browsers, onNotice }: ConnectionEditorProps) {
   const [draft, setDraft] = useState<DescriptionDraft>(() => draftFrom(connection));
   const [password, setPassword] = useState("");
+  const [agentChanges, setAgentChanges] = useState(connection.agentChangesWithoutAsking === true);
   const [triedSave, setTriedSave] = useState(false);
   const [saving, setSaving] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -222,6 +223,7 @@ function ConnectionEditor({ connection, connections, browsers, onNotice }: Conne
     draft.organization.trim() !== original.organization ||
     draft.environment.trim() !== original.environment ||
     JSON.stringify(draft.browser) !== JSON.stringify(original.browser) ||
+    agentChanges !== (connection.agentChangesWithoutAsking === true) ||
     password.length > 0;
 
   const save = async (event: React.FormEvent) => {
@@ -238,6 +240,7 @@ function ConnectionEditor({ connection, connections, browsers, onNotice }: Conne
       organization: draft.organization.trim(),
       environment: draft.environment.trim(),
       browser: draft.browser,
+      ...(agentChanges !== (connection.agentChangesWithoutAsking === true) ? { agentChangesWithoutAsking: agentChanges } : {}),
       ...(password ? { password } : {}),
     });
     setSaving(false);
@@ -296,6 +299,21 @@ function ConnectionEditor({ connection, connections, browsers, onNotice }: Conne
         showRequired={triedSave}
       />
 
+      <div className="flex flex-col gap-1">
+        <label className="flex items-center gap-2 text-sm text-fg-strong">
+          <Checkbox
+            checked={agentChanges}
+            onChange={(next) => {
+              setAgentChanges(next);
+              setError(null);
+            }}
+            aria-label="Let agents make non-destructive changes without asking"
+          />
+          Let agents make non-destructive changes without asking
+        </label>
+        <p className="pl-6 text-xs text-fg-muted">Deletions and other destructive changes always ask.</p>
+      </div>
+
       <div>
         <Button variant="secondary" size="sm" onClick={() => void testBrowser()}>
           Test: open this environment
@@ -325,6 +343,7 @@ function ConnectionEditor({ connection, connections, browsers, onNotice }: Conne
         </Button>
         <Button variant="ghost" disabled={!dirty || saving} onClick={() => {
           setDraft(original);
+          setAgentChanges(connection.agentChangesWithoutAsking === true);
           setPassword("");
           setError(null);
           setTriedSave(false);

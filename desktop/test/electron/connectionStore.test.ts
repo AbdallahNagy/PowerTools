@@ -121,6 +121,28 @@ describe("connection store", () => {
     expect(store.activeId).toBe("id-1");
   });
 
+  it("defaults the agent switch to off, including for files from before it existed", () => {
+    const { store } = storeWith([online({ id: "a", organization: "Contoso", environment: "Dev" })]);
+    expect(store.summaries()[0].agentChangesWithoutAsking).toBe(false);
+  });
+
+  it("round-trips the agent switch through the saved file", () => {
+    const { store, save } = storeWith([online({ id: "a", organization: "Contoso", environment: "Dev" })]);
+    expect(store.describe("a", { agentChangesWithoutAsking: true }).success).toBe(true);
+    expect(store.summaries()[0].agentChangesWithoutAsking).toBe(true);
+
+    const saved = save.mock.calls[save.mock.calls.length - 1][0];
+    const reloaded = createConnectionStore({ initial: saved, save: vi.fn(), createId: ids() });
+    expect(reloaded.summaries()[0].agentChangesWithoutAsking).toBe(true);
+    expect(reloaded.describe("a", { agentChangesWithoutAsking: false }).success).toBe(true);
+    expect(reloaded.summaries()[0].agentChangesWithoutAsking).toBe(false);
+  });
+
+  it("reads only a real true as the switch being on", () => {
+    const { store } = storeWith([online({ id: "a", organization: "C", environment: "D", agentChangesWithoutAsking: "yes" })]);
+    expect(store.summaries()[0].agentChangesWithoutAsking).toBe(false);
+  });
+
   it("drops the old name once organization and environment are set, and keeps the id", () => {
     const { store } = storeWith([online({ name: "My old prod" })]);
     const [conn] = store.list();
@@ -198,6 +220,7 @@ describe("connection store", () => {
         envUrl: "https://fabrikam.local",
         crmType: "onpremise",
         needsPassword: true,
+        agentChangesWithoutAsking: false,
       },
     ]);
   });

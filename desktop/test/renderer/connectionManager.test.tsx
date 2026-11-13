@@ -139,6 +139,29 @@ describe("manage connections", () => {
     expect(await screen.findByText("Saved.")).toBeInTheDocument();
   });
 
+  it("saves the agent switch with its helper text", async () => {
+    const updateConnection = vi.fn(async () => ({ success: true }));
+    renderWithProviders(<ConnectionManagerWindow />, {
+      bridgeOverrides: {
+        listConnections: async () => connections,
+        takeConnectionManagerRequest: async () => ({ selectId: "d", action: null }),
+        updateConnection,
+      },
+    });
+
+    const box = await screen.findByRole("checkbox", { name: "Let agents make non-destructive changes without asking" });
+    expect(box).not.toBeChecked();
+    expect(screen.getByText("Deletions and other destructive changes always ask.")).toBeInTheDocument();
+    fireEvent.click(box);
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(updateConnection).toHaveBeenCalledWith(
+        "d",
+        expect.objectContaining({ agentChangesWithoutAsking: true }),
+      ),
+    );
+  });
+
   it("previews an import and imports the chosen connections", async () => {
     const commitConnectionImport = vi.fn(async () => ({ success: true, imported: 1 }));
     renderWithProviders(<ConnectionManagerWindow />, {

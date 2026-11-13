@@ -42,7 +42,7 @@ public sealed class SolutionComponentsMoverServiceTests
         Assert.Null(result.Problem);
         var query = Assert.Single(fake.Queries);
         Assert.Equal(
-            ["friendlyname", "installedon", "ismanaged", "publisherid", "uniquename", "version"],
+            ["friendlyname", "installedon", "ismanaged", "parentsolutionid", "publisherid", "uniquename", "version"],
             query.ColumnSet.Columns.OrderBy(column => column).ToArray());
         Assert.DoesNotContain("description", query.ColumnSet.Columns);
         var visible = Assert.Single(query.Criteria.Conditions, condition => condition.AttributeName == "isvisible");

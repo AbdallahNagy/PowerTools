@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
-import { CircleAlert, CircleCheck, Info, X, type LucideIcon } from "lucide-react";
+import { CircleAlert, CircleCheck, Info, TriangleAlert, X, type LucideIcon } from "lucide-react";
 import { ToastContext, type Toast, type ToastType } from "./ToastContext";
 import { cn } from "./cn";
 
@@ -7,6 +7,7 @@ const toastStyles: Record<ToastType, { bar: string; icon: string; Icon: LucideIc
   error: { bar: "border-l-danger", icon: "text-danger", Icon: CircleAlert },
   success: { bar: "border-l-ok", icon: "text-ok", Icon: CircleCheck },
   info: { bar: "border-l-accent-text", icon: "text-accent-text", Icon: Info },
+  warning: { bar: "border-l-warn", icon: "text-warn", Icon: TriangleAlert },
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {

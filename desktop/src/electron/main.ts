@@ -3,8 +3,10 @@ import "./devUserData.js";
 // Must load next so Sentry hooks the app before anything else runs.
 import "./sentry.js";
 import { spawn } from "child_process";
-import { readFile, writeFile } from "fs/promises";
-import { app, BrowserWindow, dialog, ipcMain, net, shell } from "electron";
+import { rmSync } from "fs";
+import { join } from "path";
+import { access, mkdir, readdir, readFile, realpath, rename, rm, stat, writeFile } from "fs/promises";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, net, Notification, safeStorage, shell } from "electron";
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
 import { getAppIconPath, getPreloadPath } from "./pathResolver.js";
@@ -25,12 +27,27 @@ import {
   configureMainWindowChrome,
   getMainWindowOptions,
   registerWindowChromeIpc,
+  setAgentsMenuHandler,
+  setCommunityToolsMenuHandler,
   setConnectionsMenuHandlers,
 } from "./windowChrome.js";
 import { initializeTheme, windowBackgroundColor } from "./theme.js";
 import { startUsageStats } from "./usageStats.js";
+import { BUILT_IN_TOOL_IDS } from "./communityTools/builtInToolIds.js";
+import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
+import { createToolStore } from "./communityTools/toolStore.js";
+import { connectorLaunch } from "./mcp/connectorCommand.js";
+import { registerMcpIpc } from "./mcp/mcpIpc.js";
+import { createApprovalWindow } from "./mcp/approvalWindow.js";
+import { createHttpTokenStore } from "./mcp/httpToken.js";
+import { createMcpService } from "./mcp/mcpService.js";
+import { readSettings, writeSettings } from "./settings.js";
+import { installToolProtocol, registerToolScheme } from "./communityTools/toolProtocol.js";
 
 const { autoUpdater } = electronUpdater;
+
+// Privileged schemes must be registered before the app is ready.
+registerToolScheme();
 
 app.whenReady().then(async () => {
   const theme = initializeTheme();
@@ -133,6 +150,133 @@ app.whenReady().then(async () => {
     },
   });
 
+  const toolStore = createToolStore({
+    userDataPath: app.getPath("userData"),
+    hostVersion: app.getVersion(),
+    builtInToolIds: BUILT_IN_TOOL_IDS,
+    fs: {
+      readText: (path) => readFile(path, "utf-8"),
+      // Write beside the file and rename over it, so a crash mid-write cannot leave a truncated state file.
+      writeText: async (path, content) => {
+        const temporary = `${path}.${process.pid}.tmp`;
+        await writeFile(temporary, content, "utf-8");
+        try {
+          await rename(temporary, path);
+        } catch (error) {
+          await rm(temporary, { force: true });
+          throw error;
+        }
+      },
+      exists: (path) => access(path).then(() => true, () => false),
+      mkdir: async (path) => {
+        await mkdir(path, { recursive: true });
+      },
+      size: async (path) => (await stat(path)).size,
+      realpath: (path) => realpath(path),
+      remove: (path) => rm(path, { force: true }),
+      fileSizes: async (folder) => {
+        const sizes: number[] = [];
+        const walk = async (directory: string): Promise<void> => {
+          for (const entry of await readdir(directory, { withFileTypes: true })) {
+            const path = join(directory, entry.name);
+            if (entry.isDirectory()) await walk(path);
+            else if (entry.isFile()) sizes.push((await stat(path)).size);
+          }
+        };
+        await walk(folder);
+        return sizes;
+      },
+    },
+  });
+  installToolProtocol({
+    isConsented: (id) => toolStore.isConsented(id),
+    folderFor: (id) => toolStore.folderFor(id),
+    manifestFor: (id) => toolStore.manifestFor(id),
+    readFile: (path) => readFile(path),
+    realpath: (path) => realpath(path),
+    // folderFor and manifestFor are filled by list(); load once so a tool opened at start-up is found.
+    ready: toolStore.list(),
+  });
+
+  registerCommunityToolIpc({
+    ipcMain,
+    store: toolStore,
+    getMainWindow: () => mainWindow,
+    dialogs: {
+      chooseFolder: async (window) => {
+        const result = await dialog.showOpenDialog(window, {
+          title: "Load community tool from folder",
+          properties: ["openDirectory"],
+        });
+        return result.canceled ? null : result.filePaths[0] ?? null;
+      },
+      chooseOpenFile: async (window, filters) => {
+        const result = await dialog.showOpenDialog(window, { properties: ["openFile"], filters });
+        return result.canceled ? null : result.filePaths[0] ?? null;
+      },
+      chooseSaveFile: async (window, suggestedName) => {
+        const result = await dialog.showSaveDialog(window, { defaultPath: suggestedName });
+        return result.canceled || !result.filePath ? null : result.filePath;
+      },
+    },
+    files: {
+      size: async (path) => (await stat(path)).size,
+      readText: (path) => readFile(path, "utf-8"),
+      writeText: (path, content) => writeFile(path, content, "utf-8"),
+    },
+  });
+
+  const mcpService = createMcpService({
+    userDataPath: app.getPath("userData"),
+    sidecar: sidecarHandle,
+    connections: connectionIpc,
+    appVersion: app.getVersion(),
+    readEnabled: () => mcpSettings().enabled === true,
+    writeEnabled: (enabled) => writeSettings({ mcp: { ...mcpSettings(), enabled } }),
+    readGroups: () => {
+      const saved = mcpSettings().groups;
+      return saved && typeof saved === "object" ? saved : {};
+    },
+    writeGroups: (groups) => writeSettings({ mcp: { ...mcpSettings(), groups } }),
+    readHttp: () => mcpSettings().http ?? {},
+    writeHttp: (http) => writeSettings({ mcp: { ...mcpSettings(), http } }),
+    httpToken: createHttpTokenStore(join(app.getPath("userData"), "mcp-http-token.bin"), safeStorage),
+    clipboard: { writeText: (text) => clipboard.writeText(text) },
+    approvalUi: createApprovalWindow({
+      getWindow: () => mainWindow,
+      notify: (onClick) => {
+        const notification = new Notification({
+          title: "Power Tools",
+          body: "An agent is waiting for your approval",
+        });
+        notification.on("click", onClick);
+        notification.show();
+      },
+      onUnavailable: () => mcpService.failApprovals(),
+    }),
+  });
+  function mcpSettings(): { enabled?: boolean; groups?: Record<string, boolean>; http?: { enabled?: boolean; port?: number } } {
+    const value = readSettings().mcp;
+    return value && typeof value === "object" ? (value as ReturnType<typeof mcpSettings>) : {};
+  }
+  registerMcpIpc({
+    ipcMain,
+    service: mcpService,
+    getMainWindow: () => mainWindow,
+    connector: () =>
+      connectorLaunch({
+        packaged: !isDev(),
+        platform: process.platform,
+        resourcesPath: process.resourcesPath,
+        appPath: app.getAppPath(),
+        discoveryPath: mcpService.status().discoveryPath,
+      }),
+  });
+  app.on("before-quit", () => void mcpService.stop());
+  // The quit may not wait for the async stop, so remove the discovery file here as well.
+  process.on("exit", () => rmSync(mcpService.status().discoveryPath, { force: true }));
+  if (mcpSettings().enabled === true) void mcpService.start();
+
   function broadcastUpdateStatus(status: UpdateStatus) {
     updateStatus = status;
     mainWindow.webContents.send("update-status-changed", status);
@@ -151,6 +295,18 @@ app.whenReady().then(async () => {
     },
   });
 
+  setCommunityToolsMenuHandler(() => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("open-community-tools");
+    }
+  });
+
+  setAgentsMenuHandler(() => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("open-agents");
+    }
+  });
+
   await connectionIpc.registerRestoredOnPremises();
 
   const mainWindow = new BrowserWindow(getMainWindowOptions({
@@ -163,6 +319,7 @@ app.whenReady().then(async () => {
     show: false,
   }));
   configureMainWindowChrome(mainWindow);
+  mainWindow.on("closed", () => mcpService.failApprovals());
   mainWindow.maximize();
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();

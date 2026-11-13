@@ -141,6 +141,35 @@ const DEFAULT_CONNECTIONS_MENU: ConnectionsMenuOptions = {
   onExportConnections: () => connectionsMenuHandlers.onExportConnections(),
 };
 
+export interface CommunityToolsMenuOptions {
+  onOpenCommunityTools: () => void;
+}
+
+// Same late binding as the connections items: main sets the handler once the window exists.
+let communityToolsMenuHandler: () => void = () => undefined;
+
+export function setCommunityToolsMenuHandler(handler: () => void): void {
+  communityToolsMenuHandler = handler;
+}
+
+const DEFAULT_COMMUNITY_TOOLS_MENU: CommunityToolsMenuOptions = {
+  onOpenCommunityTools: () => communityToolsMenuHandler(),
+};
+
+export interface AgentsMenuOptions {
+  onOpenAgents: () => void;
+}
+
+let agentsMenuHandler: () => void = () => undefined;
+
+export function setAgentsMenuHandler(handler: () => void): void {
+  agentsMenuHandler = handler;
+}
+
+const DEFAULT_AGENTS_MENU: AgentsMenuOptions = {
+  onOpenAgents: () => agentsMenuHandler(),
+};
+
 const DEFAULT_USAGE_STATS_MENU: UsageStatsMenuOptions = {
   enabled: true,
   onChange: saveUsageStatsEnabled,
@@ -152,6 +181,8 @@ export function createApplicationMenuTemplate(
   crashReportsMenu: CrashReportsMenuOptions = DEFAULT_CRASH_REPORTS_MENU,
   toolRequestMenu: ToolRequestMenuOptions = DEFAULT_TOOL_REQUEST_MENU,
   connectionsMenu: ConnectionsMenuOptions = DEFAULT_CONNECTIONS_MENU,
+  communityToolsMenu: CommunityToolsMenuOptions = DEFAULT_COMMUNITY_TOOLS_MENU,
+  agentsMenu: AgentsMenuOptions = DEFAULT_AGENTS_MENU,
 ): Electron.MenuItemConstructorOptions[] {
   return [
     {
@@ -162,6 +193,9 @@ export function createApplicationMenuTemplate(
         { type: "separator" },
         { label: "Import Connections…", click: () => connectionsMenu.onImportConnections() },
         { label: "Export Connections…", click: () => connectionsMenu.onExportConnections() },
+        { type: "separator" },
+        { label: "Community tools…", click: () => communityToolsMenu.onOpenCommunityTools() },
+        { label: "Agents (MCP)…", click: () => agentsMenu.onOpenAgents() },
         { type: "separator" },
         // The rest matches Electron's default fileMenu role.
         process.platform === "darwin" ? { role: "close" } : { role: "quit" },

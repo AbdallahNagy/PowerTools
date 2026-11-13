@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useContext, useState } from "react";
+import { Bot, Boxes } from "lucide-react";
 import { Group, Panel, Separator } from "react-resizable-panels";
 
 import { useTabs } from "../tabs/useTabs";
-import { useShellShortcuts } from "../keyboard/useShellShortcuts";
+import { ShellShortcutDispatchContext, useShellShortcuts } from "../keyboard/useShellShortcuts";
 import { ConnectionsProvider } from "../../shared/connections";
 import { openToolRequest } from "../../shared/links/openToolRequest";
 import { StatusBarProvider } from "../../shared/status";
-import { ACTIVITY_BAR_TOOLS } from "../../tools/registry";
+import { AgentsContext } from "../agents/AgentsContext";
+import { ApprovalDialog } from "../agents/ApprovalDialog";
+import { useCommunityTools, useToolRegistry } from "../community-tools/useToolRegistry";
 import ActivityBar from "./ActivityBar";
 import CommandPalette, { type PaletteSection } from "./CommandPalette";
 import { useConnectionCommands } from "./useConnectionCommands";
@@ -27,8 +30,40 @@ function ShellCommandPalette({
   onOpenTool: (toolId: string) => void;
 }) {
   const connectionSections = useConnectionCommands();
+  const { activityBarTools } = useToolRegistry();
+  const { openManager } = useCommunityTools();
+  const { openAgents } = useContext(AgentsContext);
+  const allSections: PaletteSection[] = [
+    ...connectionSections,
+    {
+      id: "community-tools",
+      label: "Community tools",
+      commands: [
+        {
+          id: "manage",
+          title: "Community tools…",
+          tooltip: "Load, review, and remove community tools",
+          icon: <Boxes size={16} strokeWidth={1.5} />,
+          onRun: openManager,
+        },
+      ],
+    },
+    {
+      id: "agents",
+      label: "Agents",
+      commands: [
+        {
+          id: "agents-mcp",
+          title: "Agents (MCP)…",
+          tooltip: "Let AI agents such as Claude Code use your connections",
+          icon: <Bot size={16} strokeWidth={1.5} />,
+          onRun: openAgents,
+        },
+      ],
+    },
+  ];
   // Running a command closes the palette first, so windows it opens get focus.
-  const sections: PaletteSection[] = connectionSections.map((section) => ({
+  const sections: PaletteSection[] = allSections.map((section) => ({
     ...section,
     commands: section.commands.map((command) => ({
       ...command,
@@ -42,7 +77,7 @@ function ShellCommandPalette({
   return (
     <CommandPalette
       open={open}
-      tools={ACTIVITY_BAR_TOOLS}
+      tools={activityBarTools}
       sections={sections}
       onClose={onClose}
       onOpen={(toolId) => {
@@ -62,66 +97,69 @@ const Layout = () => {
   const [quickOpen, setQuickOpen] = useState(false);
   const { openTool } = useTabs();
 
-  useShellShortcuts({
+  const dispatchShortcut = useShellShortcuts({
     quickOpen,
     onQuickOpenChange: setQuickOpen,
     onToggleSidebar: () => setSidebarVisible((visible) => !visible),
   });
 
   return (
-    <ConnectionsProvider>
-      <StatusBarProvider>
-        <UpdateProvider>
-          <div className="flex flex-col h-full w-full bg-canvas">
-            <TitleBar
-              sidebarVisible={sidebarVisible}
-              onToggleSidebar={() => setSidebarVisible((visible) => !visible)}
-            />
-            <div className="flex-1 flex overflow-hidden">
-              <Group
-                className="flex flex-1 min-h-0 min-w-0"
-                orientation="horizontal"
-              >
-                {sidebarVisible ? (
-                  <Panel
-                    id="shell-sidebar"
-                    defaultSize="220px"
-                    minSize="180px"
-                    maxSize="40%"
-                    className="min-h-0 min-w-0"
-                  >
-                    <ActivityBar />
-                  </Panel>
-                ) : null}
-                {sidebarVisible ? (
-                  <Separator
-                    aria-label="Resize sidebar"
-                    className="w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent"
-                  />
-                ) : null}
-                <Panel
-                  id="shell-main"
-                  minSize="40%"
-                  className="flex min-h-0 min-w-0 flex-col"
-                  // The panel sets an inline `overflow: auto`, which beats the
-                  // class. Clip here so only the tab strip scrolls sideways.
-                  style={{ overflow: "hidden" }}
+    <ShellShortcutDispatchContext.Provider value={dispatchShortcut}>
+      <ConnectionsProvider>
+        <StatusBarProvider>
+          <UpdateProvider>
+            <div className="flex flex-col h-full w-full bg-canvas">
+              <TitleBar
+                sidebarVisible={sidebarVisible}
+                onToggleSidebar={() => setSidebarVisible((visible) => !visible)}
+              />
+              <div className="flex-1 flex overflow-hidden">
+                <Group
+                  className="flex flex-1 min-h-0 min-w-0"
+                  orientation="horizontal"
                 >
-                  <TabBar />
-                </Panel>
-              </Group>
+                  {sidebarVisible ? (
+                    <Panel
+                      id="shell-sidebar"
+                      defaultSize="220px"
+                      minSize="180px"
+                      maxSize="40%"
+                      className="min-h-0 min-w-0"
+                    >
+                      <ActivityBar />
+                    </Panel>
+                  ) : null}
+                  {sidebarVisible ? (
+                    <Separator
+                      aria-label="Resize sidebar"
+                      className="w-1 cursor-col-resize bg-raised hover:bg-accent active:bg-accent"
+                    />
+                  ) : null}
+                  <Panel
+                    id="shell-main"
+                    minSize="40%"
+                    className="flex min-h-0 min-w-0 flex-col"
+                    // The panel sets an inline `overflow: auto`, which beats the
+                    // class. Clip here so only the tab strip scrolls sideways.
+                    style={{ overflow: "hidden" }}
+                  >
+                    <TabBar />
+                  </Panel>
+                </Group>
+              </div>
+              <StatusBar />
+              <ShellCommandPalette
+                open={quickOpen}
+                onClose={() => setQuickOpen(false)}
+                onOpenTool={openTool}
+              />
+              <UpdateDialog />
+              <ApprovalDialog />
             </div>
-            <StatusBar />
-            <ShellCommandPalette
-              open={quickOpen}
-              onClose={() => setQuickOpen(false)}
-              onOpenTool={openTool}
-            />
-            <UpdateDialog />
-          </div>
-        </UpdateProvider>
-      </StatusBarProvider>
-    </ConnectionsProvider>
+          </UpdateProvider>
+        </StatusBarProvider>
+      </ConnectionsProvider>
+    </ShellShortcutDispatchContext.Provider>
   );
 };
 

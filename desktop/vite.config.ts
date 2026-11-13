@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { sentryVitePlugin } from '@sentry/vite-plugin'
@@ -27,6 +28,11 @@ export default defineConfig({
         telemetry: false,
       }),
   ],
+  resolve: {
+    alias: {
+      '@powertools/sdk/protocol': fileURLToPath(new URL('../packages/sdk/src/protocol.ts', import.meta.url)),
+    },
+  },
   base: './',
   build: {
     outDir : 'dist-react',

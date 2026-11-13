@@ -9,6 +9,8 @@ public sealed class SolutionRowDto
     public string? InstalledOn { get; init; }
     public string Version { get; init; } = "";
     public bool IsManaged { get; init; }
+    /// <summary>The solution is a patch of another solution.</summary>
+    public bool IsPatch { get; init; }
 }
 
 public sealed class SolutionsResponse

@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./test/smoke",
+  globalSetup: "./test/smoke/globalSetup.ts",
   workers: 1,
   retries: process.env.CI ? 2 : 0,
   timeout: 120_000,

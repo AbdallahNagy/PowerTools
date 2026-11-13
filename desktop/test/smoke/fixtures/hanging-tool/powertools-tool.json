@@ -1,0 +1,14 @@
+{
+  "manifestVersion": 1,
+  "id": "powertools.hanging-fixture",
+  "name": "Hanging fixture",
+  "description": "Test fixture that completes the handshake and then loops forever.",
+  "version": "0.1.0",
+  "publisher": { "name": "Power Tools" },
+  "icon": "icon.svg",
+  "entry": "index.html",
+  "minHostVersion": "1.3.0",
+  "permissions": [],
+  "messages": [],
+  "network": []
+}
