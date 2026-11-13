@@ -114,4 +114,32 @@ internal static class AgentXmlSplice
         if (close < 0) throw new AgentProblemException(AgentFaults.InvalidRequest("The stored XML could not be edited safely."));
         return close + 1;
     }
+
+    /// <summary>The element's text, plus its line's indentation and line break when it sits on a line of its own.</summary>
+    public static (int Start, int End) RemovalRange(string xml, XElement element)
+    {
+        var start = StartOf(xml, element);
+        var end = EndOf(xml, element);
+
+        var after = end;
+        while (after < xml.Length && xml[after] is ' ' or '\t') after++;
+        var ownLine = after == xml.Length || xml[after] is '\r' or '\n';
+        var before = start;
+        while (before > 0 && xml[before - 1] is ' ' or '\t') before--;
+        if (ownLine && before > 0 && xml[before - 1] == '\n')
+        {
+            before--;
+            if (before > 0 && xml[before - 1] == '\r') before--;
+            start = before;
+        }
+
+        return (start, end);
+    }
+
+    /// <summary>Removes the element, with its line when it sits on a line of its own.</summary>
+    public static string Remove(string xml, XElement element)
+    {
+        var (start, end) = RemovalRange(xml, element);
+        return xml.Remove(start, end - start);
+    }
 }

@@ -20,6 +20,7 @@ internal static class AgentSchemaEndpoints
         AgentEndpoints.Post<AddFormColumnBody, ColumnAddedDto>(group, "/schema/forms/add-column", (c, b, ct) => new AgentSchemaService(c).AddColumnToFormAsync(b, ct));
         AgentEndpoints.Post<RemoveFormColumnBody, ColumnRemovedDto>(group, "/schema/forms/remove-column", (c, b, ct) => new AgentSchemaService(c).RemoveColumnFromFormAsync(b, ct));
         AgentEndpoints.Post<AddViewColumnBody, ColumnAddedDto>(group, "/schema/views/add-column", (c, b, ct) => new AgentSchemaService(c).AddColumnToViewAsync(b, ct));
+        AgentEndpoints.Post<RemoveViewColumnBody, ViewColumnRemovedDto>(group, "/schema/views/remove-column", (c, b, ct) => new AgentSchemaService(c).RemoveColumnFromViewAsync(b, ct));
 
         AgentEndpoints.Post<DeleteColumnBody, DeletedDto>(group, "/schema/columns/delete", (c, b, ct) => new AgentSchemaService(c).DeleteColumnAsync(b, ct));
         AgentEndpoints.Post<DeleteTableBody, DeletedDto>(group, "/schema/tables/delete", (c, b, ct) => new AgentSchemaService(c).DeleteTableAsync(b, ct));

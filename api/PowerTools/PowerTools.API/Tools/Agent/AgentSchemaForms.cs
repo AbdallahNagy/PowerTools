@@ -156,6 +156,34 @@ public sealed partial class AgentSchemaService
             return AgentResult<ColumnAddedDto>.Ok(new ColumnAddedDto(viewId, attribute.LogicalName));
         });
 
+    /// <summary>Takes a column out of a view without checking the column exists, so a deleted one can be cleaned out too.</summary>
+    public Task<AgentResult<ViewColumnRemovedDto>> RemoveColumnFromViewAsync(RemoveViewColumnBody body, CancellationToken ct) =>
+        Guard(async () =>
+        {
+            Require(body.Table, "table");
+            Require(body.Column, "column");
+            var viewId = ParseGuid(body.ViewId, "viewId");
+            var table = body.Table!.ToLowerInvariant();
+            var column = body.Column!.ToLowerInvariant();
+
+            using var hold = await EditLock.HoldAsync(viewId, ct);
+            var view = await RetrieveUnpublishedAsync("savedquery", viewId, ["returnedtypecode", "layoutxml", "fetchxml"], ct);
+            if (!string.Equals(view.GetAttributeValue<string>("returnedtypecode"), table, StringComparison.OrdinalIgnoreCase))
+                throw Invalid($"View {viewId} is not a system view of '{table}'.");
+
+            var edited = AgentViewXml.RemoveColumn(
+                view.GetAttributeValue<string>("layoutxml") ?? "",
+                view.GetAttributeValue<string>("fetchxml") ?? "",
+                column);
+            if (edited.Problem is not null) return AgentResult<ViewColumnRemovedDto>.Fail(edited.Problem);
+
+            await client.UpdateAsync(
+                new Entity("savedquery", viewId) { ["layoutxml"] = edited.Value!.LayoutXml, ["fetchxml"] = edited.Value.FetchXml },
+                ct);
+            await AddToSolutionAsync(body.Solution, viewId, SavedQueryComponent, ct);
+            return AgentResult<ViewColumnRemovedDto>.Ok(new ViewColumnRemovedDto(viewId, column, edited.Value.RemovedFromQuery));
+        });
+
     // ── Helpers ──────────────────────────────────────────────────────────────
 
     /// <summary>

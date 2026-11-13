@@ -253,6 +253,12 @@ describe("schema deletes", () => {
       "/api/agent/schema/forms/remove-column",
       `column new_rating from form ${GUID} (the column and its data stay)`,
     ],
+    [
+      "schema_remove_column_from_view",
+      { table: "account", viewId: GUID, column: "new_rating" },
+      "/api/agent/schema/views/remove-column",
+      `column new_rating from view ${GUID} (the column and its data stay)`,
+    ],
   ])("%s is destructive, says what it removes and posts to its route", async (name, args, route, removes) => {
     const t = tool(name);
     expect(t.effect).toBe("destructive");
@@ -270,10 +276,14 @@ describe("schema deletes", () => {
     expect(tool("schema_remove_column_from_form").describe!({ table: "account", formId: GUID, column: "new_rating" }).summary).toBe(
       "remove column new_rating from a form of account",
     );
+    expect(tool("schema_remove_column_from_view").describe!({ table: "account", viewId: GUID, column: "new_rating" }).summary).toBe(
+      "remove column new_rating from a view of account",
+    );
   });
 
-  it("refuses a form id that is not a GUID", () => {
+  it("refuses a form or view id that is not a GUID", () => {
     expect(registry.validate(tool("schema_remove_column_from_form"), { table: "account", formId: "nope", column: "c" }).ok).toBe(false);
+    expect(registry.validate(tool("schema_remove_column_from_view"), { table: "account", viewId: "nope", column: "c" }).ok).toBe(false);
   });
 
   it("rejects a bad table name", () => {

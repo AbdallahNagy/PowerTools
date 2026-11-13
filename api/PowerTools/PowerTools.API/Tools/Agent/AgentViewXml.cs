@@ -41,4 +41,35 @@ public static class AgentViewXml
                 : fetchXml.Insert(AgentXmlSplice.AfterOpenTag(fetchXml, entity), attribute);
         return AgentResult<(string, string)>.Ok((newLayout, newFetch));
     }
+
+    /// <summary>
+    /// Takes the column's cell out of the grid and its attribute out of the query's main entity. The attribute
+    /// stays when it is the row's id or the grid's jump column, which the view needs whether shown or not. A
+    /// view's last column is not removed.
+    /// </summary>
+    public static AgentResult<ViewColumnRemoval> RemoveColumn(string layoutXml, string fetchXml, string column)
+    {
+        var layout = AgentXmlSplice.Parse(layoutXml);
+        var cells = layout.Descendants("cell").ToList();
+        var cell = cells.FirstOrDefault(c => string.Equals((string?)c.Attribute("name"), column, StringComparison.OrdinalIgnoreCase));
+        if (cell is null)
+            return AgentResult<ViewColumnRemoval>.Fail(AgentFaults.InvalidRequest($"Column '{column}' is not in this view."));
+        if (cells.Count == 1)
+            return AgentResult<ViewColumnRemoval>.Fail(AgentFaults.InvalidRequest($"Column '{column}' is the view's only column; a view needs at least one."));
+
+        var newLayout = AgentXmlSplice.Remove(layoutXml, cell);
+
+        var needed = new[] { (string?)cell.Parent?.Attribute("id"), (string?)layout.Root?.Attribute("jump") };
+        if (needed.Any(n => string.Equals(n, column, StringComparison.OrdinalIgnoreCase)))
+            return AgentResult<ViewColumnRemoval>.Ok(new ViewColumnRemoval(newLayout, fetchXml, false));
+
+        var fetch = AgentXmlSplice.Parse(fetchXml);
+        var attribute = fetch.Root?.Element("entity")?.Elements("attribute")
+            .FirstOrDefault(a => string.Equals((string?)a.Attribute("name"), column, StringComparison.OrdinalIgnoreCase));
+        return attribute is null
+            ? AgentResult<ViewColumnRemoval>.Ok(new ViewColumnRemoval(newLayout, fetchXml, false))
+            : AgentResult<ViewColumnRemoval>.Ok(new ViewColumnRemoval(newLayout, AgentXmlSplice.Remove(fetchXml, attribute), true));
+    }
 }
+
+public sealed record ViewColumnRemoval(string LayoutXml, string FetchXml, bool RemovedFromQuery);

@@ -96,4 +96,81 @@ public class AgentViewXmlTests
         var result = AgentViewXml.AddColumn("<grid/>", Fetch, "new_rating", 150);
         Assert.Equal("InvalidRequest", result.Problem!.Code);
     }
+
+    // ── Removing ──────────────────────────────────────────────────────────────
+
+    [Fact]
+    public void Removing_a_column_takes_its_cell_and_attribute_with_their_lines_and_nothing_else()
+    {
+        var result = AgentViewXml.RemoveColumn(Layout, Fetch, "TELEPHONE1");
+
+        Assert.Null(result.Problem);
+        Assert.Equal(Layout.Replace("\n    <cell name='telephone1' width=\"100\"/>", ""), result.Value!.LayoutXml);
+        Assert.Equal(Fetch.Replace("\n    <attribute name=\"telephone1\"/>", ""), result.Value.FetchXml);
+        Assert.True(result.Value.RemovedFromQuery);
+    }
+
+    [Fact]
+    public void Removing_an_added_column_gives_back_the_original_view()
+    {
+        var (layout, fetch) = AgentViewXml.AddColumn(Layout, Fetch, "new_rating", 150).Value;
+
+        var removed = AgentViewXml.RemoveColumn(layout, fetch, "new_rating").Value!;
+
+        Assert.Equal(Layout, removed.LayoutXml);
+        Assert.Equal(Fetch, removed.FetchXml);
+    }
+
+    [Fact]
+    public void The_jump_column_leaves_the_grid_but_stays_in_the_query()
+    {
+        var removed = AgentViewXml.RemoveColumn(Layout, Fetch, "name").Value!;
+
+        Assert.DoesNotContain("<cell name=\"name\"", removed.LayoutXml);
+        Assert.Equal(Fetch, removed.FetchXml);
+        Assert.False(removed.RemovedFromQuery);
+    }
+
+    [Fact]
+    public void The_primary_id_column_stays_in_the_query()
+    {
+        var layout = Layout.Replace("<cell name=\"name\" width=\"300\" />", "<cell name=\"accountid\" width=\"100\" /><cell name=\"name\" width=\"300\" />");
+        var fetch = Fetch.Replace("<attribute name=\"name\" />", "<attribute name=\"accountid\" /><attribute name=\"name\" />");
+
+        var removed = AgentViewXml.RemoveColumn(layout, fetch, "accountid").Value!;
+
+        Assert.Equal(Layout, removed.LayoutXml);
+        Assert.Equal(fetch, removed.FetchXml);
+    }
+
+    [Fact]
+    public void A_column_only_in_the_grid_leaves_the_query_as_it_was()
+    {
+        var fetch = Fetch.Replace("\n    <attribute name=\"telephone1\"/>", "");
+
+        var removed = AgentViewXml.RemoveColumn(Layout, fetch, "telephone1").Value!;
+
+        Assert.Equal(fetch, removed.FetchXml);
+        Assert.False(removed.RemovedFromQuery);
+    }
+
+    [Fact]
+    public void A_column_not_in_the_view_is_an_invalid_request()
+    {
+        var result = AgentViewXml.RemoveColumn(Layout, Fetch, "new_missing");
+
+        Assert.Equal("InvalidRequest", result.Problem!.Code);
+        Assert.Contains("not in this view", result.Problem.Message);
+    }
+
+    [Fact]
+    public void The_last_column_of_a_view_is_not_removed()
+    {
+        var layout = "<grid jump=\"name\"><row name=\"result\" id=\"accountid\"><cell name=\"telephone1\" width=\"100\"/></row></grid>";
+
+        var result = AgentViewXml.RemoveColumn(layout, Fetch, "telephone1");
+
+        Assert.Equal("InvalidRequest", result.Problem!.Code);
+        Assert.Contains("only column", result.Problem.Message);
+    }
 }

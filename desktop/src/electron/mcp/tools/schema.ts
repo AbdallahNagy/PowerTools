@@ -510,6 +510,32 @@ export const schemaRemoveColumnFromForm = destructive({
   summarize: (args) => `schema_remove_column_from_form ${str(args.table)}.${str(args.column)}`,
 });
 
+export const schemaRemoveColumnFromView = destructive({
+  name: "schema_remove_column_from_view",
+  title: "Remove column from view",
+  description:
+    "Destructive: takes a column out of a system view's grid and query. The view's id and jump columns stay in the query; its last column is refused. The column and its data stay. Find view ids with metadata_list_views; call schema_publish afterwards. Always asks the user.",
+  inputSchema: {
+    type: "object",
+    properties: {
+      connection: connectionProp,
+      table: tableProp,
+      viewId: { type: "string", pattern: GUID_PATTERN, description: "The view's GUID, from metadata_list_views." },
+      column: { type: "string", pattern: NAME_PATTERN, description: "Logical name of the column to take out of the view." },
+      solution: solutionProp,
+    },
+    required: ["table", "viewId", "column"],
+    additionalProperties: false,
+  },
+  route: "/schema/views/remove-column",
+  done: "Column removed from the view. Call schema_publish for the table to make it visible.",
+  describe: (args) => ({
+    summary: `remove column ${str(args.column)} from a view of ${str(args.table)}`,
+    removes: `column ${str(args.column)} from view ${str(args.viewId)} (the column and its data stay)`,
+  }),
+  summarize: (args) => `schema_remove_column_from_view ${str(args.table)}.${str(args.column)}`,
+});
+
 export const SCHEMA_TOOLS: AgentTool[] = [
   schemaCreateTable,
   schemaCreateColumn,
@@ -522,6 +548,7 @@ export const SCHEMA_TOOLS: AgentTool[] = [
   schemaAddColumnToForm,
   schemaAddColumnToView,
   schemaRemoveColumnFromForm,
+  schemaRemoveColumnFromView,
   schemaDeleteColumn,
   schemaDeleteTable,
   schemaDeleteRelationship,

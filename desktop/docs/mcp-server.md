@@ -65,7 +65,7 @@ Power Tools decides this for every call. The agent cannot change it.
 
 To let an agent make non-destructive changes without asking on one connection, open **Manage connections**, pick the connection and turn on **Let agents make non-destructive changes without asking**. It is off for every connection until you do.
 
-Always asking covers deleting records, columns, tables and relationships, removing a column from a form, removing solution components or layers, cloning a solution, replacing or unregistering plug-in code, deleting environment variables, lowering a column's maximum length, and any Dataverse message Power Tools does not know. The dialog says what will be removed. **Deny** is the default button. If you do not answer in 5 minutes, the call fails. If Power Tools is in the background, you get a notification and the window flashes.
+Always asking covers deleting records, columns, tables and relationships, removing a column from a form or view, removing solution components or layers, cloning a solution, replacing or unregistering plug-in code, deleting environment variables, lowering a column's maximum length, and any Dataverse message Power Tools does not know. The dialog says what will be removed. **Deny** is the default button. If you do not answer in 5 minutes, the call fails. If Power Tools is in the background, you get a notification and the window flashes.
 
 New tables, columns, solutions and similar components need a solution or a publisher, so their prefix is known. If the agent gives neither, it gets the list of publishers and should ask you which to use.
 
@@ -73,7 +73,7 @@ Data that comes back from Dataverse is marked as untrusted. Agents are told neve
 
 ## Tool groups
 
-The dialog lists the groups with their tool counts: `connections` (1), `metadata` (7), `records` (8), `schema` (14), `solutions` (10), `plugins` (10) and `envvars` (4). Turn a group off to stop offering its tools. Connected agents are told right away.
+The dialog lists the groups with their tool counts: `connections` (1), `metadata` (7), `records` (8), `schema` (16), `solutions` (11), `plugins` (10) and `envvars` (4). Turn a group off to stop offering its tools. Connected agents are told right away.
 
 ## Activity log
 

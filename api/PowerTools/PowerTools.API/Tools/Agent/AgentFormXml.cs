@@ -124,7 +124,7 @@ public static class AgentFormXml
 
         // Cut from the end so earlier offsets stay valid; skip anything inside a range already cut.
         var ranges = targets.Distinct()
-            .Select(element => RangeOf(formXml, element))
+            .Select(element => AgentXmlSplice.RemovalRange(formXml, element))
             .OrderByDescending(range => range.Start)
             .ToList();
         var edited = formXml;
@@ -137,27 +137,6 @@ public static class AgentFormXml
         }
 
         return AgentResult<FormColumnRemoval>.Ok(new FormColumnRemoval(edited, places.Distinct().ToList()));
-    }
-
-    /// <summary>The element's text, plus its line's indentation and line break when it sits on a line of its own.</summary>
-    private static (int Start, int End) RangeOf(string xml, XElement element)
-    {
-        var start = AgentXmlSplice.StartOf(xml, element);
-        var end = AgentXmlSplice.EndOf(xml, element);
-
-        var after = end;
-        while (after < xml.Length && xml[after] is ' ' or '\t') after++;
-        var ownLine = after == xml.Length || xml[after] is '\r' or '\n';
-        var before = start;
-        while (before > 0 && xml[before - 1] is ' ' or '\t') before--;
-        if (ownLine && before > 0 && xml[before - 1] == '\n')
-        {
-            before--;
-            if (before > 0 && xml[before - 1] == '\r') before--;
-            start = before;
-        }
-
-        return (start, end);
     }
 
     private static string PlaceOf(XElement cell)

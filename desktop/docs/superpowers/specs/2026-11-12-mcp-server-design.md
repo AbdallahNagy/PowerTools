@@ -275,6 +275,7 @@ Class: R read, C change, D destructive. Backend: **CT** existing `/api/community
 | `schema_add_column_to_form` | C | Add a column to a form section | NEW |
 | `schema_add_column_to_view` | C | Add a column to a view's layout | NEW |
 | `schema_remove_column_from_form` | D | Take a column off a form (tabs, header, footer); the column stays | NEW |
+| `schema_remove_column_from_view` | D | Take a column out of a view's grid and query; id and jump columns stay in the query | NEW |
 | `schema_publish` | C | Publish given tables, or all customizations | NEW |
 | `schema_delete_column` | D | Delete a column | NEW |
 | `schema_delete_table` | D | Delete a custom table | NEW |

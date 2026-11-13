@@ -217,6 +217,40 @@ public class AgentSchemaFormTests
     }
 
     [Fact]
+    public async Task Remove_column_from_view_updates_both_xml_columns_and_adds_the_view_to_the_solution()
+    {
+        var (service, client) = Make();
+
+        var result = await service.RemoveColumnFromViewAsync(
+            new RemoveViewColumnBody { Table = "Account", ViewId = ViewId.ToString(), Column = "TELEPHONE1", Solution = "Core" }, CancellationToken.None);
+
+        Assert.Null(result.Problem);
+        Assert.Equal(("telephone1", true), (result.Value!.Column, result.Value.RemovedFromQuery));
+        var update = Assert.Single(client.Updated);
+        Assert.Equal(("savedquery", ViewId), (update.LogicalName, update.Id));
+        Assert.DoesNotContain("telephone1", update.GetAttributeValue<string>("layoutxml"));
+        Assert.DoesNotContain("telephone1", update.GetAttributeValue<string>("fetchxml"));
+        Assert.Single(client.Executed.OfType<RetrieveUnpublishedRequest>());
+        var add = Assert.Single(client.Executed.OfType<AddSolutionComponentRequest>());
+        Assert.Equal((ViewId, 26, "Core"), (add.ComponentId, add.ComponentType, add.SolutionUniqueName));
+    }
+
+    [Fact]
+    public async Task Removing_a_column_not_in_the_view_or_from_another_tables_view_changes_nothing()
+    {
+        var (service, client) = Make();
+
+        var missing = await service.RemoveColumnFromViewAsync(
+            new RemoveViewColumnBody { Table = "account", ViewId = ViewId.ToString(), Column = "new_x" }, CancellationToken.None);
+        var other = await service.RemoveColumnFromViewAsync(
+            new RemoveViewColumnBody { Table = "contact", ViewId = ViewId.ToString(), Column = "telephone1" }, CancellationToken.None);
+
+        Assert.Equal("InvalidRequest", missing.Problem!.Code);
+        Assert.Equal("InvalidRequest", other.Problem!.Code);
+        Assert.Empty(client.Updated);
+    }
+
+    [Fact]
     public async Task List_views_returns_system_views_with_their_columns()
     {
         var (service, client) = Make();
