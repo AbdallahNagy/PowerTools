@@ -4,7 +4,7 @@ Date: 2026-11-11
 Status: draft, waiting for owner approval
 Scope: the big picture for all four projects, and the full design for project 1 (runtime and SDK).
 
-This design starts from the app code and the owner's stated wishes. It does not build on the earlier research under `docs/research/` or on earlier plugin notes; the owner asked for a fresh start.
+This design starts from the app code and the owner's stated wishes. It does not build on earlier plugin notes; the owner asked for a fresh start.
 
 ## Intent
 
