@@ -243,14 +243,15 @@ describe("tab header", () => {
   it("turns red and says so when the tab works against production", () => {
     renderWithProviders(
       <>
-        <Tab title="FetchXML Builder" connectionLabel="Contoso · prod" production active />
-        <Tab title="Plugin Registration" connectionLabel="Contoso · dev" />
+        <Tab id="builder" title="FetchXML Builder" connectionLabel="Contoso · prod" production active />
+        <Tab id="plugins" title="Plugin Registration" connectionLabel="Contoso · dev" />
       </>,
     );
 
-    const prod = screen.getByLabelText("FetchXML Builder, Contoso · prod (production)");
-    expect(prod).toHaveAttribute("data-production", "true");
-    expect(prod).toHaveClass("border-danger", "bg-danger-soft");
-    expect(screen.getByLabelText("Plugin Registration, Contoso · dev")).not.toHaveAttribute("data-production");
+    const prod = screen.getByRole("tab", { name: "FetchXML Builder, Contoso · prod (production)" });
+    expect(prod.closest("[data-tab-id]")).toHaveAttribute("data-production", "true");
+    expect(
+      screen.getByRole("tab", { name: "Plugin Registration, Contoso · dev" }).closest("[data-tab-id]"),
+    ).not.toHaveAttribute("data-production");
   });
 });

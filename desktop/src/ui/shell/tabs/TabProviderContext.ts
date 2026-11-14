@@ -24,6 +24,8 @@ export interface TabContextValue {
   closeOtherTabs: (tabId: string) => void;
   closeAllTabs: () => void;
   setActiveTab: (tabId: string) => void;
+  /** Move a tab to a position in the strip, counted from 0. */
+  moveTab: (tabId: string, toIndex: number) => void;
   /**
    * Bind one tab to a connection. Does not change the active connection.
    */

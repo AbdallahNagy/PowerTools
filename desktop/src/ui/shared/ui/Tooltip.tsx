@@ -8,12 +8,14 @@ interface TooltipProps {
   side?: "top" | "right" | "bottom" | "left";
   /** Keeps the tooltip closed without changing the element tree, so a focused child keeps focus. */
   disabled?: boolean;
+  /** Milliseconds of hover before it opens. Use 0 where an icon is the only label on screen, such as a collapsed sidebar. */
+  delay?: number;
 }
 
 /** Short hint on hover and keyboard focus. Not a replacement for a visible label. */
-export function Tooltip({ content, children, side = "top", disabled = false }: TooltipProps) {
+export function Tooltip({ content, children, side = "top", disabled = false, delay = 400 }: TooltipProps) {
   return (
-    <TooltipPrimitive.Provider delayDuration={400}>
+    <TooltipPrimitive.Provider delayDuration={delay}>
       <TooltipPrimitive.Root open={disabled ? false : undefined}>
         <TooltipPrimitive.Trigger asChild>{children}</TooltipPrimitive.Trigger>
         <TooltipPrimitive.Portal>

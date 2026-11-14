@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { McpStatusInfo } from "../../src/ui/platform/desktopBridge";
@@ -85,8 +85,16 @@ describe("Settings: Agents (MCP)", () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
     const code = await screen.findByText(/^claude mcp add powertools -- /);
     expect(code.textContent).toContain("--mcp-connector");
+    expect(screen.getByRole("button", { name: "Claude Code" })).toHaveAttribute("aria-pressed", "true");
+
+    // One client's setup shows at a time.
+    fireEvent.click(screen.getByRole("button", { name: "Claude Desktop" }));
+    expect(screen.queryByText(/^claude mcp add powertools -- /)).not.toBeInTheDocument();
     const json = screen.getByText(/"mcpServers"/);
     expect(json.textContent).toContain("--mcp-connector");
+    expect(screen.getByRole("button", { name: "Copy Claude Desktop" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "VS Code" }));
     const vscode = screen.getByText(/"servers"/);
     expect(vscode.textContent).toContain('"type": "stdio"');
     expect(vscode.textContent).toContain("--mcp-connector");
@@ -219,6 +227,35 @@ describe("Settings dialog", () => {
     expect(screen.getByRole("heading", { name: "Keyboard shortcuts" })).toBeInTheDocument();
     expect(screen.getByText("Ctrl+,")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keyboard shortcuts" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("groups the sections and filters them by what you search for", async () => {
+    renderShell();
+    fireEvent.click(screen.getByText("open settings"));
+    const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+    expect(within(nav).getAllByRole("group").map((group) => group.getAttribute("aria-label"))).toEqual([
+      "General",
+      "AI agents",
+      "Application",
+    ]);
+
+    // A word from inside a section finds it and opens it.
+    fireEvent.change(screen.getByLabelText("Search settings"), { target: { value: "crash" } });
+    expect(within(nav).getAllByRole("button").map((button) => button.textContent)).toEqual(["Privacy"]);
+    expect(screen.getByRole("heading", { name: "Privacy" })).toBeInTheDocument();
+
+    // Words match from their start: "port" is the MCP port, not crash "reports".
+    fireEvent.change(screen.getByLabelText("Search settings"), { target: { value: "port" } });
+    expect(within(nav).getAllByRole("button").map((button) => button.textContent)).toEqual(["Agents (MCP)"]);
+    fireEvent.change(screen.getByLabelText("Search settings"), { target: { value: "crash" } });
+
+    fireEvent.change(screen.getByLabelText("Search settings"), { target: { value: "no such setting" } });
+    expect(within(nav).queryAllByRole("button")).toHaveLength(0);
+    expect(within(nav).getByText(/No settings match/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Privacy" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(within(nav).getAllByRole("button")).toHaveLength(6);
   });
 
   it("changes the theme through main", async () => {

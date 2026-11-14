@@ -75,6 +75,41 @@
   color-scheme: dark;
 }
 
+/*
+ * Dark again inside a light app, for the theme previews in Settings. These
+ * repeat the dark values above; test/themeTokens.test.ts fails if they drift.
+ * The -soft tokens are mixed on <html>, so do not use them in such a subtree.
+ */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-canvas: #14171c;
+  --color-surface: #1b1f26;
+  --color-raised: #232832;
+  --color-hover: #2a303a;
+
+  --color-line: #2e3540;
+  --color-line-strong: #3d4654;
+
+  --color-fg-strong: #f3f5f8;
+  --color-fg: #d3d8df;
+  --color-fg-muted: #8b94a3;
+
+  --color-accent: #1f8075;
+  --color-accent-hover: #1a6d64;
+  --color-accent-fg: #ffffff;
+  --color-accent-text: #3fbfae;
+
+  --color-danger: #f0846f;
+  --color-warn: #e0b13a;
+  --color-ok: #5cbf7a;
+
+  --color-alt: #e39a5f;
+
+  --color-nest-a: #3a4d2a;
+  --color-nest-b: #4d2e52;
+}
+
 [data-theme="light"] {
   color-scheme: light;
 

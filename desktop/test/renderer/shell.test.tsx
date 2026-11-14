@@ -101,6 +101,7 @@ function statusTabContext(activeTabId: string): TabContextValue {
     closeOtherTabs: vi.fn(),
     closeAllTabs: vi.fn(),
     setActiveTab: vi.fn(),
+    moveTab: vi.fn(),
     setTabConnection: vi.fn(),
   };
 }
@@ -350,13 +351,103 @@ describe("renderer shell", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Hide sidebar" }));
 
-    expect(screen.queryByRole("navigation", { name: "Tools" })).not.toBeInTheDocument();
+    // Hidden collapses the sidebar to icons: tools, the connection, and Settings stay reachable.
+    const rail = screen.getByRole("navigation", { name: "Tools" });
+    expect(rail).toHaveAttribute("data-collapsed");
+    expect(screen.queryByRole("searchbox", { name: "Search tools" })).not.toBeInTheDocument();
     expect(screen.queryByRole("separator", { name: "Resize sidebar" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show sidebar" })).toBeInTheDocument();
+    expect(rail).toContainElement(screen.getByRole("button", { name: "Not connected" }));
+    expect(rail).toContainElement(screen.getByRole("button", { name: "Settings" }));
+    const builder = screen.getByRole("button", { name: "Build, run, and refine FetchXML queries" });
+    expect(builder).not.toHaveTextContent("FetchXML Builder");
+    expect(builder).not.toHaveAttribute("title");
+
+    fireEvent.click(builder);
+    expect(screen.getByRole("tab", { name: "FetchXML Builder" })).toHaveAttribute("aria-selected", "true");
+    expect(builder).toHaveAttribute("aria-current", "true");
 
     fireEvent.click(screen.getByRole("button", { name: "Show sidebar" }));
-    expect(screen.getByRole("navigation", { name: "Tools" })).toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Tools" })).not.toHaveAttribute("data-collapsed");
+    expect(screen.getByRole("searchbox", { name: "Search tools" })).toBeInTheDocument();
     expect(screen.getByRole("separator", { name: "Resize sidebar" })).toBeInTheDocument();
+  });
+
+  it("names a collapsed sidebar icon as soon as it has focus or the pointer", async () => {
+    renderWithProviders(
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar collapsed />
+        </TabProvider>
+      </ConnectionsProvider>,
+    );
+
+    const builder = await screen.findByRole("button", { name: "Build, run, and refine FetchXML queries" });
+    act(() => builder.focus());
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("FetchXML Builder");
+  });
+
+  it("closes a tab from its close button and with a middle click, and moves between tabs with the arrow keys", async () => {
+    const now = vi.spyOn(Date, "now");
+    renderWithProviders(
+      <ConnectionsProvider>
+        <TabProvider>
+          <ActivityBar />
+          <TabBar />
+          <TabState />
+        </TabProvider>
+      </ConnectionsProvider>,
+    );
+    const fetchXmlBuilder = await screen.findByRole("button", {
+      name: "Build, run, and refine FetchXML queries",
+    });
+    now.mockReturnValue(321);
+    fireEvent.click(fetchXmlBuilder);
+    now.mockReturnValue(322);
+    fireEvent.click(fetchXmlBuilder);
+    const titles = () => screen.getByRole("status", { name: "open tab titles" }).textContent;
+    const active = () => screen.getByRole("status", { name: "active tab" }).textContent;
+
+    const second = screen.getByRole("tab", { name: "FetchXML Builder 2" });
+    expect(second).toHaveAttribute("aria-selected", "true");
+    fireEvent.keyDown(second, { key: "ArrowLeft" });
+    expect(active()).toBe("fetchxml-builder-321");
+    expect(screen.getByRole("tab", { name: "FetchXML Builder" })).toHaveFocus();
+    fireEvent.keyDown(screen.getByRole("tab", { name: "FetchXML Builder" }), { key: "Home" });
+    expect(active()).toBe("welcome");
+
+    fireEvent.click(screen.getByRole("button", { name: "Close FetchXML Builder 2" }));
+    expect(titles()).toBe("Welcome | FetchXML Builder");
+    expect(active()).toBe("welcome");
+
+    fireEvent(
+      screen.getByRole("tab", { name: "FetchXML Builder" }),
+      new MouseEvent("auxclick", { bubbles: true, button: 1 }),
+    );
+    expect(titles()).toBe("Welcome");
+  });
+
+  it("moves the active tab left and right with Ctrl+Shift+PageUp and PageDown", async () => {
+    const now = vi.spyOn(Date, "now");
+    renderWithProviders(
+      <TabProvider>
+        <Layout />
+        <TabState />
+      </TabProvider>,
+    );
+    now.mockReturnValue(331);
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Build, run, and refine FetchXML queries" }),
+    );
+    const ids = () => screen.getByRole("status", { name: "open tab IDs" }).textContent;
+    expect(ids()).toBe("welcome | fetchxml-builder-331");
+
+    fireEvent.keyDown(document.body, { key: "PageUp", ctrlKey: true, shiftKey: true });
+    expect(ids()).toBe("fetchxml-builder-331 | welcome");
+    expect(screen.getByRole("status", { name: "active tab" }).textContent).toBe("fetchxml-builder-331");
+
+    fireEvent.keyDown(document.body, { key: "PageDown", ctrlKey: true, shiftKey: true });
+    expect(ids()).toBe("welcome | fetchxml-builder-331");
   });
 
   it("replaces status content by ID and removes only the unmounted publisher", async () => {

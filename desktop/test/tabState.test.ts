@@ -8,6 +8,7 @@ import {
   closeOtherTabs,
   closeTab,
   createInitialTabState,
+  moveTab,
   openToolTab,
   setTabConnection,
   type TabState,
@@ -267,5 +268,33 @@ describe("tab state", () => {
     expect(closeAllTabs(first)).toEqual({ tabs: [], activeTabId: "" });
     const empty = closeAllTabs(first);
     expect(closeAllTabs(empty)).toBe(empty);
+  });
+
+  it("moves a tab to a new position and keeps the active tab", () => {
+    const first = openToolTab(initialState, builderTool, 1001);
+    const second = openToolTab(first, builderTool, 1002);
+    const ids = (state: TabState) => state.tabs.map((tab) => tab.id);
+
+    const moved = moveTab(second, "fetchxml-builder-1002", 0);
+    expect(ids(moved)).toEqual(["fetchxml-builder-1002", "welcome", "fetchxml-builder-1001"]);
+    expect(moved.activeTabId).toBe("fetchxml-builder-1002");
+
+    expect(ids(moveTab(second, "welcome", 1))).toEqual([
+      "fetchxml-builder-1001",
+      "welcome",
+      "fetchxml-builder-1002",
+    ]);
+  });
+
+  it("clamps a move to the strip and returns the same state when nothing moves", () => {
+    const first = openToolTab(initialState, builderTool, 1101);
+
+    expect(moveTab(first, "welcome", 99).tabs.map((tab) => tab.id)).toEqual([
+      "fetchxml-builder-1101",
+      "welcome",
+    ]);
+    expect(moveTab(first, "welcome", -1)).toBe(first);
+    expect(moveTab(first, "fetchxml-builder-1101", 1)).toBe(first);
+    expect(moveTab(first, "missing", 0)).toBe(first);
   });
 });

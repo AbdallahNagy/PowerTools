@@ -260,7 +260,8 @@ describe("shell keyboard shortcuts", () => {
     expect(await screen.findByRole("navigation", { name: "Tools" })).toBeInTheDocument();
 
     fireEvent.keyDown(document.body, { key: "b", ctrlKey: true });
-    expect(screen.queryByRole("navigation", { name: "Tools" })).not.toBeInTheDocument();
+    expect(screen.getByRole("navigation", { name: "Tools" })).toHaveAttribute("data-collapsed");
+    expect(screen.queryByRole("searchbox", { name: "Search tools" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Show sidebar" })).toBeInTheDocument();
 
     fireEvent.keyDown(document.body, { key: "p", ctrlKey: true });
