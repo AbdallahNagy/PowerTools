@@ -85,15 +85,18 @@ const ActivityBar = () => {
         <div className="min-w-0 flex-1">
           <ConnectionFooter />
         </div>
-        <button
-          type="button"
-          title="Settings (Ctrl+,)"
-          aria-label="Settings"
-          className="flex shrink-0 items-center justify-center border-l border-t border-line px-3 text-fg-muted hover:bg-hover hover:text-fg-strong"
-          onClick={() => openSettings()}
-        >
-          <Settings size={16} strokeWidth={1.5} aria-hidden="true" />
-        </button>
+        {/* Same frame and hover as the connection button beside it. */}
+        <div className="flex shrink-0 border-t border-line p-1">
+          <button
+            type="button"
+            title="Settings (Ctrl+,)"
+            aria-label="Settings"
+            className="flex items-center justify-center px-2 py-1.5 text-fg-muted hover:bg-hover hover:text-fg-strong"
+            onClick={() => openSettings()}
+          >
+            <Settings size={16} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+        </div>
       </div>
     </nav>
   );
