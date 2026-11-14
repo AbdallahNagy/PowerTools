@@ -127,6 +127,8 @@ export interface AppSettings {
   usageStats: boolean;
   crashReports: boolean;
   version: string;
+  /** False in development builds, where checking for updates does nothing. */
+  updatesEnabled: boolean;
 }
 
 /** The MCP server's state for the Agents dialog. Mirrors McpStatusInfo in src/electron/mcp/mcpIpc.ts. */

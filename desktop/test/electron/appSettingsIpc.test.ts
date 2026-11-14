@@ -19,6 +19,7 @@ function setup(openPathResult = "") {
     ipcMain: { handle: (channel: string, handler: Handler) => void handlers.set(channel, handler) } as never,
     getMainWindow: () => ({ webContents: mainContents }) as never,
     version: "1.3.0",
+    updatesEnabled: true,
     theme: { load: () => theme, apply: deps.apply, save: (next) => (theme = next) },
     usageStats: { load: () => usageStats, save: (next) => (usageStats = next) },
     crashReports: { load: () => crashReports, save: (next) => (crashReports = next) },
@@ -38,6 +39,7 @@ describe("app settings IPC", () => {
       usageStats: true,
       crashReports: true,
       version: "1.3.0",
+      updatesEnabled: true,
     });
   });
 

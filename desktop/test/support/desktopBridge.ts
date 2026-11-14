@@ -101,6 +101,7 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     usageStats: true,
     crashReports: true,
     version: "1.2.3",
+    updatesEnabled: true,
   };
 
   const bridge: DesktopBridge = {

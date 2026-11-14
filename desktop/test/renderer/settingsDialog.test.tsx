@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { McpStatusInfo } from "../../src/ui/platform/desktopBridge";
@@ -6,6 +6,7 @@ import { ConnectionsProvider } from "../../src/ui/shared/connections";
 import { AgentsContext } from "../../src/ui/shell/agents/AgentsContext";
 import { useSettings } from "../../src/ui/shell/settings/SettingsContext";
 import { SettingsProvider } from "../../src/ui/shell/settings/SettingsProvider";
+import { UpdateProvider } from "../../src/ui/shell/layout/UpdateProvider";
 import type { ConnectionSummary } from "../../src/ui/shared/connections";
 import { renderWithProviders } from "../support/render";
 import { useContext } from "react";
@@ -62,13 +63,13 @@ describe("Settings: Agents (MCP)", () => {
   it("shows Off by default with the switch unchecked", async () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
     expect(await screen.findByText("Off")).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: /Let AI agents use Power Tools/ })).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: /Let AI agents use Power Tools/ })).not.toBeChecked();
   });
 
   it("switching on calls setMcpEnabled(true) and shows Running", async () => {
     const setMcpEnabled = vi.fn(async (): Promise<McpStatusInfo> => ({ ...OFF, enabled: true, running: true, port: 5000 }));
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpEnabled } });
-    const toggle = await screen.findByRole("checkbox", { name: /Let AI agents use Power Tools/ });
+    const toggle = await screen.findByRole("switch", { name: /Let AI agents use Power Tools/ });
     await waitFor(() => expect(toggle).not.toBeDisabled());
     fireEvent.click(toggle);
     expect(await screen.findByText("Running")).toBeInTheDocument();
@@ -109,28 +110,28 @@ describe("Settings: Agents (MCP)", () => {
     expect(document.body.textContent ?? "").not.toMatch(/[0-9a-f]{64}/);
   });
 
-  it("shows a checkbox per group with how many of its tools are on, and switches one", async () => {
+  it("shows a switch per group with how many of its tools are on, and switches one", async () => {
     const setMcpGroup = vi.fn(async (group: string, enabled: boolean): Promise<McpStatusInfo> => ({
       ...OFF,
       groups: OFF.groups.map((g) => (g.group === group ? { ...g, enabled } : g)),
     }));
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpGroup } });
-    const schema = await screen.findByRole("checkbox", { name: "schema tools" });
+    const schema = await screen.findByRole("switch", { name: "schema tools" });
     expect(schema).not.toBeChecked();
     expect(screen.getByText("Group off")).toBeInTheDocument();
     expect(screen.getByText("1 of 1 on")).toBeInTheDocument();
-    expect(screen.getByRole("checkbox", { name: "connections tools" })).toBeChecked();
+    expect(screen.getByRole("switch", { name: "connections tools" })).toBeChecked();
     await waitFor(() => expect(schema).not.toBeDisabled());
     fireEvent.click(schema);
     await waitFor(() => expect(setMcpGroup).toHaveBeenCalledWith("schema", true));
-    await waitFor(() => expect(screen.getByRole("checkbox", { name: "schema tools" })).toBeChecked());
+    await waitFor(() => expect(screen.getByRole("switch", { name: "schema tools" })).toBeChecked());
   });
 
   it("offers the direct HTTP option, saves the port and copies the config through main", async () => {
     const setMcpHttp = vi.fn(async (http: { enabled: boolean; port: number }): Promise<McpStatusInfo> => ({ ...OFF, http }));
     const copyMcpHttpConfig = vi.fn(async () => undefined);
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpHttp, copyMcpHttpConfig } });
-    const toggle = await screen.findByRole("checkbox", { name: "Direct HTTP" });
+    const toggle = await screen.findByRole("switch", { name: "Direct HTTP" });
     await waitFor(() => expect(toggle).not.toBeDisabled());
     expect(toggle).not.toBeChecked();
     expect(screen.getByRole("button", { name: "Copy client config" })).toBeDisabled();
@@ -151,7 +152,7 @@ describe("Settings: Agents (MCP)", () => {
   it("refuses a port outside 1024 to 65535 without calling main", async () => {
     const setMcpHttp = vi.fn(async (http: { enabled: boolean; port: number }): Promise<McpStatusInfo> => ({ ...OFF, http }));
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpHttp } });
-    await screen.findByRole("checkbox", { name: "Direct HTTP" });
+    await screen.findByRole("switch", { name: "Direct HTTP" });
     fireEvent.change(screen.getByLabelText("Port"), { target: { value: "80" } });
     fireEvent.click(screen.getByRole("button", { name: "Save port" }));
     expect(await screen.findByText("Enter a port from 1024 to 65535.")).toBeInTheDocument();
@@ -192,18 +193,20 @@ describe("Settings: Agents (MCP)", () => {
     }));
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpTool } });
     fireEvent.click(await screen.findByRole("button", { name: "Show connections tools" }));
-    const toggle = screen.getByRole("checkbox", { name: "connections_list tool" });
+    const toggle = screen.getByRole("switch", { name: "connections_list tool" });
     expect(screen.getByText("Read")).toBeInTheDocument();
     await waitFor(() => expect(toggle).not.toBeDisabled());
     fireEvent.click(toggle);
     await waitFor(() => expect(setMcpTool).toHaveBeenCalledWith("connections_list", false));
-    await waitFor(() => expect(screen.getByRole("checkbox", { name: "connections_list tool" })).not.toBeChecked());
+    await waitFor(() => expect(screen.getByRole("switch", { name: "connections_list tool" })).not.toBeChecked());
 
     fireEvent.change(screen.getByLabelText("Search agent tools"), { target: { value: "column" } });
     expect(screen.getByText("schema_create_column")).toBeInTheDocument();
     expect(screen.queryByText("connections_list")).not.toBeInTheDocument();
     // A tool of a switched-off group cannot be switched on its own.
-    expect(screen.getByRole("checkbox", { name: "schema_create_column tool" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "schema_create_column tool" })).toBeDisabled();
+    // It also reads as off, since agents do not get it, though its own setting is kept.
+    expect(screen.getByRole("switch", { name: "schema_create_column tool" })).not.toBeChecked();
   });
 });
 
@@ -224,6 +227,7 @@ describe("Settings dialog", () => {
       usageStats: true,
       crashReports: true,
       version: "1.2.3",
+      updatesEnabled: true,
     }));
     renderShell({ bridgeOverrides: { setThemePreference } });
     fireEvent.click(screen.getByText("open settings"));
@@ -241,18 +245,18 @@ describe("Settings dialog", () => {
     const setCrashReportsEnabled = vi.spyOn(view.bridge, "setCrashReportsEnabled");
     fireEvent.click(screen.getByText("open settings"));
     fireEvent.click(await screen.findByRole("button", { name: "Privacy" }));
-    const usage = await screen.findByRole("checkbox", { name: "Send anonymous usage stats" });
+    const usage = await screen.findByRole("switch", { name: "Send anonymous usage stats" });
     await waitFor(() => expect(usage).toBeChecked());
     fireEvent.click(usage);
     await waitFor(() => expect(setUsageStatsEnabled).toHaveBeenCalledWith(false));
-    const crash = screen.getByRole("checkbox", { name: "Send crash reports" });
+    const crash = screen.getByRole("switch", { name: "Send crash reports" });
     await waitFor(() => expect(crash).not.toBeDisabled());
     fireEvent.click(crash);
     await waitFor(() => expect(setCrashReportsEnabled).toHaveBeenCalledWith(false));
   });
 
   it("refreshes when a preference changes from the native menu", async () => {
-    const getAppSettings = vi.fn(async () => ({ theme: "system" as const, usageStats: true, crashReports: true, version: "1.2.3" }));
+    const getAppSettings = vi.fn(async () => ({ theme: "system" as const, usageStats: true, crashReports: true, version: "1.2.3", updatesEnabled: true }));
     const view = renderShell({ bridgeOverrides: { getAppSettings } });
     fireEvent.click(screen.getByText("open settings"));
     await waitFor(() => expect(getAppSettings).toHaveBeenCalledTimes(1));
@@ -276,7 +280,7 @@ describe("Settings dialog", () => {
     renderShell({ bridgeOverrides: { listConnections: async () => [connection], updateConnection } });
     fireEvent.click(screen.getByText("open settings"));
     fireEvent.click(await screen.findByRole("button", { name: "Agent permissions" }));
-    const toggle = await screen.findByRole("checkbox", { name: /Let agents make changes without asking on/ });
+    const toggle = await screen.findByRole("switch", { name: /Let agents make changes without asking on/ });
     expect(toggle).not.toBeChecked();
     fireEvent.click(toggle);
     await waitFor(() => expect(updateConnection).toHaveBeenCalledWith("c1", { agentChangesWithoutAsking: true }));
@@ -290,5 +294,42 @@ describe("Settings dialog", () => {
     expect(await screen.findByText("Power Tools v1.2.3")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open data folder" }));
     await waitFor(() => expect(openSettingsFolder).toHaveBeenCalledWith("data"));
+  });
+
+  it("waits for an update check and says when it found nothing", async () => {
+    let finish: () => void = () => undefined;
+    const checkForUpdates = vi.fn(() => new Promise<void>((resolve) => (finish = resolve)));
+    renderWithProviders(
+      <ConnectionsProvider>
+        <UpdateProvider>
+          <SettingsProvider>
+            <OpenSettingsButton />
+          </SettingsProvider>
+        </UpdateProvider>
+      </ConnectionsProvider>,
+      { bridgeOverrides: { checkForUpdates, getUpdateStatus: async () => ({ state: "idle" }) } },
+    );
+    fireEvent.click(screen.getByText("open settings"));
+    fireEvent.click(await screen.findByRole("button", { name: "Updates & About" }));
+    const button = await screen.findByRole("button", { name: "Check for updates" });
+    await waitFor(() => expect(screen.getByText("Power Tools is up to date.")).toBeInTheDocument());
+    fireEvent.click(button);
+    expect(await screen.findByText("Checking for updates…")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Check for updates" })).toBeDisabled();
+    act(() => finish());
+    expect(await screen.findByText(/You have the latest version\. Checked at/)).toBeInTheDocument();
+    expect(checkForUpdates).toHaveBeenCalledTimes(1);
+  });
+
+  it("says a development build does not check for updates", async () => {
+    renderShell({
+      bridgeOverrides: {
+        getAppSettings: async () => ({ theme: "system", usageStats: true, crashReports: true, version: "1.2.3", updatesEnabled: false }),
+      },
+    });
+    fireEvent.click(screen.getByText("open settings"));
+    fireEvent.click(await screen.findByRole("button", { name: "Updates & About" }));
+    expect(await screen.findByText(/development build, so it does not check for updates/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Check for updates" })).not.toBeInTheDocument();
   });
 });

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 
 import type { McpStatusInfo, McpToolInfo } from "../../../platform/desktopBridge";
-import { Badge, Checkbox, EmptyState, SearchInput } from "../../../shared/ui";
+import { Badge, EmptyState, SearchInput, Switch } from "../../../shared/ui";
 
 const EFFECTS: Record<McpToolInfo["effect"], { label: string; tone: "neutral" | "ok" | "warn" | "danger" }> = {
   read: { label: "Read", tone: "ok" },
@@ -61,30 +61,21 @@ export function McpToolsList({ groups, tools, busy, onGroupChange, onToolChange 
                 >
                   {open ? <ChevronDown size={14} aria-hidden="true" /> : <ChevronRight size={14} aria-hidden="true" />}
                 </button>
-                <label className="flex flex-1 items-center gap-2 text-sm text-fg">
-                  <Checkbox
-                    checked={entry.enabled}
-                    disabled={busy}
-                    onChange={(next) => onGroupChange(entry.group, next)}
-                    aria-label={`${entry.group} tools`}
-                  />
-                  <span className="font-mono">{entry.group}</span>
-                </label>
+                <span className="flex-1 font-mono text-sm text-fg-strong">{entry.group}</span>
                 <span className="text-xs text-fg-muted">
                   {entry.enabled ? `${on} of ${entry.tools} on` : "Group off"}
                 </span>
+                <Switch
+                  checked={entry.enabled}
+                  disabled={busy}
+                  onChange={(next) => onGroupChange(entry.group, next)}
+                  aria-label={`${entry.group} tools`}
+                />
               </div>
               {open ? (
                 <ul className="flex flex-col border-t border-line bg-canvas">
                   {groupTools.map((tool) => (
-                    <li key={tool.name} className="flex items-start gap-2 px-3 py-1.5 pl-10">
-                      <Checkbox
-                        className="mt-0.5"
-                        checked={tool.enabled}
-                        disabled={busy || !entry.enabled}
-                        onChange={(next) => onToolChange(tool.name, next)}
-                        aria-label={`${tool.name} tool`}
-                      />
+                    <li key={tool.name} className="flex items-center gap-4 px-3 py-2 pl-10">
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm text-fg-strong">{tool.title}</span>
@@ -93,6 +84,14 @@ export function McpToolsList({ groups, tools, busy, onGroupChange, onToolChange 
                         </div>
                         <p className="text-xs text-fg-muted">{tool.description}</p>
                       </div>
+                      {/* Shows what agents get: a tool of a switched-off group is off, whatever its own setting. */}
+                      <Switch
+                        size="sm"
+                        checked={entry.enabled && tool.enabled}
+                        disabled={busy || !entry.enabled}
+                        onChange={(next) => onToolChange(tool.name, next)}
+                        aria-label={`${tool.name} tool`}
+                      />
                     </li>
                   ))}
                 </ul>

@@ -11,12 +11,15 @@ export interface AppSettings {
   usageStats: boolean;
   crashReports: boolean;
   version: string;
+  /** False in development and unpackaged builds, where the updater does nothing. */
+  updatesEnabled: boolean;
 }
 
 export interface AppSettingsIpcDeps {
   ipcMain: Pick<IpcMain, "handle">;
   getMainWindow: () => BrowserWindow | null;
   version: string;
+  updatesEnabled: boolean;
   theme: { load(): ThemePreference; apply(theme: ThemePreference): void; save(theme: ThemePreference): void };
   usageStats: { load(): boolean; save(enabled: boolean): void };
   crashReports: { load(): boolean; save(enabled: boolean): void };
@@ -42,6 +45,7 @@ export function registerAppSettingsIpc(deps: AppSettingsIpcDeps) {
     usageStats: deps.usageStats.load(),
     crashReports: deps.crashReports.load(),
     version: deps.version,
+    updatesEnabled: deps.updatesEnabled,
   });
 
   ipcMain.handle("app-settings-get", async (event) => {

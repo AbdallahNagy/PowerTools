@@ -3,7 +3,7 @@ import { useContext, useState } from "react";
 import { desktopBridge } from "../../../platform/desktopBridge";
 import type { ConnectionInfo } from "../../../shared/connections";
 import { ConnectionsContext } from "../../../shared/connections/ConnectionsContext";
-import { Alert, Checkbox, EmptyState } from "../../../shared/ui";
+import { Alert, EmptyState, Switch } from "../../../shared/ui";
 import { bridgeErrorMessage } from "../../community-tools/bridgeErrorMessage";
 
 /** Each connection's "agents may make non-destructive changes without asking" switch, in one place. */
@@ -51,7 +51,7 @@ export function AgentPermissionsSection() {
                   {connection.envUrl}
                 </td>
                 <td className="px-3 py-1.5">
-                  <Checkbox
+                  <Switch
                     checked={connection.agentChangesWithoutAsking === true}
                     disabled={saving !== null}
                     onChange={(next) => void change(connection, next)}

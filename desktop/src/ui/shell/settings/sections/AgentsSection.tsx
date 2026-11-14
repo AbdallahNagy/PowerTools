@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, RefreshCw } from "lucide-react";
 
 import type { McpStatusInfo } from "../../../platform/desktopBridge";
-import { Alert, Badge, Button, Checkbox, EmptyState, Field, Input } from "../../../shared/ui";
+import { Alert, Badge, Button, EmptyState, Field, Input, Switch } from "../../../shared/ui";
 import { useAgents } from "../../agents/useAgents";
 import { McpToolsList } from "./McpToolsList";
+import { SettingSwitchRow } from "./SettingRow";
 
 function statusOf(status: McpStatusInfo | null): { label: string; tone: "neutral" | "ok" | "danger" } {
   if (status?.error) return { label: `Could not start: ${status.error}`, tone: "danger" };
@@ -106,10 +107,15 @@ function DirectHttp({
       <p className="text-xs text-fg-muted">
         For clients that only accept a URL. Most clients should use the command above, which needs no token in a config file.
       </p>
-      <label className="flex items-center gap-2 text-sm text-fg-strong">
-        <Checkbox checked={http.enabled} disabled={busy} onChange={(enabled) => onChange({ enabled, port: http.enabled ? http.port : Number(port) || http.port })} aria-label="Direct HTTP" />
-        Let clients connect to a fixed port
-      </label>
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-sm text-fg-strong">Let clients connect to a fixed port</span>
+        <Switch
+          checked={http.enabled}
+          disabled={busy}
+          onChange={(enabled) => onChange({ enabled, port: http.enabled ? http.port : Number(port) || http.port })}
+          aria-label="Direct HTTP"
+        />
+      </div>
       <div className="flex flex-wrap items-end gap-2">
         <Field label="Port" hint="1024 to 65535. Default 47800." error={portError ?? undefined}>
           <Input value={port} inputMode="numeric" className="w-28 bg-raised" onChange={(event) => setPort(event.target.value)} />
@@ -164,22 +170,14 @@ export function AgentsSection({ active }: { active: boolean }) {
       <p className="text-xs text-fg-muted">Let AI agents such as Claude Code use your Power Tools connections.</p>
       {error ? <Alert tone="danger">{error}</Alert> : null}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <label className="flex items-center gap-2 text-sm text-fg-strong">
-          <Checkbox
-            checked={enabled}
-            disabled={busy || status === null}
-            onChange={(next) => void setEnabled(next)}
-            aria-label="Let AI agents use Power Tools (MCP server)"
-          />
-          Let AI agents use Power Tools (MCP server)
-        </label>
-        <Badge tone={state.tone}>{state.label}</Badge>
-      </div>
-      <p className="text-xs text-fg-muted">
-        Off by default. Agents work through your own sign-in. Changes need your approval unless a connection allows them
-        under Agent permissions; destructive actions always ask.
-      </p>
+      <SettingSwitchRow
+        label="Let AI agents use Power Tools (MCP server)"
+        description="Off by default. Agents work through your own sign-in. Changes need your approval unless a connection allows them under Agent permissions; destructive actions always ask."
+        checked={enabled}
+        disabled={busy || status === null}
+        onChange={(next) => void setEnabled(next)}
+        aside={<Badge tone={state.tone}>{state.label}</Badge>}
+      />
 
       {status ? (
         <section className="flex flex-col gap-3" aria-label="Connect a client">

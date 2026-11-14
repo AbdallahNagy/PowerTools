@@ -1,35 +1,28 @@
-import { Alert, Checkbox } from "../../../shared/ui";
+import { Alert } from "../../../shared/ui";
 import type { AppSettingsState } from "../useAppSettings";
+import { SettingSwitchRow } from "./SettingRow";
 
 export function PrivacySection({ app }: { app: AppSettingsState }) {
   const disabled = app.busy || app.settings === null;
   return (
     <>
       {app.error ? <Alert tone="danger">{app.error}</Alert> : null}
-      <label className="flex items-start gap-2 text-sm text-fg-strong">
-        <Checkbox
+      <div className="flex flex-col">
+        <SettingSwitchRow
+          label="Send anonymous usage stats"
+          description="One daily heartbeat with a random install ID, the app version, and the OS. No user names, connections, or Dataverse data."
           checked={app.settings?.usageStats ?? false}
           disabled={disabled}
           onChange={(next) => void app.setUsageStats(next)}
-          aria-label="Send anonymous usage stats"
         />
-        <span className="flex flex-col">
-          Send anonymous usage stats
-          <span className="text-xs text-fg-muted">One daily heartbeat with a random install ID, the app version, and the OS. No user names, connections, or Dataverse data.</span>
-        </span>
-      </label>
-      <label className="flex items-start gap-2 text-sm text-fg-strong">
-        <Checkbox
+        <SettingSwitchRow
+          label="Send crash reports"
+          description="Error details that help fix crashes. Applies right away."
           checked={app.settings?.crashReports ?? false}
           disabled={disabled}
           onChange={(next) => void app.setCrashReports(next)}
-          aria-label="Send crash reports"
         />
-        <span className="flex flex-col">
-          Send crash reports
-          <span className="text-xs text-fg-muted">Error details that help fix crashes. Applies right away.</span>
-        </span>
-      </label>
+      </div>
     </>
   );
 }

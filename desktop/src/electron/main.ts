@@ -339,6 +339,7 @@ app.whenReady().then(async () => {
     ipcMain,
     getMainWindow: () => mainWindow,
     version: app.getVersion(),
+    updatesEnabled: shouldCheckForUpdates({ isPackaged: app.isPackaged, isDevelopment: isDev() }),
     theme: { load: loadThemePreference, apply: applyThemePreference, save: saveThemePreference },
     usageStats: { load: loadUsageStatsEnabled, save: saveUsageStatsEnabled },
     crashReports: { load: loadCrashReportsEnabled, save: saveCrashReportsEnabled },
