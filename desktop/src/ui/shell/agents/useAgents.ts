@@ -17,13 +17,18 @@ export interface AgentsState {
   refresh(): Promise<void>;
 }
 
-/** The MCP server's state for the Agents section of Settings. Reads when `active` turns true. */
+/**
+ * The MCP server's state for the Agents section of Settings. Reads when `active` turns true and
+ * keeps the last status meanwhile, so the section shows what it knows at once and corrects itself
+ * when the read returns, instead of drawing "off" first.
+ */
 export function useAgents(active: boolean): AgentsState {
   const [status, setStatus] = useState<McpStatusInfo | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const mounted = useRef(true);
   const latest = useRef(0);
+  const loaded = useRef(false);
 
   useEffect(() => {
     mounted.current = true;
@@ -33,12 +38,14 @@ export function useAgents(active: boolean): AgentsState {
   }, []);
 
   // Runs one bridge call, ignoring its result if a newer call has started or the dialog is gone.
-  const run = useCallback(async (call: () => Promise<McpStatusInfo>) => {
+  // A quiet call does not mark the section busy, so its controls do not dim while it runs.
+  const run = useCallback(async (call: () => Promise<McpStatusInfo>, quiet = false) => {
     const request = ++latest.current;
-    setBusy(true);
+    setBusy(!quiet);
     try {
       const next = await call();
       if (!mounted.current || request !== latest.current) return;
+      loaded.current = true;
       setStatus(next);
       setError(null);
     } catch (failure) {
@@ -49,7 +56,8 @@ export function useAgents(active: boolean): AgentsState {
     }
   }, []);
 
-  const refresh = useCallback(() => run(() => desktopBridge.getMcpStatus()), [run]);
+  // Re-reading a status that is already on screen is quiet; only the first read shows as loading.
+  const refresh = useCallback(() => run(() => desktopBridge.getMcpStatus(), loaded.current), [run]);
   const setEnabled = useCallback((enabled: boolean) => run(() => desktopBridge.setMcpEnabled(enabled)), [run]);
   const setGroup = useCallback((group: string, enabled: boolean) => run(() => desktopBridge.setMcpGroup(group, enabled)), [run]);
   const setTool = useCallback((name: string, enabled: boolean) => run(() => desktopBridge.setMcpTool(name, enabled)), [run]);

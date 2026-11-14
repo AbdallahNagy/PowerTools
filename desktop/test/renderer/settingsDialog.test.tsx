@@ -187,6 +187,37 @@ describe("Settings: Agents (MCP)", () => {
     await waitFor(() => expect(getMcpStatus).toHaveBeenCalledTimes(2));
   });
 
+  it("shows the switch as it is when the section is opened again, without drawing it off first", async () => {
+    const running: McpStatusInfo = { ...OFF, enabled: true, running: true, port: 5000 };
+    let calls = 0;
+    // Only the first read answers; later ones hang, as a slow main process would.
+    const getMcpStatus = vi.fn(() => (++calls === 1 ? Promise.resolve(running) : new Promise<McpStatusInfo>(() => undefined)));
+    renderAgents({ bridgeOverrides: { getMcpStatus } });
+    const name = /Let AI agents use Power Tools/;
+    expect(await screen.findByRole("switch", { name })).toBeChecked();
+
+    fireEvent.click(screen.getByRole("button", { name: "Privacy" }));
+    fireEvent.click(screen.getByRole("button", { name: "Agents (MCP)" }));
+    expect(screen.getByRole("switch", { name })).toBeChecked();
+    expect(screen.getByRole("switch", { name })).not.toBeDisabled();
+    expect(screen.getByText("Running")).toBeInTheDocument();
+    expect(getMcpStatus).toHaveBeenCalledTimes(2);
+
+    // Closing and opening Settings keeps it too.
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Settings" })).not.toBeInTheDocument());
+    fireEvent.click(screen.getByText("open agents"));
+    expect(await screen.findByRole("switch", { name })).toBeChecked();
+    expect(screen.getByRole("switch", { name })).not.toBeDisabled();
+  });
+
+  it("shows that the server state is loading instead of an off switch", async () => {
+    renderAgents({ bridgeOverrides: { getMcpStatus: () => new Promise<McpStatusInfo>(() => undefined) } });
+    expect(await screen.findByRole("status", { name: /Loading Let AI agents use Power Tools/ })).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /Let AI agents use Power Tools/ })).not.toBeInTheDocument();
+    expect(screen.queryByText("Off")).not.toBeInTheDocument();
+  });
+
   it("opens at Agents from the Agents (MCP) menu event", async () => {
     const view = renderShell();
     expect(screen.queryByText("Settings")).not.toBeInTheDocument();

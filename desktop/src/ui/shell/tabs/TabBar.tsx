@@ -41,12 +41,15 @@ function TabBar() {
   } = useTabs();
   const { toolsById } = useToolRegistry();
   const stripRef = useRef<HTMLDivElement>(null);
+  // Pressing a tab selects it, as in VS Code, so its content is already showing when a drag starts.
   const { draggingId, startDrag, swallowDragClick } = useTabDrag({
     stripRef,
-    order: tabs.map((tab) => tab.id),
     onMove: moveTab,
-    onDragStart: setActiveTab,
+    onPress: setActiveTab,
   });
+  // Tool content stays in one fixed order whatever the strip's order is. Moving a pane in the
+  // page would reload a community tool's frame, so reordering tabs must never move one.
+  const panes = [...tabs].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const [menu, setMenu] = useState<{
     tabId: string;
     x: number;
@@ -157,11 +160,12 @@ function TabBar() {
         {tabs.length === 0 ? (
           <EmptyWorkspace />
         ) : (
-          tabs.map((tab) => {
+          panes.map((tab) => {
             const isActive = tab.id === activeTabId;
             return (
               <div
                 key={tab.id}
+                data-tab-pane={tab.id}
                 className={
                   isActive ? "flex flex-1 flex-col min-h-0" : "hidden"
                 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Bot, EyeOff, Info, Keyboard, Palette, ShieldCheck, type LucideIcon } from "lucide-react";
 
 import { Modal, ModalTitle, SearchInput, cn } from "../../shared/ui";
+import { useAgents, type AgentsState } from "../agents/useAgents";
 import { useSettings } from "./SettingsContext";
 import {
   matchSettingsSections,
@@ -16,7 +17,7 @@ import { AppearanceSection } from "./sections/AppearanceSection";
 import { PrivacySection } from "./sections/PrivacySection";
 import { ShortcutsSection } from "./sections/ShortcutsSection";
 import { UpdatesAboutSection } from "./sections/UpdatesAboutSection";
-import { useAppSettings } from "./useAppSettings";
+import { useAppSettings, type AppSettingsState } from "./useAppSettings";
 
 const SECTION_ICONS: Record<SettingsSection, LucideIcon> = {
   appearance: Palette,
@@ -27,13 +28,12 @@ const SECTION_ICONS: Record<SettingsSection, LucideIcon> = {
   updates: Info,
 };
 
-function SectionBody({ section, active }: { section: SettingsSection; active: boolean }) {
-  const app = useAppSettings(active);
+function SectionBody({ section, app, agents }: { section: SettingsSection; app: AppSettingsState; agents: AgentsState }) {
   switch (section) {
     case "appearance":
       return <AppearanceSection app={app} />;
     case "agents":
-      return <AgentsSection active={active} />;
+      return <AgentsSection agents={agents} />;
     case "permissions":
       return <AgentPermissionsSection />;
     case "privacy":
@@ -49,6 +49,10 @@ export function SettingsDialog() {
   const { open, section, setSection, closeSettings } = useSettings();
   const [query, setQuery] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
+  // Both live here, outside the sections and the dialog's content, so what they loaded survives
+  // switching sections and closing the dialog. A section then opens showing its real state.
+  const app = useAppSettings(open);
+  const agents = useAgents(open && section === "agents");
   const matches = matchSettingsSections(query);
 
   // Each section starts at its top.
@@ -122,7 +126,7 @@ export function SettingsDialog() {
         </header>
         <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto px-8 pb-8">
           <div className="flex max-w-2xl flex-col gap-6">
-            <SectionBody section={section} active={open} />
+            <SectionBody section={section} app={app} agents={agents} />
           </div>
         </div>
       </section>

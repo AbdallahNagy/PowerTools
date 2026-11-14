@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from "react";
 
-import { Switch, cn } from "../../../shared/ui";
+import { Spinner, Switch, cn } from "../../../shared/ui";
 
 interface SettingsGroupProps {
   /** Names the group. Shown as its heading unless `hideTitle` is set. */
@@ -61,21 +61,31 @@ interface SettingSwitchRowProps {
   onChange(checked: boolean): void;
   /** Shown before the switch, such as a status badge. */
   aside?: ReactNode;
+  /** The value is not known yet: a spinner stands in for the switch and `aside`. */
+  loading?: boolean;
 }
 
 /** One on/off setting: what it is on the left, the switch on the right. */
-export function SettingSwitchRow({ label, description, checked, disabled, onChange, aside }: SettingSwitchRowProps) {
+export function SettingSwitchRow({ label, description, checked, disabled, onChange, aside, loading }: SettingSwitchRowProps) {
   const descriptionId = useId();
   return (
     <SettingRow label={label} description={description ? <span id={descriptionId}>{description}</span> : undefined}>
-      {aside}
-      <Switch
-        checked={checked}
-        disabled={disabled}
-        onChange={onChange}
-        aria-label={label}
-        aria-describedby={description ? descriptionId : undefined}
-      />
+      {loading ? (
+        <span role="status" aria-label={`Loading ${label}`} className="flex h-5 items-center">
+          <Spinner size={16} />
+        </span>
+      ) : (
+        <>
+          {aside}
+          <Switch
+            checked={checked}
+            disabled={disabled}
+            onChange={onChange}
+            aria-label={label}
+            aria-describedby={description ? descriptionId : undefined}
+          />
+        </>
+      )}
     </SettingRow>
   );
 }

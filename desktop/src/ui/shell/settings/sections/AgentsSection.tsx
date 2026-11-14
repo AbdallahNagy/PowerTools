@@ -3,7 +3,7 @@ import { Check, Copy, RefreshCw } from "lucide-react";
 
 import type { McpStatusInfo } from "../../../platform/desktopBridge";
 import { Alert, Badge, Button, EmptyState, Field, Input, Switch, cn } from "../../../shared/ui";
-import { useAgents } from "../../agents/useAgents";
+import type { AgentsState } from "../../agents/useAgents";
 import { McpToolsList } from "./McpToolsList";
 import { SettingRow, SettingSwitchRow, SettingsGroup } from "./SettingRow";
 
@@ -206,9 +206,8 @@ function DirectHttp({
 }
 
 /** The MCP server: switch, client setup, tools, direct HTTP, and recent activity. */
-export function AgentsSection({ active }: { active: boolean }) {
-  const { status, busy, error, setEnabled, setGroup, setTool, setHttp, regenerateToken, copyHttpConfig, refresh } =
-    useAgents(active);
+export function AgentsSection({ agents }: { agents: AgentsState }) {
+  const { status, busy, error, setEnabled, setGroup, setTool, setHttp, regenerateToken, copyHttpConfig, refresh } = agents;
   const state = statusOf(status);
   const enabled = status?.running === true || (status?.enabled === true && !status.error);
 
@@ -222,6 +221,8 @@ export function AgentsSection({ active }: { active: boolean }) {
           description="Off by default. Agents work through your own sign-in. Changes need your approval unless a connection allows them under Agent permissions; destructive actions always ask."
           checked={enabled}
           disabled={busy || status === null}
+          // Until the first read returns there is no state to show; a switch drawn "off" would flip a moment later.
+          loading={status === null && !error}
           onChange={(next) => void setEnabled(next)}
           aside={<Badge tone={state.tone}>{state.label}</Badge>}
         />

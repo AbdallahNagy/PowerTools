@@ -450,6 +450,36 @@ describe("renderer shell", () => {
     expect(ids()).toBe("welcome | fetchxml-builder-331");
   });
 
+  it("keeps tool content where it is in the page when tabs are reordered", async () => {
+    const now = vi.spyOn(Date, "now");
+    renderWithProviders(
+      <TabProvider>
+        <Layout />
+        <TabState />
+      </TabProvider>,
+    );
+    const builder = await screen.findByRole("button", { name: "Build, run, and refine FetchXML queries" });
+    now.mockReturnValue(341);
+    fireEvent.click(builder);
+    now.mockReturnValue(342);
+    fireEvent.click(builder);
+    const panes = () =>
+      Array.from(document.querySelectorAll<HTMLElement>("[data-tab-pane]"));
+    const before = panes();
+    expect(before).toHaveLength(3);
+
+    fireEvent.keyDown(document.body, { key: "PageUp", ctrlKey: true, shiftKey: true });
+    fireEvent.keyDown(document.body, { key: "PageUp", ctrlKey: true, shiftKey: true });
+    expect(screen.getByRole("status", { name: "open tab IDs" }).textContent).toBe(
+      "fetchxml-builder-342 | welcome | fetchxml-builder-341",
+    );
+
+    // Same elements, same order: a reorder that moved a pane would reload a community tool's frame.
+    const after = panes();
+    expect(after).toHaveLength(3);
+    after.forEach((pane, index) => expect(pane).toBe(before[index]));
+  });
+
   it("replaces status content by ID and removes only the unmounted publisher", async () => {
     const firstStatus = <span role="status" aria-label="first publisher status">First status</span>;
     const updatedFirstStatus = <span role="status" aria-label="first publisher status">Updated first status</span>;
