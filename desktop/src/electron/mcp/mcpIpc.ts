@@ -3,7 +3,7 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import type { ActivityEntry } from "./activityLog.js";
 import { connectorCommandLine, type ConnectorLaunch } from "./connectorCommand.js";
-import { isValidHttpPort, type McpService, type McpStatus } from "./mcpService.js";
+import type { McpService, McpStatus } from "./mcpService.js";
 import { AGENT_TOOL_GROUPS, type AgentToolGroup } from "./types.js";
 
 export type McpStatusInfo = McpStatus & {
@@ -14,7 +14,7 @@ export type McpStatusInfo = McpStatus & {
 
 export interface McpIpcDeps {
   ipcMain: Pick<IpcMain, "handle">;
-  service: Pick<McpService, "status" | "setEnabled" | "setGroup" | "setTool" | "setHttp" | "copyHttpConfig" | "regenerateHttpToken" | "recentActivity" | "respondApproval">;
+  service: Pick<McpService, "status" | "setEnabled" | "setGroup" | "setTool" | "recentActivity" | "respondApproval">;
   getMainWindow: () => BrowserWindow | null;
   connector: () => ConnectorLaunch;
 }
@@ -64,26 +64,6 @@ export function registerMcpIpc({ ipcMain, service, getMainWindow, connector }: M
     if (typeof name !== "string" || name.length === 0 || name.length > 64) throw new Error("A tool name is required");
     if (typeof enabled !== "boolean") throw new Error("Enabled must be true or false");
     return statusInfo(service.setTool(name, enabled));
-  });
-
-  ipcMain.handle("mcp-set-http", async (event, value: unknown) => {
-    assertMainWindow(event);
-    const input = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-    if (typeof input.enabled !== "boolean") throw new Error("Enabled must be true or false");
-    if (!isValidHttpPort(input.port)) throw new Error("The port must be a whole number from 1024 to 65535");
-    return statusInfo(await service.setHttp({ enabled: input.enabled, port: input.port }));
-  });
-
-  // The token goes to the clipboard from here and is never returned: the renderer only learns that it worked.
-  ipcMain.handle("mcp-copy-http-config", async (event) => {
-    assertMainWindow(event);
-    await service.copyHttpConfig();
-    return undefined;
-  });
-
-  ipcMain.handle("mcp-regenerate-http-token", async (event) => {
-    assertMainWindow(event);
-    return statusInfo(await service.regenerateHttpToken());
   });
 
   ipcMain.handle("mcp-approval-respond", async (event, id: unknown, allow: unknown) => {

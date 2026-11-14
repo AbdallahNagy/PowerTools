@@ -112,9 +112,6 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
     getMcpActivity: (limit: number) => ipcRenderer.invoke("mcp-get-activity", limit),
     setMcpGroup: (group: string, enabled: boolean) => ipcRenderer.invoke("mcp-set-group", group, enabled),
     setMcpTool: (name: string, enabled: boolean) => ipcRenderer.invoke("mcp-set-tool", name, enabled),
-    setMcpHttp: (http: { enabled: boolean; port: number }) => ipcRenderer.invoke("mcp-set-http", http),
-    copyMcpHttpConfig: () => ipcRenderer.invoke("mcp-copy-http-config"),
-    regenerateMcpHttpToken: () => ipcRenderer.invoke("mcp-regenerate-http-token"),
     onMcpApprovalPresent: (callback: (request: any) => void) => {
       const listener = (_: unknown, request: any) => callback(request);
       ipcRenderer.on("mcp-approval-present", listener);

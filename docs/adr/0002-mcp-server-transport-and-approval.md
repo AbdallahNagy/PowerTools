@@ -17,7 +17,7 @@ Power Tools will let AI agents (Claude Code, Claude Desktop, Copilot) work with 
 - Clients connect through a small stdio connector (`powertools-mcp`) by default.
   - The connector reads the port and a per-launch token from a discovery file in the user's profile.
   - It relays JSON-RPC to the endpoint and holds no MCP logic of its own.
-- Direct Streamable HTTP, with a fixed port and a stable token kept in `safeStorage`, is an opt-in option for clients that only accept a URL.
+- The connector is the only way in. There is no direct HTTP option for clients that only accept a URL (see below).
 
 **Organization**
 
@@ -43,7 +43,7 @@ Power Tools will let AI agents (Claude Code, Claude Desktop, Copilot) work with 
 - **A stdio server as the main transport.** A client-started process cannot reach the running app's connections, tokens or approval UI.
 - **Hosting the server in the sidecar.** Tokens, the active connection and the approval UI live in Electron, so every call would need a callback into main.
 - **Moving Electron↔sidecar to stdio.** A process's stdio has one owner, so it does not help agents. It would also force every renderer API call through IPC, for little security gain over loopback plus the per-launch secret.
-- **A stable token as the default.** It leaves a long-lived secret in plain text in client config files.
+- **A direct HTTP option with a stable token** (amended 2026-11-14; it was built, then removed before release). It needed a fixed port and a token that stays valid across launches, pasted in plain text into client config files. The clients that only take a URL (ChatGPT, Claude.ai connectors, Copilot Studio) connect from the vendor's cloud and cannot reach 127.0.0.1 anyway. Every local client we target can start the connector.
 - **One namespace per built-in tool.** It ties agent tool names to UI screens, and they break when a screen changes or becomes a community tool.
 - **Approval from tool hints.** A tool, or an agent, could mark a destructive call as safe.
 
