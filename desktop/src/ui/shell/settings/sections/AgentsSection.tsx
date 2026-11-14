@@ -15,7 +15,7 @@ function statusOf(status: McpStatusInfo | null): { label: string; tone: "neutral
 
 /** Both snippets use the same launch, so a client config and the Claude Code command cannot disagree. */
 function claudeCodeCommand(status: McpStatusInfo): string {
-  return `claude mcp add powertools -- ${status.connectorCommand}`;
+  return `claude mcp add --scope user powertools -- ${status.connectorCommand}`;
 }
 
 function clientConfigJson(status: McpStatusInfo): string {

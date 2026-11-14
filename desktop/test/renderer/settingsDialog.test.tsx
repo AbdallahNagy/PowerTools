@@ -82,13 +82,13 @@ describe("Settings: Agents (MCP)", () => {
 
   it("offers a Claude Code command and a JSON config that start the connector", async () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
-    const code = await screen.findByText(/^claude mcp add powertools -- /);
+    const code = await screen.findByText(/^claude mcp add --scope user powertools -- /);
     expect(code.textContent).toContain("--mcp-connector");
     expect(screen.getByRole("button", { name: "Claude Code" })).toHaveAttribute("aria-pressed", "true");
 
     // One client's setup shows at a time.
     fireEvent.click(screen.getByRole("button", { name: "Claude Desktop" }));
-    expect(screen.queryByText(/^claude mcp add powertools -- /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^claude mcp add --scope user powertools -- /)).not.toBeInTheDocument();
     const json = screen.getByText(/"mcpServers"/);
     expect(json.textContent).toContain("--mcp-connector");
     expect(screen.getByRole("button", { name: "Copy Claude Desktop" })).toBeInTheDocument();
