@@ -17,8 +17,10 @@ Agents start a small connector program that comes with Power Tools. It relays to
 **Claude Code**
 
 ```
-claude mcp add powertools -- "<install folder>\resources\api\PowerTools.API.exe" --mcp-connector
+claude mcp add --scope user powertools -- "<install folder>\resources\api\PowerTools.API.exe" --mcp-connector
 ```
+
+`--scope user` makes Power Tools available in every folder you open Claude Code in. Without it, Claude Code only loads the server in the folder where you ran the command.
 
 **Claude Desktop**, in `claude_desktop_config.json`:
 

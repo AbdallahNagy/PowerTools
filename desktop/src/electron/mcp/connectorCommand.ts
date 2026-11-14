@@ -28,7 +28,7 @@ export function connectorLaunch(options: ConnectorCommandOptions): ConnectorLaun
 
 const quote = (value: string) => (/\s/.test(value) ? `"${value}"` : value);
 
-/** The launch as one line a person can paste after `claude mcp add powertools --`. */
+/** The launch as one line a person can paste after `claude mcp add --scope user powertools --`. */
 export function connectorCommandLine(launch: ConnectorLaunch): string {
   return [launch.command, ...launch.args].map(quote).join(" ");
 }
