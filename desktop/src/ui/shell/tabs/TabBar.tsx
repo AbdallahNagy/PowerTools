@@ -1,5 +1,9 @@
 import { memo, useContext, useEffect, useRef, useState } from "react";
+import { House } from "lucide-react";
 import Tab from "./TabHeader";
+import { useTabDrag } from "./useTabDrag";
+import { isCommunityIcon } from "../layout/isCommunityIcon";
+import { ToolIcon } from "../layout/ToolIcon";
 import TabContextMenu from "./TabContextMenu";
 import EmptyWorkspace from "../layout/EmptyWorkspace";
 import { useTabs } from "./useTabs";
@@ -32,9 +36,20 @@ function TabBar() {
     closeTab,
     closeOtherTabs,
     closeAllTabs,
+    moveTab,
     setTabConnection,
   } = useTabs();
+  const { toolsById } = useToolRegistry();
   const stripRef = useRef<HTMLDivElement>(null);
+  // Pressing a tab selects it, as in VS Code, so its content is already showing when a drag starts.
+  const { draggingId, startDrag, swallowDragClick } = useTabDrag({
+    stripRef,
+    onMove: moveTab,
+    onPress: setActiveTab,
+  });
+  // Tool content stays in one fixed order whatever the strip's order is. Moving a pane in the
+  // page would reload a community tool's frame, so reordering tabs must never move one.
+  const panes = [...tabs].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   const [menu, setMenu] = useState<{
     tabId: string;
     x: number;
@@ -65,27 +80,67 @@ function TabBar() {
       ?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
   }, [activeTabId, tabs.length]);
 
+  // Arrow keys move between tabs when one has focus, as in any tab list.
+  const focusNeighborTab = (event: React.KeyboardEvent) => {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+    if (!(event.target as HTMLElement).matches('[role="tab"]')) return;
+    const index = tabs.findIndex((tab) => tab.id === activeTabId);
+    const target =
+      event.key === "ArrowRight" ? index + 1
+      : event.key === "ArrowLeft" ? index - 1
+      : event.key === "Home" ? 0
+      : event.key === "End" ? tabs.length - 1
+      : -1;
+    const next = tabs[target];
+    if (!next || index < 0) return;
+    event.preventDefault();
+    setActiveTab(next.id);
+    const tabElement = Array.from(
+      stripRef.current?.querySelectorAll<HTMLElement>("[data-tab-id]") ?? [],
+    ).find((element) => element.dataset.tabId === next.id);
+    tabElement?.querySelector<HTMLElement>('[role="tab"]')?.focus();
+  };
+
   return (
     <>
       <div
         ref={stripRef}
-        className="tab-strip flex min-w-0 shrink-0 overflow-x-auto overflow-y-hidden bg-surface"
+        role="tablist"
+        aria-label="Open tabs"
+        onClickCapture={swallowDragClick}
+        onKeyDown={focusNeighborTab}
+        // The inset line is the strip's bottom edge; the active tab covers it and joins the content below.
+        className="tab-strip relative flex min-w-0 shrink-0 overflow-x-auto overflow-y-hidden bg-surface shadow-[inset_0_-1px_0_var(--color-line)]"
       >
-        {tabs.map((tab) => (
-          <Tab
-            key={tab.id}
-            title={tab.title}
-            connectionLabel={tab.connectionId ? connectionsById.get(tab.connectionId)?.displayName ?? null : null}
-            production={tab.connectionId ? connectionsById.get(tab.connectionId)?.environmentKind === "production" : false}
-            active={tab.id === activeTabId}
-            onClick={() => setActiveTab(tab.id)}
-            onClose={() => closeTab(tab.id)}
-            onContextMenu={(event) => {
-              event.preventDefault();
-              setMenu({ tabId: tab.id, x: event.clientX, y: event.clientY });
-            }}
-          />
-        ))}
+        {tabs.map((tab) => {
+          const tool = toolsById[tab.toolId];
+          const connection = tab.connectionId ? connectionsById.get(tab.connectionId) : undefined;
+          return (
+            <Tab
+              key={tab.id}
+              id={tab.id}
+              title={tab.title}
+              icon={
+                tool?.icon ? (
+                  <ToolIcon src={tool.icon} untrusted={isCommunityIcon(tool)} className="h-4 w-4" />
+                ) : tab.toolId === "welcome" ? (
+                  <House size={14} className="shrink-0 opacity-80" aria-hidden="true" />
+                ) : null
+              }
+              connectionLabel={connection?.displayName ?? null}
+              production={connection?.environmentKind === "production"}
+              active={tab.id === activeTabId}
+              dragging={tab.id === draggingId}
+              onClick={() => setActiveTab(tab.id)}
+              onClose={() => closeTab(tab.id)}
+              onPointerDown={(event) => startDrag(tab.id, event)}
+              onContextMenu={(event) => {
+                event.preventDefault();
+                setMenu({ tabId: tab.id, x: event.clientX, y: event.clientY });
+              }}
+            />
+          );
+        })}
       </div>
       {menu && menuTab ? (
         <TabContextMenu
@@ -105,11 +160,12 @@ function TabBar() {
         {tabs.length === 0 ? (
           <EmptyWorkspace />
         ) : (
-          tabs.map((tab) => {
+          panes.map((tab) => {
             const isActive = tab.id === activeTabId;
             return (
               <div
                 key={tab.id}
+                data-tab-pane={tab.id}
                 className={
                   isActive ? "flex flex-1 flex-col min-h-0" : "hidden"
                 }

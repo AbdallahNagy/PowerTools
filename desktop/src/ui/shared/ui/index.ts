@@ -12,7 +12,7 @@ export { Input, Select, Textarea } from "./Input";
 export { CodeEditor, type CodeEditorProps } from "./CodeEditor";
 export { preloadCodeEditor } from "./loadCodeEditor";
 export { Menu, type MenuItem } from "./Menu";
-export { Modal } from "./Modal";
+export { Modal, ModalTitle } from "./Modal";
 export { ProgressBar } from "./ProgressBar";
 export { SearchInput } from "./SearchInput";
 export { Spinner } from "./Spinner";

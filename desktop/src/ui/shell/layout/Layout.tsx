@@ -128,6 +128,8 @@ const ShellBody = () => {
           onToggleSidebar={() => setSidebarVisible((visible) => !visible)}
         />
         <div className="flex-1 flex overflow-hidden">
+          {/* Hidden means collapsed to icons, so tools, the connection, and Settings stay one click away. */}
+          {sidebarVisible ? null : <ActivityBar collapsed />}
           <Group
             className="flex flex-1 min-h-0 min-w-0"
             orientation="horizontal"

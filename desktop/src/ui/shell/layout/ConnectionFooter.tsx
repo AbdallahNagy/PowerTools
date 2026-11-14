@@ -1,9 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 
 import { useConnections } from "../../shared/connections";
+import { Tooltip, cn } from "../../shared/ui";
 import { ConnectionGroupList, ProductionBadge } from "../connections/ConnectionGroupList";
 
-const ConnectionFooter = () => {
+interface ConnectionFooterProps {
+  /** Collapsed sidebar: only the status dot, with the name in a tooltip and the menu opening beside it. */
+  compact?: boolean;
+}
+
+const ConnectionFooter = ({ compact = false }: ConnectionFooterProps) => {
   const [open, setOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,33 +58,65 @@ const ConnectionFooter = () => {
 
   const label = active?.displayName ?? "Not connected";
 
+  const dot = (
+    <span
+      aria-hidden="true"
+      className={`h-2 w-2 shrink-0 rounded-full ${active ? "bg-accent" : "bg-fg-muted"}`}
+    />
+  );
+  const toggle = () => setOpen((current) => !current);
+  const ariaLabel = active ? `Connection: ${active.displayName}` : "Not connected";
+
   return (
     <div
-      className="relative shrink-0 border-t border-line p-1"
+      className={cn("relative shrink-0 border-t border-line", compact ? "w-full" : "p-1")}
       ref={containerRef}
     >
-      <button
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={active ? `Connection: ${active.displayName}` : "Not connected"}
-        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-fg hover:bg-hover hover:text-fg-strong"
-        onClick={() => setOpen((current) => !current)}
-      >
-        <span
-          aria-hidden="true"
-          className={`h-2 w-2 shrink-0 rounded-full ${
-            active ? "bg-accent" : "bg-fg-muted"
-          }`}
-        />
-        <span className="truncate">{label}</span>
-        {active ? <ProductionBadge connection={active} /> : null}
-      </button>
+      {compact ? (
+        <Tooltip
+          side="right"
+          delay={0}
+          disabled={open}
+          content={
+            <span className="flex items-center gap-2">
+              {label}
+              {active ? <ProductionBadge connection={active} /> : null}
+            </span>
+          }
+        >
+          <button
+            type="button"
+            aria-expanded={open}
+            aria-haspopup="menu"
+            aria-label={ariaLabel}
+            className="flex h-9 w-full items-center justify-center hover:bg-hover"
+            onClick={toggle}
+          >
+            {dot}
+          </button>
+        </Tooltip>
+      ) : (
+        <button
+          type="button"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          aria-label={ariaLabel}
+          className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm text-fg hover:bg-hover hover:text-fg-strong"
+          onClick={toggle}
+        >
+          {dot}
+          <span className="truncate">{label}</span>
+          {active ? <ProductionBadge connection={active} /> : null}
+        </button>
+      )}
 
       {open && (
         <div
           role="menu"
-          className="absolute bottom-full left-1 right-1 z-50 mb-1 max-h-[70vh] overflow-y-auto border border-line bg-raised py-1 text-fg"
+          className={cn(
+            "absolute z-50 max-h-[70vh] overflow-y-auto border border-line bg-raised py-1 text-sm text-fg shadow-lg",
+            compact ? "bottom-1 left-full ml-1 w-72" : "bottom-full left-1 right-1 mb-1",
+          )}
         >
           {connections.length === 0 && (
             <div className="px-3 py-1.5 text-fg-muted">No connections</div>

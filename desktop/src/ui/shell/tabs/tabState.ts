@@ -136,3 +136,16 @@ export function closeOtherTabs(state: TabState, tabId: string): TabState {
 export function closeAllTabs(state: TabState): TabState {
   return state.tabs.length === 0 ? state : { tabs: [], activeTabId: "" };
 }
+
+/** Move a tab to `toIndex` in the strip (clamped). The active tab does not change. */
+export function moveTab(state: TabState, tabId: string, toIndex: number): TabState {
+  const fromIndex = state.tabs.findIndex((tab) => tab.id === tabId);
+  if (fromIndex < 0) return state;
+  const target = Math.max(0, Math.min(state.tabs.length - 1, toIndex));
+  if (target === fromIndex) return state;
+
+  const tabs = [...state.tabs];
+  const [tab] = tabs.splice(fromIndex, 1);
+  tabs.splice(target, 0, tab);
+  return { ...state, tabs };
+}

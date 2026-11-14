@@ -24,6 +24,8 @@ const FORWARDABLE: ReadonlySet<string> = new Set([
   "close-tab",
   "next-tab",
   "previous-tab",
+  "move-tab-left",
+  "move-tab-right",
   "toggle-quick-open",
   "toggle-sidebar",
   "open-settings",
@@ -42,7 +44,7 @@ export function useShellShortcuts({
   onToggleSidebar,
   onOpenSettings,
 }: ShellShortcutBindings) {
-  const { tabs, activeTabId, closeTab, setActiveTab } = useTabs();
+  const { tabs, activeTabId, closeTab, setActiveTab, moveTab } = useTabs();
   const registry = usePrimaryActionRegistry();
 
   const runShellAction = useCallback(
@@ -61,6 +63,12 @@ export function useShellShortcuts({
           if (nextId && nextId !== activeTabId) setActiveTab(nextId);
           break;
         }
+        case "move-tab-left":
+        case "move-tab-right": {
+          const index = tabs.findIndex((tab) => tab.id === activeTabId);
+          if (index >= 0) moveTab(activeTabId, index + (shortcut === "move-tab-right" ? 1 : -1));
+          break;
+        }
         case "toggle-quick-open":
           onQuickOpenChange(true);
           break;
@@ -72,7 +80,7 @@ export function useShellShortcuts({
           break;
       }
     },
-    [activeTabId, closeTab, onOpenSettings, onQuickOpenChange, onToggleSidebar, setActiveTab, tabs],
+    [activeTabId, closeTab, moveTab, onOpenSettings, onQuickOpenChange, onToggleSidebar, setActiveTab, tabs],
   );
 
   const dispatchShortcut = useCallback(

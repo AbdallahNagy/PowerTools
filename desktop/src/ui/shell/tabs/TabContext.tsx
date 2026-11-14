@@ -8,6 +8,7 @@ import {
   closeOtherTabs as closeOtherTabsInState,
   closeTab as closeTabInState,
   createInitialTabState,
+  moveTab as moveTabInState,
   openToolTab,
   setTabConnection as setTabConnectionInState,
   type TabState,
@@ -29,6 +30,7 @@ type TabAction =
   | { type: "close-other-tabs"; tabId: string }
   | { type: "close-all-tabs" }
   | { type: "activate-tab"; tabId: string }
+  | { type: "move-tab"; tabId: string; toIndex: number }
   | { type: "set-connection"; tabId: string; connectionId: string | null };
 
 const initialTabState = createInitialTabState(TOOL_REGISTRY.welcome);
@@ -52,6 +54,8 @@ function tabReducer(state: TabState, action: TabAction): TabState {
       return closeAllTabsInState(state);
     case "activate-tab":
       return activateTab(state, action.tabId);
+    case "move-tab":
+      return moveTabInState(state, action.tabId, action.toIndex);
     case "set-connection":
       return setTabConnectionInState(state, action.tabId, action.connectionId);
   }
@@ -111,6 +115,10 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
     dispatch({ type: "activate-tab", tabId });
   };
 
+  const moveTab = (tabId: string, toIndex: number) => {
+    dispatch({ type: "move-tab", tabId, toIndex });
+  };
+
   return (
     <TabProviderContext.Provider
       value={{
@@ -122,6 +130,7 @@ export const TabProvider = ({ children }: { children: ReactNode }) => {
         closeOtherTabs,
         closeAllTabs,
         setActiveTab,
+        moveTab,
         setTabConnection,
       }}
     >

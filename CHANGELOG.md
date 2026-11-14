@@ -9,8 +9,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Added
 
 - Community tools: load a tool from a local folder (File > Community tools).
-- **Settings.** One place to manage the app. Open it from the gear at the bottom of the sidebar, File > Settings…, the command palette, or Ctrl+,. It has the theme, the MCP server with each of its tools listed and switchable one by one, the "changes without asking" switch for every connection, usage stats and crash reports, the version and update status, the data and agent activity folders, and the keyboard shortcuts.
+- **Settings.** One place to manage the app. Open it from the gear at the bottom of the sidebar, File > Settings…, the command palette, or Ctrl+,. It has the theme, the MCP server with each of its tools listed and switchable one by one, the "changes without asking" switch for every connection, usage stats and crash reports, the version and update status, the data and agent activity folders, and the keyboard shortcuts. Sections are grouped in a side list with a search box, the theme is picked from previews, and each agent client (Claude Code, Claude Desktop, VS Code) shows its own setup.
+- **Reorder tabs.** Drag a tab along the strip to move it, or press Ctrl+Shift+PageUp and Ctrl+Shift+PageDown to move the active tab. Each tab shows its tool's icon, a middle click closes a tab, and the arrow keys move between tabs when one has focus.
 - **MCP server for AI agents.** An optional server (off by default; turn it on under Settings > Agents (MCP)) that lets agents such as Claude Code, Claude Desktop and VS Code work on your Dataverse environments with your own sign-in. Agents can read metadata and records; create, update and delete records and run Dataverse messages; create and change tables, columns, lookups, relationships and choices, add columns to forms and views, remove columns from forms and views, and publish; manage solutions, patches, components and layers; register plug-in assemblies, steps and images; and manage environment variables. Power Tools decides what needs your approval, not the agent: reads run, changes ask unless you allow non-destructive changes for that connection (Manage connections), and deletions and other destructive changes always ask. Clients connect through a small command or, as an option, a fixed local HTTP port. You can switch each group of tools off, and a local activity log shows what agents did. See [the MCP server guide](desktop/docs/mcp-server.md).
+
+### Changed
+
+- **The sidebar collapses to icons.** Hiding the sidebar (Ctrl+B or the title bar button) now leaves a narrow strip with every tool's icon, the connection dot, and Settings. Point at an icon to see its name at once. The tool of the active tab is marked in the sidebar.
+
+### Fixed
+
+- The minimize, maximize, and close buttons keep the normal arrow cursor instead of the hand.
 
 ## [1.3.0] - 2026-11-03
 

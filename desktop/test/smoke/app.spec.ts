@@ -44,16 +44,14 @@ test("launches the desktop app with an isolated profile and opens FetchXML Build
 
     await expect(mainWindow.getByRole("heading", { level: 1, name: "PowerTools" })).toBeVisible();
     await expect(mainWindow.getByRole("button", { name: "File" })).toBeVisible();
-    await expect(mainWindow.getByRole("button", { name: "Close" })).toBeVisible();
+    await expect(mainWindow.getByRole("button", { name: "Close", exact: true })).toBeVisible();
     await expect(mainWindow.getByRole("searchbox", { name: "Search tools" })).toBeVisible();
 
     await mainWindow
       .getByRole("button", { name: "Build, run, and refine FetchXML queries" })
       .click();
 
-    await expect(
-      mainWindow.locator("span.mr-2").filter({ hasText: /^FetchXML Builder$/ }),
-    ).toBeVisible();
+    await expect(mainWindow.getByRole("tab", { name: "FetchXML Builder" })).toBeVisible();
   } finally {
     try {
       await electronApp?.close();

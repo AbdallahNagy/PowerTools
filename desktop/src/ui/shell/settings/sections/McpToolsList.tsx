@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 
 import type { McpStatusInfo, McpToolInfo } from "../../../platform/desktopBridge";
 import { Badge, EmptyState, SearchInput, Switch } from "../../../shared/ui";
+import { SettingsGroup } from "./SettingRow";
 
 const EFFECTS: Record<McpToolInfo["effect"], { label: string; tone: "neutral" | "ok" | "warn" | "danger" }> = {
   read: { label: "Read", tone: "ok" },
@@ -36,13 +37,14 @@ export function McpToolsList({ groups, tools, busy, onGroupChange, onToolChange 
   const visible = useMemo(() => tools.filter((tool) => matches(tool, query.trim())), [tools, query]);
 
   return (
-    <section className="flex flex-col gap-2" aria-label="Tools">
-      <h3 className="text-sm font-medium text-fg-strong">Tools</h3>
-      <p className="text-xs text-fg-muted">
-        Turn a group or a single tool off to stop offering it to agents. Connected agents are told right away.
-      </p>
-      <SearchInput value={query} onChange={setQuery} placeholder="Search tools" aria-label="Search agent tools" />
-      <ul className="flex flex-col divide-y divide-line border border-line">
+    <SettingsGroup
+      title="Tools"
+      description="Turn a group or a single tool off to stop offering it to agents. Connected agents are told right away."
+    >
+      <div className="p-2">
+        <SearchInput value={query} onChange={setQuery} placeholder="Search tools" aria-label="Search agent tools" />
+      </div>
+      <ul className="flex flex-col divide-y divide-line">
         {groups.map((entry) => {
           const groupTools = visible.filter((tool) => tool.group === entry.group);
           if (query && groupTools.length === 0) return null;
@@ -51,7 +53,7 @@ export function McpToolsList({ groups, tools, busy, onGroupChange, onToolChange 
           const open = query ? true : expanded[entry.group] === true;
           return (
             <li key={entry.group} className="flex flex-col">
-              <div className="flex items-center gap-2 px-3 py-1.5">
+              <div className="flex items-center gap-2 py-2 pl-3 pr-4">
                 <button
                   type="button"
                   className="rounded-sm p-0.5 text-fg-muted hover:bg-hover hover:text-fg-strong"
@@ -75,7 +77,7 @@ export function McpToolsList({ groups, tools, busy, onGroupChange, onToolChange 
               {open ? (
                 <ul className="flex flex-col border-t border-line bg-canvas">
                   {groupTools.map((tool) => (
-                    <li key={tool.name} className="flex items-center gap-4 px-3 py-2 pl-10">
+                    <li key={tool.name} className="flex items-center gap-4 py-2 pl-10 pr-4">
                       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="text-sm text-fg-strong">{tool.title}</span>
@@ -101,6 +103,6 @@ export function McpToolsList({ groups, tools, busy, onGroupChange, onToolChange 
         })}
       </ul>
       {query && visible.length === 0 ? <EmptyState title="No matching tools" description="Try another word." /> : null}
-    </section>
+    </SettingsGroup>
   );
 }

@@ -55,6 +55,10 @@ describe("title bar", () => {
     fireEvent.click(screen.getByRole("button", { name: "Hide sidebar" }));
     expect(onToggleSidebar).toHaveBeenCalledTimes(1);
 
+    // Window controls keep the arrow cursor; other buttons show the hand.
+    for (const control of [minimize, maximize, close]) expect(control).toHaveClass("cursor-default");
+    expect(file).not.toHaveClass("cursor-default");
+
     fireEvent.click(minimize);
     fireEvent.click(maximize);
     fireEvent.click(close);

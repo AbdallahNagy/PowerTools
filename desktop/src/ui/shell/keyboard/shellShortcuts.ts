@@ -4,6 +4,8 @@ export type ShellShortcut =
   | "close-tab"
   | "next-tab"
   | "previous-tab"
+  | "move-tab-left"
+  | "move-tab-right"
   | "toggle-quick-open"
   | "toggle-sidebar"
   | "open-settings"
@@ -27,6 +29,8 @@ export const SHELL_SHORTCUT_LIST: ReadonlyArray<{ id: ShellShortcut; label: stri
   { id: "close-tab", label: "Close the active tab", keys: ["Ctrl+W"] },
   { id: "next-tab", label: "Next tab", keys: ["Ctrl+Tab"] },
   { id: "previous-tab", label: "Previous tab", keys: ["Ctrl+Shift+Tab"] },
+  { id: "move-tab-left", label: "Move the active tab left", keys: ["Ctrl+Shift+PageUp"] },
+  { id: "move-tab-right", label: "Move the active tab right", keys: ["Ctrl+Shift+PageDown"] },
   { id: "primary-action", label: "Run the tool's main action", keys: ["Enter", "Ctrl+Enter in a field"] },
 ];
 
@@ -37,6 +41,9 @@ export function matchShellShortcut(event: ShortcutKeyState): ShellShortcut | nul
   if (command && event.key === "Tab") {
     return event.shiftKey ? "previous-tab" : "next-tab";
   }
+
+  if (command && event.shiftKey && event.key === "PageUp") return "move-tab-left";
+  if (command && event.shiftKey && event.key === "PageDown") return "move-tab-right";
 
   if (event.shiftKey) return null;
 

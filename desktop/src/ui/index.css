@@ -90,3 +90,8 @@
 .tab-strip::-webkit-scrollbar {
   height: 3px;
 }
+
+/* The collapsed sidebar is one icon wide; a scrollbar would cover the icons. */
+.rail-scroll::-webkit-scrollbar {
+  width: 0;
+}

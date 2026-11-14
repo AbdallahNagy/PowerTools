@@ -129,7 +129,7 @@ test("a community tool stuck in an infinite loop leaves the shell responsive", a
       const button = window.getByRole("navigation").locator("button", { hasText: "Hanging fixture" });
       await expect(button).toBeVisible({ timeout: 30_000 });
       await button.click();
-      const tab = window.locator('div[aria-label="Hanging fixture"]');
+      const tab = window.getByRole("tab", { name: "Hanging fixture", exact: true });
       await expect(tab).toBeVisible();
 
       // The tool loops one second after the handshake; give it time to be stuck.
@@ -150,7 +150,7 @@ test("a community tool stuck in an infinite loop leaves the shell responsive", a
 
       // Another tool still opens, in its own tab.
       await window.getByRole("button", { name: "Build, run, and refine FetchXML queries" }).click({ timeout: 5_000 });
-      await expect(window.locator('div[aria-label="FetchXML Builder"]')).toBeVisible({ timeout: 5_000 });
+      await expect(window.getByRole("tab", { name: "FetchXML Builder", exact: true })).toBeVisible({ timeout: 5_000 });
 
       // The File button opens a native menu that Playwright cannot see; a click that lands within the timeout
       // shows the shell still takes input.
@@ -159,7 +159,7 @@ test("a community tool stuck in an infinite loop leaves the shell responsive", a
       // The shell stays in control of the hung tool: its tab is listed and can be closed.
       await expect(tab).toBeVisible();
       await tab.hover();
-      await tab.locator("button").click({ timeout: 5_000 });
+      await window.getByRole("button", { name: "Close Hanging fixture", exact: true }).click({ timeout: 5_000 });
       await expect(tab).toHaveCount(0, { timeout: 5_000 });
     },
   );

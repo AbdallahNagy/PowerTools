@@ -1,13 +1,13 @@
 import { Alert } from "../../../shared/ui";
 import type { AppSettingsState } from "../useAppSettings";
-import { SettingSwitchRow } from "./SettingRow";
+import { SettingSwitchRow, SettingsGroup } from "./SettingRow";
 
 export function PrivacySection({ app }: { app: AppSettingsState }) {
   const disabled = app.busy || app.settings === null;
   return (
     <>
       {app.error ? <Alert tone="danger">{app.error}</Alert> : null}
-      <div className="flex flex-col">
+      <SettingsGroup title="Diagnostics">
         <SettingSwitchRow
           label="Send anonymous usage stats"
           description="One daily heartbeat with a random install ID, the app version, and the OS. No user names, connections, or Dataverse data."
@@ -22,7 +22,7 @@ export function PrivacySection({ app }: { app: AppSettingsState }) {
           disabled={disabled}
           onChange={(next) => void app.setCrashReports(next)}
         />
-      </div>
+      </SettingsGroup>
     </>
   );
 }

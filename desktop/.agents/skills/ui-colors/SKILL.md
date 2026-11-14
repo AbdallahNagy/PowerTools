@@ -11,6 +11,7 @@ description: "Use when making any UI modification that involves color or shared 
 - Each `--color-<name>` token generates utilities: `bg-<name>`, `text-<name>`, `border-<name>`, `ring-<name>`, `accent-<name>`, `fill-<name>`, and so on.
 - Tokens are named by **role**, not by value. Dark is the default theme. `[data-theme="light"]` redefines the same names, so a component that uses tokens works in both themes without changes.
 - The user picks **System**, **Dark**, or **Light** in **View > Theme**. The main process (`src/electron/theme.ts`) saves the choice in `settings.json` and sets `nativeTheme.themeSource`. The renderer follows `prefers-color-scheme` and sets `data-theme` on `<html>` (`src/ui/shell/theme/colorScheme.ts`). Window background colors in `theme.ts` mirror `surface` and `canvas`; change both places together.
+- `[data-theme="dark"]` and `[data-theme="light"]` also work on any element, which then draws its subtree in that theme. The Settings theme previews use this. The nested dark block repeats the default values (`test/themeTokens.test.ts` keeps them equal); when you change a dark value, change both. Do not use the `-soft` tokens inside such a subtree: they are mixed on `<html>`.
 - Always check a change in both themes. Anything drawn with a fixed color, such as an image or an inverted icon, breaks in one of them.
 - Identity: cool slate neutrals with one deep teal accent. Teal is the only brand color. Blue is not part of the palette.
 
@@ -115,10 +116,10 @@ Import from `src/ui/shared/ui`. Each one already uses the palette, so a tool onl
 | `Input`, `Textarea`, `Select` | Text fields and dropdowns | `Select` is a styled native `<select>`. Put them inside `Field` for a label. |
 | `SearchInput` | Filtering a list | Has a search icon and a clear button. |
 | `Checkbox` | Boolean choice | Supports `indeterminate`. |
-| `Modal` | Dialogs | Radix Dialog: traps focus, closes the top dialog on Escape or outside click, hides the background from screen readers. `busy` blocks closing and shows a spinner. |
+| `Modal` | Dialogs | Radix Dialog: traps focus, closes the top dialog on Escape or outside click, hides the background from screen readers. `busy` blocks closing and shows a spinner. `frameless` drops the header and padding for a dialog that lays out its own panes, such as Settings; place `ModalTitle` inside it yourself. |
 | `Tabs` | Switching views inside a tool, such as Results / FetchXML | Arrow keys move between tabs. |
 | `Menu` | Actions behind one button | Keyboard navigation and type-ahead. `null` in `items` draws a separator. |
-| `Tooltip` | A short hint for an icon-only button | Never the only label; icon buttons still need `aria-label`. |
+| `Tooltip` | A short hint for an icon-only button | Never the only label; icon buttons still need `aria-label`. `delay={0}` shows it at once, for places where icons are the only thing on screen, such as the collapsed sidebar. |
 | `Badge` | A state or category, such as Managed or Custom | `tone`: `neutral`, `accent`, `ok`, `warn`, `danger`. |
 | `Alert` | An inline message about the current screen | `tone`: `info`, `ok`, `warn`, `danger`. Errors and warnings are announced. |
 | `EmptyState` | Where content will appear | Say what goes here and the next step, for example "Select a table to see its fields." |

@@ -23,6 +23,13 @@ describe("shell shortcuts", () => {
     expect(matchShellShortcut({ ...plainKey, key: "Tab", ctrlKey: true, shiftKey: true })).toBe(
       "previous-tab",
     );
+    expect(matchShellShortcut({ ...plainKey, key: "PageUp", ctrlKey: true, shiftKey: true })).toBe(
+      "move-tab-left",
+    );
+    expect(matchShellShortcut({ ...plainKey, key: "PageDown", ctrlKey: true, shiftKey: true })).toBe(
+      "move-tab-right",
+    );
+    expect(matchShellShortcut({ ...plainKey, key: "PageDown", ctrlKey: true })).toBeNull();
     expect(matchShellShortcut({ ...plainKey, key: "p", ctrlKey: true })).toBe("toggle-quick-open");
     expect(matchShellShortcut({ ...plainKey, key: "b", ctrlKey: true })).toBe("toggle-sidebar");
     expect(matchShellShortcut({ ...plainKey, key: "Enter" })).toBe("primary-action");

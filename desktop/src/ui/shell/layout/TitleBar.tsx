@@ -11,6 +11,9 @@ interface TitleBarProps {
   onToggleSidebar: () => void;
 }
 
+// Window controls keep the arrow cursor, as in every Windows title bar.
+const WINDOW_CONTROL = "flex w-11 cursor-default items-center justify-center hover:bg-hover hover:text-fg-strong";
+
 function popupMenu(menuId: TitleBarMenuId, target: HTMLElement) {
   const rect = target.getBoundingClientRect();
   void desktopBridge.popupAppMenu(menuId, rect.left, rect.bottom);
@@ -83,7 +86,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
           type="button"
           aria-label="Minimize"
           title="Minimize"
-          className="flex w-11 items-center justify-center hover:bg-hover hover:text-fg-strong"
+          className={WINDOW_CONTROL}
           onClick={() => {
             void desktopBridge.minimizeWindow();
           }}
@@ -94,7 +97,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
           type="button"
           aria-label={maximized ? "Restore" : "Maximize"}
           title={maximized ? "Restore" : "Maximize"}
-          className="flex w-11 items-center justify-center hover:bg-hover hover:text-fg-strong"
+          className={WINDOW_CONTROL}
           onClick={() => {
             void desktopBridge.toggleMaximizeWindow();
           }}
@@ -109,7 +112,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
           type="button"
           aria-label="Close"
           title="Close"
-          className="flex w-11 items-center justify-center hover:bg-hover hover:text-fg-strong"
+          className={WINDOW_CONTROL}
           onClick={() => {
             void desktopBridge.closeWindow();
           }}
