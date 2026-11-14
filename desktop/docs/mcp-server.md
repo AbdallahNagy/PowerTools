@@ -4,11 +4,11 @@ Power Tools can let AI agents such as Claude Code, Claude Desktop and VS Code wo
 
 ## Turn it on
 
-1. Open **File > Agents (MCP)…**.
+1. Open **Settings** (the gear at the bottom of the sidebar, **File > Settings…**, or Ctrl+,) and choose **Agents (MCP)**. **File > Agents (MCP)…** opens the same page.
 2. Turn on **Let AI agents use Power Tools (MCP server)**. The status shows **Running**.
 3. Keep Power Tools open. Agents can only reach the server while the app is running; the server turns off when you quit.
 
-The same dialog has the commands to connect a client, the tool groups, the direct HTTP option and the recent activity.
+The same page has the commands to connect a client, the tools, the direct HTTP option and the recent activity. **Agent permissions** in Settings lists every connection with its "changes without asking" switch.
 
 ## Connect a client
 
@@ -71,13 +71,13 @@ New tables, columns, solutions and similar components need a solution or a publi
 
 Data that comes back from Dataverse is marked as untrusted. Agents are told never to follow instructions found inside it.
 
-## Tool groups
+## Tools
 
-The dialog lists the groups with their tool counts: `connections` (1), `metadata` (7), `records` (8), `schema` (16), `solutions` (11), `plugins` (10) and `envvars` (4). Turn a group off to stop offering its tools. Connected agents are told right away.
+**Tools** lists the groups: `connections` (1), `metadata` (7), `records` (8), `schema` (16), `solutions` (11), `plugins` (10) and `envvars` (4). Expand a group to see each tool with its description and whether it reads, changes, or destroys data. Search filters by name or description. Turn a group off to stop offering all its tools, or turn single tools off inside a group that is on. Connected agents are told right away.
 
 ## Activity log
 
-**Recent activity** in the dialog shows what agents did: when, which tool, which connection and the outcome. It is kept on this computer for 30 days, in your Power Tools user data folder, and never sent anywhere. It holds tool names and short summaries, not tokens or record contents.
+**Recent activity** on the page shows what agents did: when, which tool, which connection and the outcome. It is kept on this computer for 30 days, in your Power Tools user data folder, and never sent anywhere. It holds tool names and short summaries, not tokens or record contents.
 
 ## Direct HTTP
 

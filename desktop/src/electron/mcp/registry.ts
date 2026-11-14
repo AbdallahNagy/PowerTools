@@ -6,6 +6,17 @@ const NAME_PATTERN = /^[a-z0-9_]{1,64}$/;
 const EFFECT_MARKERS = ["Read-only.", "Changes the environment.", "Destructive:"];
 const MAX_DESCRIPTION = 400;
 
+/** How a tool's effect reads in settings: "varies" when it depends on the arguments. */
+export type AgentToolEffectLabel = "read" | "change" | "destructive" | "varies";
+
+export interface AgentToolInfo {
+  name: string;
+  title: string;
+  description: string;
+  group: AgentToolGroup;
+  effect: AgentToolEffectLabel;
+}
+
 export type Validation = { ok: true; args: Record<string, unknown> } | { ok: false; message: string };
 
 export interface AgentToolRegistry {
@@ -15,6 +26,8 @@ export interface AgentToolRegistry {
   get(name: string): AgentTool | undefined;
   /** Tools per group, whether or not the group is enabled. */
   groups(): Array<{ group: AgentToolGroup; tools: number }>;
+  /** Every tool, whether or not it is enabled. */
+  tools(): AgentToolInfo[];
   validate(tool: AgentTool, args: unknown): Validation;
 }
 
@@ -29,10 +42,13 @@ function describeError(error: ErrorObject): string {
 export interface RegistryOptions {
   /** Read on every call, so a toggle takes effect at once. Default: every group is on. */
   isGroupEnabled?(group: AgentToolGroup): boolean;
+  /** Read on every call. Default: every tool is on. A tool is offered only when it and its group are on. */
+  isToolEnabled?(name: string): boolean;
 }
 
 export function createAgentToolRegistry(tools: AgentTool[], options: RegistryOptions = {}): AgentToolRegistry {
-  const enabled = (tool: AgentTool) => options.isGroupEnabled?.(tool.group) ?? true;
+  const enabled = (tool: AgentTool) =>
+    (options.isGroupEnabled?.(tool.group) ?? true) && (options.isToolEnabled?.(tool.name) ?? true);
   const byName = new Map<string, AgentTool>();
   for (const tool of tools) {
     if (!NAME_PATTERN.test(tool.name)) throw new Error(`Invalid agent tool name "${tool.name}"`);
@@ -76,6 +92,14 @@ export function createAgentToolRegistry(tools: AgentTool[], options: RegistryOpt
     },
     groups: () =>
       AGENT_TOOL_GROUPS.map((group) => ({ group, tools: [...byName.values()].filter((tool) => tool.group === group).length })),
+    tools: () =>
+      [...byName.values()].map((tool) => ({
+        name: tool.name,
+        title: tool.title,
+        description: tool.description,
+        group: tool.group,
+        effect: typeof tool.effect === "string" ? tool.effect : "varies",
+      })),
     validate(tool, args) {
       let validator = validators.get(tool.name);
       if (!validator) {

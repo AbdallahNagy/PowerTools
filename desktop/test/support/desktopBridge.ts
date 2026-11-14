@@ -64,6 +64,11 @@ const offlineMcpStatus: Awaited<ReturnType<DesktopBridge["getMcpStatus"]>> = {
     { group: "metadata", enabled: true, tools: 7 },
     { group: "records", enabled: true, tools: 8 },
   ],
+  tools: [
+    { name: "connections_list", title: "List connections", description: "Lists saved connections. Read-only.", group: "connections", effect: "read", enabled: true },
+    { name: "metadata_tables", title: "List tables", description: "Lists tables. Read-only.", group: "metadata", effect: "read", enabled: true },
+    { name: "records_delete", title: "Delete a record", description: "Destructive: deletes a record.", group: "records", effect: "destructive", enabled: true },
+  ],
   http: { enabled: false, port: 47800 },
 };
 
@@ -78,6 +83,8 @@ export interface FakeDesktopBridge extends DesktopBridge {
   emitWindowMaximizedChanged(maximized: boolean): void;
   emitOpenCommunityTools(): void;
   emitOpenAgents(): void;
+  emitOpenSettings(): void;
+  emitAppSettingsChanged(): void;
 }
 
 export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}): FakeDesktopBridge {
@@ -87,6 +94,15 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
   const windowMaximizedChangedListeners = new Set<WindowMaximizedChangedListener>();
   const openCommunityToolsListeners = new Set<() => void>();
   const openAgentsListeners = new Set<() => void>();
+  const openSettingsListeners = new Set<() => void>();
+  const appSettingsChangedListeners = new Set<() => void>();
+  let appSettings: Awaited<ReturnType<DesktopBridge["getAppSettings"]>> = {
+    theme: "system",
+    usageStats: true,
+    crashReports: true,
+    version: "1.2.3",
+    updatesEnabled: true,
+  };
 
   const bridge: DesktopBridge = {
     createConnectionWindow: async () => undefined,
@@ -161,6 +177,23 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
       ...offlineMcpStatus,
       groups: offlineMcpStatus.groups.map((g) => (g.group === group ? { ...g, enabled } : g)),
     }),
+    setMcpTool: async (name, enabled) => ({
+      ...offlineMcpStatus,
+      tools: offlineMcpStatus.tools.map((t) => (t.name === name ? { ...t, enabled } : t)),
+    }),
+    onOpenSettings: (callback) => {
+      openSettingsListeners.add(callback);
+      return () => openSettingsListeners.delete(callback);
+    },
+    onAppSettingsChanged: (callback) => {
+      appSettingsChangedListeners.add(callback);
+      return () => appSettingsChangedListeners.delete(callback);
+    },
+    getAppSettings: async () => appSettings,
+    setThemePreference: async (theme) => (appSettings = { ...appSettings, theme }),
+    setUsageStatsEnabled: async (usageStats) => (appSettings = { ...appSettings, usageStats }),
+    setCrashReportsEnabled: async (crashReports) => (appSettings = { ...appSettings, crashReports }),
+    openSettingsFolder: async () => undefined,
     onMcpApprovalPresent: () => () => undefined,
     onMcpApprovalDismiss: () => () => undefined,
     respondMcpApproval: async () => undefined,
@@ -190,6 +223,12 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     },
     emitOpenAgents: () => {
       openAgentsListeners.forEach((listener) => listener());
+    },
+    emitOpenSettings: () => {
+      openSettingsListeners.forEach((listener) => listener());
+    },
+    emitAppSettingsChanged: () => {
+      appSettingsChangedListeners.forEach((listener) => listener());
     },
   };
 }

@@ -85,11 +85,19 @@ export interface ThemeMenuOptions {
   onThemeChange: (theme: ThemePreference) => void;
 }
 
+// Settings shows the same preferences as the menu, so a menu change tells main to refresh it.
+let preferencesChangedHandler: () => void = () => undefined;
+
+export function setPreferencesChangedHandler(handler: () => void): void {
+  preferencesChangedHandler = handler;
+}
+
 const DEFAULT_THEME_MENU: ThemeMenuOptions = {
   theme: "system",
   onThemeChange: (theme) => {
     applyThemePreference(theme);
     saveThemePreference(theme);
+    preferencesChangedHandler();
   },
 };
 
@@ -102,7 +110,10 @@ export type CrashReportsMenuOptions = UsageStatsMenuOptions;
 
 const DEFAULT_CRASH_REPORTS_MENU: CrashReportsMenuOptions = {
   enabled: true,
-  onChange: saveCrashReportsEnabled,
+  onChange: (enabled) => {
+    saveCrashReportsEnabled(enabled);
+    preferencesChangedHandler();
+  },
 };
 
 export interface ToolRequestMenuOptions {
@@ -172,7 +183,24 @@ const DEFAULT_AGENTS_MENU: AgentsMenuOptions = {
 
 const DEFAULT_USAGE_STATS_MENU: UsageStatsMenuOptions = {
   enabled: true,
-  onChange: saveUsageStatsEnabled,
+  onChange: (enabled) => {
+    saveUsageStatsEnabled(enabled);
+    preferencesChangedHandler();
+  },
+};
+
+export interface SettingsMenuOptions {
+  onOpenSettings: () => void;
+}
+
+let settingsMenuHandler: () => void = () => undefined;
+
+export function setSettingsMenuHandler(handler: () => void): void {
+  settingsMenuHandler = handler;
+}
+
+const DEFAULT_SETTINGS_MENU: SettingsMenuOptions = {
+  onOpenSettings: () => settingsMenuHandler(),
 };
 
 export function createApplicationMenuTemplate(
@@ -183,6 +211,7 @@ export function createApplicationMenuTemplate(
   connectionsMenu: ConnectionsMenuOptions = DEFAULT_CONNECTIONS_MENU,
   communityToolsMenu: CommunityToolsMenuOptions = DEFAULT_COMMUNITY_TOOLS_MENU,
   agentsMenu: AgentsMenuOptions = DEFAULT_AGENTS_MENU,
+  settingsMenu: SettingsMenuOptions = DEFAULT_SETTINGS_MENU,
 ): Electron.MenuItemConstructorOptions[] {
   return [
     {
@@ -196,6 +225,14 @@ export function createApplicationMenuTemplate(
         { type: "separator" },
         { label: "Community tools…", click: () => communityToolsMenu.onOpenCommunityTools() },
         { label: "Agents (MCP)…", click: () => agentsMenu.onOpenAgents() },
+        { type: "separator" },
+        // The renderer owns the shortcut, so the menu only shows it.
+        {
+          label: "Settings…",
+          accelerator: "CmdOrCtrl+,",
+          registerAccelerator: false,
+          click: () => settingsMenu.onOpenSettings(),
+        },
         { type: "separator" },
         // The rest matches Electron's default fileMenu role.
         process.platform === "darwin" ? { role: "close" } : { role: "quit" },

@@ -10,13 +10,14 @@ export interface AgentsState {
   error: string | null;
   setEnabled(enabled: boolean): Promise<void>;
   setGroup(group: string, enabled: boolean): Promise<void>;
+  setTool(name: string, enabled: boolean): Promise<void>;
   setHttp(http: { enabled: boolean; port: number }): Promise<void>;
   regenerateToken(): Promise<void>;
   copyHttpConfig(): Promise<void>;
   refresh(): Promise<void>;
 }
 
-/** The MCP server's state for the Agents dialog. Reads when `active` turns true. */
+/** The MCP server's state for the Agents section of Settings. Reads when `active` turns true. */
 export function useAgents(active: boolean): AgentsState {
   const [status, setStatus] = useState<McpStatusInfo | null>(null);
   const [busy, setBusy] = useState(false);
@@ -51,6 +52,7 @@ export function useAgents(active: boolean): AgentsState {
   const refresh = useCallback(() => run(() => desktopBridge.getMcpStatus()), [run]);
   const setEnabled = useCallback((enabled: boolean) => run(() => desktopBridge.setMcpEnabled(enabled)), [run]);
   const setGroup = useCallback((group: string, enabled: boolean) => run(() => desktopBridge.setMcpGroup(group, enabled)), [run]);
+  const setTool = useCallback((name: string, enabled: boolean) => run(() => desktopBridge.setMcpTool(name, enabled)), [run]);
 
   useEffect(() => {
     if (active) void refresh();
@@ -68,5 +70,5 @@ export function useAgents(active: boolean): AgentsState {
     }
   }, []);
 
-  return { status, busy, error, setEnabled, setGroup, setHttp, regenerateToken, copyHttpConfig, refresh };
+  return { status, busy, error, setEnabled, setGroup, setTool, setHttp, regenerateToken, copyHttpConfig, refresh };
 }

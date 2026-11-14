@@ -6,7 +6,7 @@ import { createConnectionResolver, type ConnectionSummaryLike } from "./connecti
 import { deleteDiscovery, writeDiscovery } from "./discovery.js";
 import { startHttpHost, type HttpHost } from "./httpHost.js";
 import { createMcpRequestHandler, type McpRequestHandler } from "./mcpServer.js";
-import { createAgentToolRegistry } from "./registry.js";
+import { createAgentToolRegistry, type AgentToolInfo } from "./registry.js";
 import { createSidecarCaller } from "./sidecarCaller.js";
 import { READ_TOOLS } from "./tools/index.js";
 import { WRITE_TOOLS } from "./tools/recordWrites.js";
@@ -42,6 +42,8 @@ export interface McpStatus {
   error: string | null;
   /** Every group, with whether its tools are offered and how many it has. */
   groups: Array<{ group: AgentToolGroup; enabled: boolean; tools: number }>;
+  /** Every tool, with whether the user left it on. A tool of a switched-off group keeps its own setting. */
+  tools: Array<AgentToolInfo & { enabled: boolean }>;
   /** The direct HTTP option: a fixed port and a token kept in secure storage. The token is never part of the status. */
   http: McpHttpSettings;
 }
@@ -60,6 +62,9 @@ export interface McpServiceDeps {
   /** A group missing from the saved record is on. Defaults to keeping them in memory. */
   readGroups?(): Partial<Record<AgentToolGroup, boolean>>;
   writeGroups?(groups: Partial<Record<AgentToolGroup, boolean>>): void;
+  /** Names of tools the user switched off. Defaults to keeping them in memory. */
+  readDisabledTools?(): string[];
+  writeDisabledTools?(names: string[]): void;
   readHttp?(): Partial<McpHttpSettings>;
   writeHttp?(http: McpHttpSettings): void;
   /** Where the HTTP token lives. Defaults to a token kept in memory. */
@@ -89,6 +94,8 @@ export interface McpService {
   setEnabled(value: boolean): Promise<McpStatus>;
   /** Switches a group of tools on or off and tells connected clients the list changed. */
   setGroup(group: AgentToolGroup, enabled: boolean): McpStatus;
+  /** Switches one tool on or off and tells connected clients the list changed. */
+  setTool(name: string, enabled: boolean): McpStatus;
   /** Turns the direct HTTP option on or off and sets its port. A running server restarts to apply it. */
   setHttp(http: McpHttpSettings): Promise<McpStatus>;
   /** Puts the client config, token included, on the clipboard. The token never leaves main. */
@@ -114,9 +121,17 @@ export function createMcpService(deps: McpServiceDeps): McpService {
   });
   let memoryGroups: Partial<Record<AgentToolGroup, boolean>> = {};
   const readGroups = () => (deps.readGroups ? deps.readGroups() : memoryGroups);
+  let memoryDisabledTools: string[] = [];
+  const readDisabledTools = (): Set<string> => {
+    const saved = deps.readDisabledTools ? deps.readDisabledTools() : memoryDisabledTools;
+    return new Set(Array.isArray(saved) ? saved.filter((name): name is string => typeof name === "string") : []);
+  };
   const registry = createAgentToolRegistry(
     [...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS, ...SOLUTION_TOOLS, ...PLUGIN_TOOLS, ...ENVVAR_TOOLS],
-    { isGroupEnabled: (group) => readGroups()[group] !== false },
+    {
+      isGroupEnabled: (group) => readGroups()[group] !== false,
+      isToolEnabled: (name) => !readDisabledTools().has(name),
+    },
   );
   const approvalUi = deps.approvalUi ?? {
     present: () => queueMicrotask(() => gate.failAll("unavailable")),
@@ -209,6 +224,10 @@ export function createMcpService(deps: McpServiceDeps): McpService {
       discoveryPath,
       error,
       groups: registry.groups().map(({ group, tools }) => ({ group, enabled: readGroups()[group] !== false, tools })),
+      tools: (() => {
+        const disabled = readDisabledTools();
+        return registry.tools().map((tool) => ({ ...tool, enabled: !disabled.has(tool.name) }));
+      })(),
       http: readHttp(),
     };
   }
@@ -229,6 +248,17 @@ export function createMcpService(deps: McpServiceDeps): McpService {
       const next = { ...readGroups(), [group]: enabled };
       if (deps.writeGroups) deps.writeGroups(next);
       else memoryGroups = next;
+      handler?.notifyToolsChanged();
+      return status();
+    },
+    setTool(name, enabled) {
+      if (!registry.tools().some((tool) => tool.name === name)) throw new Error("Unknown tool");
+      const disabled = readDisabledTools();
+      if (enabled) disabled.delete(name);
+      else disabled.add(name);
+      const next = [...disabled].sort();
+      if (deps.writeDisabledTools) deps.writeDisabledTools(next);
+      else memoryDisabledTools = next;
       handler?.notifyToolsChanged();
       return status();
     },

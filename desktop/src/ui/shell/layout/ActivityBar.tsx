@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Settings } from "lucide-react";
 
 import { useTabs } from "../tabs/useTabs";
 import { useToolRegistry } from "../community-tools/useToolRegistry";
@@ -8,10 +9,12 @@ import { Badge, Input } from "../../shared/ui";
 import { isCommunityIcon } from "./isCommunityIcon";
 import { ToolIcon } from "./ToolIcon";
 import ToolContextMenu from "./ToolContextMenu";
+import { useSettings } from "../settings/SettingsContext";
 
 const ActivityBar = () => {
   const { openTool } = useTabs();
   const { activityBarTools } = useToolRegistry();
+  const { openSettings } = useSettings();
   const [query, setQuery] = useState("");
   const [menu, setMenu] = useState<{
     toolId: string;
@@ -78,7 +81,23 @@ const ActivityBar = () => {
           onClose={() => setMenu(null)}
         />
       ) : null}
-      <ConnectionFooter />
+      <div className="flex items-stretch">
+        <div className="min-w-0 flex-1">
+          <ConnectionFooter />
+        </div>
+        {/* Same frame and hover as the connection button beside it. */}
+        <div className="flex shrink-0 border-t border-line p-1">
+          <button
+            type="button"
+            title="Settings (Ctrl+,)"
+            aria-label="Settings"
+            className="flex items-center justify-center px-2 py-1.5 text-fg-muted hover:bg-hover hover:text-fg-strong"
+            onClick={() => openSettings()}
+          >
+            <Settings size={16} strokeWidth={1.5} aria-hidden="true" />
+          </button>
+        </div>
+      </div>
     </nav>
   );
 };

@@ -111,6 +111,7 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
     setMcpEnabled: (enabled: boolean) => ipcRenderer.invoke("mcp-set-enabled", enabled),
     getMcpActivity: (limit: number) => ipcRenderer.invoke("mcp-get-activity", limit),
     setMcpGroup: (group: string, enabled: boolean) => ipcRenderer.invoke("mcp-set-group", group, enabled),
+    setMcpTool: (name: string, enabled: boolean) => ipcRenderer.invoke("mcp-set-tool", name, enabled),
     setMcpHttp: (http: { enabled: boolean; port: number }) => ipcRenderer.invoke("mcp-set-http", http),
     copyMcpHttpConfig: () => ipcRenderer.invoke("mcp-copy-http-config"),
     regenerateMcpHttpToken: () => ipcRenderer.invoke("mcp-regenerate-http-token"),
@@ -125,6 +126,21 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       return () => ipcRenderer.removeListener("mcp-approval-dismiss", listener);
     },
     respondMcpApproval: (id: string, allow: boolean) => ipcRenderer.invoke("mcp-approval-respond", id, allow),
+    onOpenSettings: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("open-settings", listener);
+      return () => ipcRenderer.removeListener("open-settings", listener);
+    },
+    onAppSettingsChanged: (callback: () => void) => {
+      const listener = () => callback();
+      ipcRenderer.on("app-settings-changed", listener);
+      return () => ipcRenderer.removeListener("app-settings-changed", listener);
+    },
+    getAppSettings: () => ipcRenderer.invoke("app-settings-get"),
+    setThemePreference: (theme: string) => ipcRenderer.invoke("app-settings-set-theme", theme),
+    setUsageStatsEnabled: (enabled: boolean) => ipcRenderer.invoke("app-settings-set-usage-stats", enabled),
+    setCrashReportsEnabled: (enabled: boolean) => ipcRenderer.invoke("app-settings-set-crash-reports", enabled),
+    openSettingsFolder: (folder: string) => ipcRenderer.invoke("app-settings-open-folder", folder),
     onOpenAgents: (callback: () => void) => {
       const listener = () => callback();
       ipcRenderer.on("open-agents", listener);

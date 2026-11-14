@@ -9,7 +9,7 @@ type Handler = (event: unknown, ...args: unknown[]) => Promise<unknown>;
 function setup() {
   const handlers = new Map<string, Handler>();
   const mainContents = { id: 1 };
-  const status: McpStatus = { enabled: false, running: false, port: null, discoveryPath: "C:\\u\\mcp-endpoint.json", error: null, groups: [], http: { enabled: false, port: 47800 } };
+  const status: McpStatus = { enabled: false, running: false, port: null, discoveryPath: "C:\\u\\mcp-endpoint.json", error: null, groups: [], tools: [], http: { enabled: false, port: 47800 } };
   const service = {
     status: vi.fn(() => status),
     setEnabled: vi.fn(async (enabled: boolean) => ({ ...status, enabled, running: enabled, port: enabled ? 5000 : null })),
@@ -18,6 +18,10 @@ function setup() {
     setHttp: vi.fn(async (http: { enabled: boolean; port: number }) => ({ ...status, http })),
     copyHttpConfig: vi.fn(async () => undefined),
     regenerateHttpToken: vi.fn(async () => status),
+    setTool: vi.fn((name: string, enabled: boolean) => ({
+      ...status,
+      tools: [{ name, title: "T", description: "Read-only.", group: "records" as never, effect: "read" as const, enabled }],
+    })),
     setGroup: vi.fn((group: string, enabled: boolean) => ({
       ...status,
       groups: [{ group: group as never, enabled, tools: 3 }],
@@ -173,5 +177,16 @@ describe("connectorLaunch", () => {
     });
     expect(launch.args).toEqual(["--mcp-connector", "--discovery", "C:\\Users\\me\\AppData\\Roaming\\Power Tools (Dev)\\mcp-endpoint.json"]);
     expect(connectorCommandLine(launch)).toContain('--discovery "C:\\Users');
+  });
+  it("switches one tool and validates its input", async () => {
+    const { call, mainContents, service } = setup();
+    const info = (await call("mcp-set-tool", mainContents, "records_delete", false)) as { tools: Array<{ name: string; enabled: boolean }> };
+    expect(info.tools).toEqual([expect.objectContaining({ name: "records_delete", enabled: false })]);
+    expect(service.setTool).toHaveBeenCalledWith("records_delete", false);
+    await expect(call("mcp-set-tool", mainContents, "", false)).rejects.toThrow(/tool name/);
+    await expect(call("mcp-set-tool", mainContents, "x".repeat(65), false)).rejects.toThrow(/tool name/);
+    await expect(call("mcp-set-tool", mainContents, "records_delete", "off")).rejects.toThrow(/true or false/);
+    await expect(call("mcp-set-tool", { id: 2 }, "records_delete", true)).rejects.toThrow(/main window/);
+    expect(service.setTool).toHaveBeenCalledTimes(1);
   });
 });

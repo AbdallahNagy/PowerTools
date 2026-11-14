@@ -147,6 +147,37 @@ describe("createMcpService", () => {
     expect(saved).toEqual({ schema: false, solutions: false });
   });
 
+  it("switches a single tool off and on and rejects an unknown name", () => {
+    const s = makeService();
+    const off = s.setTool("records_delete", false);
+    expect(off.tools.find((t) => t.name === "records_delete")!.enabled).toBe(false);
+    expect(off.tools.filter((t) => !t.enabled)).toHaveLength(1);
+    expect(off.tools).toHaveLength(57);
+    expect(s.setTool("records_delete", true).tools.every((t) => t.enabled)).toBe(true);
+    expect(() => s.setTool("nonsense", false)).toThrow(/Unknown tool/);
+  });
+
+  it("keeps switched-off tools in the settings store it is given", () => {
+    let saved: string[] = ["records_delete"];
+    service = createMcpService({
+      userDataPath: dir,
+      sidecar: { baseUrl: "http://127.0.0.1:1", secret: "s" },
+      connections: { resolveConnectionAuth: async () => ({ error: "none" }), listConnectionSummaries: () => [], activeConnectionId: () => null },
+      appVersion: "1.0.0",
+      readEnabled: () => false,
+      writeEnabled: () => undefined,
+      readDisabledTools: () => saved,
+      writeDisabledTools: (names) => {
+        saved = names;
+      },
+    });
+    expect(service.status().tools.find((t) => t.name === "records_delete")!.enabled).toBe(false);
+    service.setTool("connections_list", false);
+    expect(saved).toEqual(["connections_list", "records_delete"]);
+    service.setTool("records_delete", true);
+    expect(saved).toEqual(["connections_list"]);
+  });
+
   it("reports a start failure without throwing", async () => {
     const s = makeService();
     // A file where the userData folder should be makes writing discovery fail.

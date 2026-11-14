@@ -185,6 +185,7 @@ describe("window chrome", () => {
     };
     const onOpenCommunityTools = vi.fn();
     const onOpenAgents = vi.fn();
+    const onOpenSettings = vi.fn();
     const template = createApplicationMenuTemplate(
       undefined,
       undefined,
@@ -193,6 +194,7 @@ describe("window chrome", () => {
       handlers,
       { onOpenCommunityTools },
       { onOpenAgents },
+      { onOpenSettings },
     );
     const file = template.find((item) => item.label === "File");
     const items = file?.submenu as Electron.MenuItemConstructorOptions[];
@@ -207,6 +209,8 @@ describe("window chrome", () => {
       "Community tools…",
       "Agents (MCP)…",
       "separator",
+      "Settings…",
+      "separator",
       process.platform === "darwin" ? "close" : "quit",
     ]);
     for (const item of items.filter((entry) => entry.click)) {
@@ -215,6 +219,12 @@ describe("window chrome", () => {
     expect(Object.values(handlers).every((handler) => handler.mock.calls.length === 1)).toBe(true);
     expect(onOpenCommunityTools).toHaveBeenCalledOnce();
     expect(onOpenAgents).toHaveBeenCalledOnce();
+    expect(onOpenSettings).toHaveBeenCalledOnce();
+    // The renderer handles Ctrl+, so the menu must not register it as well.
+    expect(items.find((item) => item.label === "Settings…")).toMatchObject({
+      accelerator: "CmdOrCtrl+,",
+      registerAccelerator: false,
+    });
   });
 
   it("leaves Ctrl+W free so the shell can close the active tab", async () => {

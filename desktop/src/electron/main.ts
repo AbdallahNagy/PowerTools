@@ -26,13 +26,24 @@ import { createBrowserLauncher, parseWebUrl } from "./browserLauncher.js";
 import {
   configureMainWindowChrome,
   getMainWindowOptions,
+  installApplicationMenu,
   registerWindowChromeIpc,
   setAgentsMenuHandler,
+  setPreferencesChangedHandler,
+  setSettingsMenuHandler,
   setCommunityToolsMenuHandler,
   setConnectionsMenuHandlers,
 } from "./windowChrome.js";
-import { initializeTheme, windowBackgroundColor } from "./theme.js";
-import { startUsageStats } from "./usageStats.js";
+import {
+  applyThemePreference,
+  initializeTheme,
+  loadThemePreference,
+  saveThemePreference,
+  windowBackgroundColor,
+} from "./theme.js";
+import { loadUsageStatsEnabled, saveUsageStatsEnabled, startUsageStats } from "./usageStats.js";
+import { loadCrashReportsEnabled, saveCrashReportsEnabled } from "./crashReports.js";
+import { registerAppSettingsIpc } from "./appSettingsIpc.js";
 import { BUILT_IN_TOOL_IDS } from "./communityTools/builtInToolIds.js";
 import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
 import { createToolStore } from "./communityTools/toolStore.js";
@@ -238,6 +249,11 @@ app.whenReady().then(async () => {
       return saved && typeof saved === "object" ? saved : {};
     },
     writeGroups: (groups) => writeSettings({ mcp: { ...mcpSettings(), groups } }),
+    readDisabledTools: () => {
+      const saved = mcpSettings().disabledTools;
+      return Array.isArray(saved) ? saved : [];
+    },
+    writeDisabledTools: (disabledTools) => writeSettings({ mcp: { ...mcpSettings(), disabledTools } }),
     readHttp: () => mcpSettings().http ?? {},
     writeHttp: (http) => writeSettings({ mcp: { ...mcpSettings(), http } }),
     httpToken: createHttpTokenStore(join(app.getPath("userData"), "mcp-http-token.bin"), safeStorage),
@@ -255,7 +271,7 @@ app.whenReady().then(async () => {
       onUnavailable: () => mcpService.failApprovals(),
     }),
   });
-  function mcpSettings(): { enabled?: boolean; groups?: Record<string, boolean>; http?: { enabled?: boolean; port?: number } } {
+  function mcpSettings(): { enabled?: boolean; groups?: Record<string, boolean>; disabledTools?: string[]; http?: { enabled?: boolean; port?: number } } {
     const value = readSettings().mcp;
     return value && typeof value === "object" ? (value as ReturnType<typeof mcpSettings>) : {};
   }
@@ -305,6 +321,35 @@ app.whenReady().then(async () => {
     if (!mainWindow.isDestroyed()) {
       mainWindow.webContents.send("open-agents");
     }
+  });
+
+  setSettingsMenuHandler(() => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("open-settings");
+    }
+  });
+
+  setPreferencesChangedHandler(() => {
+    if (!mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("app-settings-changed");
+    }
+  });
+
+  registerAppSettingsIpc({
+    ipcMain,
+    getMainWindow: () => mainWindow,
+    version: app.getVersion(),
+    updatesEnabled: shouldCheckForUpdates({ isPackaged: app.isPackaged, isDevelopment: isDev() }),
+    theme: { load: loadThemePreference, apply: applyThemePreference, save: saveThemePreference },
+    usageStats: { load: loadUsageStatsEnabled, save: saveUsageStatsEnabled },
+    crashReports: { load: loadCrashReportsEnabled, save: saveCrashReportsEnabled },
+    refreshMenu: () => installApplicationMenu(loadThemePreference()),
+    folderPath: (folder) =>
+      folder === "data" ? app.getPath("userData") : join(app.getPath("userData"), "mcp-activity"),
+    openPath: async (path) => {
+      await mkdir(path, { recursive: true });
+      return shell.openPath(path);
+    },
   });
 
   await connectionIpc.registerRestoredOnPremises();

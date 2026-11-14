@@ -16,6 +16,7 @@ export { Modal } from "./Modal";
 export { ProgressBar } from "./ProgressBar";
 export { SearchInput } from "./SearchInput";
 export { Spinner } from "./Spinner";
+export { Switch } from "./Switch";
 export { Tabs } from "./Tabs";
 export { ToastProvider } from "./Toast";
 export { Toolbar } from "./Toolbar";

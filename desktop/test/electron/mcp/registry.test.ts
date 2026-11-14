@@ -70,6 +70,37 @@ describe("createAgentToolRegistry", () => {
     expect(registry.list().map((t) => t.name)).toEqual(["a", "b", "c"]);
   });
 
+  it("hides a disabled tool from list and get, but keeps it in tools()", () => {
+    const off = new Set<string>(["b"]);
+    const registry = createAgentToolRegistry(
+      [
+        tool({ name: "a" }),
+        tool({ name: "b", description: "Changes the environment.", effect: "change", describe: () => ({ summary: "x" }) }),
+        tool({ name: "c", description: "Destructive: removes it.", effect: "destructive", describe: () => ({ summary: "x" }) }),
+        tool({ name: "d", description: "Changes the environment.", effect: () => "change", describe: () => ({ summary: "x" }) }),
+      ],
+      { isToolEnabled: (name) => !off.has(name) },
+    );
+    expect(registry.list().map((t) => t.name)).toEqual(["a", "c", "d"]);
+    expect(registry.get("b")).toBeUndefined();
+    expect(registry.tools().map((t) => [t.name, t.effect])).toEqual([
+      ["a", "read"],
+      ["b", "change"],
+      ["c", "destructive"],
+      ["d", "varies"],
+    ]);
+    off.delete("b");
+    expect(registry.get("b")).toBeDefined();
+  });
+
+  it("offers a tool only when its group is on as well", () => {
+    const registry = createAgentToolRegistry([tool({ name: "a", group: "schema" })], {
+      isGroupEnabled: () => false,
+      isToolEnabled: () => true,
+    });
+    expect(registry.list()).toEqual([]);
+  });
+
   it("validates arguments and names the field", () => {
     const registry = createAgentToolRegistry([tool()]);
     const t = registry.get("demo_tool")!;

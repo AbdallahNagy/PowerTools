@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import Layout from "../../src/ui/shell/layout/Layout";
@@ -10,6 +10,8 @@ import { useShellShortcuts } from "../../src/ui/shell/keyboard/useShellShortcuts
 import {
   isActivationTarget,
   isTextEntryTarget,
+  matchShellShortcut,
+  SHELL_SHORTCUT_LIST,
   shouldIgnoreShellShortcut,
 } from "../../src/ui/shell/keyboard/shellShortcuts";
 import { PrimaryActionProvider, PrimaryActionScope, usePrimaryAction } from "../../src/ui/shared/keyboard";
@@ -267,5 +269,40 @@ describe("shell keyboard shortcuts", () => {
 
     fireEvent.keyDown(document.body, { key: "Escape" });
     expect(screen.queryByRole("combobox", { name: "Open tool" })).not.toBeInTheDocument();
+  });
+
+  it("matches Ctrl+, on Latin and non-Latin layouts and lists it", () => {
+    const keys = { ctrlKey: true, metaKey: false, altKey: false, shiftKey: false };
+    expect(matchShellShortcut({ ...keys, key: ",", code: "Comma" })).toBe("open-settings");
+    expect(matchShellShortcut({ ...keys, key: "б", code: "Comma" })).toBe("open-settings");
+    expect(matchShellShortcut({ ...keys, ctrlKey: false, key: ",", code: "Comma" })).toBeNull();
+    expect(SHELL_SHORTCUT_LIST.map((entry) => entry.id)).toContain("open-settings");
+  });
+
+  it("opens Settings from Ctrl+, the sidebar gear, and the command palette", async () => {
+    renderWithProviders(
+      <PrimaryActionProvider>
+        <TabProvider>
+          <Layout />
+        </TabProvider>
+      </PrimaryActionProvider>,
+    );
+    expect(await screen.findByRole("navigation", { name: "Tools" })).toBeInTheDocument();
+
+    fireEvent.keyDown(document.body, { key: ",", code: "Comma", ctrlKey: true });
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Settings" })).not.toBeInTheDocument());
+
+    fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
+    fireEvent.keyDown(document.activeElement ?? document.body, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Settings" })).not.toBeInTheDocument());
+
+    fireEvent.keyDown(document.body, { key: "p", ctrlKey: true });
+    const palette = screen.getByRole("combobox", { name: "Open tool" });
+    fireEvent.change(palette, { target: { value: "Settings" } });
+    fireEvent.keyDown(palette, { key: "Enter" });
+    expect(await screen.findByRole("dialog", { name: "Settings" })).toBeInTheDocument();
   });
 });

@@ -108,6 +108,29 @@ export interface McpApprovalRequest {
   args: Record<string, unknown>;
 }
 
+/** One agent tool as Settings lists it. "varies" means the effect depends on the arguments. */
+export interface McpToolInfo {
+  name: string;
+  title: string;
+  description: string;
+  group: string;
+  effect: "read" | "change" | "destructive" | "varies";
+  enabled: boolean;
+}
+
+export type ThemePreference = "system" | "dark" | "light";
+export type SettingsFolder = "data" | "mcp-activity";
+
+/** App preferences shown in Settings. Mirrors AppSettings in src/electron/appSettingsIpc.ts. */
+export interface AppSettings {
+  theme: ThemePreference;
+  usageStats: boolean;
+  crashReports: boolean;
+  version: string;
+  /** False in development builds, where checking for updates does nothing. */
+  updatesEnabled: boolean;
+}
+
 /** The MCP server's state for the Agents dialog. Mirrors McpStatusInfo in src/electron/mcp/mcpIpc.ts. */
 export interface McpStatusInfo {
   enabled: boolean;
@@ -121,6 +144,8 @@ export interface McpStatusInfo {
   recent: McpActivityEntry[];
   /** Every tool group, with whether it is on and how many tools it has. */
   groups: Array<{ group: string; enabled: boolean; tools: number }>;
+  /** Every agent tool, with whether the user left it on. */
+  tools: McpToolInfo[];
   /** The direct HTTP option. The token is never part of it. */
   http: { enabled: boolean; port: number };
 }
@@ -231,6 +256,8 @@ export interface DesktopBridge {
   getMcpActivity(limit: number): Promise<McpActivityEntry[]>;
   /** Turns a group of agent tools on or off. */
   setMcpGroup(group: string, enabled: boolean): Promise<McpStatusInfo>;
+  /** Turns one agent tool on or off. */
+  setMcpTool(name: string, enabled: boolean): Promise<McpStatusInfo>;
   /** Turns the direct HTTP option on or off and sets its port. */
   setMcpHttp(http: { enabled: boolean; port: number }): Promise<McpStatusInfo>;
   /** Copies the direct HTTP client config to the clipboard. Main does the copying; no token comes back. */
@@ -239,6 +266,16 @@ export interface DesktopBridge {
   regenerateMcpHttpToken(): Promise<McpStatusInfo>;
   /** The File > Agents (MCP) menu item was chosen. */
   onOpenAgents(callback: () => void): () => void;
+  /** The File > Settings menu item was chosen. */
+  onOpenSettings(callback: () => void): () => void;
+  /** A preference changed outside Settings (the native menu). */
+  onAppSettingsChanged(callback: () => void): () => void;
+  getAppSettings(): Promise<AppSettings>;
+  setThemePreference(theme: ThemePreference): Promise<AppSettings>;
+  setUsageStatsEnabled(enabled: boolean): Promise<AppSettings>;
+  setCrashReportsEnabled(enabled: boolean): Promise<AppSettings>;
+  /** Opens a fixed app folder in the file manager. */
+  openSettingsFolder(folder: SettingsFolder): Promise<void>;
   /** An agent call needs the user's answer. */
   onMcpApprovalPresent(callback: (request: McpApprovalRequest) => void): () => void;
   /** An approval request was answered elsewhere or gave up; take its dialog down. */
@@ -314,10 +351,18 @@ export const desktopBridge: DesktopBridge = {
   setMcpEnabled: (enabled) => bridge().setMcpEnabled(enabled),
   getMcpActivity: (limit) => bridge().getMcpActivity(limit),
   setMcpGroup: (group, enabled) => bridge().setMcpGroup(group, enabled),
+  setMcpTool: (name, enabled) => bridge().setMcpTool(name, enabled),
   setMcpHttp: (http) => bridge().setMcpHttp(http),
   copyMcpHttpConfig: () => bridge().copyMcpHttpConfig(),
   regenerateMcpHttpToken: () => bridge().regenerateMcpHttpToken(),
   onOpenAgents: (callback) => bridge().onOpenAgents(callback),
+  onOpenSettings: (callback) => bridge().onOpenSettings(callback),
+  onAppSettingsChanged: (callback) => bridge().onAppSettingsChanged(callback),
+  getAppSettings: () => bridge().getAppSettings(),
+  setThemePreference: (theme) => bridge().setThemePreference(theme),
+  setUsageStatsEnabled: (enabled) => bridge().setUsageStatsEnabled(enabled),
+  setCrashReportsEnabled: (enabled) => bridge().setCrashReportsEnabled(enabled),
+  openSettingsFolder: (folder) => bridge().openSettingsFolder(folder),
   onMcpApprovalPresent: (callback) => bridge().onMcpApprovalPresent(callback),
   onMcpApprovalDismiss: (callback) => bridge().onMcpApprovalDismiss(callback),
   respondMcpApproval: (id, allow) => bridge().respondMcpApproval(id, allow),
