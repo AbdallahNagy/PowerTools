@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy, RefreshCw } from "lucide-react";
 
-import type { McpStatusInfo } from "../../platform/desktopBridge";
-import { Alert, Badge, Button, Checkbox, EmptyState, Field, Input, Modal } from "../../shared/ui";
-import { useAgents } from "./useAgents";
+import type { McpStatusInfo } from "../../../platform/desktopBridge";
+import { Alert, Badge, Button, Checkbox, EmptyState, Field, Input } from "../../../shared/ui";
+import { useAgents } from "../../agents/useAgents";
+import { McpToolsList } from "./McpToolsList";
 
 function statusOf(status: McpStatusInfo | null): { label: string; tone: "neutral" | "ok" | "danger" } {
   if (status?.error) return { label: `Could not start: ${status.error}`, tone: "danger" };
@@ -151,24 +152,16 @@ function DirectHttp({
   );
 }
 
-interface AgentsDialogProps {
-  open: boolean;
-  onClose(): void;
-}
-
-export function AgentsDialog({ open, onClose }: AgentsDialogProps) {
-  const { status, busy, error, setEnabled, setGroup, setHttp, regenerateToken, copyHttpConfig, refresh } = useAgents(open);
+/** The MCP server: switch, client setup, tools, direct HTTP, and recent activity. */
+export function AgentsSection({ active }: { active: boolean }) {
+  const { status, busy, error, setEnabled, setGroup, setTool, setHttp, regenerateToken, copyHttpConfig, refresh } =
+    useAgents(active);
   const state = statusOf(status);
   const enabled = status?.running === true || (status?.enabled === true && !status.error);
 
   return (
-    <Modal
-      open={open}
-      title="Agents (MCP)"
-      description="Let AI agents such as Claude Code use your Power Tools connections."
-      onClose={onClose}
-      widthClass="max-w-2xl"
-    >
+    <>
+      <p className="text-xs text-fg-muted">Let AI agents such as Claude Code use your Power Tools connections.</p>
       {error ? <Alert tone="danger">{error}</Alert> : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -184,7 +177,8 @@ export function AgentsDialog({ open, onClose }: AgentsDialogProps) {
         <Badge tone={state.tone}>{state.label}</Badge>
       </div>
       <p className="text-xs text-fg-muted">
-        Off by default. Agents work through your own sign-in and can only read metadata and records for now.
+        Off by default. Agents work through your own sign-in. Changes need your approval unless a connection allows them
+        under Agent permissions; destructive actions always ask.
       </p>
 
       {status ? (
@@ -197,28 +191,13 @@ export function AgentsDialog({ open, onClose }: AgentsDialogProps) {
       ) : null}
 
       {status ? (
-        <section className="flex flex-col gap-2" aria-label="Tool groups">
-          <h3 className="text-sm font-medium text-fg-strong">Tool groups</h3>
-          <p className="text-xs text-fg-muted">Turn a group off to stop offering its tools to agents. Connected agents are told right away.</p>
-          <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-            {status.groups.map((entry) => (
-              <li key={entry.group}>
-                <label className="flex items-center gap-2 text-sm text-fg">
-                  <Checkbox
-                    checked={entry.enabled}
-                    disabled={busy}
-                    onChange={(next) => void setGroup(entry.group, next)}
-                    aria-label={`${entry.group} tools`}
-                  />
-                  <span className="font-mono">{entry.group}</span>
-                  <span className="text-xs text-fg-muted">
-                    {entry.tools} {entry.tools === 1 ? "tool" : "tools"}
-                  </span>
-                </label>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <McpToolsList
+          groups={status.groups}
+          tools={status.tools ?? []}
+          busy={busy}
+          onGroupChange={(group, next) => void setGroup(group, next)}
+          onToolChange={(name, next) => void setTool(name, next)}
+        />
       ) : null}
 
       {status ? (
@@ -256,6 +235,6 @@ export function AgentsDialog({ open, onClose }: AgentsDialogProps) {
           <EmptyState title="No agent activity yet" description="Calls made by agents appear here." />
         )}
       </section>
-    </Modal>
+    </>
   );
 }

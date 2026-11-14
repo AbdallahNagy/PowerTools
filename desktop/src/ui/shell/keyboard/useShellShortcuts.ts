@@ -26,18 +26,21 @@ const FORWARDABLE: ReadonlySet<string> = new Set([
   "previous-tab",
   "toggle-quick-open",
   "toggle-sidebar",
+  "open-settings",
 ]);
 
 interface ShellShortcutBindings {
   quickOpen: boolean;
   onQuickOpenChange: (open: boolean) => void;
   onToggleSidebar: () => void;
+  onOpenSettings?: () => void;
 }
 
 export function useShellShortcuts({
   quickOpen,
   onQuickOpenChange,
   onToggleSidebar,
+  onOpenSettings,
 }: ShellShortcutBindings) {
   const { tabs, activeTabId, closeTab, setActiveTab } = useTabs();
   const registry = usePrimaryActionRegistry();
@@ -64,9 +67,12 @@ export function useShellShortcuts({
         case "toggle-sidebar":
           onToggleSidebar();
           break;
+        case "open-settings":
+          onOpenSettings?.();
+          break;
       }
     },
-    [activeTabId, closeTab, onQuickOpenChange, onToggleSidebar, setActiveTab, tabs],
+    [activeTabId, closeTab, onOpenSettings, onQuickOpenChange, onToggleSidebar, setActiveTab, tabs],
   );
 
   const dispatchShortcut = useCallback(

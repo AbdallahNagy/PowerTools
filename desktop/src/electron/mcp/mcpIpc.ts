@@ -14,7 +14,7 @@ export type McpStatusInfo = McpStatus & {
 
 export interface McpIpcDeps {
   ipcMain: Pick<IpcMain, "handle">;
-  service: Pick<McpService, "status" | "setEnabled" | "setGroup" | "setHttp" | "copyHttpConfig" | "regenerateHttpToken" | "recentActivity" | "respondApproval">;
+  service: Pick<McpService, "status" | "setEnabled" | "setGroup" | "setTool" | "setHttp" | "copyHttpConfig" | "regenerateHttpToken" | "recentActivity" | "respondApproval">;
   getMainWindow: () => BrowserWindow | null;
   connector: () => ConnectorLaunch;
 }
@@ -57,6 +57,13 @@ export function registerMcpIpc({ ipcMain, service, getMainWindow, connector }: M
     }
     if (typeof enabled !== "boolean") throw new Error("Enabled must be true or false");
     return statusInfo(service.setGroup(group as AgentToolGroup, enabled));
+  });
+
+  ipcMain.handle("mcp-set-tool", async (event, name: unknown, enabled: unknown) => {
+    assertMainWindow(event);
+    if (typeof name !== "string" || name.length === 0 || name.length > 64) throw new Error("A tool name is required");
+    if (typeof enabled !== "boolean") throw new Error("Enabled must be true or false");
+    return statusInfo(service.setTool(name, enabled));
   });
 
   ipcMain.handle("mcp-set-http", async (event, value: unknown) => {

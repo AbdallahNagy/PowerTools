@@ -6,6 +6,7 @@ export type ShellShortcut =
   | "previous-tab"
   | "toggle-quick-open"
   | "toggle-sidebar"
+  | "open-settings"
   | "primary-action"
   | "primary-action-from-field";
 
@@ -18,6 +19,17 @@ export interface ShortcutKeyState {
   shiftKey: boolean;
 }
 
+/** What Settings lists. Keep in step with matchShellShortcut. */
+export const SHELL_SHORTCUT_LIST: ReadonlyArray<{ id: ShellShortcut; label: string; keys: string[] }> = [
+  { id: "toggle-quick-open", label: "Open the command palette", keys: ["Ctrl+P"] },
+  { id: "open-settings", label: "Open Settings", keys: ["Ctrl+,"] },
+  { id: "toggle-sidebar", label: "Show or hide the sidebar", keys: ["Ctrl+B"] },
+  { id: "close-tab", label: "Close the active tab", keys: ["Ctrl+W"] },
+  { id: "next-tab", label: "Next tab", keys: ["Ctrl+Tab"] },
+  { id: "previous-tab", label: "Previous tab", keys: ["Ctrl+Shift+Tab"] },
+  { id: "primary-action", label: "Run the tool's main action", keys: ["Enter", "Ctrl+Enter in a field"] },
+];
+
 export function matchShellShortcut(event: ShortcutKeyState): ShellShortcut | null {
   if (event.altKey) return null;
 
@@ -27,6 +39,8 @@ export function matchShellShortcut(event: ShortcutKeyState): ShellShortcut | nul
   }
 
   if (event.shiftKey) return null;
+
+  if (command && (event.key === "," || event.code === "Comma")) return "open-settings";
 
   const key = shortcutLetter(event);
   if (command && key === "w") return "close-tab";
