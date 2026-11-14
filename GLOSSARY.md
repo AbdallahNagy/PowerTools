@@ -28,25 +28,13 @@ _Avoid_: Proxy, gateway, bridge
 Attribute Explorer rebuilt as a **Community tool** in `packages/reference-tool`. It is the runtime's test fixture and the example for tool authors.
 _Avoid_: Sample tool, demo tool
 
-**Host API**:
-The interface Power Tools offers a **Community tool** for everything outside its sandbox.
-_Avoid_: Bridge, toolbox API
-
 **Tool worker**:
-Script a **Community tool** ships to run outside its tab's page, still sandboxed and limited to the **Host API**.
+Script a **Community tool** ships to run outside its tab's page, still sandboxed and limited to the SDK.
 _Avoid_: Backend, service
-
-**Catalog**:
-The list of **Community tools** a user can browse, install and update from inside Power Tools.
-_Avoid_: Store, marketplace, gallery
 
 **Theme token**:
 A named, role-based colour of the Power Tools theme, with a value for light and for dark, that **Built-in tools** and **Community tools** both style with.
 _Avoid_: Palette variable, CSS var
-
-**Community UI kit**:
-The optional set of framework-neutral controls a **Community tool** may use to look like Power Tools, styled only through **Theme tokens**.
-_Avoid_: Component library, design system
 
 **Agent tool**:
 An operation the Power Tools MCP server publishes to AI agents.
@@ -63,6 +51,5 @@ _Avoid_: Risk level, hint
 ## Relationships
 
 - A **Community tool** has a UI and may ship **Tool workers**
-- A user installs, updates, disables and uninstalls **Community tools** through the **Catalog**
-- Power Tools gives every **Community tool** the current **Theme tokens**; using them or the **Community UI kit** is the tool's choice
+- Power Tools gives every **Community tool** the current **Theme tokens**
 - Power Tools, never the **Agent tool**, decides a call's **Effect class**
