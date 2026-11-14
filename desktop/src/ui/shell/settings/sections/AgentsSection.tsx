@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy, RefreshCw } from "lucide-react";
 
 import type { McpStatusInfo } from "../../../platform/desktopBridge";
-import { Alert, Badge, Button, EmptyState, Field, Input, Switch, cn } from "../../../shared/ui";
+import { Alert, Badge, Button, EmptyState, cn } from "../../../shared/ui";
 import type { AgentsState } from "../../agents/useAgents";
 import { McpToolsList } from "./McpToolsList";
-import { SettingRow, SettingSwitchRow, SettingsGroup } from "./SettingRow";
+import { SettingSwitchRow, SettingsGroup } from "./SettingRow";
 
 function statusOf(status: McpStatusInfo | null): { label: string; tone: "neutral" | "ok" | "danger" } {
   if (status?.error) return { label: `Could not start: ${status.error}`, tone: "danger" };
@@ -119,95 +119,9 @@ function ConnectClient({ status }: { status: McpStatusInfo }) {
   );
 }
 
-function DirectHttp({
-  http,
-  busy,
-  onChange,
-  onCopy,
-  onRegenerate,
-}: {
-  http: McpStatusInfo["http"];
-  busy: boolean;
-  onChange(http: McpStatusInfo["http"]): void;
-  onCopy(): void;
-  onRegenerate(): void;
-}) {
-  const [port, setPort] = useState(String(http.port));
-  const [portError, setPortError] = useState<string | null>(null);
-  const [confirming, setConfirming] = useState(false);
-
-  useEffect(() => setPort(String(http.port)), [http.port]);
-
-  const savePort = () => {
-    const value = Number(port);
-    if (!Number.isInteger(value) || value < 1024 || value > 65535) {
-      setPortError("Enter a port from 1024 to 65535.");
-      return;
-    }
-    setPortError(null);
-    onChange({ enabled: http.enabled, port: value });
-  };
-
-  return (
-    <SettingsGroup
-      title="Direct HTTP"
-      description="For clients that only accept a URL. Most clients should use the command above, which needs no token in a config file."
-    >
-      <SettingRow label="Let clients connect to a fixed port">
-        <Switch
-          checked={http.enabled}
-          disabled={busy}
-          onChange={(enabled) => onChange({ enabled, port: http.enabled ? http.port : Number(port) || http.port })}
-          aria-label="Direct HTTP"
-        />
-      </SettingRow>
-      <div className="flex flex-wrap items-end gap-2 px-4 py-3">
-        <Field label="Port" hint="1024 to 65535. Default 47800." error={portError ?? undefined}>
-          <Input value={port} inputMode="numeric" className="w-28 bg-canvas" onChange={(event) => setPort(event.target.value)} />
-        </Field>
-        <Button variant="secondary" size="sm" disabled={busy} onClick={savePort}>
-          Save port
-        </Button>
-        <Button variant="secondary" size="sm" disabled={busy || !http.enabled} onClick={onCopy}>
-          <Copy size={14} aria-hidden="true" />
-          Copy client config
-        </Button>
-        <Button variant="ghost" size="sm" disabled={busy || !http.enabled} onClick={() => setConfirming(true)}>
-          Regenerate token
-        </Button>
-      </div>
-      {confirming ? (
-        <div className="px-4 py-3">
-          <Alert
-            tone="warn"
-            action={
-              <div className="flex gap-2">
-                <Button variant="ghost" size="sm" onClick={() => setConfirming(false)}>
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setConfirming(false);
-                    onRegenerate();
-                  }}
-                >
-                  Regenerate and restart
-                </Button>
-              </div>
-            }
-          >
-            Clients using the old config will stop working until you copy the new one. The server restarts and ends open sessions.
-          </Alert>
-        </div>
-      ) : null}
-    </SettingsGroup>
-  );
-}
-
-/** The MCP server: switch, client setup, tools, direct HTTP, and recent activity. */
+/** The MCP server: switch, client setup, tools, and recent activity. */
 export function AgentsSection({ agents }: { agents: AgentsState }) {
-  const { status, busy, error, setEnabled, setGroup, setTool, setHttp, regenerateToken, copyHttpConfig, refresh } = agents;
+  const { status, busy, error, setEnabled, setGroup, setTool, refresh } = agents;
   const state = statusOf(status);
   const enabled = status?.running === true || (status?.enabled === true && !status.error);
 
@@ -237,16 +151,6 @@ export function AgentsSection({ agents }: { agents: AgentsState }) {
           busy={busy}
           onGroupChange={(group, next) => void setGroup(group, next)}
           onToolChange={(name, next) => void setTool(name, next)}
-        />
-      ) : null}
-
-      {status ? (
-        <DirectHttp
-          http={status.http}
-          busy={busy}
-          onChange={(http) => void setHttp(http)}
-          onCopy={() => void copyHttpConfig()}
-          onRegenerate={() => void regenerateToken()}
         />
       ) : null}
 

@@ -69,7 +69,6 @@ const offlineMcpStatus: Awaited<ReturnType<DesktopBridge["getMcpStatus"]>> = {
     { name: "metadata_tables", title: "List tables", description: "Lists tables. Read-only.", group: "metadata", effect: "read", enabled: true },
     { name: "records_delete", title: "Delete a record", description: "Destructive: deletes a record.", group: "records", effect: "destructive", enabled: true },
   ],
-  http: { enabled: false, port: 47800 },
 };
 
 export type DesktopBridgeOverrides = {
@@ -170,9 +169,6 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     getMcpStatus: async () => offlineMcpStatus,
     setMcpEnabled: async (enabled) => ({ ...offlineMcpStatus, enabled, running: enabled, port: enabled ? 51234 : null }),
     getMcpActivity: async () => [],
-    setMcpHttp: async (http) => ({ ...offlineMcpStatus, http }),
-    copyMcpHttpConfig: async () => undefined,
-    regenerateMcpHttpToken: async () => offlineMcpStatus,
     setMcpGroup: async (group, enabled) => ({
       ...offlineMcpStatus,
       groups: offlineMcpStatus.groups.map((g) => (g.group === group ? { ...g, enabled } : g)),

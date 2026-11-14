@@ -146,8 +146,6 @@ export interface McpStatusInfo {
   groups: Array<{ group: string; enabled: boolean; tools: number }>;
   /** Every agent tool, with whether the user left it on. */
   tools: McpToolInfo[];
-  /** The direct HTTP option. The token is never part of it. */
-  http: { enabled: boolean; port: number };
 }
 
 /** A community tool's validated powertools-tool.json. Mirrors src/electron/communityTools/manifest.ts. */
@@ -258,12 +256,6 @@ export interface DesktopBridge {
   setMcpGroup(group: string, enabled: boolean): Promise<McpStatusInfo>;
   /** Turns one agent tool on or off. */
   setMcpTool(name: string, enabled: boolean): Promise<McpStatusInfo>;
-  /** Turns the direct HTTP option on or off and sets its port. */
-  setMcpHttp(http: { enabled: boolean; port: number }): Promise<McpStatusInfo>;
-  /** Copies the direct HTTP client config to the clipboard. Main does the copying; no token comes back. */
-  copyMcpHttpConfig(): Promise<void>;
-  /** Replaces the HTTP token. Clients using the old config stop working. */
-  regenerateMcpHttpToken(): Promise<McpStatusInfo>;
   /** The File > Agents (MCP) menu item was chosen. */
   onOpenAgents(callback: () => void): () => void;
   /** The File > Settings menu item was chosen. */
@@ -352,9 +344,6 @@ export const desktopBridge: DesktopBridge = {
   getMcpActivity: (limit) => bridge().getMcpActivity(limit),
   setMcpGroup: (group, enabled) => bridge().setMcpGroup(group, enabled),
   setMcpTool: (name, enabled) => bridge().setMcpTool(name, enabled),
-  setMcpHttp: (http) => bridge().setMcpHttp(http),
-  copyMcpHttpConfig: () => bridge().copyMcpHttpConfig(),
-  regenerateMcpHttpToken: () => bridge().regenerateMcpHttpToken(),
   onOpenAgents: (callback) => bridge().onOpenAgents(callback),
   onOpenSettings: (callback) => bridge().onOpenSettings(callback),
   onAppSettingsChanged: (callback) => bridge().onAppSettingsChanged(callback),

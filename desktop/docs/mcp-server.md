@@ -8,7 +8,7 @@ Power Tools can let AI agents such as Claude Code, Claude Desktop and VS Code wo
 2. Turn on **Let AI agents use Power Tools (MCP server)**. The status shows **Running**.
 3. Keep Power Tools open. Agents can only reach the server while the app is running; the server turns off when you quit.
 
-The same page has the commands to connect a client, the tools, the direct HTTP option and the recent activity. **Agent permissions** in Settings lists every connection with its "changes without asking" switch.
+The same page has the commands to connect a client, the tools and the recent activity. **Agent permissions** in Settings lists every connection with its "changes without asking" switch.
 
 ## Connect a client
 
@@ -78,17 +78,3 @@ Data that comes back from Dataverse is marked as untrusted. Agents are told neve
 ## Activity log
 
 **Recent activity** on the page shows what agents did: when, which tool, which connection and the outcome. It is kept on this computer for 30 days, in your Power Tools user data folder, and never sent anywhere. It holds tool names and short summaries, not tokens or record contents.
-
-## Direct HTTP
-
-Some clients can only take a URL. Under **Direct HTTP**, turn the option on and pick a port (1024 to 65535, default 47800). Then choose **Copy client config** and paste it into the client:
-
-```json
-{ "type": "http", "url": "http://127.0.0.1:47800/mcp", "headers": { "Authorization": "Bearer <token>" } }
-```
-
-- The token is copied from the app and never shown on screen. It is kept encrypted with your Windows account and stays the same between launches.
-- It is a long-lived secret, so treat the pasted config like a password. **Regenerate token** makes a new one, restarts the server and stops clients that use the old config.
-- The server only listens on `127.0.0.1`. If the port is taken, the dialog says so and the server stays off.
-
-The connector command above stays the safer choice where a client supports it.
