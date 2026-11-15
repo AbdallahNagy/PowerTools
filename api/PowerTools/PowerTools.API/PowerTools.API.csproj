@@ -24,6 +24,14 @@
         <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" Version="1.2.10" />
     </ItemGroup>
 
+    <!-- Deprecated: PowerTools.API.exe with the mcp-connector switch runs the same relay as PowerTools.McpConnector.exe, so MCP
+         client setups made before the separate connector keep working. Clients holding this executable open block
+         app updates; remove this once users have moved to the connector the app copies to %LOCALAPPDATA%. -->
+    <ItemGroup>
+        <Compile Include="..\PowerTools.McpConnector\McpConnector.cs" Link="Mcp\McpConnector.cs" />
+        <Compile Include="..\PowerTools.McpConnector\McpDiscovery.cs" Link="Mcp\McpDiscovery.cs" />
+    </ItemGroup>
+
     <ItemGroup>
         <ProjectReference Include="..\ThirdParty\Data8.PowerPlatform.Dataverse.Client\Data8.PowerPlatform.Dataverse.Client.csproj" />
     </ItemGroup>

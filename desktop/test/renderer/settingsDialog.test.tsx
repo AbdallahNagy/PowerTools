@@ -17,9 +17,10 @@ const OFF: McpStatusInfo = {
   port: null,
   discoveryPath: "/users/me/power-tools/mcp-endpoint.json",
   error: null,
-  connectorCommand: '"/program files/power-tools/api/PowerTools.API.exe" --mcp-connector',
-  connector: { command: "/program files/power-tools/api/PowerTools.API.exe", args: ["--mcp-connector"] },
+  connectorCommand: '"/users/test/appdata/local/power tools/mcp/PowerTools.McpConnector.exe"',
+  connector: { command: "/users/me/appdata/local/power tools/mcp/PowerTools.McpConnector.exe", args: [] },
   recent: [],
+  legacySetups: [],
   groups: [
     { group: "connections", enabled: true, tools: 1 },
     { group: "schema", enabled: false, tools: 13 },
@@ -83,20 +84,45 @@ describe("Settings: Agents (MCP)", () => {
   it("offers a Claude Code command and a JSON config that start the connector", async () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
     const code = await screen.findByText(/^claude mcp add --scope user powertools -- /);
-    expect(code.textContent).toContain("--mcp-connector");
+    expect(code.textContent).toContain("PowerTools.McpConnector.exe");
     expect(screen.getByRole("button", { name: "Claude Code" })).toHaveAttribute("aria-pressed", "true");
 
     // One client's setup shows at a time.
     fireEvent.click(screen.getByRole("button", { name: "Claude Desktop" }));
     expect(screen.queryByText(/^claude mcp add --scope user powertools -- /)).not.toBeInTheDocument();
     const json = screen.getByText(/"mcpServers"/);
-    expect(json.textContent).toContain("--mcp-connector");
+    expect(json.textContent).toContain("PowerTools.McpConnector.exe");
     expect(screen.getByRole("button", { name: "Copy Claude Desktop" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "VS Code" }));
     const vscode = screen.getByText(/"servers"/);
     expect(vscode.textContent).toContain('"type": "stdio"');
-    expect(vscode.textContent).toContain("--mcp-connector");
+    expect(vscode.textContent).toContain("PowerTools.McpConnector.exe");
+  });
+
+  it("warns about client setups that still start PowerTools.API.exe and shows the new command", async () => {
+    renderAgents({
+      bridgeOverrides: {
+        getMcpStatus: async () => ({
+          ...OFF,
+          legacySetups: [
+            { client: "Claude Code", configPath: "C:\\Users\\me\\.claude.json", server: "powertools", scope: "user" },
+            { client: "Claude Desktop", configPath: "C:\\Users\\me\\AppData\\Roaming\\Claude\\claude_desktop_config.json", server: "pt" },
+          ],
+        }),
+      },
+    });
+    expect(await screen.findByText("Update your agent setup so Power Tools can update")).toBeInTheDocument();
+    const fix = screen.getByText(/^claude mcp remove --scope user powertools/);
+    expect(fix.textContent).toContain("claude mcp add --scope user powertools -- ");
+    expect(fix.textContent).toContain("PowerTools.McpConnector.exe");
+    expect(screen.getByText(/Replace the "pt" entry in .*claude_desktop_config\.json/)).toBeInTheDocument();
+  });
+
+  it("shows no update warning when every setup uses the new connector", async () => {
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
+    await screen.findByText("Off");
+    expect(screen.queryByText("Update your agent setup so Power Tools can update")).not.toBeInTheDocument();
   });
 
   it("lists recent activity without ids or tokens", async () => {

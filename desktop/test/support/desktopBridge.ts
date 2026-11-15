@@ -56,9 +56,10 @@ const offlineMcpStatus: Awaited<ReturnType<DesktopBridge["getMcpStatus"]>> = {
   port: null,
   discoveryPath: "/users/test/power-tools/mcp-endpoint.json",
   error: null,
-  connectorCommand: '"/program files/power-tools/api/PowerTools.API.exe" --mcp-connector',
-  connector: { command: "/program files/power-tools/api/PowerTools.API.exe", args: ["--mcp-connector"] },
+  connectorCommand: '"/users/test/appdata/local/power tools/mcp/PowerTools.McpConnector.exe"',
+  connector: { command: "/users/me/appdata/local/power tools/mcp/PowerTools.McpConnector.exe", args: [] },
   recent: [],
+  legacySetups: [],
   groups: [
     { group: "connections", enabled: true, tools: 1 },
     { group: "metadata", enabled: true, tools: 7 },

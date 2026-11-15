@@ -45,6 +45,10 @@
             {
                 "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/win-x64/publish",
                 "to": "api"
+            },
+            {
+                "from": "../api/PowerTools/PowerTools.McpConnector/bin/Release/net9.0/win-x64/publish/PowerTools.McpConnector.exe",
+                "to": "mcp-connector/PowerTools.McpConnector.exe"
             }
         ]
     },

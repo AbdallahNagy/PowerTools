@@ -1,7 +1,7 @@
 using Xunit;
 using System.IO.Pipelines;
 using System.Text.Json.Nodes;
-using Connector = PowerTools.API.Mcp.McpConnector;
+using Connector = PowerTools.Mcp.McpConnector;
 
 namespace PowerTools.API.McpConnector.Tests;
 

@@ -17,6 +17,6 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\PowerTools.API\PowerTools.API.csproj" />
+    <ProjectReference Include="..\PowerTools.McpConnector\PowerTools.McpConnector.csproj" />
   </ItemGroup>
 </Project>

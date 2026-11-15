@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 
-namespace PowerTools.API.Mcp;
+namespace PowerTools.Mcp;
 
 /// <summary>
 /// The stdio side of the Power Tools MCP server. An MCP client starts this as a child process and
@@ -11,6 +11,12 @@ namespace PowerTools.API.Mcp;
 /// desktop app hosts on loopback. It holds no MCP logic: when the app is not running it only answers
 /// enough (initialize, tools/list, ping) to stay connected, then picks the app up when it appears.
 /// Stdout carries JSON-RPC lines only; diagnostics go to stderr.
+/// <para>
+/// The desktop app copies this connector to a per-user folder and does not replace a copy that is running, so a
+/// client may keep using an older connector with a newer app. Keep what it depends on small and stable: the
+/// discovery file's { port, token } and MCP Streamable HTTP on http://127.0.0.1:{port}/mcp with a bearer token.
+/// Anything new belongs in the app, not here.
+/// </para>
 /// </summary>
 public static class McpConnector
 {

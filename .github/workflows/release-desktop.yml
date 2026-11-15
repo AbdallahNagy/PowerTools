@@ -108,6 +108,7 @@ jobs:
           EP_DRAFT: ${{ inputs.draft }}
         run: |
           npm run publish:api:win
+          npm run publish:connector:win
           npm run transpile:electron
           npm run build
           npx electron-builder --win --x64 --publish always

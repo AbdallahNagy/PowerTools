@@ -47,7 +47,8 @@ import { registerAppSettingsIpc } from "./appSettingsIpc.js";
 import { BUILT_IN_TOOL_IDS } from "./communityTools/builtInToolIds.js";
 import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
 import { createToolStore } from "./communityTools/toolStore.js";
-import { connectorLaunch } from "./mcp/connectorCommand.js";
+import { createConnectorSetup } from "./mcp/connectorSetup.js";
+import { DEV_USER_DATA_FOLDER } from "./devUserData.js";
 import { registerMcpIpc } from "./mcp/mcpIpc.js";
 import { createApprovalWindow } from "./mcp/approvalWindow.js";
 import { createMcpService } from "./mcp/mcpService.js";
@@ -270,18 +271,24 @@ app.whenReady().then(async () => {
     const value = readSettings().mcp;
     return value && typeof value === "object" ? (value as ReturnType<typeof mcpSettings>) : {};
   }
+  const connectorSetup = createConnectorSetup({
+    packaged: !isDev(),
+    platform: process.platform,
+    resourcesPath: process.resourcesPath,
+    appPath: () => app.getAppPath(),
+    homePath: () => app.getPath("home"),
+    appDataPath: () => app.getPath("appData"),
+    localAppData: process.env.LOCALAPPDATA,
+    appFolderName: () => (app.isPackaged ? app.getName() : DEV_USER_DATA_FOLDER),
+  });
+  // MCP clients start this copy, so the installed files stay free for updates. Never blocks or fails start-up.
+  void connectorSetup.install();
   registerMcpIpc({
     ipcMain,
     service: mcpService,
     getMainWindow: () => mainWindow,
-    connector: () =>
-      connectorLaunch({
-        packaged: !isDev(),
-        platform: process.platform,
-        resourcesPath: process.resourcesPath,
-        appPath: app.getAppPath(),
-        discoveryPath: mcpService.status().discoveryPath,
-      }),
+    connector: () => connectorSetup.launch(mcpService.status().discoveryPath),
+    legacySetups: () => connectorSetup.legacySetups(),
   });
   app.on("before-quit", () => void mcpService.stop());
   // The quit may not wait for the async stop, so remove the discovery file here as well.
