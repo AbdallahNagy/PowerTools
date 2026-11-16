@@ -18,12 +18,12 @@ public sealed class ConnectorHarness : IAsyncDisposable
     public string DiscoveryPath { get; } = Path.Combine(Path.GetTempPath(), $"pt-mcp-{Guid.NewGuid():N}.json");
     public List<string> AllLines { get; } = [];
 
-    public ConnectorHarness()
+    public ConnectorHarness(params string[] extraArgs)
     {
         _lines = new StreamReader(_stdout.Reader.AsStream());
         _input = new StreamWriter(_stdin.Writer.AsStream()) { AutoFlush = true, NewLine = "\n" };
         _run = Connector.RunAsync(
-            ["--discovery", DiscoveryPath, "--poll-ms", "50"],
+            ["--discovery", DiscoveryPath, "--poll-ms", "50", .. extraArgs],
             _stdin.Reader.AsStream(),
             _stdout.Writer.AsStream(),
             CancellationToken.None);
@@ -33,6 +33,8 @@ public sealed class ConnectorHarness : IAsyncDisposable
         File.WriteAllText(DiscoveryPath, new JsonObject { ["port"] = port, ["token"] = token, ["pid"] = 1 }.ToJsonString());
 
     public void Send(JsonNode message) => _input.WriteLine(message.ToJsonString());
+
+    public void SendLine(string line) => _input.WriteLine(line);
 
     public Task<JsonNode> ReadAsync() => ReadAsync(Timeout);
 
@@ -295,6 +297,105 @@ public class McpConnectorTests
         h.Send(ConnectorHarness.Initialize(1));
         await h.ReadAsync();
         Assert.Equal(0, await h.CloseStdinAsync());
+    }
+
+    [Fact]
+    public async Task A_tool_call_cut_off_after_it_reached_the_app_is_not_sent_twice()
+    {
+        await using var app = await FakeMcpApp.StartAsync();
+        app.AbortToolCalls = true;
+        await using var h = new ConnectorHarness();
+        h.WriteDiscovery(app.Port);
+        h.Send(ConnectorHarness.Initialize(1));
+        await h.ReadAsync();
+        h.Send(ConnectorHarness.Initialized());
+
+        h.Send(ConnectorHarness.Request(4, "tools/call"));
+        var error = await h.ReadAsync();
+
+        Assert.Equal(4, error["id"]!.GetValue<int>());
+        Assert.Equal(Connector.InterruptedMessage, error["error"]!["message"]!.GetValue<string>());
+        Assert.Equal(1, app.Count("tools/call"));
+        // It still started a new session, so the next call works.
+        Assert.Equal(2, app.Count("initialize"));
+        AssertAllJson(h);
+    }
+
+    [Fact]
+    public async Task A_tool_call_rejected_with_404_is_retried_once()
+    {
+        await using var app = await FakeMcpApp.StartAsync();
+        await using var h = new ConnectorHarness();
+        h.WriteDiscovery(app.Port);
+        h.Send(ConnectorHarness.Initialize(1));
+        await h.ReadAsync();
+        h.Send(ConnectorHarness.Initialized());
+
+        app.InvalidateSessions();
+        h.Send(ConnectorHarness.Request(6, "tools/call"));
+        var result = await h.ReadAsync();
+
+        Assert.Equal(6, result["id"]!.GetValue<int>());
+        Assert.NotNull(result["result"]);
+        Assert.Equal(2, app.Count("tools/call"));
+        AssertAllJson(h);
+    }
+
+    [Fact]
+    public async Task A_request_whose_method_is_not_a_string_does_not_stop_the_connector()
+    {
+        await using var h = new ConnectorHarness();
+        h.Send(ConnectorHarness.Initialize(1));
+        await h.ReadAsync();
+
+        h.SendLine("""{"jsonrpc":"2.0","id":3,"method":5}""");
+        var error = await h.ReadAsync();
+        Assert.Equal(3, error["id"]!.GetValue<int>());
+        Assert.NotNull(error["error"]);
+
+        h.Send(ConnectorHarness.Request(4, "ping"));
+        Assert.Equal(4, (await h.ReadAsync())["id"]!.GetValue<int>());
+        AssertAllJson(h);
+    }
+
+    [Fact]
+    public async Task A_line_that_is_not_json_gets_a_parse_error()
+    {
+        await using var h = new ConnectorHarness();
+        h.SendLine("this is not json");
+
+        var error = await h.ReadAsync();
+        Assert.Null(error["id"]);
+        Assert.Equal(-32700, error["error"]!["code"]!.GetValue<int>());
+        AssertAllJson(h);
+    }
+
+    [Fact]
+    public async Task A_hung_initialize_falls_back_to_offline()
+    {
+        await using var app = await FakeMcpApp.StartAsync();
+        app.HangInitialize = true;
+        await using var h = new ConnectorHarness("--handshake-ms", "300");
+        h.WriteDiscovery(app.Port);
+
+        h.Send(ConnectorHarness.Initialize(1));
+        var init = await h.ReadAsync(TimeSpan.FromSeconds(2));
+
+        Assert.Equal(Connector.OfflineMessage, init["result"]!["instructions"]!.GetValue<string>());
+        AssertAllJson(h);
+    }
+
+    [Fact]
+    public async Task Closes_the_session_when_stdin_closes()
+    {
+        await using var app = await FakeMcpApp.StartAsync();
+        await using var h = new ConnectorHarness();
+        h.WriteDiscovery(app.Port);
+        h.Send(ConnectorHarness.Initialize(1));
+        await h.ReadAsync();
+
+        Assert.Equal(0, await h.CloseStdinAsync());
+        Assert.Contains(app.Seen, s => s.Method == "DELETE" && s.SessionId == "session-1");
     }
 
     private static async Task WaitForAsync(Func<bool> condition)

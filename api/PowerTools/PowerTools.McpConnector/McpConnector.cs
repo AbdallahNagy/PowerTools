@@ -23,11 +23,16 @@ public static class McpConnector
     public const string OfflineMessage =
         "Power Tools is not running or its MCP server is off. Start Power Tools and turn it on under File → Agents (MCP)…; the tools will appear automatically.";
 
+    public const string InterruptedMessage =
+        "The connection to Power Tools was lost while the call was running. It may have completed; check before retrying.";
+
     public static async Task<int> RunAsync(string[] args, Stream stdin, Stream stdout, CancellationToken ct)
     {
         var discoveryPath = ArgValue(args, "--discovery") ?? McpDiscovery.DefaultPath();
-        var pollMs = int.TryParse(ArgValue(args, "--poll-ms"), out var parsed) && parsed > 0 ? parsed : 2000;
-        await using var relay = new Relay(discoveryPath, TimeSpan.FromMilliseconds(pollMs), stdout, ct);
+        var poll = MsArg(args, "--poll-ms", 2000);
+        // Hidden; tests shorten it.
+        var handshake = MsArg(args, "--handshake-ms", 15000);
+        await using var relay = new Relay(discoveryPath, poll, handshake, stdout, ct);
         await relay.RunAsync(stdin);
         return 0;
     }
@@ -38,14 +43,28 @@ public static class McpConnector
         return index >= 0 && index + 1 < args.Length ? args[index + 1] : null;
     }
 
-    private enum Outcome { Ok, Reconnect, Error }
+    private static TimeSpan MsArg(string[] args, string name, int fallback) =>
+        TimeSpan.FromMilliseconds(int.TryParse(ArgValue(args, name), out var parsed) && parsed > 0 ? parsed : fallback);
+
+    private static string? MethodOf(JsonObject message) =>
+        message["method"] is JsonValue value && value.TryGetValue<string>(out var method) ? method : null;
+
+    /// <summary>
+    /// Ok: answered. Unsent: the app provably did not act on it (no connection, or it rejected the session or token
+    /// before dispatching), so sending it again is safe. Lost: the connection failed after the request may have
+    /// reached the app, so it may have run. Error: the app answered with another HTTP error.
+    /// </summary>
+    private enum Outcome { Ok, Unsent, Lost, Error }
 
     private static readonly TimeSpan WatchInterval = TimeSpan.FromMilliseconds(250);
+    private static readonly TimeSpan SseRetryMin = TimeSpan.FromMilliseconds(300);
+    private static readonly TimeSpan SseRetryMax = TimeSpan.FromSeconds(5);
 
     private sealed class Relay : IAsyncDisposable
     {
         private readonly string _discoveryPath;
         private readonly TimeSpan _poll;
+        private readonly TimeSpan _handshake;
         private readonly StreamWriter _out;
         private readonly object _outLock = new();
         // Connecting to a closed loopback port takes about two seconds on Windows, and far longer when the machine is
@@ -57,7 +76,8 @@ public static class McpConnector
         private readonly CancellationTokenSource _lifetime;
         private readonly SemaphoreSlim _gate = new(1, 1);
 
-        // Written while holding _gate; relays read them without it and re-check through the generation.
+        // Written while holding _gate. Relays read them without it, so a read can mix two states (the tuple is not
+        // atomic); a request sent with a stale pair fails with 404 and is re-checked through the generation.
         private volatile bool _online;
         private int _generation;
         private (int Port, string Token)? _endpoint;
@@ -66,10 +86,11 @@ public static class McpConnector
         private Task _sseTask = Task.CompletedTask;
         private JsonNode? _initialize;
 
-        public Relay(string discoveryPath, TimeSpan poll, Stream stdout, CancellationToken ct)
+        public Relay(string discoveryPath, TimeSpan poll, TimeSpan handshake, Stream stdout, CancellationToken ct)
         {
             _discoveryPath = discoveryPath;
             _poll = poll;
+            _handshake = handshake;
             _out = new StreamWriter(stdout, new UTF8Encoding(false), 1024, leaveOpen: true) { AutoFlush = true, NewLine = "\n" };
             _lifetime = CancellationTokenSource.CreateLinkedTokenSource(ct);
         }
@@ -91,13 +112,14 @@ public static class McpConnector
                     try { message = JsonNode.Parse(line); }
                     catch (JsonException)
                     {
-                        Console.Error.WriteLine("powertools-mcp: ignoring a line that is not JSON");
+                        Console.Error.WriteLine("powertools-mcp: answering a line that is not JSON with a parse error");
+                        WriteError(null, -32700, "Parse error");
                         continue;
                     }
 
                     if (message is not JsonObject obj) continue;
 
-                    if (obj["method"]?.GetValue<string>() == "initialize")
+                    if (MethodOf(obj) == "initialize")
                     {
                         // Later messages depend on the state this sets, so it finishes first.
                         await GuardAsync(obj, () => HandleInitializeAsync(obj));
@@ -117,6 +139,21 @@ public static class McpConnector
             _lifetime.Cancel();
             await Task.WhenAny(poller, Task.Delay(1000));
             await Task.WhenAny(_sseTask, Task.Delay(1000));
+            // Only after the background work has stopped, so nothing reconnects once the session is gone.
+            await EndSessionAsync();
+        }
+
+        /// <summary>Tells the app the session is over, so it does not hold a slot for it. Best effort.</summary>
+        private async Task EndSessionAsync()
+        {
+            if (!_online || _endpoint is not { } endpoint || _sessionId is not { } sessionId) return;
+            try
+            {
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(1));
+                using var request = NewRequest(HttpMethod.Delete, endpoint, sessionId, "application/json");
+                using var response = await _http.SendAsync(request, timeout.Token);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException) { }
         }
 
         private async Task GuardAsync(JsonObject message, Func<Task> work)
@@ -128,7 +165,7 @@ public static class McpConnector
             catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"powertools-mcp: {ex.GetType().Name}");
+                Console.Error.WriteLine($"powertools-mcp: {ex.GetType().Name}: {ex.Message}");
                 if (message["id"] is not null) WriteError(message["id"], -32000, OfflineMessage);
             }
         }
@@ -145,7 +182,7 @@ public static class McpConnector
                 if (ReadEndpoint() is { } endpoint)
                 {
                     string? sessionId = null;
-                    var (outcome, _) = await PostAsync(endpoint, null, message, true, s => sessionId = s, _lifetime.Token);
+                    var (outcome, _) = await HandshakePostAsync(endpoint, null, message, true, s => sessionId = s);
                     if (outcome == Outcome.Ok && sessionId is not null)
                     {
                         SetOnline(endpoint, sessionId);
@@ -169,20 +206,29 @@ public static class McpConnector
             var generation = _generation;
             var (endpoint, sessionId) = (_endpoint, _sessionId);
             var (outcome, status) = await PostAsync(endpoint!.Value, sessionId, message, true, null, _lifetime.Token);
-            if (outcome == Outcome.Reconnect)
+            var toolCall = MethodOf(message) == "tools/call";
+            if (outcome is Outcome.Unsent or Outcome.Lost)
             {
-                // The app restarted or the session is gone: start a new session and try once more.
-                if (await ReconnectAsync(generation))
+                // The app restarted or the session is gone: start a new session. Send the message again only if the
+                // app cannot have acted on it. A tool call may change data, so one that was lost in flight is not
+                // repeated; anything else only reads and is safe to ask again.
+                var resend = outcome == Outcome.Unsent || !toolCall;
+                if (await ReconnectAsync(generation) && resend)
                 {
                     (outcome, status) = await PostAsync(_endpoint!.Value, _sessionId, message, true, null, _lifetime.Token);
-                    if (outcome == Outcome.Reconnect) await GoOfflineAsync(true);
+                    if (outcome is Outcome.Unsent or Outcome.Lost) await GoOfflineAsync(true);
                 }
             }
 
             if (outcome == Outcome.Ok) return;
             if (message["id"] is not null)
             {
-                WriteError(message["id"], -32000, outcome == Outcome.Error ? $"Power Tools answered HTTP {status}." : OfflineMessage);
+                WriteError(message["id"], -32000, outcome switch
+                {
+                    Outcome.Error => $"Power Tools answered HTTP {status}.",
+                    Outcome.Lost when toolCall => InterruptedMessage,
+                    _ => OfflineMessage,
+                });
             }
         }
 
@@ -190,7 +236,7 @@ public static class McpConnector
         {
             var id = message["id"];
             if (id is null) return; // A notification: nothing to answer.
-            switch (message["method"]?.GetValue<string>())
+            switch (MethodOf(message))
             {
                 case "tools/list":
                     WriteResult(id, new JsonObject { ["tools"] = new JsonArray() });
@@ -204,6 +250,10 @@ public static class McpConnector
             }
         }
 
+        /// <remarks>
+        /// The client keeps the capabilities it gets here for the whole session, even after the app appears. They must
+        /// match what the app offers (createSession in desktop/src/electron/mcp/mcpServer.ts): today, tools only.
+        /// </remarks>
         private void WriteOfflineInitialize(JsonObject message)
         {
             var result = new JsonObject
@@ -276,11 +326,31 @@ public static class McpConnector
             if (_initialize?.DeepClone() is not JsonObject init) return null;
             init["id"] = "powertools-connector-init";
             string? sessionId = null;
-            var (outcome, _) = await PostAsync(endpoint, null, init, false, s => sessionId = s, _lifetime.Token);
+            var (outcome, _) = await HandshakePostAsync(endpoint, null, init, false, s => sessionId = s);
             if (outcome != Outcome.Ok || sessionId is null) return null;
             var initialized = new JsonObject { ["jsonrpc"] = "2.0", ["method"] = "notifications/initialized" };
-            (outcome, _) = await PostAsync(endpoint, sessionId, initialized, false, null, _lifetime.Token);
+            (outcome, _) = await HandshakePostAsync(endpoint, sessionId, initialized, false, null);
             return outcome == Outcome.Ok ? sessionId : null;
+        }
+
+        /// <summary>
+        /// A handshake message, with a time limit. These run while holding _gate, and the client's initialize also
+        /// holds up reading stdin, so an app that accepts the connection and then never answers must not stall them.
+        /// </summary>
+        private async Task<(Outcome, int)> HandshakePostAsync(
+            (int Port, string Token) endpoint, string? sessionId, JsonNode message, bool emit, Action<string>? onSession)
+        {
+            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+            timeout.CancelAfter(_handshake);
+            try
+            {
+                return await PostAsync(endpoint, sessionId, message, emit, onSession, timeout.Token);
+            }
+            catch (OperationCanceledException) when (!_lifetime.IsCancellationRequested)
+            {
+                Console.Error.WriteLine("powertools-mcp: Power Tools did not answer the handshake in time");
+                return (Outcome.Lost, 0);
+            }
         }
 
         private async Task PollAsync(CancellationToken ct)
@@ -368,20 +438,22 @@ public static class McpConnector
             {
                 response = await _http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException ex)
             {
-                return (Outcome.Reconnect, 0);
+                // No connection was made, so the app never saw the request. Any other failure may come after it did.
+                return (ex.HttpRequestError == HttpRequestError.ConnectionError ? Outcome.Unsent : Outcome.Lost, 0);
             }
-            catch (OperationCanceledException) when (!outer.IsCancellationRequested)
+            catch (OperationCanceledException ex) when (!outer.IsCancellationRequested)
             {
-                // The connect timeout, or the app went away while this waited; not a shutdown.
-                return (Outcome.Reconnect, 0);
+                // The connect timeout (nothing sent), or the app went away while this waited; not a shutdown.
+                return (ex.InnerException is TimeoutException ? Outcome.Unsent : Outcome.Lost, 0);
             }
 
             using (response)
             {
                 var status = (int)response.StatusCode;
-                if (status is 404 or 401) return (Outcome.Reconnect, status);
+                // The app checks the token and the session before it dispatches anything.
+                if (status is 404 or 401) return (Outcome.Unsent, status);
                 if (!response.IsSuccessStatusCode) return (Outcome.Error, status);
                 if (onSession is not null && response.Headers.TryGetValues("Mcp-Session-Id", out var ids)) onSession(ids.First());
                 if (status == 202) return (Outcome.Ok, status);
@@ -404,11 +476,11 @@ public static class McpConnector
                 }
                 catch (IOException)
                 {
-                    return (Outcome.Reconnect, status);
+                    return (Outcome.Lost, status);
                 }
                 catch (OperationCanceledException) when (!outer.IsCancellationRequested)
                 {
-                    return (Outcome.Reconnect, status);
+                    return (Outcome.Lost, status);
                 }
             }
 
@@ -418,6 +490,7 @@ public static class McpConnector
         /// <summary>Holds the server-to-client stream open and relays what the app pushes, such as list_changed.</summary>
         private async Task SseLoopAsync((int Port, string Token) endpoint, string sessionId, int generation, CancellationToken ct)
         {
+            var retry = SseRetryMin;
             try
             {
                 while (!ct.IsCancellationRequested)
@@ -431,6 +504,7 @@ public static class McpConnector
                     }
 
                     var lost = false;
+                    var failed = false;
                     try
                     {
                         using var request = NewRequest(HttpMethod.Get, endpoint, sessionId, "text/event-stream");
@@ -443,8 +517,13 @@ public static class McpConnector
                         }
                         else if (response.IsSuccessStatusCode)
                         {
+                            retry = SseRetryMin;
                             await using var stream = await response.Content.ReadAsStreamAsync(ct);
                             await foreach (var data in ReadSseAsync(stream, ct)) WriteRaw(data);
+                        }
+                        else
+                        {
+                            failed = true; // The app is up but erroring: back off rather than ask again every 300ms.
                         }
                     }
                     catch (HttpRequestException) { lost = true; }
@@ -457,7 +536,8 @@ public static class McpConnector
                         return;
                     }
 
-                    await Task.Delay(300, ct);
+                    await Task.Delay(retry, ct);
+                    if (failed) retry = TimeSpan.FromTicks(Math.Min(retry.Ticks * 2, SseRetryMax.Ticks));
                 }
             }
             catch (OperationCanceledException) { }
