@@ -11,9 +11,10 @@ interface SwitchProps {
   "aria-describedby"?: string;
 }
 
+// The thumb sits 2px inside the track on both sides: on = track width - thumb - 2px.
 const SIZES = {
-  md: { track: "h-5 w-9", thumb: "h-3.5 w-3.5", on: "translate-x-4", off: "translate-x-0.5" },
-  sm: { track: "h-4 w-7", thumb: "h-2.5 w-2.5", on: "translate-x-3.5", off: "translate-x-0.5" },
+  md: { track: "h-5 w-9", thumb: "size-4", on: "translate-x-[18px]", off: "translate-x-0.5" },
+  sm: { track: "h-4 w-7", thumb: "size-3", on: "translate-x-3.5", off: "translate-x-0.5" },
 } as const;
 
 /** An on/off setting that applies at once. Use Checkbox for picking items from a list. */
@@ -39,11 +40,9 @@ export function Switch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative inline-flex shrink-0 items-center rounded-full border transition-colors",
+        "relative inline-flex shrink-0 items-center rounded-full transition-colors duration-150",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        checked
-          ? "border-accent bg-accent enabled:hover:border-accent-hover enabled:hover:bg-accent-hover"
-          : "border-line-strong bg-raised enabled:hover:bg-hover",
+        checked ? "bg-accent enabled:hover:bg-accent-hover" : "bg-line-strong enabled:hover:bg-fg-muted",
         s.track,
         className,
       )}
@@ -51,8 +50,7 @@ export function Switch({
       <span
         aria-hidden="true"
         className={cn(
-          "inline-block rounded-full transition-transform",
-          checked ? "bg-accent-fg" : "bg-fg-muted",
+          "inline-block rounded-full bg-accent-fg shadow-sm transition-transform duration-150 ease-out motion-reduce:transition-none",
           s.thumb,
           checked ? s.on : s.off,
         )}

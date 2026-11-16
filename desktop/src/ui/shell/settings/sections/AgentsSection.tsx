@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, Copy, RefreshCw } from "lucide-react";
+import { Check, Copy } from "lucide-react";
 
 import type { McpLegacySetup, McpStatusInfo } from "../../../platform/desktopBridge";
-import { Alert, Badge, Button, EmptyState, cn } from "../../../shared/ui";
+import { Alert, Badge, Button, cn } from "../../../shared/ui";
 import type { AgentsState } from "../../agents/useAgents";
-import { McpToolsList } from "./McpToolsList";
-import { SettingSwitchRow, SettingsGroup } from "./SettingRow";
+import { useSettings } from "../SettingsContext";
+import { relativeTime } from "./agentTools";
+import { SettingRow, SettingSwitchRow, SettingsGroup } from "./SettingRow";
 
 function statusOf(status: McpStatusInfo | null): { label: string; tone: "neutral" | "ok" | "danger" } {
   if (status?.error) return { label: `Could not start: ${status.error}`, tone: "danger" };
@@ -71,7 +72,7 @@ function Snippet({ label, text }: { label: string; text: string }) {
 
   return (
     <div className="relative">
-      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-sm border border-line bg-canvas p-3 pr-24 font-mono text-xs text-fg">
+      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-canvas p-3 pr-24 font-mono text-xs text-fg">
         {text}
       </pre>
       <Button
@@ -148,7 +149,7 @@ function ConnectClient({ status }: { status: McpStatusInfo }) {
   return (
     <SettingsGroup title="Connect a client" description="Pick your agent, then copy its setup.">
       <div className="flex flex-col gap-3 p-4">
-        <div role="group" aria-label="Client" className="flex w-fit gap-0.5 rounded-md border border-line bg-canvas p-0.5">
+        <div role="group" aria-label="Client" className="flex w-fit gap-0.5 rounded-md bg-canvas p-0.5">
           {CLIENTS.map((entry) => (
             <button
               key={entry.id}
@@ -171,9 +172,37 @@ function ConnectClient({ status }: { status: McpStatusInfo }) {
   );
 }
 
-/** The MCP server: switch, client setup, tools, and recent activity. */
+/** Where the tools and the activity went, with a one-line state of each. */
+function MovedPages({ status }: { status: McpStatusInfo }) {
+  const { setSection } = useSettings();
+  const tools = status.tools ?? [];
+  const groupOn = new Map(status.groups.map((entry) => [entry.group, entry.enabled]));
+  const offered = tools.filter((tool) => tool.enabled && groupOn.get(tool.group)).length;
+  const newest = status.recent.reduce<string | null>((latest, entry) => (!latest || entry.time > latest ? entry.time : latest), null);
+  const errors = status.recent.filter((entry) => entry.outcome === "error").length;
+  const activity = newest
+    ? `Last call ${relativeTime(new Date(newest), new Date()).toLowerCase()}${errors > 0 ? `, ${errors} ${errors === 1 ? "error" : "errors"} recently` : ""}`
+    : "No calls yet";
+
+  return (
+    <SettingsGroup title="Tools and activity" hideTitle>
+      <SettingRow label="Tools offered" description={`${offered} of ${tools.length}, in ${status.groups.length} groups`}>
+        <Button variant="secondary" size="sm" onClick={() => setSection("agentTools")}>
+          Manage tools
+        </Button>
+      </SettingRow>
+      <SettingRow label="Agent activity" description={activity}>
+        <Button variant="secondary" size="sm" onClick={() => setSection("agentActivity")}>
+          View activity
+        </Button>
+      </SettingRow>
+    </SettingsGroup>
+  );
+}
+
+/** The MCP server: switch, client setup, and where to find its tools and activity. */
 export function AgentsSection({ agents }: { agents: AgentsState }) {
-  const { status, busy, error, setEnabled, setGroup, setTool, refresh } = agents;
+  const { status, busy, error, setEnabled } = agents;
   const state = statusOf(status);
   const enabled = status?.running === true || (status?.enabled === true && !status.error);
 
@@ -196,44 +225,9 @@ export function AgentsSection({ agents }: { agents: AgentsState }) {
 
       {status ? <LegacySetupWarning status={status} /> : null}
 
+      {status ? <MovedPages status={status} /> : null}
+
       {status ? <ConnectClient status={status} /> : null}
-
-      {status ? (
-        <McpToolsList
-          groups={status.groups}
-          tools={status.tools ?? []}
-          busy={busy}
-          onGroupChange={(group, next) => void setGroup(group, next)}
-          onToolChange={(name, next) => void setTool(name, next)}
-        />
-      ) : null}
-
-      <SettingsGroup
-        title="Recent activity"
-        action={
-          <Button variant="ghost" size="sm" disabled={busy} aria-label="Refresh activity" onClick={() => void refresh()}>
-            <RefreshCw size={14} aria-hidden="true" />
-            Refresh
-          </Button>
-        }
-      >
-        {status && status.recent.length > 0 ? (
-          <ul className="flex max-h-64 flex-col divide-y divide-line overflow-y-auto text-xs">
-            {status.recent.slice(0, 50).map((entry, index) => (
-              <li key={`${entry.time}-${index}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
-                <span className="text-fg-muted">{new Date(entry.time).toLocaleString()}</span>
-                <span className="font-mono text-fg-strong">{entry.tool}</span>
-                <span className="min-w-0 flex-1 truncate text-fg-muted">{entry.connection ?? "No connection"}</span>
-                <Badge tone={entry.outcome === "ok" ? "ok" : "danger"}>
-                  {entry.outcome === "ok" ? "OK" : (entry.code ?? "Error")}
-                </Badge>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <EmptyState title="No agent activity yet" description="Calls made by agents appear here." />
-        )}
-      </SettingsGroup>
     </>
   );
 }
