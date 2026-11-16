@@ -3,3 +3,6 @@
 website/.astro/
 website/dist/
 website/node_modules/
+
+# JetBrains IDE settings (Rider)
+.idea/
