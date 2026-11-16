@@ -28,10 +28,11 @@ public static class MigrationEndpoints
                 SourceConnection = ctx.GetDataverseConnectionContext(),
                 TargetConnection = ctx.GetTargetDataverseConnectionContext()
                     ?? throw new InvalidOperationException("Target connection was not provided."),
-                EntityLogicalName = req.EntityLogicalName,
-                Attributes = req.Attributes,
-                FetchXmlFilter = req.FetchXmlFilter,
-                Options = new MigrationOptions(req.Create, req.Update, req.Delete, req.ConfirmedDeleteCount)
+                Request = new MigrationRequest(
+                    req.EntityLogicalName,
+                    req.Attributes,
+                    req.FetchXmlFilter,
+                    new MigrationOptions(req.Create, req.Update, req.Delete, req.ConfirmedDeleteCount))
             };
 
             store.Enqueue(job);
@@ -42,7 +43,7 @@ public static class MigrationEndpoints
 
         statusGroup.MapGet("/jobs/{jobId:guid}", (Guid jobId, IMigrationJobStore store) =>
         {
-            var job = store.Get(jobId);
+            var job = store.Get(jobId)?.Progress.Snapshot();
             if (job is null) return Results.NotFound();
 
             return Results.Ok(new

@@ -29,7 +29,7 @@ public class MigrationJobRunner(
             catch (Exception ex)
             {
                 source?.Dispose();
-                DataMigrationRun.Fail(job, ex);
+                job.Progress.Fail(DataverseErrorFormatter.Format(ex));
                 logger.LogError(ex, "Migration job {JobId} failed", job.Id);
                 continue;
             }
@@ -37,7 +37,7 @@ public class MigrationJobRunner(
             using (source)
             using (target)
             {
-                await new DataMigrationRun(source, target, logger).RunAsync(job, ct);
+                await new DataMigrationRun(source, target, logger).RunAsync(job.Request, job.Progress, ct);
             }
         }
     }
