@@ -59,7 +59,12 @@ function renderAgents(overrides: Parameters<typeof renderWithProviders>[1] = {})
   return view;
 }
 
-describe("Settings: Agents (MCP)", () => {
+async function openTab(name: string) {
+  const nav = await screen.findByRole("navigation", { name: "Settings sections" });
+  fireEvent.click(within(nav).getByRole("button", { name }));
+}
+
+describe("Settings: MCP server", () => {
   it("shows Off by default with the switch unchecked", async () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
     expect(await screen.findByText("Off")).toBeInTheDocument();
@@ -125,7 +130,7 @@ describe("Settings: Agents (MCP)", () => {
     expect(screen.queryByText("Update your agent setup so Power Tools can update")).not.toBeInTheDocument();
   });
 
-  it("lists recent activity without ids or tokens", async () => {
+  it("lists recent activity on its own tab without ids or tokens", async () => {
     renderAgents({
       bridgeOverrides: {
         getMcpStatus: async () => ({
@@ -138,7 +143,11 @@ describe("Settings: Agents (MCP)", () => {
         }),
       },
     });
-    expect(await screen.findByText("metadata_get_table")).toBeInTheDocument();
+    await screen.findByText("Running");
+    await openTab("Agent activity");
+    expect(await screen.findByRole("heading", { name: "Agent activity" })).toBeInTheDocument();
+    expect(screen.getAllByText("metadata_get_table").length).toBeGreaterThan(0);
+    expect(screen.getByText("account")).toBeInTheDocument();
     expect(screen.getByText("A · Dev")).toBeInTheDocument();
     expect(document.body.textContent ?? "").not.toMatch(/[0-9a-f]{64}/);
   });
@@ -149,15 +158,17 @@ describe("Settings: Agents (MCP)", () => {
       groups: OFF.groups.map((g) => (g.group === group ? { ...g, enabled } : g)),
     }));
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpGroup } });
-    const schema = await screen.findByRole("switch", { name: "schema tools" });
+    await screen.findByText("Off");
+    await openTab("Agent tools");
+    const schema = await screen.findByRole("switch", { name: "Schema tools" });
     expect(schema).not.toBeChecked();
-    expect(screen.getByText("Group off")).toBeInTheDocument();
-    expect(screen.getByText("1 of 1 on")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "connections tools" })).toBeChecked();
+    expect(screen.getByText(/Group off\./)).toBeInTheDocument();
+    expect(screen.getByText(/1 of 1 on\./)).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Connections tools" })).toBeChecked();
     await waitFor(() => expect(schema).not.toBeDisabled());
     fireEvent.click(schema);
     await waitFor(() => expect(setMcpGroup).toHaveBeenCalledWith("schema", true));
-    await waitFor(() => expect(screen.getByRole("switch", { name: "schema tools" })).toBeChecked());
+    await waitFor(() => expect(screen.getByRole("switch", { name: "Schema tools" })).toBeChecked());
   });
 
   it("has no direct HTTP option", async () => {
@@ -171,8 +182,11 @@ describe("Settings: Agents (MCP)", () => {
     const getMcpStatus = vi.fn(async () => OFF);
     renderAgents({ bridgeOverrides: { getMcpStatus } });
     await screen.findByText("Off");
-    fireEvent.click(screen.getByRole("button", { name: "Refresh activity" }));
+    await openTab("Agent activity");
+    // Opening the tab reads the activity again.
     await waitFor(() => expect(getMcpStatus).toHaveBeenCalledTimes(2));
+    fireEvent.click(await screen.findByRole("button", { name: "Refresh activity" }));
+    await waitFor(() => expect(getMcpStatus).toHaveBeenCalledTimes(3));
   });
 
   it("shows the switch as it is when the section is opened again, without drawing it off first", async () => {
@@ -185,7 +199,7 @@ describe("Settings: Agents (MCP)", () => {
     expect(await screen.findByRole("switch", { name })).toBeChecked();
 
     fireEvent.click(screen.getByRole("button", { name: "Privacy" }));
-    fireEvent.click(screen.getByRole("button", { name: "Agents (MCP)" }));
+    fireEvent.click(screen.getByRole("button", { name: "MCP server" }));
     expect(screen.getByRole("switch", { name })).toBeChecked();
     expect(screen.getByRole("switch", { name })).not.toBeDisabled();
     expect(screen.getByText("Running")).toBeInTheDocument();
@@ -206,11 +220,11 @@ describe("Settings: Agents (MCP)", () => {
     expect(screen.queryByText("Off")).not.toBeInTheDocument();
   });
 
-  it("opens at Agents from the Agents (MCP) menu event", async () => {
+  it("opens at MCP server from the Agents (MCP) menu event", async () => {
     const view = renderShell();
     expect(screen.queryByText("Settings")).not.toBeInTheDocument();
     view.bridge.emitOpenAgents();
-    expect(await screen.findByRole("heading", { name: "Agents (MCP)" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "MCP server" })).toBeInTheDocument();
   });
 
   it("lists each tool with its effect, filters by search, and switches one tool", async () => {
@@ -219,21 +233,103 @@ describe("Settings: Agents (MCP)", () => {
       tools: OFF.tools.map((t) => (t.name === name ? { ...t, enabled } : t)),
     }));
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpTool } });
-    fireEvent.click(await screen.findByRole("button", { name: "Show connections tools" }));
-    const toggle = screen.getByRole("switch", { name: "connections_list tool" });
-    expect(screen.getByText("Read")).toBeInTheDocument();
+    await screen.findByText("Off");
+    await openTab("Agent tools");
+    fireEvent.click(await screen.findByRole("button", { name: "Show Connections tools" }));
+    const toggle = screen.getByRole("switch", { name: "List connections (connections_list)" });
     await waitFor(() => expect(toggle).not.toBeDisabled());
     fireEvent.click(toggle);
     await waitFor(() => expect(setMcpTool).toHaveBeenCalledWith("connections_list", false));
-    await waitFor(() => expect(screen.getByRole("switch", { name: "connections_list tool" })).not.toBeChecked());
+    await waitFor(() =>
+      expect(screen.getByRole("switch", { name: "List connections (connections_list)" })).not.toBeChecked(),
+    );
 
     fireEvent.change(screen.getByLabelText("Search agent tools"), { target: { value: "column" } });
-    expect(screen.getByText("schema_create_column")).toBeInTheDocument();
-    expect(screen.queryByText("connections_list")).not.toBeInTheDocument();
+    const column = screen.getByRole("switch", { name: "Create a column (schema_create_column)" });
+    expect(screen.queryByText("List connections")).not.toBeInTheDocument();
     // A tool of a switched-off group cannot be switched on its own.
-    expect(screen.getByRole("switch", { name: "schema_create_column tool" })).toBeDisabled();
+    expect(column).toBeDisabled();
     // It also reads as off, since agents do not get it, though its own setting is kept.
-    expect(screen.getByRole("switch", { name: "schema_create_column tool" })).not.toBeChecked();
+    expect(column).not.toBeChecked();
+  });
+
+  it("flips a tool switch at once without dimming the others while main saves", async () => {
+    let finish: (status: McpStatusInfo) => void = () => undefined;
+    const setMcpTool = vi.fn(() => new Promise<McpStatusInfo>((resolve) => (finish = resolve)));
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpTool } });
+    await screen.findByText("Off");
+    await openTab("Agent tools");
+    fireEvent.click(await screen.findByRole("button", { name: "Show Connections tools" }));
+    const name = "List connections (connections_list)";
+    await waitFor(() => expect(screen.getByRole("switch", { name })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("switch", { name }));
+    expect(screen.getByRole("switch", { name })).not.toBeChecked();
+    expect(screen.getByRole("switch", { name })).not.toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Connections tools" })).not.toBeDisabled();
+    act(() => finish({ ...OFF, tools: OFF.tools.map((t) => (t.name === "connections_list" ? { ...t, enabled: false } : t)) }));
+    await waitFor(() => expect(setMcpTool).toHaveBeenCalledWith("connections_list", false));
+    expect(screen.getByRole("switch", { name })).not.toBeChecked();
+  });
+
+  it("puts a tool switch back when main cannot save it", async () => {
+    const setMcpTool = vi.fn(async (): Promise<McpStatusInfo> => {
+      throw new Error("Could not save");
+    });
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpTool } });
+    await screen.findByText("Off");
+    await openTab("Agent tools");
+    fireEvent.click(await screen.findByRole("button", { name: "Show Connections tools" }));
+    const name = "List connections (connections_list)";
+    await waitFor(() => expect(screen.getByRole("switch", { name })).not.toBeDisabled());
+    fireEvent.click(screen.getByRole("switch", { name }));
+    await waitFor(() => expect(screen.getByRole("switch", { name })).toBeChecked());
+  });
+
+  it("filters tools by what they do", async () => {
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
+    await screen.findByText("Off");
+    await openTab("Agent tools");
+    const filter = await screen.findByRole("group", { name: "Show tools that" });
+    fireEvent.click(within(filter).getByRole("button", { name: /^Change/ }));
+    expect(screen.getByText("Create a column")).toBeInTheDocument();
+    expect(screen.queryByText("List connections")).not.toBeInTheDocument();
+    fireEvent.click(within(filter).getByRole("button", { name: /^Destructive/ }));
+    expect(screen.getByText("No matching tools")).toBeInTheDocument();
+  });
+
+  it("shows declined calls and errors in the activity and filters to errors", async () => {
+    renderAgents({
+      bridgeOverrides: {
+        getMcpStatus: async () => ({
+          ...OFF,
+          recent: [
+            { time: "2026-11-12T10:00:00.000Z", client: "claude-code", tool: "connections_list", connection: null, effect: "read", approval: "not-needed", outcome: "ok", summary: "connections_list" },
+            { time: "2026-11-12T10:01:00.000Z", client: "claude-code", tool: "schema_create_column", connection: "A · Dev", effect: "change", approval: "denied", outcome: "error", code: "Denied", summary: "schema_create_column account.new_x" },
+            { time: "2026-11-12T10:02:00.000Z", client: "claude-code", tool: "schema_create_column", connection: "A · Dev", effect: "change", approval: "allowed", outcome: "error", code: "InvalidRequest", summary: "schema_create_column account.new_y" },
+          ],
+        }),
+      },
+    });
+    await screen.findByText("Off");
+    await openTab("Agent activity");
+    expect(await screen.findByText("Declined")).toBeInTheDocument();
+    expect(screen.getByText("InvalidRequest")).toBeInTheDocument();
+    expect(screen.getByText("You approved")).toBeInTheDocument();
+    expect(screen.getByText("List connections")).toBeInTheDocument();
+
+    fireEvent.click(within(screen.getByRole("group", { name: "Show calls" })).getByRole("button", { name: /^Errors/ }));
+    expect(screen.queryByText("List connections")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Create a column")).toHaveLength(2);
+  });
+
+  it("links from MCP server to the tools and activity tabs", async () => {
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
+    expect(await screen.findByText("1 of 2, in 2 groups")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Manage tools" }));
+    expect(await screen.findByRole("heading", { name: "Agent tools" })).toBeInTheDocument();
+    await openTab("MCP server");
+    fireEvent.click(await screen.findByRole("button", { name: "View activity" }));
+    expect(await screen.findByRole("heading", { name: "Agent activity" })).toBeInTheDocument();
   });
 });
 
@@ -265,7 +361,7 @@ describe("Settings dialog", () => {
 
     // Words match from their start: "port" is the MCP port, not crash "reports".
     fireEvent.change(screen.getByLabelText("Search settings"), { target: { value: "port" } });
-    expect(within(nav).getAllByRole("button").map((button) => button.textContent)).toEqual(["Agents (MCP)"]);
+    expect(within(nav).getAllByRole("button").map((button) => button.textContent)).toEqual(["MCP server"]);
     fireEvent.change(screen.getByLabelText("Search settings"), { target: { value: "crash" } });
 
     fireEvent.change(screen.getByLabelText("Search settings"), { target: { value: "no such setting" } });
@@ -274,7 +370,7 @@ describe("Settings dialog", () => {
     expect(screen.getByRole("heading", { name: "Privacy" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
-    expect(within(nav).getAllByRole("button")).toHaveLength(6);
+    expect(within(nav).getAllByRole("button")).toHaveLength(8);
   });
 
   it("changes the theme through main", async () => {

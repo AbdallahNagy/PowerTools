@@ -26,7 +26,7 @@ export function SettingsGroup({ title, hideTitle, description, action, children,
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
       )}
-      <div className={cn("flex flex-col divide-y divide-line overflow-hidden rounded-md border border-line bg-surface", className)}>
+      <div className={cn("flex flex-col divide-y divide-line/60 overflow-hidden rounded-xl bg-surface", className)}>
         {children}
       </div>
     </section>

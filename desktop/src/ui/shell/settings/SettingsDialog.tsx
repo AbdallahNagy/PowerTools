@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Bot, EyeOff, Info, Keyboard, Palette, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Activity, EyeOff, Info, Keyboard, Palette, Server, ShieldCheck, Wrench, type LucideIcon } from "lucide-react";
 
 import { Modal, ModalTitle, SearchInput, cn } from "../../shared/ui";
 import { useAgents, type AgentsState } from "../agents/useAgents";
@@ -11,8 +11,10 @@ import {
   SETTINGS_SECTION_LABELS,
   type SettingsSection,
 } from "./settingsSections";
+import { AgentActivitySection } from "./sections/AgentActivitySection";
 import { AgentPermissionsSection } from "./sections/AgentPermissionsSection";
 import { AgentsSection } from "./sections/AgentsSection";
+import { AgentToolsSection } from "./sections/AgentToolsSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { PrivacySection } from "./sections/PrivacySection";
 import { ShortcutsSection } from "./sections/ShortcutsSection";
@@ -22,11 +24,16 @@ import { useAppSettings, type AppSettingsState } from "./useAppSettings";
 const SECTION_ICONS: Record<SettingsSection, LucideIcon> = {
   appearance: Palette,
   shortcuts: Keyboard,
-  agents: Bot,
+  agents: Server,
+  agentTools: Wrench,
+  agentActivity: Activity,
   permissions: ShieldCheck,
   privacy: EyeOff,
   updates: Info,
 };
+
+/** The sections that show the MCP server state, which is read again each time one opens. */
+const AGENT_SECTIONS = new Set<SettingsSection>(["agents", "agentTools", "agentActivity"]);
 
 function SectionBody({ section, app, agents }: { section: SettingsSection; app: AppSettingsState; agents: AgentsState }) {
   switch (section) {
@@ -34,6 +41,10 @@ function SectionBody({ section, app, agents }: { section: SettingsSection; app: 
       return <AppearanceSection app={app} />;
     case "agents":
       return <AgentsSection agents={agents} />;
+    case "agentTools":
+      return <AgentToolsSection agents={agents} />;
+    case "agentActivity":
+      return <AgentActivitySection agents={agents} />;
     case "permissions":
       return <AgentPermissionsSection />;
     case "privacy":
@@ -52,7 +63,7 @@ export function SettingsDialog() {
   // Both live here, outside the sections and the dialog's content, so what they loaded survives
   // switching sections and closing the dialog. A section then opens showing its real state.
   const app = useAppSettings(open);
-  const agents = useAgents(open && section === "agents");
+  const agents = useAgents(open && AGENT_SECTIONS.has(section));
   const matches = matchSettingsSections(query);
 
   // Each section starts at its top.

@@ -61,7 +61,7 @@ export function UpdatesAboutSection({ app }: { app: AppSettingsState }) {
       {app.error ? <Alert tone="danger">{app.error}</Alert> : null}
       <section
         aria-label="About"
-        className="flex items-center gap-4 rounded-md border border-line bg-surface px-4 py-4"
+        className="flex items-center gap-4 rounded-xl bg-surface px-4 py-4"
       >
         <img src={PowerToolsIcon} alt="" className="h-10 w-10 shrink-0" />
         <p className="min-w-0 flex-1 text-base font-semibold text-fg-strong">Power Tools {version}</p>
