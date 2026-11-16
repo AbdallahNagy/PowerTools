@@ -36,6 +36,12 @@ public sealed class FakeMcpApp : IAsyncDisposable
     /// <summary>True makes tools/call wait forever, like an app that accepted the request and then stopped.</summary>
     public bool HangToolCalls { get; set; }
 
+    /// <summary>True drops the connection after reading a tools/call, as an app that ran it and then died would.</summary>
+    public bool AbortToolCalls { get; set; }
+
+    /// <summary>True makes initialize wait forever, like an app that accepts connections but is stuck.</summary>
+    public bool HangInitialize { get; set; }
+
     private FakeMcpApp(WebApplication app, int port)
     {
         _app = app;
@@ -117,6 +123,13 @@ public sealed class FakeMcpApp : IAsyncDisposable
 
         if (method == "initialize")
         {
+            if (HangInitialize)
+            {
+                try { await Task.Delay(Timeout.Infinite, ctx.RequestAborted); }
+                catch (OperationCanceledException) { }
+                return;
+            }
+
             var id = $"session-{Interlocked.Increment(ref _nextSession)}";
             _sessions[id] = true;
             ctx.Response.Headers["Mcp-Session-Id"] = id;
@@ -132,6 +145,12 @@ public sealed class FakeMcpApp : IAsyncDisposable
         if (message?["id"] is null)
         {
             ctx.Response.StatusCode = 202;
+            return;
+        }
+
+        if (AbortToolCalls && method == "tools/call")
+        {
+            ctx.Abort();
             return;
         }
 
