@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
-using PowerTools.API.Tools.DataMigration;
+using PowerTools.API.Services;
 
-namespace PowerTools.API.Services;
+namespace PowerTools.API.Tools.DataMigration;
 
 public enum MigrationJobStatus { Queued, Running, Completed, Failed }
 

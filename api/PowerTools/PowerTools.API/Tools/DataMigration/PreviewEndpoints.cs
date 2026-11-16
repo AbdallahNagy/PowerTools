@@ -1,4 +1,3 @@
-using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.DataMigration.Dtos;
@@ -22,34 +21,18 @@ public static class PreviewEndpoints
             HttpContext ctx,
             DataverseClientFactory factory) =>
         {
-            var svc = ctx.CreateDataverseClient(factory);
+            var source = Source(ctx, factory);
 
             try
             {
-                var metadata = await DataMigrationRecords.GetEntityMetadataAsync(svc, req.EntityLogicalName);
-                var nameAttribute = metadata.PrimaryNameAttribute;
-                var fetchXml = DataMigrationFetchXml.Build(
-                    req.EntityLogicalName,
-                    [string.IsNullOrEmpty(nameAttribute) ? metadata.PrimaryIdAttribute : nameAttribute],
-                    req.FetchXmlFilter,
-                    req.Page,
-                    req.PageSize,
-                    req.PagingCookie);
-                var result = await svc.RetrieveMultipleAsync(new FetchExpression(fetchXml));
-
-                var records = result.Entities.Select(e => new
-                {
-                    id = e.Id.ToString(),
-                    name = string.IsNullOrEmpty(nameAttribute) || !e.Contains(nameAttribute)
-                        ? null
-                        : e[nameAttribute]?.ToString()
-                }).ToList();
+                var table = await DataMigrationTable.OpenAsync(source, req.EntityLogicalName);
+                var page = await table.PreviewPageAsync(req.FetchXmlFilter, req.Page, req.PageSize, req.PagingCookie);
 
                 return Results.Ok(new
                 {
-                    records,
-                    pagingCookie = result.PagingCookie,
-                    moreRecords = result.MoreRecords
+                    records = page.Records.Select(r => new { id = r.Id.ToString(), name = r.Name }).ToList(),
+                    pagingCookie = page.PagingCookie,
+                    moreRecords = page.MoreRecords
                 });
             }
             catch (Exception ex)
@@ -65,13 +48,12 @@ public static class PreviewEndpoints
             DataverseClientFactory factory,
             CancellationToken ct) =>
         {
-            var svc = ctx.CreateDataverseClient(factory);
+            var source = Source(ctx, factory);
 
             try
             {
-                var metadata = await DataMigrationRecords.GetEntityMetadataAsync(svc, req.EntityLogicalName);
-                var count = await DataMigrationRecords.CountAsync(
-                    svc, req.EntityLogicalName, metadata.PrimaryIdAttribute, req.FetchXmlFilter, ct);
+                var table = await DataMigrationTable.OpenAsync(source, req.EntityLogicalName);
+                var count = await table.CountAsync(req.FetchXmlFilter, ct);
                 return Results.Ok(new { count });
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -92,22 +74,14 @@ public static class PreviewEndpoints
             DataverseClientFactory factory,
             CancellationToken ct) =>
         {
-            var svc = ctx.CreateDataverseClient(factory);
-            var targetSvc = ctx.CreateTargetDataverseClient(factory)
-                ?? throw new InvalidOperationException("Target connection was not provided.");
+            var source = Source(ctx, factory);
+            var target = Target(ctx, factory);
 
             try
             {
-                var sourceMetadata = await DataMigrationRecords.GetEntityMetadataAsync(svc, req.EntityLogicalName);
-                var targetMetadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, req.EntityLogicalName);
-                var (count, existing) = await DataMigrationRecords.CountInTargetAsync(
-                    svc,
-                    targetSvc,
-                    req.EntityLogicalName,
-                    sourceMetadata.PrimaryIdAttribute,
-                    targetMetadata.PrimaryIdAttribute,
-                    req.FetchXmlFilter,
-                    ct);
+                var sourceTable = await DataMigrationTable.OpenAsync(source, req.EntityLogicalName);
+                var targetTable = await DataMigrationTable.OpenAsync(target, req.EntityLogicalName);
+                var (count, existing) = await sourceTable.CountInTargetAsync(targetTable, req.FetchXmlFilter, ct);
                 return Results.Ok(new { count, existing });
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -124,14 +98,12 @@ public static class PreviewEndpoints
             DataverseClientFactory factory,
             CancellationToken ct) =>
         {
-            var targetSvc = ctx.CreateTargetDataverseClient(factory)
-                ?? throw new InvalidOperationException("Target connection was not provided.");
+            var target = Target(ctx, factory);
 
             try
             {
-                var metadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, req.EntityLogicalName);
-                var existing = await DataMigrationRecords.FindExistingIdsAsync(
-                    targetSvc, req.EntityLogicalName, metadata.PrimaryIdAttribute, req.Ids, ct);
+                var table = await DataMigrationTable.OpenAsync(target, req.EntityLogicalName);
+                var existing = await table.ExistingIdsAsync(req.Ids, ct);
                 return Results.Ok(new { existingIds = existing.Select(id => id.ToString()) });
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
@@ -148,22 +120,14 @@ public static class PreviewEndpoints
             DataverseClientFactory factory,
             CancellationToken ct) =>
         {
-            var svc = ctx.CreateDataverseClient(factory);
-            var targetSvc = ctx.CreateTargetDataverseClient(factory)
-                ?? throw new InvalidOperationException("Target connection was not provided.");
+            var source = Source(ctx, factory);
+            var target = Target(ctx, factory);
 
             try
             {
-                var sourceMetadata = await DataMigrationRecords.GetEntityMetadataAsync(svc, req.EntityLogicalName);
-                var targetMetadata = await DataMigrationRecords.GetEntityMetadataAsync(targetSvc, req.EntityLogicalName);
-                var (sourceCount, missing) = await DataMigrationRecords.FindTargetRecordsMissingFromSourceAsync(
-                    svc,
-                    targetSvc,
-                    req.EntityLogicalName,
-                    sourceMetadata.PrimaryIdAttribute,
-                    targetMetadata,
-                    req.FetchXmlFilter,
-                    ct);
+                var sourceTable = await DataMigrationTable.OpenAsync(source, req.EntityLogicalName);
+                var targetTable = await DataMigrationTable.OpenAsync(target, req.EntityLogicalName);
+                var (sourceCount, missing) = await targetTable.MissingFromSourceAsync(sourceTable, req.FetchXmlFilter, ct);
                 return Results.Ok(new
                 {
                     count = missing.Count,
@@ -179,4 +143,12 @@ public static class PreviewEndpoints
 
         return app;
     }
+
+    // The request disposes the SDK clients when it ends, so these wrappers are not disposed here.
+    private static DataverseDataMigrationClient Source(HttpContext ctx, DataverseClientFactory factory) =>
+        new(ctx.CreateDataverseClient(factory));
+
+    private static DataverseDataMigrationClient Target(HttpContext ctx, DataverseClientFactory factory) =>
+        new(ctx.CreateTargetDataverseClient(factory)
+            ?? throw new InvalidOperationException("Target connection was not provided."));
 }
