@@ -336,6 +336,9 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
         var records = rows.Where(row => row.Key.Kind is LabelKinds.View or LabelKinds.Chart).ToList();
         if (records.Count > 0) await PlanRecordsAsync(records, units, failures, cancellationToken);
 
+        foreach (var form in rows.Where(row => row.Key.Kind == LabelKinds.Form).GroupBy(row => row.Key.RecordId!.Value))
+            await PlanFormAsync(form.Key, form.ToList(), units, failures, cancellationToken);
+
         return new ApplyPlan(units, failures);
     }
 
@@ -655,6 +658,59 @@ public sealed class TranslatorApply(ITranslatorClient client, ITranslatorDelay d
                 $"{(isView ? "View" : "Chart")} {targets[i].RecordId}"));
             units.Add(recordUnit);
         }
+    }
+
+    /// <summary>
+    /// One <c>Update</c> of <c>systemform.formxml</c> per form, built from the unpublished XML so other
+    /// pending form changes are kept. Publishing the table publishes its forms.
+    /// </summary>
+    private async Task PlanFormAsync(
+        Guid formId,
+        IReadOnlyList<ApplyRowDto> rows,
+        List<WriteUnit> units,
+        List<PlannedFailure> failures,
+        CancellationToken cancellationToken)
+    {
+        string? xml;
+        try
+        {
+            xml = await client.RetrieveFormXmlAsync(formId, cancellationToken);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            failures.Add(TranslatorFaults.IsDoesNotExist(ex)
+                ? new PlannedFailure(rows, ApplyOutcomes.Skipped, "This form no longer exists.")
+                : new PlannedFailure(rows, ApplyOutcomes.Failed, TranslatorFaults.RowMessage(ex)));
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(xml))
+        {
+            failures.Add(new PlannedFailure(rows, ApplyOutcomes.Failed, "Dataverse returned no XML for this form."));
+            return;
+        }
+
+        string merged;
+        IReadOnlyList<ApplyRowDto> missing;
+        try
+        {
+            (merged, missing) = TranslatorForms.Merge(xml, rows);
+        }
+        catch (System.Xml.XmlException ex)
+        {
+            failures.Add(new PlannedFailure(rows, ApplyOutcomes.Failed, $"The form XML could not be read: {ex.Message}"));
+            return;
+        }
+
+        if (missing.Count > 0)
+            failures.Add(new PlannedFailure(missing, ApplyOutcomes.Skipped, "This tab or section no longer exists on the form."));
+        var found = rows.Except(missing).ToList();
+        if (found.Count == 0) return;
+
+        var form = new Entity(TranslatorForms.EntityName, formId) { ["formxml"] = merged };
+        var unit = Unit(new UpdateRequest { Target = form }, found, found[0].Key.Table!.Trim().ToLowerInvariant());
+        unit.Components.Add(new SolutionComponentRef(SolutionComponentTypes.SystemForm, formId, $"Form {formId}"));
+        units.Add(unit);
     }
 
     /// <summary>The full label list for <c>SetLocLabels</c>: current labels with the changed languages replaced.</summary>

@@ -8,7 +8,7 @@ public sealed partial class TranslatorService
 {
     /// <summary>
     /// Tables for the scope list. With a solution, a table is listed when the table itself or any of its
-    /// columns, relationships, views, or charts is in the solution.
+    /// columns, relationships, views, charts, or forms is in the solution.
     /// </summary>
     public async Task<TranslatorResult<TablesResponse>> GetTablesAsync(Guid? solutionId, CancellationToken cancellationToken)
     {
@@ -135,6 +135,7 @@ public sealed partial class TranslatorService
 
         await AddRecordTablesAsync(names, scope.Views, "savedquery", "savedqueryid", "returnedtypecode", cancellationToken);
         await AddRecordTablesAsync(names, scope.Charts, "savedqueryvisualization", "savedqueryvisualizationid", "primaryentitytypecode", cancellationToken);
+        await AddRecordTablesAsync(names, scope.Forms, TranslatorForms.EntityName, "formid", "objecttypecode", cancellationToken);
         names.Remove("");
         return names;
     }

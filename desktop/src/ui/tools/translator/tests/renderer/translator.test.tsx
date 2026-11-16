@@ -221,6 +221,63 @@ describe("Translator", () => {
     expect(screen.getByRole("button", { name: "Apply 1 change" })).toBeEnabled();
   });
 
+  it("lists form tabs and sections in form order and sends the element id on apply", async () => {
+    const formId = "a1000000-0000-0000-0000-000000000001";
+    const formRow = (element: string, property: "TabLabel" | "SectionLabel", position: number, name: string, en: string, fr?: string): LabelRow => ({
+      key: { kind: "form", table: "account", recordId: formId, element, property },
+      component: en,
+      componentName: name,
+      detail: "Information (Main)",
+      position,
+      booleanSet: false,
+      readOnlyReason: null,
+      labels: fr ? { 1033: en, 1036: fr } : { 1033: en },
+    });
+    const formRows = [
+      formRow("s2", "SectionLabel", 2, "address", "Address"),
+      formRow("t1", "TabLabel", 0, "general", "Summary", "Résumé"),
+      formRow("s1", "SectionLabel", 1, "details", "Details"),
+    ];
+    const sent: ApplyRequest[] = [];
+    httpServer.use(
+      http.post(`${API}/translator/labels/query`, async ({ request }) => {
+        const body = (await request.json()) as LabelQueryRequest;
+        return HttpResponse.json({ rows: body.kinds[0] === "form" ? formRows : rowsByKind[body.kinds[0]!] ?? [] });
+      }),
+      ...applyHandlers(
+        completedJob({
+          processed: 1,
+          total: 1,
+          succeeded: 1,
+          results: [{ key: formRows[2]!.key, lcids: [1036], outcome: "succeeded", message: null }],
+        }),
+        sent,
+      ),
+    );
+    await openAccount();
+
+    fireEvent.mouseDown(screen.getByRole("tab", { name: "Forms" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Forms" }));
+    const french = await screen.findByRole("textbox", { name: "Details Section Label French (1036)" });
+    expect(screen.getByRole("columnheader", { name: /Form/ })).toBeInTheDocument();
+    const order = screen
+      .getAllByRole("textbox", { name: /French \(1036\)$/ })
+      .map((input) => input.getAttribute("aria-label"));
+    expect(order).toEqual([
+      "Summary Tab Label French (1036)",
+      "Details Section Label French (1036)",
+      "Address Section Label French (1036)",
+    ]);
+
+    fireEvent.change(french, { target: { value: "Détails" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply 1 change" }));
+    const dialog = await screen.findByRole("dialog", { name: "Apply label changes" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Apply and publish" }));
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]!.rows).toEqual([{ key: formRows[2]!.key, labels: { 1036: "Détails" } }]);
+  });
+
   it("applies changes, publishes only the listed tables, and shows the saved value", async () => {
     const sent: ApplyRequest[] = [];
     const key = accountTableRows[0]!.key;
@@ -365,11 +422,11 @@ describe("Translator", () => {
     await screen.findByRole("button", { name: /^Contact\s*contact/ });
 
     const source = screen.getByRole("combobox", { name: "Source" });
-    await waitFor(() => expect(within(source).getByRole("option", { name: "Vendor Pack (managed)" })).toBeInTheDocument());
+    await waitFor(() => expect(within(source).getByRole("option", { name: "Vendor Pack 2.1.0.0 (managed)" })).toBeInTheDocument());
     expect(within(source).getAllByRole("option").map((option) => option.textContent)).toEqual([
       "All tables",
-      "Contoso Core",
-      "Vendor Pack (managed)",
+      "Contoso Core 1.0.0.0",
+      "Vendor Pack 2.1.0.0 (managed)",
     ]);
 
     fireEvent.change(source, { target: { value: solutionsFixture[0]!.solutionId } });

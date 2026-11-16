@@ -5,6 +5,12 @@ const UNIQUE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const VERSION = /^\d{1,9}(\.\d{1,9}){1,3}$/;
 const HIDDEN = new Set(["default", "active"]);
 
+/** Solutions often share a display name across batches, so the version tells them apart. */
+export function solutionLabel(solution: SolutionInfo): string {
+  const version = solution.version ? ` ${solution.version}` : "";
+  return `${solution.friendlyName}${version}${solution.isManaged ? " (managed)" : ""}`;
+}
+
 /** The "Add changed components to a solution" choice in the Apply confirmation. */
 export interface SolutionTargetDraft {
   enabled: boolean;

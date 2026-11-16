@@ -6,7 +6,8 @@ export type LabelKind =
   | "boolean"
   | "relationship"
   | "view"
-  | "chart";
+  | "chart"
+  | "form";
 
 export type LabelProperty =
   | "DisplayName"
@@ -14,7 +15,9 @@ export type LabelProperty =
   | "Description"
   | "Label"
   | "name"
-  | "description";
+  | "description"
+  | "TabLabel"
+  | "SectionLabel";
 
 /** Identifies one label of one component. Only the fields the kind needs are set. */
 export interface LabelKey {
@@ -26,6 +29,8 @@ export interface LabelKey {
   recordId?: string | null;
   relationship?: string | null;
   side?: number | null;
+  /** Forms only: the tab or section id. */
+  element?: string | null;
   property: LabelProperty;
 }
 
@@ -35,10 +40,12 @@ export interface LabelRow {
   component: string;
   /** Logical or schema name shown under the component name. */
   componentName: string | null;
-  /** 1:N / N:N for relationships, the view type for views. */
+  /** 1:N / N:N for relationships, the view type for views, the form name and type for forms. */
   detail: string | null;
   /** Global Yes/No sets: option rows are True and False labels. */
   booleanSet: boolean;
+  /** Forms only: order of the tab or section within its form. */
+  position?: number | null;
   readOnlyReason: string | null;
   /** Label per LCID. Missing languages have no label. */
   labels: Record<string, string>;

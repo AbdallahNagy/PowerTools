@@ -53,6 +53,10 @@ function compareValue(left: number | null | undefined, right: number | null | un
 }
 
 function defaultCompare(left: LabelRow, right: LabelRow): number {
+  // Form rows keep the form's own order: tabs, each followed by its sections.
+  if (left.key.kind === "form" && right.key.kind === "form") {
+    return compareText(left.detail ?? "", right.detail ?? "") || (left.position ?? 0) - (right.position ?? 0);
+  }
   return (
     compareText(left.component, right.component) ||
     compareText(left.componentName ?? "", right.componentName ?? "") ||
@@ -87,7 +91,15 @@ export function sortRows(rows: readonly LabelRow[], sort: SortState): LabelRow[]
 export function componentCount(rows: readonly LabelRow[]): number {
   return new Set(
     rows.map((row) =>
-      [row.key.table, row.key.column, row.key.optionSet, row.key.recordId, row.key.relationship, row.key.side].join("|"),
+      [
+        row.key.table,
+        row.key.column,
+        row.key.optionSet,
+        row.key.recordId,
+        row.key.relationship,
+        row.key.side,
+        row.key.element,
+      ].join("|"),
     ),
   ).size;
 }

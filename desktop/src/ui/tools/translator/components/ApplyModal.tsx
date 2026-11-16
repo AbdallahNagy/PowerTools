@@ -2,7 +2,7 @@ import { useId, useState } from "react";
 import { Alert, Button, Checkbox, DataTable, Field, Input, Modal, ProgressBar, Select } from "../../../shared/ui";
 import { summarizeByScope, type Draft, type Drafts } from "../model/drafts";
 import { languageHeader, plural } from "../model/labels";
-import { solutionNeedsAttention, uniqueNameFrom, type SolutionTargetDraft } from "../model/solutionTarget";
+import { solutionLabel, solutionNeedsAttention, uniqueNameFrom, type SolutionTargetDraft } from "../model/solutionTarget";
 import type { Language, PublisherInfo, SolutionFailure, SolutionInfo, SolutionResult } from "../model/types";
 import type { ApplyState } from "../state/useTranslator";
 
@@ -267,7 +267,7 @@ function ExistingSolutionField({ option }: { option: SolutionOption }) {
         <option value="">{option.solutionsLoading ? "Loading solutions…" : "Choose a solution"}</option>
         {option.solutions.map((solution) => (
           <option key={solution.solutionId} value={solution.uniqueName}>
-            {solution.friendlyName}
+            {solutionLabel(solution)}
           </option>
         ))}
       </Select>

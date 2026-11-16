@@ -17,8 +17,9 @@ public static class SolutionComponentTypes
     public const int Relationship = 10;
     public const int SavedQuery = 26;
     public const int SavedQueryVisualization = 59;
+    public const int SystemForm = 60;
 
-    public static readonly int[] All = [Entity, Attribute, OptionSet, Relationship, SavedQuery, SavedQueryVisualization];
+    public static readonly int[] All = [Entity, Attribute, OptionSet, Relationship, SavedQuery, SavedQueryVisualization, SystemForm];
 
     /// <summary><c>rootcomponentbehavior</c> 0: the table was added with all of its subcomponents.</summary>
     public const int IncludeSubcomponents = 0;
@@ -34,6 +35,7 @@ public sealed class SolutionScope
     public HashSet<Guid> Relationships { get; } = [];
     public HashSet<Guid> Views { get; } = [];
     public HashSet<Guid> Charts { get; } = [];
+    public HashSet<Guid> Forms { get; } = [];
 
     /// <summary>The table itself is in the solution (any root behavior).</summary>
     public bool IncludesTable(Guid? tableId) => tableId is { } id && Tables.ContainsKey(id);
@@ -73,6 +75,9 @@ public sealed class SolutionScope
                     break;
                 case SolutionComponentTypes.SavedQueryVisualization:
                     scope.Charts.Add(objectId);
+                    break;
+                case SolutionComponentTypes.SystemForm:
+                    scope.Forms.Add(objectId);
                     break;
             }
         }

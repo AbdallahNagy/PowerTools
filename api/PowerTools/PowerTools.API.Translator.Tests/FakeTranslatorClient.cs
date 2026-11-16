@@ -19,6 +19,9 @@ public sealed class FakeTranslatorClient : ITranslatorClient
     public List<OptionSetMetadataBase> OptionSets { get; } = [];
     public List<Entity> Views { get; } = [];
     public List<Entity> Charts { get; } = [];
+    /// <summary>Unpublished form XML by form id, for apply reads.</summary>
+    public Dictionary<Guid, string> FormXml { get; } = [];
+    public List<Guid> FormReads { get; } = [];
     public Dictionary<(Guid, string), Label> LocLabels { get; } = [];
     /// <summary>Rows for other tables (solution, publisher, solutioncomponent), filtered by simple conditions.</summary>
     public Dictionary<string, List<Entity>> Records { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -107,6 +110,14 @@ public sealed class FakeTranslatorClient : ITranslatorClient
         return optionSet is not null
             ? Task.FromResult(optionSet)
             : throw Fault(TranslatorFaults.ObjectDoesNotExist, $"Could not find option set '{name}'.");
+    }
+
+    public Task<string?> RetrieveFormXmlAsync(Guid formId, CancellationToken cancellationToken)
+    {
+        FormReads.Add(formId);
+        return FormXml.TryGetValue(formId, out var xml)
+            ? Task.FromResult<string?>(xml)
+            : throw Fault(TranslatorFaults.ObjectDoesNotExist, "systemform does not exist.");
     }
 
     public Task<IReadOnlyDictionary<int, Exception>> ExecuteBatchAsync(

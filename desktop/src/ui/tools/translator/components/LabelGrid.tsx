@@ -174,6 +174,14 @@ function GridBody({
   if (kind === "relationship") {
     columns.push({ key: "type", header: "Type", sortable: true, render: (row) => row.detail ?? "" });
   }
+  if (kind === "form") {
+    columns.push({
+      key: "type",
+      header: "Form",
+      sortable: true,
+      render: (row) => <span className="whitespace-nowrap">{row.detail ?? ""}</span>,
+    });
+  }
   columns.push({
     key: "label",
     header: "Label",

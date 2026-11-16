@@ -49,6 +49,9 @@ public interface ITranslatorClient
     /// <summary>One global choice, including unpublished changes.</summary>
     Task<OptionSetMetadataBase> RetrieveOptionSetAsync(string name, CancellationToken cancellationToken);
 
+    /// <summary>One form's <c>formxml</c>, including unpublished changes.</summary>
+    Task<string?> RetrieveFormXmlAsync(Guid formId, CancellationToken cancellationToken);
+
     /// <summary>
     /// Sends the requests in one <c>ExecuteMultiple</c> with <c>ContinueOnError</c>. Returns the fault
     /// for each failed request index. Throws when the whole batch fails.
@@ -326,6 +329,18 @@ public sealed class DataverseTranslatorClient(IOrganizationServiceAsync2 service
             new RetrieveOptionSetRequest { Name = name, RetrieveAsIfPublished = true },
             cancellationToken);
         return response.OptionSetMetadata;
+    }
+
+    public async Task<string?> RetrieveFormXmlAsync(Guid formId, CancellationToken cancellationToken)
+    {
+        var response = (RetrieveUnpublishedResponse)await service.ExecuteAsync(
+            new RetrieveUnpublishedRequest
+            {
+                Target = new EntityReference(TranslatorForms.EntityName, formId),
+                ColumnSet = new ColumnSet("formxml"),
+            },
+            cancellationToken);
+        return response.Entity?.GetAttributeValue<string>("formxml");
     }
 
     public async Task<IReadOnlyDictionary<int, Exception>> ExecuteBatchAsync(

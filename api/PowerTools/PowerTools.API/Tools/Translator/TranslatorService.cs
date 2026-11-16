@@ -93,14 +93,16 @@ public sealed partial class TranslatorService(ITranslatorClient client, ITransla
                 rows.AddRange(TranslatorMapper.GlobalChoiceRows(inScope, lcids, languages.BaseLcid));
             }
 
-            if (kinds.Contains(LabelKinds.View) || kinds.Contains(LabelKinds.Chart))
+            if (kinds.Contains(LabelKinds.View) || kinds.Contains(LabelKinds.Chart) || kinds.Contains(LabelKinds.Form))
             {
-                // A table added with all subcomponents shows every view and chart, so its id is needed.
+                // A table added with all subcomponents shows every view, chart, and form, so its id is needed.
                 var fullTables = scope is null ? null : await FullTablesAsync(scope, tables, lcids, cancellationToken);
                 if (kinds.Contains(LabelKinds.View))
                     rows.AddRange(await RecordRowsAsync(LabelKinds.View, tables, lcids, languages.BaseLcid, scope, fullTables, cancellationToken));
                 if (kinds.Contains(LabelKinds.Chart))
                     rows.AddRange(await RecordRowsAsync(LabelKinds.Chart, tables, lcids, languages.BaseLcid, scope, fullTables, cancellationToken));
+                if (kinds.Contains(LabelKinds.Form))
+                    rows.AddRange(await FormRowsAsync(tables, lcids, languages.BaseLcid, scope, fullTables, cancellationToken));
             }
 
             var filtered = properties switch
@@ -214,6 +216,27 @@ public sealed partial class TranslatorService(ITranslatorClient client, ITransla
         return rows;
     }
 
+    private async Task<IEnumerable<LabelRowDto>> FormRowsAsync(
+        IReadOnlyCollection<string> tables,
+        IReadOnlyCollection<int> lcids,
+        int baseLcid,
+        SolutionScope? scope,
+        IReadOnlySet<string>? fullTables,
+        CancellationToken cancellationToken)
+    {
+        var forms = await client.RetrieveAllPagesAsync(TranslatorForms.Query(tables), cancellationToken);
+        if (scope is not null)
+        {
+            forms = forms
+                .Where(form => scope.Forms.Contains(form.Id) || fullTables?.Contains(TableOf(form, "objecttypecode")) == true)
+                .ToList();
+        }
+
+        return forms
+            .SelectMany(form => TranslatorForms.Rows(form, TableOf(form, "objecttypecode"), lcids, baseLcid))
+            .ToList();
+    }
+
     private static string TableOf(Entity record, string attribute) =>
         (record.Attributes.TryGetValue(attribute, out var value) ? value?.ToString() : null)?.ToLowerInvariant() ?? "";
 
@@ -316,7 +339,7 @@ public static class TranslatorValidation
     /// <summary>Names that Dataverse requires in the base language.</summary>
     public static bool IsName(string property) =>
         property is LabelProperties.DisplayName or LabelProperties.DisplayCollectionName or LabelProperties.Label
-            or LabelProperties.RecordName;
+            or LabelProperties.RecordName or LabelProperties.TabLabel or LabelProperties.SectionLabel;
 
     public static string? ValueProblem(LabelKeyDto key, int lcid, string? value, int baseLcid, IReadOnlySet<int> provisioned)
     {
@@ -366,6 +389,11 @@ public static class TranslatorValidation
                 if (Missing(key.Table) || key.RecordId is null || key.RecordId == Guid.Empty)
                     return $"A {key.Kind} row has no table or record id.";
                 allowed = [LabelProperties.RecordName, LabelProperties.RecordDescription];
+                break;
+            case LabelKinds.Form:
+                if (Missing(key.Table) || key.RecordId is null || key.RecordId == Guid.Empty || Missing(key.Element))
+                    return "A form row has no table, form id, or tab or section id.";
+                allowed = [LabelProperties.TabLabel, LabelProperties.SectionLabel];
                 break;
             default:
                 return $"Unknown label kind \"{key.Kind}\".";

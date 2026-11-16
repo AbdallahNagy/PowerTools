@@ -11,6 +11,7 @@ export type ComponentTab =
   | "relationships"
   | "views"
   | "charts"
+  | "forms"
   | "global";
 
 export interface TabDefinition {
@@ -81,6 +82,14 @@ export const TABLE_TABS: readonly TabDefinition[] = [
     countNoun: "charts",
     emptyMessage: "This table has no system charts.",
   },
+  {
+    tab: "forms",
+    title: "Forms",
+    kind: "form",
+    noun: "form labels",
+    countNoun: "tabs and sections",
+    emptyMessage: "This table has no active forms with tabs or sections.",
+  },
 ];
 
 export const GLOBAL_TAB: TabDefinition = {
@@ -126,6 +135,8 @@ export function labelName(row: Pick<LabelRow, "key" | "booleanSet">): string {
     case "view":
     case "chart":
       return property === "name" ? "Name" : "Description";
+    case "form":
+      return property === "TabLabel" ? "Tab Label" : "Section Label";
     case "globalChoice":
       if (value == null) return property === "DisplayName" ? "Display Name" : "Description";
       if (row.booleanSet && property === "Label") return value === 1 ? "True Label" : "False Label";
@@ -164,6 +175,7 @@ export function rowId(key: LabelKey): string {
     (key.recordId ?? "").toLowerCase(),
     key.relationship ?? "",
     key.side ?? "",
+    (key.element ?? "").toLowerCase(),
     key.property,
   ].join("|");
 }

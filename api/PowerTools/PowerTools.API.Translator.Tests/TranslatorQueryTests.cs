@@ -55,11 +55,11 @@ public sealed class TranslatorQueryTests
     {
         var service = new TranslatorService(new FakeTranslatorClient());
 
-        var unknown = await service.QueryLabelsAsync(new LabelQueryBody { Kinds = ["form"], Tables = ["account"] }, default);
+        var unknown = await service.QueryLabelsAsync(new LabelQueryBody { Kinds = ["dashboard"], Tables = ["account"] }, default);
         var noTables = await service.QueryLabelsAsync(new LabelQueryBody { Kinds = ["column"] }, default);
 
         Assert.Equal(400, unknown.Problem!.Status);
-        Assert.Contains("form", unknown.Problem.Message);
+        Assert.Contains("dashboard", unknown.Problem.Message);
         Assert.Equal(400, noTables.Problem!.Status);
     }
 

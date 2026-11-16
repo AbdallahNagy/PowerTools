@@ -669,3 +669,14 @@ Added by the user after the first draft pull request (2026-10-09):
     - a chart (59)
   - When the source is a solution, the option is hidden because the changed components already belong to it.
   - A failure while adding to the solution is reported separately and does not undo the label updates.
+    - a form (60)
+
+## Addendum: form tabs and sections
+
+Added after the first release at the user's request. Field labels are left out: a form field with no label in the user's language falls back to the column's display name, so translating the column usually covers it. Tabs and sections have no such fallback.
+
+- **Kind `form`**, shown as a **Forms** tab after Charts. Each row is one tab or section label: key `{ kind: "form", table, recordId: formid, element: <tab or section id, lowercase, no braces>, property: "TabLabel" | "SectionLabel" }`. The Label column reads "Tab Label" or "Section Label". A **Form** column shows the form name and type, and rows keep the form's own order (each tab followed by its sections).
+- **Read:** `systemform` by `objecttypecode`, types Main (2), Quick View (6), Quick Create (7), Card (11) and Main - Interactive experience (12), active forms only (`formactivationstate = 1`). Labels come from `formxml`: `<labels><label description="…" languagecode="…"/></labels>` directly under each `<tab>` and `<section>`. Elements without an `id` are left out. A non-customizable form is read only.
+- **Write:** one `Update` of `systemform.formxml` per form. The XML is read first with `RetrieveUnpublished` so pending form edits are kept, and only the changed `<label>` elements are set or added. A tab or section that is gone is skipped. Publishing the table publishes its forms.
+- **Solution:** forms in the source solution (component type 60) are shown, and an apply can add a changed form to a solution as component type 60.
+- **Unverified:** whether every form type above stores tab and section labels the same way. Checked against the Main form XML shape only.

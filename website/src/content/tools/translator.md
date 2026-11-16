@@ -1,10 +1,11 @@
 ---
 seoTitle: "Translator: Edit Dataverse Labels in Every Language | PowerTools"
-seoDescription: "Edit Dataverse table, column, choice, view, and chart labels side by side in every installed language, then apply all changes at once. Free and open source."
+seoDescription: "Edit Dataverse table, column, choice, view, chart, and form labels side by side in every installed language, then apply all changes at once. Free and open source."
 xrmToolBoxEquivalent: "Easy Translator"
 features:
   - See one column per installed language, side by side
   - Edit tables, columns, choices, Yes/No labels, relationships, views, and charts
+  - Translate form tab and section labels
   - Edit global choices in their own list
   - Show names, descriptions, or both
   - Filter by name or by any label text
@@ -15,7 +16,7 @@ features:
 
 Translator shows the labels of a Dataverse or Dynamics 365 environment with one column for each installed language. Instead of switching your user language and editing labels one at a time, you edit them side by side and see the gaps at a glance.
 
-Pick a table from the list, or pick **Global choices**. For a table, tabs cover the table itself, its columns, local choices, Yes/No labels, relationship menu labels, views, and charts.
+Pick a table from the list, or pick **Global choices**. For a table, tabs cover the table itself, its columns, local choices, Yes/No labels, relationship menu labels, views, charts, and the tab and section labels of its active forms.
 
 ## Edit, review, apply
 

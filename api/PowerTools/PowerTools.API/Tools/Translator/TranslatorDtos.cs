@@ -11,16 +11,18 @@ public static class LabelKinds
     public const string Relationship = "relationship";
     public const string View = "view";
     public const string Chart = "chart";
+    /// <summary>A tab or section label of a form.</summary>
+    public const string Form = "form";
 
     public static readonly IReadOnlySet<string> All = new HashSet<string>(StringComparer.Ordinal)
     {
-        Table, Column, Choice, GlobalChoice, Boolean, Relationship, View, Chart,
+        Table, Column, Choice, GlobalChoice, Boolean, Relationship, View, Chart, Form,
     };
 
     /// <summary>Kinds that belong to a table and need table logical names in a query.</summary>
     public static readonly IReadOnlySet<string> TableScoped = new HashSet<string>(StringComparer.Ordinal)
     {
-        Table, Column, Choice, Boolean, Relationship, View, Chart,
+        Table, Column, Choice, Boolean, Relationship, View, Chart, Form,
     };
 }
 
@@ -35,6 +37,10 @@ public static class LabelProperties
     public const string RecordName = "name";
     /// <summary>savedquery / savedqueryvisualization <c>description</c>.</summary>
     public const string RecordDescription = "description";
+    /// <summary>A form tab's label in <c>formxml</c>.</summary>
+    public const string TabLabel = "TabLabel";
+    /// <summary>A form section's label in <c>formxml</c>.</summary>
+    public const string SectionLabel = "SectionLabel";
 
     public static bool IsDescription(string property) =>
         property is Description or RecordDescription;
@@ -56,6 +62,8 @@ public sealed class LabelKeyDto
     public string? Relationship { get; set; }
     /// <summary>N:N relationships only: 1 for the first table's menu, 2 for the second.</summary>
     public int? Side { get; set; }
+    /// <summary>Forms only: the tab or section id, lowercase and without braces.</summary>
+    public string? Element { get; set; }
     public string Property { get; set; } = "";
 }
 
@@ -70,6 +78,8 @@ public sealed class LabelRowDto
     public string? Detail { get; set; }
     /// <summary>Global Yes/No sets only: the option rows are True and False.</summary>
     public bool BooleanSet { get; set; }
+    /// <summary>Forms only: document order of the tab or section within its form.</summary>
+    public int? Position { get; set; }
     /// <summary>Set when the row cannot be edited, with the reason.</summary>
     public string? ReadOnlyReason { get; set; }
     /// <summary>Label text per LCID. Languages with no label are left out.</summary>

@@ -2,6 +2,7 @@ import { useEffect, useRef, type KeyboardEvent } from "react";
 import { Alert, Badge, Button, Field, SearchInput, Select, Spinner, cn } from "../../../shared/ui";
 import { filterTables } from "../model/grid";
 import { GLOBAL_SCOPE } from "../model/labels";
+import { solutionLabel } from "../model/solutionTarget";
 import type { SolutionInfo, TableInfo } from "../model/types";
 
 const ALL_TABLES = "";
@@ -56,7 +57,7 @@ function SourcePicker({
           ) : null}
           {solutions.map((solution) => (
             <option key={solution.solutionId} value={solution.solutionId}>
-              {solution.isManaged ? `${solution.friendlyName} (managed)` : solution.friendlyName}
+              {solutionLabel(solution)}
             </option>
           ))}
         </Select>
