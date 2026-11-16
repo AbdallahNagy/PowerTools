@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy, RefreshCw } from "lucide-react";
 
-import type { McpStatusInfo } from "../../../platform/desktopBridge";
+import type { McpLegacySetup, McpStatusInfo } from "../../../platform/desktopBridge";
 import { Alert, Badge, Button, EmptyState, cn } from "../../../shared/ui";
 import type { AgentsState } from "../../agents/useAgents";
 import { McpToolsList } from "./McpToolsList";
@@ -88,6 +88,58 @@ function Snippet({ label, text }: { label: string; text: string }) {
   );
 }
 
+/** What to run or paste instead of a setup that still starts PowerTools.API.exe. */
+function legacyFix(setup: McpLegacySetup, status: McpStatusInfo): { text: string; hint: string } {
+  switch (setup.client) {
+    case "Claude Code": {
+      const remove =
+        setup.scope && setup.scope !== "user"
+          ? `cd "${setup.scope}"\nclaude mcp remove --scope local ${setup.server}`
+          : `claude mcp remove --scope user ${setup.server}`;
+      return { text: `${remove}\n${claudeCodeCommand(status)}`, hint: "Run these in a terminal, then restart Claude Code." };
+    }
+    case "Claude Desktop":
+      return {
+        text: clientConfigJson(status),
+        hint: `Replace the "${setup.server}" entry in ${setup.configPath}, then restart Claude Desktop.`,
+      };
+    case "VS Code":
+      return { text: vsCodeConfigJson(status), hint: `Replace the "${setup.server}" entry in ${setup.configPath}.` };
+  }
+}
+
+/**
+ * Setups made before the separate connector start PowerTools.API.exe from the install folder. The client keeps it
+ * running, so Power Tools cannot install updates. The app never edits these files; it shows what to change.
+ */
+function LegacySetupWarning({ status }: { status: McpStatusInfo }) {
+  const setups = status.legacySetups ?? [];
+  if (setups.length === 0) return null;
+  return (
+    <Alert tone="warn" title="Update your agent setup so Power Tools can update">
+      <p>
+        These setups start the old connector inside the Power Tools install folder. While the agent runs, it keeps
+        that file locked and updates cannot install. Switch them to the new connector:
+      </p>
+      <ul className="mt-3 flex flex-col gap-4">
+        {setups.map((setup) => {
+          const fix = legacyFix(setup, status);
+          const where = setup.scope && setup.scope !== "user" ? `${setup.configPath}, project ${setup.scope}` : setup.configPath;
+          return (
+            <li key={`${setup.client}|${setup.configPath}|${setup.scope ?? ""}|${setup.server}`} className="flex flex-col gap-2">
+              <p className="text-xs">
+                <span className="font-medium text-fg-strong">{setup.client}</span>: server "{setup.server}" in {where}
+              </p>
+              <Snippet label={`${setup.client} fix`} text={fix.text} />
+              <p className="text-xs text-fg-muted">{fix.hint}</p>
+            </li>
+          );
+        })}
+      </ul>
+    </Alert>
+  );
+}
+
 /** One client's setup at a time, so the page is not three snippets long. */
 function ConnectClient({ status }: { status: McpStatusInfo }) {
   const [clientId, setClientId] = useState<ClientId>("claude-code");
@@ -141,6 +193,8 @@ export function AgentsSection({ agents }: { agents: AgentsState }) {
           aside={<Badge tone={state.tone}>{state.label}</Badge>}
         />
       </SettingsGroup>
+
+      {status ? <LegacySetupWarning status={status} /> : null}
 
       {status ? <ConnectClient status={status} /> : null}
 

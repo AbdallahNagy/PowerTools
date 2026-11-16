@@ -1,6 +1,11 @@
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { connectorCommandLine, connectorLaunch } from "../../src/electron/mcp/connectorCommand";
+import {
+  bundledConnectorFolder,
+  connectorCommandLine,
+  connectorInstallFolder,
+  connectorLaunch,
+} from "../../src/electron/mcp/connectorCommand";
 import { registerMcpIpc } from "../../src/electron/mcp/mcpIpc";
 import type { McpStatus } from "../../src/electron/mcp/mcpService";
 
@@ -122,29 +127,61 @@ describe("mcp approval IPC", () => {
 });
 
 describe("connectorLaunch", () => {
-  it("points at the packaged executable", () => {
+  const localMcp = "C:\\Users\\me\\AppData\\Local\\Power Tools\\mcp";
+
+  it("points at the per-user copy of the connector, not the install folder", () => {
     const launch = connectorLaunch({
       packaged: true,
       platform: "win32",
       resourcesPath: resolve("/app/resources"),
       appPath: resolve("/app"),
       discoveryPath: "x",
+      connectorDir: localMcp,
     });
-    expect(launch.command.endsWith("PowerTools.API.exe")).toBe(true);
-    expect(launch.args).toEqual(["--mcp-connector"]);
+    expect(launch.command.startsWith(localMcp)).toBe(true);
+    expect(launch.command.endsWith("PowerTools.McpConnector.exe")).toBe(true);
+    expect(launch.command).not.toContain("resources");
+    expect(launch.args).toEqual([]);
   });
 
-  it("points at the dev build and passes the discovery path", () => {
+  it("passes the dev discovery path to the dev copy", () => {
     const launch = connectorLaunch({
       packaged: false,
       platform: "win32",
       resourcesPath: "",
       appPath: resolve("/repo/desktop"),
-      discoveryPath: "C:\\Users\\me\\AppData\\Roaming\\Power Tools (Dev)\\mcp-endpoint.json",
+      discoveryPath: "C:\\Users\\me\\AppData\\Roaming\\Power Tools Dev\\mcp-endpoint.json",
+      connectorDir: connectorInstallFolder("C:\\Users\\me\\AppData\\Local", "Power Tools Dev"),
     });
-    expect(launch.args).toEqual(["--mcp-connector", "--discovery", "C:\\Users\\me\\AppData\\Roaming\\Power Tools (Dev)\\mcp-endpoint.json"]);
+    expect(launch.command).toContain("Power Tools Dev");
+    expect(launch.args).toEqual(["--discovery", "C:\\Users\\me\\AppData\\Roaming\\Power Tools Dev\\mcp-endpoint.json"]);
     expect(connectorCommandLine(launch)).toContain('--discovery "C:\\Users');
   });
+
+  it("copies from the bundled connector, or the dev build", () => {
+    expect(bundledConnectorFolder({ packaged: true, resourcesPath: resolve("/app/resources"), appPath: "" })).toBe(
+      resolve("/app/resources/mcp-connector"),
+    );
+    expect(bundledConnectorFolder({ packaged: false, resourcesPath: "", appPath: resolve("/repo/desktop") })).toBe(
+      resolve("/repo/api/PowerTools/PowerTools.McpConnector/bin/Debug/net9.0"),
+    );
+  });
+
+  it("returns the client setups that still use the deprecated connector", async () => {
+    const handlers = new Map<string, Handler>();
+    const contents = { id: 1 };
+    const setups = [{ client: "Claude Code" as const, configPath: "C:\\u\\.claude.json", server: "powertools", scope: "user" }];
+    registerMcpIpc({
+      ipcMain: { handle: (channel: string, handler: Handler) => void handlers.set(channel, handler) } as never,
+      service: setup().service,
+      getMainWindow: () => ({ webContents: contents }) as never,
+      connector: () => ({ command: "C:\\x.exe", args: [] }),
+      legacySetups: async () => setups,
+    });
+    const info = (await handlers.get("mcp-get-status")!({ sender: contents })) as { legacySetups: unknown };
+    expect(info.legacySetups).toEqual(setups);
+  });
+
   it("switches one tool and validates its input", async () => {
     const { call, mainContents, service } = setup();
     const info = (await call("mcp-set-tool", mainContents, "records_delete", false)) as { tools: Array<{ name: string; enabled: boolean }> };

@@ -9,15 +9,15 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { createMcpService, type McpService } from "../../../src/electron/mcp/mcpService";
 import { bypassMsw } from "../../support/loopback";
 
-// The connector is a mode of the sidecar executable. Build it first with
-//   dotnet build ../api/PowerTools/PowerTools.API   (or npm run publish:api:win and point CONNECTOR_EXE at it)
+// Build the connector first with
+//   dotnet build ../api/PowerTools/PowerTools.McpConnector   (or npm run publish:connector:win and point CONNECTOR_EXE at it)
 const desktopDir = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const connectorExe =
   process.env.CONNECTOR_EXE ??
-  resolve(desktopDir, "..", "api", "PowerTools", "PowerTools.API", "bin", "Debug", "net9.0", "PowerTools.API.exe");
+  resolve(desktopDir, "..", "api", "PowerTools", "PowerTools.McpConnector", "bin", "Debug", "net9.0", "PowerTools.McpConnector.exe");
 const built = existsSync(connectorExe);
 if (!built) {
-  console.warn(`Skipping the connector end-to-end test: ${connectorExe} is missing. Run "dotnet build ../api/PowerTools/PowerTools.API" first.`);
+  console.warn(`Skipping the connector end-to-end test: ${connectorExe} is missing. Run "dotnet build ../api/PowerTools/PowerTools.McpConnector" first.`);
 }
 
 let service: McpService | null = null;
@@ -58,7 +58,7 @@ describe("stdio connector end to end", () => {
     await client.connect(
       new StdioClientTransport({
         command: connectorExe,
-        args: ["--mcp-connector", "--discovery", join(dir, "mcp-endpoint.json")],
+        args: ["--discovery", join(dir, "mcp-endpoint.json")],
       }),
     );
 

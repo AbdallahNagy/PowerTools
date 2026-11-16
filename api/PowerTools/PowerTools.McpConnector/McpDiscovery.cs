@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace PowerTools.API.Mcp;
+namespace PowerTools.Mcp;
 
 /// <summary>Reads the file the desktop app writes while its MCP server is on: { port, token, pid }.</summary>
 public static class McpDiscovery

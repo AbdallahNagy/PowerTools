@@ -3,6 +3,7 @@
 import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
 import type { ActivityEntry } from "./activityLog.js";
 import { connectorCommandLine, type ConnectorLaunch } from "./connectorCommand.js";
+import type { LegacySetup } from "./legacySetups.js";
 import type { McpService, McpStatus } from "./mcpService.js";
 import { AGENT_TOOL_GROUPS, type AgentToolGroup } from "./types.js";
 
@@ -10,6 +11,8 @@ export type McpStatusInfo = McpStatus & {
   connectorCommand: string;
   connector: ConnectorLaunch;
   recent: ActivityEntry[];
+  /** Client setups that still start the deprecated connector inside the install folder. */
+  legacySetups: LegacySetup[];
 };
 
 export interface McpIpcDeps {
@@ -17,11 +20,13 @@ export interface McpIpcDeps {
   service: Pick<McpService, "status" | "setEnabled" | "setGroup" | "setTool" | "recentActivity" | "respondApproval">;
   getMainWindow: () => BrowserWindow | null;
   connector: () => ConnectorLaunch;
+  /** Defaults to none. */
+  legacySetups?: () => Promise<LegacySetup[]>;
 }
 
 const RECENT_IN_STATUS = 50;
 
-export function registerMcpIpc({ ipcMain, service, getMainWindow, connector }: McpIpcDeps) {
+export function registerMcpIpc({ ipcMain, service, getMainWindow, connector, legacySetups }: McpIpcDeps) {
   function assertMainWindow(event: IpcMainInvokeEvent): void {
     const window = getMainWindow();
     if (!window || event.sender !== window.webContents) {
@@ -36,6 +41,7 @@ export function registerMcpIpc({ ipcMain, service, getMainWindow, connector }: M
       connectorCommand: connectorCommandLine(launch),
       connector: launch,
       recent: await service.recentActivity(RECENT_IN_STATUS),
+      legacySetups: legacySetups ? await legacySetups().catch(() => []) : [],
     };
   }
 

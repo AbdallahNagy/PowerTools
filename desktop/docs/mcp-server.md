@@ -12,12 +12,12 @@ The same page has the commands to connect a client, the tools and the recent act
 
 ## Connect a client
 
-Agents start a small connector program that comes with Power Tools. It relays to the running app, and it needs no token in any config file. The dialog shows the exact commands for your install, including the folder Power Tools is installed in. Copy them from there. They look like this.
+Agents start a small connector program that comes with Power Tools. It relays to the running app, and it needs no token in any config file. Each time Power Tools starts, it copies the connector to `%LOCALAPPDATA%\Power Tools\mcp\PowerTools.McpConnector.exe`, outside the install folder, so an agent keeping the connector running never blocks a Power Tools update. The dialog shows the exact commands for your user. Copy them from there. They look like this.
 
 **Claude Code**
 
 ```
-claude mcp add --scope user powertools -- "<install folder>\resources\api\PowerTools.API.exe" --mcp-connector
+claude mcp add --scope user powertools -- "%LOCALAPPDATA%\Power Tools\mcp\PowerTools.McpConnector.exe"
 ```
 
 `--scope user` makes Power Tools available in every folder you open Claude Code in. Without it, Claude Code only loads the server in the folder where you ran the command.
@@ -28,8 +28,8 @@ claude mcp add --scope user powertools -- "<install folder>\resources\api\PowerT
 {
   "mcpServers": {
     "powertools": {
-      "command": "<install folder>\\resources\\api\\PowerTools.API.exe",
-      "args": ["--mcp-connector"]
+      "command": "C:\\Users\\<you>\\AppData\\Local\\Power Tools\\mcp\\PowerTools.McpConnector.exe",
+      "args": []
     }
   }
 }
@@ -42,14 +42,24 @@ claude mcp add --scope user powertools -- "<install folder>\resources\api\PowerT
   "servers": {
     "powertools": {
       "type": "stdio",
-      "command": "<install folder>\\resources\\api\\PowerTools.API.exe",
-      "args": ["--mcp-connector"]
+      "command": "C:\\Users\\<you>\\AppData\\Local\\Power Tools\\mcp\\PowerTools.McpConnector.exe",
+      "args": []
     }
   }
 }
 ```
 
 If Power Tools is not running when the client starts, the client still connects and shows no tools. Start Power Tools and turn the server on; the tools appear without restarting the client.
+
+The dialog shows the real path in place of `%LOCALAPPDATA%`; use that, since not every client expands variables. Development runs copy the connector to `%LOCALAPPDATA%\Power Tools Dev\mcp` and add `--discovery` with the dev discovery file.
+
+### Updating an older setup
+
+Setups made before this connector start `<install folder>\resources\api\PowerTools.API.exe --mcp-connector`. That still works for now, but it is deprecated: while the agent runs, the file stays locked and Power Tools cannot install updates. **Agents (MCP)** looks for such setups in `~/.claude.json`, `claude_desktop_config.json` and VS Code's user `mcp.json`, warns about them, and shows the commands that replace them. It never edits those files. Workspace `.vscode/mcp.json` files are not checked; update them by hand.
+
+### When the connector is updated
+
+Power Tools copies the connector only when the bundled one differs from the copy. If an agent is running the copy, it is locked; Power Tools leaves it as it is and copies on a later start. An older connector keeps working with a newer app: it only reads the discovery file (`port`, `token`) and relays MCP over HTTP on `127.0.0.1`.
 
 ## Connections
 

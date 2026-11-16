@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using PowerTools.API.Filters;
-using PowerTools.API.Mcp;
+using PowerTools.Mcp;
 using PowerTools.API.Tools.Agent;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.AttributeExplorer;
@@ -22,10 +22,12 @@ using PowerTools.API.Tools.PluginRegistration.Inspection;
 using PowerTools.API.Tools.PluginRegistration.Services;
 
 // ── stdio connector mode ─────────────────────────────────────────────────────
-// An MCP client starts this executable with --mcp-connector to reach the desktop app's MCP server.
-// It never starts the sidecar web host.
+// Deprecated. MCP client setups made before PowerTools.McpConnector.exe existed start this executable with
+// --mcp-connector. A client keeps it running, which locks the installed file and blocks app updates, so the
+// Agents (MCP) page asks users to switch to the separate connector. It never starts the sidecar web host.
 if (args.Contains("--mcp-connector"))
 {
+    Console.Error.WriteLine("powertools-mcp: PowerTools.API.exe --mcp-connector is deprecated and blocks Power Tools updates. Use the command under File → Agents (MCP)… instead.");
     Environment.ExitCode = await McpConnector.RunAsync(args, Console.OpenStandardInput(), Console.OpenStandardOutput(), CancellationToken.None);
     return;
 }
