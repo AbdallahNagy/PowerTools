@@ -30,6 +30,12 @@ public sealed class MigrationApi : WebApplicationFactory<DataverseClientFactory>
     public FakeDataverse Source { get; }
     public FakeDataverse Target { get; }
 
+    /// <summary>While set and not signalled, creating a Dataverse client waits, as a slow connection does.</summary>
+    public ManualResetEventSlim? HoldClientCreation { get; set; }
+
+    /// <summary>Creating a Dataverse client fails with this error.</summary>
+    public Exception? FailClientCreation { get; set; }
+
     protected override IHost CreateHost(IHostBuilder builder)
     {
         builder.ConfigureHostConfiguration(config => config.AddInMemoryCollection(
@@ -59,19 +65,35 @@ public sealed class MigrationApi : WebApplicationFactory<DataverseClientFactory>
     }
 
     /// <summary>Starts a migration and polls its job until it ends. Returns the last job JSON.</summary>
-    public async Task<JsonNode> RunAsync(object body)
+    public async Task<JsonNode> RunAsync(object body) =>
+        await WaitForStatusAsync(await StartAsync(body), "completed", "failed");
+
+    /// <summary>Starts a migration and returns its job id.</summary>
+    public async Task<string> StartAsync(object body)
     {
         var (status, started) = await PostAsync("/api/migration/run", body);
         if (status != 200) throw new InvalidOperationException($"Run returned {status}: {started}");
-        var jobId = (string)started!["jobId"]!;
+        return (string)started!["jobId"]!;
+    }
 
-        var deadline = DateTime.UtcNow.AddSeconds(30);
+    /// <summary>Polls a job until its status is one of <paramref name="statuses"/>. Returns the job JSON.</summary>
+    public async Task<JsonNode> WaitForStatusAsync(string jobId, params string[] statuses)
+    {
+        var job = await PollAsync(jobId, TimeSpan.FromSeconds(30), statuses);
+        return statuses.Contains((string)job["status"]!) ? job : throw new TimeoutException(job.ToJsonString());
+    }
+
+    /// <summary>
+    /// Polls a job until its status is one of <paramref name="statuses"/> or the time runs out. Returns the
+    /// last job JSON either way.
+    /// </summary>
+    public async Task<JsonNode> PollAsync(string jobId, TimeSpan timeout, params string[] statuses)
+    {
+        var deadline = DateTime.UtcNow + timeout;
         while (true)
         {
             var (_, job) = await GetAsync($"/api/migration/jobs/{jobId}");
-            var state = (string)job!["status"]!;
-            if (state is "completed" or "failed") return job;
-            if (DateTime.UtcNow > deadline) throw new TimeoutException(job.ToJsonString());
+            if (statuses.Contains((string)job!["status"]!) || DateTime.UtcNow > deadline) return job;
             await Task.Delay(50);
         }
     }
@@ -103,12 +125,16 @@ public sealed class MigrationApi : WebApplicationFactory<DataverseClientFactory>
 
     private sealed class FakeClientFactory(MigrationApi api) : DataverseClientFactory
     {
-        public override IOrganizationServiceAsync2 Create(DataverseConnectionContext context) =>
-            context.EnvironmentUrl switch
+        public override IOrganizationServiceAsync2 Create(DataverseConnectionContext context)
+        {
+            api.HoldClientCreation?.Wait(TimeSpan.FromSeconds(30));
+            if (api.FailClientCreation is not null) throw api.FailClientCreation;
+            return context.EnvironmentUrl switch
             {
                 SourceUrl => api.Source.AsService(),
                 TargetUrl => api.Target.AsService(),
                 _ => throw new InvalidOperationException($"Unknown environment {context.EnvironmentUrl}"),
             };
+        }
     }
 }

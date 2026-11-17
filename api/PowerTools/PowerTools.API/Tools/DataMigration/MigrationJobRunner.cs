@@ -19,6 +19,8 @@ public class MigrationJobRunner(
                 continue;
             }
 
+            // Running from here, so a job does not read as queued while its connections open.
+            job.Progress.MarkRunning();
             DataverseDataMigrationClient? source = null;
             DataverseDataMigrationClient? target = null;
             try

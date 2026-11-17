@@ -320,6 +320,20 @@ public sealed class MigrationRoutesTests
             """, job);
     }
 
+    [Fact]
+    public async Task A_job_reports_running_while_its_connections_open()
+    {
+        using var hold = new ManualResetEventSlim(false);
+        await using var api = new MigrationApi(Accounts().Add(A, "Alpha"), Accounts()) { HoldClientCreation = hold };
+
+        var jobId = await api.StartAsync(Run());
+        var job = await api.PollAsync(jobId, TimeSpan.FromSeconds(3), "running", "completed", "failed");
+        hold.Set();
+
+        Assert.Equal("running", (string)job["status"]!);
+        Assert.Equal("completed", (string)(await api.WaitForStatusAsync(jobId, "completed", "failed"))["status"]!);
+    }
+
     private static object Run(
         bool create = true,
         bool update = true,
