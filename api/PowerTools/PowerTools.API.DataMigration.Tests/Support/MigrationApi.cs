@@ -129,12 +129,13 @@ public sealed class MigrationApi : WebApplicationFactory<DataverseClientFactory>
         {
             api.HoldClientCreation?.Wait(TimeSpan.FromSeconds(30));
             if (api.FailClientCreation is not null) throw api.FailClientCreation;
-            return context.EnvironmentUrl switch
+            var fake = context.EnvironmentUrl switch
             {
-                SourceUrl => api.Source.AsService(),
-                TargetUrl => api.Target.AsService(),
+                SourceUrl => api.Source,
+                TargetUrl => api.Target,
                 _ => throw new InvalidOperationException($"Unknown environment {context.EnvironmentUrl}"),
             };
+            return fake.FailOpen is null ? fake.AsService() : throw fake.FailOpen;
         }
     }
 }

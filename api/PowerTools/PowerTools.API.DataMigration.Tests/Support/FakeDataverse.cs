@@ -41,6 +41,15 @@ public sealed class FakeDataverse : IDataMigrationClient
     /// <summary>Disposing the SDK client fails with this error.</summary>
     public Exception? FailDispose { get; set; }
 
+    /// <summary>Disposing the SDK client takes this long, as closing a slow connection does.</summary>
+    public TimeSpan DisposeDelay { get; set; }
+
+    /// <summary>Opening a client to this environment fails with this error.</summary>
+    public Exception? FailOpen { get; set; }
+
+    /// <summary>How many times a client to this environment was closed.</summary>
+    public int Closes { get; private set; }
+
     /// <summary>Every request fails with this error.</summary>
     public Exception? FailEverything { get; set; }
 
@@ -251,6 +260,8 @@ public sealed class FakeDataverse : IDataMigrationClient
             var ct = args?.OfType<CancellationToken>().FirstOrDefault() ?? default;
             if (method!.Name == nameof(IDisposable.Dispose))
             {
+                _fake.Closes++;
+                if (_fake.DisposeDelay > TimeSpan.Zero) Thread.Sleep(_fake.DisposeDelay);
                 if (_fake.FailDispose is not null) throw _fake.FailDispose;
                 return null;
             }

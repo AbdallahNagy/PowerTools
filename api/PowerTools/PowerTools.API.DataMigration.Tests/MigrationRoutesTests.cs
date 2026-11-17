@@ -351,6 +351,58 @@ public sealed class MigrationRoutesTests
     }
 
     [Fact]
+    public async Task A_job_whose_connection_fails_to_close_never_reads_as_completed()
+    {
+        var target = Accounts();
+        target.FailDispose = new InvalidOperationException("Connection did not close.");
+        target.DisposeDelay = TimeSpan.FromMilliseconds(500);
+        await using var api = new MigrationApi(Accounts().Add(A, "Alpha"), target);
+
+        var jobId = await api.StartAsync(Run());
+        var deadline = DateTime.UtcNow.AddSeconds(30);
+        string status;
+        do
+        {
+            var (_, job) = await api.GetAsync($"/api/migration/jobs/{jobId}");
+            status = (string)job!["status"]!;
+            await Task.Delay(20);
+        } while (status is "queued" or "running" && DateTime.UtcNow < deadline);
+
+        // The desktop stops polling at the first final status, so the first one it sees must be the real one.
+        Assert.Equal("failed", status);
+    }
+
+    [Fact]
+    public async Task A_run_that_fails_and_then_fails_to_close_reports_the_close_error_as_before()
+    {
+        var target = Accounts();
+        target.FailEverything = new InvalidOperationException("Target unreachable.");
+        target.FailDispose = new InvalidOperationException("Connection did not close.");
+        await using var api = new MigrationApi(Accounts().Add(A, "Alpha"), target);
+
+        var job = await api.RunAsync(Run());
+
+        AssertJson("""
+            {"status":"failed","processed":0,"total":1,"succeeded":0,"created":0,"updated":0,
+             "skipped":0,"deleted":0,"failed":0,"errors":[{"recordId":"N/A","message":"Connection did not close."}]}
+            """, job);
+    }
+
+    [Fact]
+    public async Task When_the_target_fails_to_open_the_source_connection_is_closed()
+    {
+        var source = Accounts().Add(A, "Alpha");
+        var target = Accounts();
+        target.FailOpen = new InvalidOperationException("Target sign-in expired.");
+        await using var api = new MigrationApi(source, target);
+
+        var job = await api.RunAsync(Run());
+
+        Assert.Equal("Target sign-in expired.", (string)job["errors"]![0]!["message"]!);
+        Assert.Equal(1, source.Closes);
+    }
+
+    [Fact]
     public async Task A_connection_that_fails_to_open_fails_its_job_and_the_next_job_still_runs()
     {
         var target = Accounts();

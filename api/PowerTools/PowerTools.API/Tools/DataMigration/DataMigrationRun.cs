@@ -7,30 +7,50 @@ namespace PowerTools.API.Tools.DataMigration;
 /// <summary>
 /// Carries out one table's migration from a source to a target Dataverse connection: creates and updates
 /// records, then deletes target records missing from the source when asked. Progress and errors go to its
-/// <see cref="MigrationProgress"/>.
+/// <see cref="MigrationProgress"/>. The run owns both clients and closes the disposable ones when it ends.
 /// </summary>
 public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigrationClient target, ILogger? logger = null)
 {
     private const int BatchSize = 100;
 
     /// <summary>
-    /// Runs the migration to its end. It does not throw: a failure that stops the run, including cancellation,
-    /// marks the progress failed with the Dataverse error, and a record Dataverse rejects is recorded and the
-    /// run goes on.
+    /// Runs the migration to its end, then closes both connections, and only then reports the outcome, so a
+    /// poller never sees "completed" for a job that ends failed. It does not throw: a failure that stops the
+    /// run, including cancellation, marks the progress failed with the Dataverse error, and a record Dataverse
+    /// rejects is recorded and the run goes on. A failure to close a connection fails the job and its error
+    /// replaces the run's, as before the refactor.
     /// </summary>
     public async Task RunAsync(MigrationRequest request, MigrationProgress progress, CancellationToken ct)
     {
         progress.MarkRunning();
+        Exception? failure = null;
         try
         {
             await RunStepsAsync(request, progress, ct);
-            progress.Complete();
         }
         catch (Exception ex)
         {
-            progress.Fail(DataverseErrorFormatter.Format(ex));
-            logger?.LogError(ex, "Migration of {Table} failed", request.EntityLogicalName);
+            failure = ex;
         }
+
+        try
+        {
+            (source as IDisposable)?.Dispose();
+            (target as IDisposable)?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            failure = ex;
+        }
+
+        if (failure is null)
+        {
+            progress.Complete();
+            return;
+        }
+
+        progress.Fail(DataverseErrorFormatter.Format(failure));
+        logger?.LogError(failure, "Migration of {Table} failed", request.EntityLogicalName);
     }
 
     private async Task RunStepsAsync(MigrationRequest request, MigrationProgress progress, CancellationToken ct)
