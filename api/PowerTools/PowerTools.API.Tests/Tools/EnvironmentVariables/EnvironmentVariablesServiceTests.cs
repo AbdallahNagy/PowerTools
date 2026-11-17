@@ -7,7 +7,7 @@ using PowerTools.API.Tools.EnvironmentVariables;
 using Xunit;
 using static PowerTools.API.Tools.EnvironmentVariables.EnvironmentVariablesQueries;
 
-namespace PowerTools.API.EnvironmentVariables.Tests;
+namespace PowerTools.API.Tests.Tools.EnvironmentVariables;
 
 /// <summary>An in-memory stand-in for the organization service.</summary>
 public sealed class FakeEnvironmentVariablesClient : IEnvironmentVariablesClient
