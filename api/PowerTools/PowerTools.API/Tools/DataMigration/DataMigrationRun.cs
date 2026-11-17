@@ -102,7 +102,7 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
             if (page.Count == 0) break;
 
             var existing = await targetTable.ExistingIdsAsync(page.Select(e => e.Id).ToList(), ct);
-            await SendBatchAsync(request, progress, page, existing, ct);
+            await SendBatchAsync(request, progress, page, existing);
         }
     }
 
@@ -110,12 +110,10 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
         MigrationRequest request,
         MigrationProgress progress,
         DataCollection<Entity> entities,
-        HashSet<Guid> existing,
-        CancellationToken ct)
+        HashSet<Guid> existing)
     {
         var batch = NewBatch();
-        var sentIds = new List<string>();
-        var sentActions = new List<RecordAction>();
+        var sent = new List<(string RecordId, RecordAction Action)>();
 
         foreach (var sourceRecord in entities)
         {
@@ -155,8 +153,7 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
                     };
             }
 
-            sentIds.Add(sourceRecord.Id.ToString());
-            sentActions.Add(action);
+            sent.Add((sourceRecord.Id.ToString(), action));
             batch.Requests.Add(req);
         }
 
@@ -168,10 +165,11 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
 
         foreach (var item in response.Responses)
         {
+            var (recordId, action) = SentAt(sent, item.RequestIndex, (item.RequestIndex.ToString(), RecordAction.Update));
             if (item.Fault is not null)
-                progress.RecordRejected(RecordIdAt(sentIds, item.RequestIndex), FaultMessage(item.Fault));
+                progress.RecordRejected(recordId, FaultMessage(item.Fault));
             else
-                progress.RecordSent(item.RequestIndex < sentActions.Count ? sentActions[item.RequestIndex] : RecordAction.Update);
+                progress.RecordSent(action);
         }
     }
 
@@ -212,16 +210,16 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
                     continue;
                 }
 
-                progress.RecordRejected(RecordIdAt(sentIds, item.RequestIndex), FaultMessage(item.Fault));
+                progress.RecordRejected(SentAt(sentIds, item.RequestIndex, item.RequestIndex.ToString()), FaultMessage(item.Fault));
             }
         }
     }
 
     /// <summary>
-    /// The record a batch response belongs to. A response index past the requests sent names the index itself.
+    /// What was sent for a batch response's request. A response index past the requests sent gets the fallback.
     /// </summary>
-    private static string RecordIdAt(IReadOnlyList<string> sentIds, int requestIndex) =>
-        requestIndex < sentIds.Count ? sentIds[requestIndex] : requestIndex.ToString();
+    private static T SentAt<T>(IReadOnlyList<T> sent, int requestIndex, T fallback) =>
+        requestIndex < sent.Count ? sent[requestIndex] : fallback;
 
     private static ExecuteMultipleRequest NewBatch() => new()
     {
