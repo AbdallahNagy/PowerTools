@@ -3,7 +3,7 @@ using System.IO.Pipelines;
 using System.Text.Json.Nodes;
 using Connector = PowerTools.Mcp.McpConnector;
 
-namespace PowerTools.API.McpConnector.Tests;
+namespace PowerTools.McpConnector.Tests;
 
 /// <summary>Runs the connector against in-memory pipes and a temp discovery file.</summary>
 public sealed class ConnectorHarness : IAsyncDisposable

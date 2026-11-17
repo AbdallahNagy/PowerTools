@@ -10,7 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace PowerTools.API.McpConnector.Tests;
+namespace PowerTools.McpConnector.Tests;
 
 public sealed record SeenRequest(string Method, string? SessionId, string? Authorization, string? Rpc);
 
