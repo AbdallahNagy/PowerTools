@@ -370,16 +370,62 @@ public sealed class MigrationRoutesTests
             """, first);
     }
 
+    private const string AlphaOnly = """<filter><condition attribute="name" operator="eq" value="Alpha" /></filter>""";
+
+    private static bool HasAlphaFilter(string fetchXml) =>
+        System.Xml.Linq.XElement.Parse(fetchXml).Descendants("condition")
+            .Any(c => (string?)c.Attribute("attribute") == "name" && (string?)c.Attribute("value") == "Alpha");
+
+    [Fact]
+    public async Task A_run_applies_the_filter_to_every_source_query_and_to_no_target_query()
+    {
+        var source = Accounts().Add(A, "Alpha");
+        var target = Accounts().Add(A, "Alpha").Add(D, "Delta");
+        await using var api = new MigrationApi(source, target);
+
+        var job = await api.RunAsync(Run(delete: true, confirmedDeleteCount: 1, filter: AlphaOnly));
+
+        Assert.Equal("completed", (string)job["status"]!);
+        // The source count, the source pages, and the delete step's source count and id checks.
+        Assert.Equal(4, source.Fetches.Count);
+        Assert.All(source.Fetches, fetch => Assert.True(HasAlphaFilter(fetch), fetch));
+        // The filter only selects source records: every target record of the table is compared.
+        Assert.NotEmpty(target.Fetches);
+        Assert.All(target.Fetches, fetch => Assert.False(HasAlphaFilter(fetch), fetch));
+    }
+
+    [Fact]
+    public async Task The_preview_routes_apply_the_filter_to_source_queries_only()
+    {
+        var source = Accounts().Add(A, "Alpha");
+        var target = Accounts().Add(A, "Alpha").Add(D, "Delta");
+        await using var api = new MigrationApi(source, target);
+        var body = new { entityLogicalName = "account", fetchXmlFilter = AlphaOnly };
+
+        await api.PostAsync("/api/migration/preview", body);
+        await api.PostAsync("/api/migration/count", body);
+        await api.PostAsync("/api/migration/count/target", body);
+        await api.PostAsync("/api/migration/deletions", body);
+
+        // Preview page, aggregate count, the source pages counted against the target, and the deletions
+        // check's source count and id lookup.
+        Assert.Equal(5, source.Fetches.Count);
+        Assert.All(source.Fetches, fetch => Assert.True(HasAlphaFilter(fetch), fetch));
+        Assert.NotEmpty(target.Fetches);
+        Assert.All(target.Fetches, fetch => Assert.False(HasAlphaFilter(fetch), fetch));
+    }
+
     private static object Run(
         bool create = true,
         bool update = true,
         bool delete = false,
         int? confirmedDeleteCount = null,
-        string[]? attributes = null) => new
+        string[]? attributes = null,
+        string? filter = null) => new
     {
         entityLogicalName = "account",
         attributes = attributes ?? ["name"],
-        fetchXmlFilter = (string?)null,
+        fetchXmlFilter = filter,
         create,
         update,
         delete,

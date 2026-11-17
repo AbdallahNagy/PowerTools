@@ -5,31 +5,45 @@ namespace PowerTools.API.DataMigration.Tests;
 
 public sealed class MigrationProgressTests
 {
+    private const int Rounds = 300;
+    private const int RejectionsPerRound = 500;
+
     [Fact]
     public async Task A_snapshot_taken_while_the_run_records_errors_is_consistent()
     {
-        var progress = new MigrationProgress();
-        progress.MarkRunning();
-        var running = true;
-
-        var writer = Task.Run(() =>
+        // Many short rounds keep each snapshot's copy small, so the reader takes many snapshots while the
+        // writer is recording.
+        var snapshotsDuringWrites = 0;
+        for (var round = 0; round < Rounds; round++)
         {
-            for (var i = 0; i < 20_000; i++) progress.RecordRejected(i.ToString(), "Record rejected.");
-            Volatile.Write(ref running, false);
-        });
+            var progress = new MigrationProgress();
+            progress.MarkRunning();
+            var running = true;
+            using var readerStarted = new ManualResetEventSlim(false);
 
-        var failure = await Record.ExceptionAsync(() => Task.Run(() =>
-        {
-            while (Volatile.Read(ref running))
+            var reader = Task.Run(() =>
             {
-                var snapshot = progress.Snapshot();
-                Assert.Equal(snapshot.Failed, snapshot.Errors.Count);
-                Assert.Equal(snapshot.Processed, snapshot.Errors.Count);
-            }
-        }));
-        await writer;
+                readerStarted.Set();
+                var taken = 0;
+                while (Volatile.Read(ref running))
+                {
+                    var snapshot = progress.Snapshot();
+                    Assert.Equal(snapshot.Failed, snapshot.Errors.Count);
+                    Assert.Equal(snapshot.Processed, snapshot.Errors.Count);
+                    taken++;
+                }
+                return taken;
+            });
 
-        Assert.Null(failure);
-        Assert.Equal(20_000, progress.Snapshot().Errors.Count);
+            readerStarted.Wait();
+            for (var i = 0; i < RejectionsPerRound; i++) progress.RecordRejected(i.ToString(), "Record rejected.");
+            Volatile.Write(ref running, false);
+
+            var failure = await Record.ExceptionAsync(async () => snapshotsDuringWrites += await reader);
+            Assert.Null(failure);
+            Assert.Equal(RejectionsPerRound, progress.Snapshot().Errors.Count);
+        }
+
+        Assert.True(snapshotsDuringWrites >= Rounds, $"Only {snapshotsDuringWrites} snapshots overlapped the writes.");
     }
 }

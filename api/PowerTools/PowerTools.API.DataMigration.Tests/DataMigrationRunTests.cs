@@ -75,4 +75,27 @@ public sealed class DataMigrationRunTests
         Assert.False(target.Has(B));
         Assert.Equal(1, progress.Snapshot().Deleted);
     }
+
+    [Fact]
+    public async Task An_unconfirmed_delete_deletes_nothing_and_says_why()
+    {
+        var source = new FakeDataverse("account", "accountid", "name").Add(A, "Alpha");
+        var target = new FakeDataverse("account", "accountid", "name").Add(A, "Alpha").Add(B, "Beta");
+        var progress = new MigrationProgress();
+
+        await new DataMigrationRun(source, target).RunAsync(
+            new MigrationRequest("account", ["name"], null,
+                new MigrationOptions(Create: false, Update: false, Delete: true, ConfirmedDeleteCount: null)),
+            progress,
+            CancellationToken.None);
+
+        var snapshot = progress.Snapshot();
+        Assert.Equal(MigrationJobStatus.Completed, snapshot.Status);
+        Assert.Equal(1, snapshot.Failed);
+        Assert.Equal(
+            new MigrationJobError("N/A", "Delete was not confirmed, so no target records were deleted."),
+            Assert.Single(snapshot.Errors));
+        Assert.True(target.Has(B));
+        Assert.Empty(target.Writes);
+    }
 }

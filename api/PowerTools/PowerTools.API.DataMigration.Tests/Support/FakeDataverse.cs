@@ -30,9 +30,10 @@ public sealed class FakeDataverse : IDataMigrationClient
     public string PrimaryId { get; }
     public string? PrimaryName { get; }
 
-    /// <summary>Writes to these ids fail with <see cref="RecordFaultMessage"/>.</summary>
+    private const string RecordFaultMessage = "Record rejected.";
+
+    /// <summary>Writes to these ids fail with "Record rejected.".</summary>
     public HashSet<Guid> FailingIds { get; } = [];
-    public string RecordFaultMessage { get; set; } = "Record rejected.";
 
     /// <summary>Aggregate counts fail, as they do past 50,000 records.</summary>
     public bool AggregateCountFails { get; set; }
@@ -73,9 +74,9 @@ public sealed class FakeDataverse : IDataMigrationClient
         return this;
     }
 
-    public FakeDataverse AddMany(int count, Func<int, Guid>? id = null)
+    public FakeDataverse AddMany(int count)
     {
-        for (var i = 0; i < count; i++) Add(id?.Invoke(i) ?? Guid.NewGuid(), $"Record {i}");
+        for (var i = 0; i < count; i++) Add(Guid.NewGuid(), $"Record {i}");
         return this;
     }
 
