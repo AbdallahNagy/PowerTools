@@ -123,6 +123,27 @@ public sealed class DataMigrationRunTests
         Assert.Contains(logger.Errors, error => error.Message == "Target unreachable.");
     }
 
+    [Fact]
+    public async Task When_both_connections_fail_to_close_the_target_close_error_is_still_logged()
+    {
+        var source = new ClosingClient(
+            new FakeDataverse("account", "accountid", "name").Add(A, "Alpha"),
+            new InvalidOperationException("Source did not close."));
+        var target = new ClosingClient(
+            new FakeDataverse("account", "accountid", "name"),
+            new InvalidOperationException("Target did not close."));
+        var logger = new ListLogger();
+        var progress = new MigrationProgress();
+
+        await new DataMigrationRun(source, target, logger).RunAsync(
+            new MigrationRequest("account", ["name"], null, new MigrationOptions(Create: true, Update: true, Delete: false)),
+            progress,
+            CancellationToken.None);
+
+        Assert.Equal("Source did not close.", Assert.Single(progress.Snapshot().Errors).Message);
+        Assert.Contains(logger.Errors, error => error.Message == "Target did not close.");
+    }
+
     /// <summary>A client whose connection fails to close.</summary>
     private sealed class ClosingClient(FakeDataverse fake, Exception closeError) : IDataMigrationClient, IDisposable
     {
