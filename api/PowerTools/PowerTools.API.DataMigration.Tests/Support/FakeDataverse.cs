@@ -46,6 +46,12 @@ public sealed class FakeDataverse : IDataMigrationClient
     /// <summary>Retrieves whose FetchXml matches fail with an error.</summary>
     public Func<XElement, bool>? FailRetrieveWhen { get; set; }
 
+    /// <summary>Runs on every retrieve, after it is accepted.</summary>
+    public Action<XElement>? OnRetrieve { get; set; }
+
+    /// <summary>Runs as each Execute call starts, before the client checks its token.</summary>
+    public Action<OrganizationRequest>? OnExecute { get; set; }
+
     /// <summary>Every FetchXml query received, in order.</summary>
     public List<string> Fetches { get; } = [];
 
@@ -77,11 +83,14 @@ public sealed class FakeDataverse : IDataMigrationClient
 
     public Task<EntityCollection> RetrieveMultipleAsync(QueryBase query, CancellationToken ct)
     {
+        // The SDK client refuses a call whose token is already cancelled.
+        ct.ThrowIfCancellationRequested();
         ThrowIfFailing();
         var fetchXml = ((FetchExpression)query).Query;
         Fetches.Add(fetchXml);
         var fetch = XElement.Parse(fetchXml);
         if (FailRetrieveWhen?.Invoke(fetch) == true) throw Fault("Retrieve failed.");
+        OnRetrieve?.Invoke(fetch);
 
         if ((string?)fetch.Attribute("aggregate") == "true")
         {
@@ -110,6 +119,8 @@ public sealed class FakeDataverse : IDataMigrationClient
 
     public Task<OrganizationResponse> ExecuteAsync(OrganizationRequest request, CancellationToken ct)
     {
+        OnExecute?.Invoke(request);
+        ct.ThrowIfCancellationRequested();
         ThrowIfFailing();
         return Task.FromResult(request switch
         {

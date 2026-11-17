@@ -142,7 +142,9 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
 
         if (batch.Requests.Count == 0) return;
 
-        if (await target.ExecuteAsync(batch, ct) is not ExecuteMultipleResponse response) return;
+        // Sent without the token: a batch that has started writing finishes and is counted. Shutdown stops
+        // the run between batches instead.
+        if (await target.ExecuteAsync(batch, CancellationToken.None) is not ExecuteMultipleResponse response) return;
 
         foreach (var item in response.Responses)
         {
@@ -179,7 +181,8 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
                 batch.Requests.Add(new DeleteRequest { Target = new EntityReference(request.EntityLogicalName, record.Id) });
             var sentIds = chunk.Select(record => record.Id.ToString()).ToList();
 
-            if (await target.ExecuteAsync(batch, ct) is not ExecuteMultipleResponse response) continue;
+            // Sent without the token, like the send batches: shutdown stops the run between batches.
+            if (await target.ExecuteAsync(batch, CancellationToken.None) is not ExecuteMultipleResponse response) continue;
 
             foreach (var item in response.Responses)
             {
