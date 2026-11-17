@@ -6,7 +6,7 @@ using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.SolutionLayers;
 using Xunit;
 
-namespace PowerTools.API.SolutionLayers.Tests;
+namespace PowerTools.API.Tests.Tools.SolutionLayers;
 
 public sealed class FakeSolutionLayersClient : ISolutionLayersClient
 {
