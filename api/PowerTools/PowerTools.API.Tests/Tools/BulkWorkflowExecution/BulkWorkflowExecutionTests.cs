@@ -10,7 +10,7 @@ using PowerTools.API.Services;
 using PowerTools.API.Tools.BulkWorkflowExecution;
 using Xunit;
 
-namespace PowerTools.API.BulkWorkflowExecution.Tests;
+namespace PowerTools.API.Tests.Tools.BulkWorkflowExecution;
 
 public sealed class BulkWorkflowFetchXmlTests
 {
