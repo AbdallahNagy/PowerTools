@@ -228,6 +228,21 @@ public sealed class MigrationRoutesTests
     }
 
     [Fact]
+    public async Task Run_records_a_delete_Dataverse_rejects_against_its_record()
+    {
+        var target = Accounts().Add(A, "Alpha").Add(C, "Gamma").Add(D, "Delta");
+        target.FailingIds.Add(D);
+        await using var api = new MigrationApi(Accounts().Add(A, "Alpha"), target);
+
+        var job = await api.RunAsync(Run(create: false, update: false, delete: true, confirmedDeleteCount: 2));
+
+        AssertJson($$"""
+            {"status":"completed","processed":2,"total":2,"succeeded":0,"created":0,"updated":0,
+             "skipped":0,"deleted":1,"failed":1,"errors":[{"recordId":"{{D}}","message":"Record rejected."}]}
+            """, job);
+    }
+
+    [Fact]
     public async Task Run_deletes_nothing_when_more_records_would_go_than_were_confirmed()
     {
         var target = Accounts().Add(C).Add(D);
