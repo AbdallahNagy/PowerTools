@@ -94,7 +94,8 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
         CancellationToken ct)
     {
         var batch = NewBatch();
-        var sent = new List<(string RecordId, RecordAction Action)>();
+        var sentIds = new List<string>();
+        var sentActions = new List<RecordAction>();
 
         foreach (var sourceRecord in entities)
         {
@@ -134,7 +135,8 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
                     };
             }
 
-            sent.Add((sourceRecord.Id.ToString(), action));
+            sentIds.Add(sourceRecord.Id.ToString());
+            sentActions.Add(action);
             batch.Requests.Add(req);
         }
 
@@ -144,14 +146,10 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
 
         foreach (var item in response.Responses)
         {
-            var (recordId, action) = item.RequestIndex < sent.Count
-                ? sent[item.RequestIndex]
-                : (item.RequestIndex.ToString(), RecordAction.Update);
-
             if (item.Fault is not null)
-                progress.RecordRejected(recordId, FaultMessage(item.Fault));
+                progress.RecordRejected(RecordIdAt(sentIds, item.RequestIndex), FaultMessage(item.Fault));
             else
-                progress.RecordSent(action);
+                progress.RecordSent(item.RequestIndex < sentActions.Count ? sentActions[item.RequestIndex] : RecordAction.Update);
         }
     }
 
@@ -179,6 +177,7 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
             var batch = NewBatch();
             foreach (var record in chunk)
                 batch.Requests.Add(new DeleteRequest { Target = new EntityReference(request.EntityLogicalName, record.Id) });
+            var sentIds = chunk.Select(record => record.Id.ToString()).ToList();
 
             if (await target.ExecuteAsync(batch, ct) is not ExecuteMultipleResponse response) continue;
 
@@ -190,11 +189,16 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
                     continue;
                 }
 
-                var recordId = item.RequestIndex < chunk.Length ? chunk[item.RequestIndex].Id.ToString() : item.RequestIndex.ToString();
-                progress.RecordRejected(recordId, FaultMessage(item.Fault));
+                progress.RecordRejected(RecordIdAt(sentIds, item.RequestIndex), FaultMessage(item.Fault));
             }
         }
     }
+
+    /// <summary>
+    /// The record a batch response belongs to. A response index past the requests sent names the index itself.
+    /// </summary>
+    private static string RecordIdAt(IReadOnlyList<string> sentIds, int requestIndex) =>
+        requestIndex < sentIds.Count ? sentIds[requestIndex] : requestIndex.ToString();
 
     private static ExecuteMultipleRequest NewBatch() => new()
     {
