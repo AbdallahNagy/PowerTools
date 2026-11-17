@@ -5,7 +5,7 @@ using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.CommunityToolApi;
 
-namespace PowerTools.API.CommunityToolApi.Tests;
+namespace PowerTools.API.Tests.Tools.CommunityToolApi;
 
 public sealed class FakeCommunityToolClient : ICommunityToolClient
 {

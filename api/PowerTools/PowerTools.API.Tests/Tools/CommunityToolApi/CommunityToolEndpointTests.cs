@@ -13,7 +13,7 @@ using PowerTools.API.Services;
 using PowerTools.API.Tools.CommunityToolApi;
 using Xunit;
 
-namespace PowerTools.API.CommunityToolApi.Tests;
+namespace PowerTools.API.Tests.Tools.CommunityToolApi;
 
 /// <summary>
 /// Real HTTP requests through the /api/community-tools route group on a loopback Kestrel server,
