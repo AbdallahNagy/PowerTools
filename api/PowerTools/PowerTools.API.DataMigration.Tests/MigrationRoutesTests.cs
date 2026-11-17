@@ -334,6 +334,42 @@ public sealed class MigrationRoutesTests
         Assert.Equal("completed", (string)(await api.WaitForStatusAsync(jobId, "completed", "failed"))["status"]!);
     }
 
+    [Fact]
+    public async Task A_connection_that_fails_to_close_fails_its_job_and_the_next_job_still_runs()
+    {
+        var target = Accounts();
+        target.FailDispose = new InvalidOperationException("Connection did not close.");
+        await using var api = new MigrationApi(Accounts().Add(A, "Alpha"), target);
+
+        var first = await api.RunAsync(Run());
+        target.FailDispose = null;
+        var second = await api.PollAsync(await api.StartAsync(Run()), TimeSpan.FromSeconds(10), "completed", "failed");
+
+        Assert.Equal("completed", (string)second["status"]!);
+        Assert.Equal("failed", (string)first["status"]!);
+        Assert.Equal("Connection did not close.", (string)first["errors"]![0]!["message"]!);
+    }
+
+    [Fact]
+    public async Task A_connection_that_fails_to_open_fails_its_job_and_the_next_job_still_runs()
+    {
+        var target = Accounts();
+        await using var api = new MigrationApi(Accounts().Add(A, "Alpha"), target)
+        {
+            FailClientCreation = new InvalidOperationException("Sign-in expired."),
+        };
+
+        var first = await api.RunAsync(Run());
+        api.FailClientCreation = null;
+        var second = await api.PollAsync(await api.StartAsync(Run()), TimeSpan.FromSeconds(10), "completed", "failed");
+
+        Assert.Equal("completed", (string)second["status"]!);
+        AssertJson("""
+            {"status":"failed","processed":0,"total":0,"succeeded":0,"created":0,"updated":0,
+             "skipped":0,"deleted":0,"failed":0,"errors":[{"recordId":"N/A","message":"Sign-in expired."}]}
+            """, first);
+    }
+
     private static object Run(
         bool create = true,
         bool update = true,

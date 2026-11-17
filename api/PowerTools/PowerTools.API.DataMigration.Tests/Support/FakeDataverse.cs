@@ -37,6 +37,9 @@ public sealed class FakeDataverse : IDataMigrationClient
     /// <summary>Aggregate counts fail, as they do past 50,000 records.</summary>
     public bool AggregateCountFails { get; set; }
 
+    /// <summary>Disposing the SDK client fails with this error.</summary>
+    public Exception? FailDispose { get; set; }
+
     /// <summary>Every request fails with this error.</summary>
     public Exception? FailEverything { get; set; }
 
@@ -216,14 +219,17 @@ public sealed class FakeDataverse : IDataMigrationClient
         target.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)!
             .SetValue(target, value);
 
-    /// <summary>Routes every RetrieveMultiple and Execute overload of the SDK client to the fake.</summary>
+    /// <summary>The SDK client is disposable, as ServiceClient is.</summary>
+    public interface IDisposableService : IOrganizationServiceAsync2, IDisposable;
+
+    /// <summary>Routes every RetrieveMultiple and Execute overload of the SDK client, and Dispose, to the fake.</summary>
     public class ServiceProxy : DispatchProxy
     {
         private FakeDataverse _fake = null!;
 
         public static IOrganizationServiceAsync2 Create(FakeDataverse fake)
         {
-            var proxy = DispatchProxy.Create<IOrganizationServiceAsync2, ServiceProxy>();
+            var proxy = DispatchProxy.Create<IDisposableService, ServiceProxy>();
             ((ServiceProxy)(object)proxy)._fake = fake;
             return proxy;
         }
@@ -231,7 +237,13 @@ public sealed class FakeDataverse : IDataMigrationClient
         protected override object? Invoke(MethodInfo? method, object?[]? args)
         {
             var ct = args?.OfType<CancellationToken>().FirstOrDefault() ?? default;
-            return method!.Name switch
+            if (method!.Name == nameof(IDisposable.Dispose))
+            {
+                if (_fake.FailDispose is not null) throw _fake.FailDispose;
+                return null;
+            }
+
+            return method.Name switch
             {
                 "RetrieveMultipleAsync" => _fake.RetrieveMultipleAsync((QueryBase)args![0]!, ct),
                 "ExecuteAsync" => _fake.ExecuteAsync((OrganizationRequest)args![0]!, ct),

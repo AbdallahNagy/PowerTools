@@ -21,25 +21,18 @@ public class MigrationJobRunner(
 
             // Running from here, so a job does not read as queued while its connections open.
             job.Progress.MarkRunning();
-            DataverseDataMigrationClient? source = null;
-            DataverseDataMigrationClient? target = null;
             try
             {
-                source = new DataverseDataMigrationClient(factory.Create(job.SourceConnection));
-                target = new DataverseDataMigrationClient(factory.Create(job.TargetConnection));
+                // Opening and closing the connections belong to the job: a failure in either fails this job
+                // and the runner goes on to the next one.
+                using var source = new DataverseDataMigrationClient(factory.Create(job.SourceConnection));
+                using var target = new DataverseDataMigrationClient(factory.Create(job.TargetConnection));
+                await new DataMigrationRun(source, target, logger).RunAsync(job.Request, job.Progress, ct);
             }
             catch (Exception ex)
             {
-                source?.Dispose();
                 job.Progress.Fail(DataverseErrorFormatter.Format(ex));
                 logger.LogError(ex, "Migration job {JobId} failed", job.Id);
-                continue;
-            }
-
-            using (source)
-            using (target)
-            {
-                await new DataMigrationRun(source, target, logger).RunAsync(job.Request, job.Progress, ct);
             }
         }
     }
