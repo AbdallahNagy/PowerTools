@@ -3,6 +3,11 @@ using Xunit;
 
 namespace PowerTools.API.DataMigration.Tests;
 
+// The race test keeps two threads busy. Run alone so it does not starve the in-memory sidecars of the other tests.
+[CollectionDefinition(nameof(MigrationProgressTests), DisableParallelization = true)]
+public sealed class RunsAlone;
+
+[Collection(nameof(MigrationProgressTests))]
 public sealed class MigrationProgressTests
 {
     private const int Rounds = 300;

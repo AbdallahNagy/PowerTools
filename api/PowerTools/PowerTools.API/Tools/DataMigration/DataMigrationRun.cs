@@ -33,15 +33,10 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
             failure = ex;
         }
 
-        try
-        {
-            (source as IDisposable)?.Dispose();
-            (target as IDisposable)?.Dispose();
-        }
-        catch (Exception ex)
-        {
-            failure = ex;
-        }
+        // Each connection is closed even when the other fails to close; the first close error is the one reported.
+        var sourceCloseFailure = Close(source);
+        var targetCloseFailure = Close(target);
+        failure = sourceCloseFailure ?? targetCloseFailure ?? failure;
 
         if (failure is null)
         {
@@ -51,6 +46,19 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
 
         progress.Fail(DataverseErrorFormatter.Format(failure));
         logger?.LogError(failure, "Migration of {Table} failed", request.EntityLogicalName);
+    }
+
+    private static Exception? Close(IDataMigrationClient client)
+    {
+        try
+        {
+            (client as IDisposable)?.Dispose();
+            return null;
+        }
+        catch (Exception ex)
+        {
+            return ex;
+        }
     }
 
     private async Task RunStepsAsync(MigrationRequest request, MigrationProgress progress, CancellationToken ct)

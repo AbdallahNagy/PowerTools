@@ -404,6 +404,22 @@ public sealed class MigrationRoutesTests
     }
 
     [Fact]
+    public async Task When_the_source_fails_to_close_the_target_connection_is_still_closed()
+    {
+        var source = Accounts().Add(A, "Alpha");
+        source.FailDispose = new InvalidOperationException("Source did not close.");
+        var target = Accounts();
+        target.FailDispose = new InvalidOperationException("Target did not close.");
+        await using var api = new MigrationApi(source, target);
+
+        var job = await api.RunAsync(Run());
+
+        Assert.Equal(1, target.Closes);
+        // The first close error is the one reported, as before the refactor.
+        Assert.Equal("Source did not close.", (string)Assert.Single(job["errors"]!.AsArray())!["message"]!);
+    }
+
+    [Fact]
     public async Task When_the_target_fails_to_open_the_source_connection_is_closed()
     {
         var source = Accounts().Add(A, "Alpha");
