@@ -7,7 +7,7 @@ using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.PolymorphicLookup;
 using Xunit;
 
-namespace PowerTools.API.PolymorphicLookup.Tests;
+namespace PowerTools.API.Tests.Tools.PolymorphicLookup;
 
 public sealed class FakePolymorphicLookupClient : IPolymorphicLookupClient
 {
