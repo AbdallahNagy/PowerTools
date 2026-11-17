@@ -5,7 +5,7 @@ using Microsoft.Xrm.Sdk.Metadata;
 using PowerTools.API.Tools.AttributeExplorer;
 using Xunit;
 
-namespace PowerTools.API.AttributeExplorer.Tests;
+namespace PowerTools.API.Tests.Tools.AttributeExplorer;
 
 public sealed class FakeAttributeExplorerClient : IAttributeExplorerClient
 {
