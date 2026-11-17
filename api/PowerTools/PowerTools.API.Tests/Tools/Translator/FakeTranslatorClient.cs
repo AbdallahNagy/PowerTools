@@ -5,7 +5,7 @@ using Microsoft.Xrm.Sdk.Metadata;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.Translator;
 
-namespace PowerTools.API.Translator.Tests;
+namespace PowerTools.API.Tests.Tools.Translator;
 
 /// <summary>A fake Dataverse surface. Records every request; no network.</summary>
 public sealed class FakeTranslatorClient : ITranslatorClient

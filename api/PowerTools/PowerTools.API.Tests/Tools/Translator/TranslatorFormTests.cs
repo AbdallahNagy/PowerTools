@@ -5,7 +5,7 @@ using PowerTools.API.Services;
 using PowerTools.API.Tools.Translator;
 using Xunit;
 
-namespace PowerTools.API.Translator.Tests;
+namespace PowerTools.API.Tests.Tools.Translator;
 
 public sealed class TranslatorFormTests
 {
