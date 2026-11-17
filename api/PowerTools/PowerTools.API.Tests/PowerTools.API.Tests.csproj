@@ -1,14 +1,30 @@
 <Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The one test project for PowerTools.API. Tests mirror the production layout:
+    PowerTools.API/Tools/<Tool>/ is tested in Tools/<Tool>/ with the namespace
+    PowerTools.API.Tests.Tools.<Tool>. Add a folder for a new tool, not a project.
 
-    <PropertyGroup>
-        <OutputType>Exe</OutputType>
-        <TargetFramework>net9.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
-    </PropertyGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\PowerTools.API\PowerTools.API.csproj" />
-    </ItemGroup>
-
+    To run one tool's tests, filter on its namespace, for example
+    FullyQualifiedName~PowerTools.API.Tests.Tools.Translator. (see AGENTS.md in this folder).
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PowerTools.API\PowerTools.API.csproj" />
+  </ItemGroup>
 </Project>
