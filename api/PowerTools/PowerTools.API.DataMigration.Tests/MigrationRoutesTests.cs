@@ -415,7 +415,7 @@ public sealed class MigrationRoutesTests
         var job = await api.RunAsync(Run());
 
         Assert.Equal(1, target.Closes);
-        // The first close error is the one reported, as before the refactor.
+        // The source's close error is the one reported.
         Assert.Equal("Source did not close.", (string)Assert.Single(job["errors"]!.AsArray())!["message"]!);
     }
 
@@ -431,6 +431,25 @@ public sealed class MigrationRoutesTests
 
         Assert.Equal("Target sign-in expired.", (string)job["errors"]![0]!["message"]!);
         Assert.Equal(1, source.Closes);
+    }
+
+    [Fact]
+    public async Task When_the_target_fails_to_open_and_the_source_fails_to_close_the_open_error_is_reported()
+    {
+        var source = Accounts().Add(A, "Alpha");
+        source.FailDispose = new InvalidOperationException("Source did not close.");
+        var target = Accounts();
+        target.FailOpen = new InvalidOperationException("Target sign-in expired.");
+        await using var api = new MigrationApi(source, target);
+
+        var first = await api.PollAsync(await api.StartAsync(Run()), TimeSpan.FromSeconds(10), "completed", "failed");
+        source.FailDispose = null;
+        target.FailOpen = null;
+        var second = await api.PollAsync(await api.StartAsync(Run()), TimeSpan.FromSeconds(10), "completed", "failed");
+
+        Assert.Equal("failed", (string)first["status"]!);
+        Assert.Equal("Target sign-in expired.", (string)Assert.Single(first["errors"]!.AsArray())!["message"]!);
+        Assert.Equal("completed", (string)second["status"]!);
     }
 
     [Fact]
