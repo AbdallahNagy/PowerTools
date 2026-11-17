@@ -27,4 +27,35 @@
   <ItemGroup>
     <ProjectReference Include="..\PowerTools.API\PowerTools.API.csproj" />
   </ItemGroup>
+
+  <!-- Plugin Registration inspects real plugin assemblies. Build the fixture projects and copy them to
+       $(OutDir)Fixtures before compiling; they are not part of this project's own sources. -->
+  <PropertyGroup>
+    <PluginRegistrationFixtures>Tools\PluginRegistration\TestFixtures</PluginRegistrationFixtures>
+  </PropertyGroup>
+  <ItemGroup>
+    <InspectionFixtureProject Include="$(PluginRegistrationFixtures)\MixedRegistrationAssembly\MixedRegistrationAssembly.csproj" />
+    <InspectionFixtureProject Include="$(PluginRegistrationFixtures)\RemovedHandlerAssembly\RemovedHandlerAssembly.csproj" />
+    <InspectionFixtureProject Include="$(PluginRegistrationFixtures)\BreakingWorkflowAssembly\BreakingWorkflowAssembly.csproj" />
+    <InspectionFixtureProject Include="$(PluginRegistrationFixtures)\UnsignedPluginAssembly\UnsignedPluginAssembly.csproj" />
+    <InspectionFixtureProject Include="$(PluginRegistrationFixtures)\MissingDependencyAssembly\MissingDependencyAssembly.csproj" />
+    <InspectionFixtureProject Include="$(PluginRegistrationFixtures)\UnsupportedTargetFrameworkAssembly\UnsupportedTargetFrameworkAssembly.csproj" />
+    <Compile Remove="$(PluginRegistrationFixtures)\**\*.cs" />
+  </ItemGroup>
+
+  <Target Name="BuildAndCopyInspectionFixtures" BeforeTargets="CoreCompile">
+    <MSBuild Projects="@(InspectionFixtureProject)"
+             Targets="Restore"
+             BuildInParallel="true" />
+    <MSBuild Projects="@(InspectionFixtureProject)"
+             Targets="Build"
+             BuildInParallel="true"
+             Properties="Configuration=$(Configuration);EnableWindowsTargeting=true">
+      <Output TaskParameter="TargetOutputs" ItemName="InspectionFixtureAssembly" />
+    </MSBuild>
+    <MakeDir Directories="$(OutDir)Fixtures" />
+    <Copy SourceFiles="@(InspectionFixtureAssembly)"
+          DestinationFolder="$(OutDir)Fixtures"
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>

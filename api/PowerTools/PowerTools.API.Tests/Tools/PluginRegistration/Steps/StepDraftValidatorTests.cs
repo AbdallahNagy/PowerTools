@@ -2,7 +2,7 @@ using PowerTools.API.Tools.PluginRegistration.Dtos;
 using PowerTools.API.Tools.PluginRegistration.Validation;
 using Xunit;
 
-namespace PowerTools.API.PluginRegistration.Tests.Steps;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.Steps;
 
 public sealed class StepDraftValidatorTests
 {

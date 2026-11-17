@@ -1,10 +1,10 @@
-using PowerTools.API.PluginRegistration.Tests.Support;
+using PowerTools.API.Tests.Tools.PluginRegistration.Support;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.PluginRegistration.Services;
 using PowerTools.API.Tools.PluginRegistration.Validation;
 using Xunit;
 
-namespace PowerTools.API.PluginRegistration.Tests.Capabilities;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.Capabilities;
 
 public sealed class CapabilitiesTests
 {

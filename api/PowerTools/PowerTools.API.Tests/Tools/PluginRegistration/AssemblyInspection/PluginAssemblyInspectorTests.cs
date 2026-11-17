@@ -3,7 +3,7 @@ using PowerTools.API.Tools.PluginRegistration.Dtos;
 using PowerTools.API.Tools.PluginRegistration.Inspection;
 using Xunit;
 
-namespace PowerTools.API.PluginRegistration.Tests.AssemblyInspection;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.AssemblyInspection;
 
 public sealed class PluginAssemblyInspectorTests
 {

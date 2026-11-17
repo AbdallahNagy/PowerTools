@@ -1,7 +1,7 @@
 using Microsoft.PowerPlatform.Dataverse.Client;
 using PowerTools.API.Services;
 
-namespace PowerTools.API.PluginRegistration.Tests.Support;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.Support;
 
 public sealed class FakeCurrentConnection(DataverseConnectionContext context) : ICurrentConnection
 {

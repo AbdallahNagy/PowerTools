@@ -2,7 +2,7 @@ using PowerTools.API.Tools.PluginRegistration.Dtos;
 using PowerTools.API.Tools.PluginRegistration.Validation;
 using Xunit;
 
-namespace PowerTools.API.PluginRegistration.Tests.Images;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.Images;
 
 public sealed class ImageDraftValidatorTests
 {

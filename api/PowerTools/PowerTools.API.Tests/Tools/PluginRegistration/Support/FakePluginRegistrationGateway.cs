@@ -2,7 +2,7 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.PluginRegistration.Gateway;
 
-namespace PowerTools.API.PluginRegistration.Tests.Support;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.Support;
 
 public sealed class FakePluginRegistrationGateway : IPluginRegistrationGateway
 {

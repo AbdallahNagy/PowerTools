@@ -3,7 +3,7 @@ using PowerTools.API.Tools.PluginRegistration.Queries;
 using PowerTools.API.Tools.PluginRegistration.Validation;
 using Xunit;
 
-namespace PowerTools.API.PluginRegistration.Tests.Catalog;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.Catalog;
 
 public sealed class CatalogQueriesTests
 {

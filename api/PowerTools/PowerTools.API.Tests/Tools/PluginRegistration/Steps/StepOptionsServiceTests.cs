@@ -1,9 +1,9 @@
 using Microsoft.Xrm.Sdk;
-using PowerTools.API.PluginRegistration.Tests.Support;
+using PowerTools.API.Tests.Tools.PluginRegistration.Support;
 using PowerTools.API.Tools.PluginRegistration.Services;
 using Xunit;
 
-namespace PowerTools.API.PluginRegistration.Tests.Steps;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.Steps;
 
 public sealed class StepOptionsServiceTests
 {

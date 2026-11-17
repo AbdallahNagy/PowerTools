@@ -1,13 +1,13 @@
 using Microsoft.Crm.Sdk.Messages;
 using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Messages;
-using PowerTools.API.PluginRegistration.Tests.Support;
+using PowerTools.API.Tests.Tools.PluginRegistration.Support;
 using PowerTools.API.Tools.PluginRegistration;
 using PowerTools.API.Tools.PluginRegistration.Services;
 using PowerTools.API.Tools.PluginRegistration.Validation;
 using Xunit;
 
-namespace PowerTools.API.PluginRegistration.Tests.Unregister;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.Unregister;
 
 public sealed class UnregisterServiceTests
 {

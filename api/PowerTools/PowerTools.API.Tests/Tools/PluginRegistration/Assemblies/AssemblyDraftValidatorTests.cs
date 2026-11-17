@@ -2,7 +2,7 @@ using PowerTools.API.Tools.PluginRegistration.Dtos;
 using PowerTools.API.Tools.PluginRegistration.Validation;
 using Xunit;
 
-namespace PowerTools.API.PluginRegistration.Tests.Assemblies;
+namespace PowerTools.API.Tests.Tools.PluginRegistration.Assemblies;
 
 public sealed class AssemblyDraftValidatorTests
 {
