@@ -32,7 +32,8 @@ public class MigrationJobRunner(
             }
             catch (Exception ex)
             {
-                CloseQuietly(source);
+                if (DataMigrationRun.TryClose(source) is { } closeError)
+                    logger.LogWarning(closeError, "Could not close a Dataverse connection");
                 job.Progress.Fail(DataverseErrorFormatter.Format(ex));
                 logger.LogError(ex, "Migration job {JobId} failed", job.Id);
                 continue;
@@ -40,18 +41,6 @@ public class MigrationJobRunner(
 
             // The run closes both connections before it reports the outcome, and it does not throw.
             await new DataMigrationRun(source, target, logger).RunAsync(job.Request, job.Progress, ct);
-        }
-    }
-
-    private void CloseQuietly(IDisposable? client)
-    {
-        try
-        {
-            client?.Dispose();
-        }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Could not close a Dataverse connection");
         }
     }
 }

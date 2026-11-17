@@ -18,7 +18,7 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
     /// poller never sees "completed" for a job that ends failed. It does not throw: a failure that stops the
     /// run, including cancellation, marks the progress failed with the Dataverse error, and a record Dataverse
     /// rejects is recorded and the run goes on. A failure to close a connection fails the job and its error
-    /// replaces the run's, as before the refactor.
+    /// replaces the run's; when both connections fail to close, the source's error is the one reported.
     /// </summary>
     public async Task RunAsync(MigrationRequest request, MigrationProgress progress, CancellationToken ct)
     {
@@ -34,8 +34,8 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
         }
 
         // Each connection is closed even when the other fails to close; the first close error is the one reported.
-        var sourceCloseFailure = Close(source);
-        var targetCloseFailure = Close(target);
+        var sourceCloseFailure = TryClose(source);
+        var targetCloseFailure = TryClose(target);
         failure = sourceCloseFailure ?? targetCloseFailure ?? failure;
 
         if (failure is null)
@@ -48,7 +48,8 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
         logger?.LogError(failure, "Migration of {Table} failed", request.EntityLogicalName);
     }
 
-    private static Exception? Close(IDataMigrationClient client)
+    /// <summary>Closes a client when it is disposable. Returns the error instead of throwing it.</summary>
+    internal static Exception? TryClose(object? client)
     {
         try
         {
