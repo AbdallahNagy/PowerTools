@@ -4,7 +4,7 @@ using Microsoft.Xrm.Sdk.Messages;
 using PowerTools.API.Tools.Agent;
 using Xunit;
 
-namespace PowerTools.API.Agent.Tests;
+namespace PowerTools.API.Tests.Tools.Agent;
 
 public class AgentEnvVarsServiceTests
 {

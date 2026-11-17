@@ -7,7 +7,7 @@ using PowerTools.API.Tools.Agent;
 using PowerTools.API.Tools.SolutionLayers;
 using Xunit;
 
-namespace PowerTools.API.Agent.Tests;
+namespace PowerTools.API.Tests.Tools.Agent;
 
 public class AgentSolutionsServiceTests
 {

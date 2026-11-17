@@ -6,7 +6,7 @@ using PowerTools.API.Tools.PluginRegistration.Inspection;
 using PowerTools.API.Tools.PluginRegistration.Services;
 using Xunit;
 
-namespace PowerTools.API.Agent.Tests;
+namespace PowerTools.API.Tests.Tools.Agent;
 
 internal sealed class FakeInspector : IPluginAssemblyInspector
 {

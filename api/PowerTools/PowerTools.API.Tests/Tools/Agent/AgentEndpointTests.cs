@@ -10,7 +10,7 @@ using PowerTools.API.Services;
 using PowerTools.API.Tools.Agent;
 using Xunit;
 
-namespace PowerTools.API.Agent.Tests;
+namespace PowerTools.API.Tests.Tools.Agent;
 
 /// <summary>Real HTTP requests through the /api/agent route group; only the Dataverse client is replaced.</summary>
 public sealed class AgentEndpointTests : IAsyncLifetime

@@ -4,7 +4,7 @@ using Microsoft.Xrm.Sdk;
 using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.Agent;
 
-namespace PowerTools.API.Agent.Tests;
+namespace PowerTools.API.Tests.Tools.Agent;
 
 public sealed class FakeAgentClient : IAgentClient
 {
