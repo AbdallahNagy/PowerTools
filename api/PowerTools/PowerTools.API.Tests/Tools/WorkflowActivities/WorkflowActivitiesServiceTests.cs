@@ -5,7 +5,7 @@ using Microsoft.Xrm.Sdk.Query;
 using PowerTools.API.Tools.WorkflowActivities;
 using Xunit;
 
-namespace PowerTools.API.WorkflowActivities.Tests;
+namespace PowerTools.API.Tests.Tools.WorkflowActivities;
 
 public sealed class FakeWorkflowActivitiesClient : IWorkflowActivitiesClient
 {
