@@ -9,7 +9,7 @@ using PowerTools.API.Services;
 using PowerTools.API.Tools.SolutionComponentsMover;
 using Xunit;
 
-namespace PowerTools.API.SolutionComponentsMover.Tests;
+namespace PowerTools.API.Tests.Tools.SolutionComponentsMover;
 
 public sealed class SolutionComponentsMoverServiceTests
 {
