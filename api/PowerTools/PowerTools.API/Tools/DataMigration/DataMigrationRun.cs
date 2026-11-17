@@ -36,6 +36,11 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
         // Each connection is closed even when the other fails to close; the first close error is the one reported.
         var sourceCloseFailure = TryClose(source);
         var targetCloseFailure = TryClose(target);
+        if (failure is not null && (sourceCloseFailure ?? targetCloseFailure) is not null)
+        {
+            // The job reports the close error, so keep the run's own error in the log.
+            logger?.LogError(failure, "Migration of {Table} failed before its connections closed", request.EntityLogicalName);
+        }
         failure = sourceCloseFailure ?? targetCloseFailure ?? failure;
 
         if (failure is null)
