@@ -59,7 +59,7 @@ public sealed class DataMigrationRun(IDataMigrationClient source, IDataMigration
     }
 
     /// <summary>Closes a client when it is disposable. Returns the error instead of throwing it.</summary>
-    internal static Exception? TryClose(object? client)
+    internal static Exception? TryClose(IDataMigrationClient? client)
     {
         try
         {
