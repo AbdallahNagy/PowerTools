@@ -15,7 +15,7 @@ namespace PowerTools.API.DataMigration.Tests.Support;
 /// table metadata, aggregate counts, paged lists, id lookups ("in" conditions) and ExecuteMultiple writes.
 /// It does not evaluate user filters.
 /// </summary>
-public sealed class FakeDataverse
+public sealed class FakeDataverse : IDataMigrationClient
 {
     private readonly List<Entity> _rows = [];
 
