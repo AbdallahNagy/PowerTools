@@ -11,7 +11,7 @@ namespace PowerTools.API.Services;
 /// </summary>
 public class DataverseClientFactory
 {
-    public IOrganizationServiceAsync2 Create(DataverseConnectionContext context) =>
+    public virtual IOrganizationServiceAsync2 Create(DataverseConnectionContext context) =>
         context switch
         {
             OnlineConnectionContext online => CreateOnline(online.AccessToken, online.EnvironmentUrl),

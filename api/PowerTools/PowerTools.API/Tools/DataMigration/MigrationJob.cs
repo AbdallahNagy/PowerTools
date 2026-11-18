@@ -1,36 +1,29 @@
 using System.Collections.Concurrent;
-using PowerTools.API.Tools.DataMigration;
+using PowerTools.API.Services;
 
-namespace PowerTools.API.Services;
+namespace PowerTools.API.Tools.DataMigration;
 
 public enum MigrationJobStatus { Queued, Running, Completed, Failed }
 
 public record MigrationJobError(string RecordId, string Message);
 
-public class MigrationJob
+/// <summary>What one migration copies: a table, its columns, the source filter and the options.</summary>
+public sealed record MigrationRequest(
+    string EntityLogicalName,
+    IReadOnlyList<string> Attributes,
+    string? FetchXmlFilter,
+    MigrationOptions Options);
+
+public sealed class MigrationJob
 {
-    public Guid Id { get; init; } = Guid.NewGuid();
-    public MigrationJobStatus Status { get; set; } = MigrationJobStatus.Queued;
-    public int Total { get; set; }
-    public int Processed { get; set; }
-    public int Succeeded { get; set; }
-    public int Created { get; set; }
-    public int Updated { get; set; }
-    /// <summary>Source records left alone because the options do not cover them.</summary>
-    public int Skipped { get; set; }
-    public int Deleted { get; set; }
-    public int Failed { get; set; }
-    public List<MigrationJobError> Errors { get; set; } = [];
+    public Guid Id { get; } = Guid.NewGuid();
 
     // Captured auth context so the background runner can make requests.
     public required DataverseConnectionContext SourceConnection { get; init; }
     public required DataverseConnectionContext TargetConnection { get; init; }
 
-    // Migration parameters
-    public required string EntityLogicalName { get; init; }
-    public required List<string> Attributes { get; init; }
-    public string? FetchXmlFilter { get; init; }
-    public required MigrationOptions Options { get; init; }
+    public required MigrationRequest Request { get; init; }
+    public MigrationProgress Progress { get; } = new();
 }
 
 public interface IMigrationJobStore
@@ -60,7 +53,7 @@ public class InMemoryMigrationJobStore : IMigrationJobStore
         while (_queue.TryDequeue(out var id))
         {
             if (_jobs.TryGetValue(id, out var job) &&
-                job.Status == MigrationJobStatus.Queued)
+                job.Progress.Status == MigrationJobStatus.Queued)
                 return job;
         }
         return null;
