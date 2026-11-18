@@ -39,10 +39,42 @@ describe("FetchXML Builder columns", () => {
 
     fireEvent.change(screen.getByRole("textbox", { name: "Search columns" }), { target: { value: "desc" } });
     expect(screen.queryByText("Main Phone")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("checkbox", { name: /^Description/ }));
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
 
     expect(onApply).toHaveBeenCalledWith(["name", "description"]);
+  });
+
+  it("selects all columns, then deselects all when clicked again", () => {
+    const onApply = vi.fn();
+    render(
+      <ColumnPickerModal open fields={fields} columns={["name"]} onClose={() => {}} onApply={onApply} />,
+    );
+
+    const selectAll = screen.getByRole("checkbox", { name: /Select all/ });
+    expect(selectAll).not.toBeChecked();
+    expect((selectAll as HTMLInputElement).indeterminate).toBe(true);
+
+    fireEvent.click(selectAll);
+    expect(selectAll).toBeChecked();
+    expect(screen.getByText("3 selected")).toBeInTheDocument();
+
+    fireEvent.click(selectAll);
+    expect(selectAll).not.toBeChecked();
+    expect(screen.getByText("0 selected")).toBeInTheDocument();
+  });
+
+  it("limits select all to the columns matching the search", () => {
+    const onApply = vi.fn();
+    render(
+      <ColumnPickerModal open fields={fields} columns={["name"]} onClose={() => {}} onApply={onApply} />,
+    );
+
+    fireEvent.change(screen.getByRole("textbox", { name: "Search columns" }), { target: { value: "phone" } });
+    fireEvent.click(screen.getByRole("checkbox", { name: /Select all matching/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+
+    expect(onApply).toHaveBeenCalledWith(["name", "telephone1"]);
   });
 
   it("lists system and personal views and removes a chosen column", () => {

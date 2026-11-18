@@ -34,6 +34,9 @@ export function ColumnPickerModal({ open, fields, columns, onClose, onApply }: C
   }, [fields, search]);
 
   const checkedSet = new Set(checked);
+  const visibleCheckedCount = visibleFields.filter((field) => checkedSet.has(field.logicalName)).length;
+  const allVisibleChecked = visibleFields.length > 0 && visibleCheckedCount === visibleFields.length;
+  const someVisibleChecked = visibleCheckedCount > 0 && !allVisibleChecked;
 
   function toggle(logicalName: string) {
     setChecked((prev) =>
@@ -41,9 +44,39 @@ export function ColumnPickerModal({ open, fields, columns, onClose, onApply }: C
     );
   }
 
+  function toggleAllVisible() {
+    const visibleNames = visibleFields.map((field) => field.logicalName);
+    if (allVisibleChecked) {
+      const visibleSet = new Set(visibleNames);
+      setChecked((prev) => prev.filter((name) => !visibleSet.has(name)));
+    } else {
+      setChecked((prev) => {
+        const prevSet = new Set(prev);
+        return [...prev, ...visibleNames.filter((name) => !prevSet.has(name))];
+      });
+    }
+  }
+
   return (
     <Modal open={open} title="Choose columns" onClose={onClose} widthClass="max-w-xl">
       <SearchInput value={search} onChange={setSearch} placeholder="Search columns" aria-label="Search columns" />
+
+      <label
+        htmlFor="column-select-all"
+        className="flex items-center gap-3 px-3 py-1.5 cursor-pointer text-xs border border-line rounded-sm hover:bg-hover"
+      >
+        <Checkbox
+          id="column-select-all"
+          checked={allVisibleChecked}
+          indeterminate={someVisibleChecked}
+          disabled={visibleFields.length === 0}
+          onChange={toggleAllVisible}
+        />
+        <span className="text-fg font-medium">{search.trim() ? "Select all matching" : "Select all"}</span>
+        <span className="text-fg-muted ml-auto">
+          {visibleCheckedCount} of {visibleFields.length}
+        </span>
+      </label>
 
       <ul className="min-h-64 max-h-[52vh] overflow-auto border border-line rounded-sm" aria-label="Columns">
         {visibleFields.length === 0 ? (
