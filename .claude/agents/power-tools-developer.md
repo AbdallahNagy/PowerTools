@@ -35,6 +35,7 @@ Shape:
 - One website tool page at `website/src/content/tools/<tool-id>.md`, written as `### Website tool page` in the pipeline doc says. It lists the tool on the website's Tools tab and gives it a page at `/tools/<tool-id>/`
 - Private components, model, API hooks, state, fixtures, and tests inside that folder
 - Sidecar endpoints under `api/PowerTools/PowerTools.API/Tools/<Tool>/`, registered from `api/PowerTools/PowerTools.API/Program.cs`
+- Sidecar tests in the folder `api/PowerTools/PowerTools.API.Tests/Tools/<Tool>/` of the existing test project, as its [`AGENTS.md`](../../api/PowerTools/PowerTools.API.Tests/AGENTS.md) describes
 - `DataverseContextFilter` on those routes, and `DataverseClientFactory` for the organization service
 - Renderer calls through `desktop/src/ui/shared/api/client.ts` with `meta.connectionId` and, when the brief requires a second environment, `meta.targetConnectionId`
 - Links to Dataverse pages (a record, a solution) open with `useOpenInBrowser` from `desktop/src/ui/shared/connections`, so they use the browser profile the user chose for the connection. Never `openExternalUrl` for environment pages
@@ -43,7 +44,7 @@ Reuse endpoints and shared contracts the brief names before adding new ones. Pro
 
 Tests use a fake Dataverse HTTP surface. Follow plugin registration: MSW handlers and local fixtures under the tool's tests, as in `desktop/src/ui/tools/plugin-registration/tests/`. Do not require organization credentials, connection secrets, or a live environment.
 
-From `desktop/`, run `npm test`, `npm run lint`, and `npm run build`. When `npm run check` exists, run it as the aggregate gate. From `website/`, run `pnpm install --frozen-lockfile` once and then `pnpm build`, which fails when the tool page is missing or its frontmatter is invalid.
+From `desktop/`, run `npm test`, `npm run lint`, and `npm run build`, then `npm run check` as the aggregate gate. From `api/PowerTools/`, run `dotnet test PowerTools.sln`. From `website/`, run `pnpm install --frozen-lockfile` once and then `pnpm build`, which fails when the tool page is missing or its frontmatter is invalid.
 
 ## Output
 

@@ -25,7 +25,8 @@ Fail the pull request when any check fails.
 - No tool imports another tool's private files or shell internals.
 - The renderer has no Dataverse SDK, no raw IPC, and no `window.electron` outside the platform adapter.
 - Colors use theme tokens from the UI colors skill. Arbitrary hex classes such as `bg-[#007acc]`, Tailwind palette colors such as `text-blue-500`, and the removed legacy variables such as `var(--color-bg-dark)` fail the check. ESLint enforces the first two.
-- `### Implementation notes and test evidence` records `npm test`, `npm run lint`, and `npm run build` from `desktop/`, and `pnpm build` from `website/`. When `npm run check` exists, the notes record that gate too. A missing or failing command fails the check.
+- Sidecar tests live in `api/PowerTools/PowerTools.API.Tests/Tools/<Tool>/`. A new test project for the tool fails the check.
+- `### Implementation notes and test evidence` records `npm test`, `npm run lint`, and `npm run build` from `desktop/`, `dotnet test PowerTools.sln` from `api/PowerTools/`, and `pnpm build` from `website/`, plus the `npm run check` gate. A missing or failing command fails the check.
 
 ## Output
 
@@ -41,7 +42,8 @@ Result: Pass
 - Dataverse SDK in the renderer: none found
 - Colors use theme tokens: yes
 - Website tool page: present, describes shipped behavior
-- Desktop tests, lint, and build, and website build: recorded and passing
+- Sidecar tests: in `PowerTools.API.Tests/Tools/<Tool>/`
+- Desktop tests, lint, and build, sidecar tests, and website build: recorded and passing
 ```
 
 Use `Result: Fail` and name the failing check when any item fails. Keep it short enough to read with the brief.
