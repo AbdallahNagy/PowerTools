@@ -379,7 +379,7 @@ public class McpConnectorTests
         h.WriteDiscovery(app.Port);
 
         h.Send(ConnectorHarness.Initialize(1));
-        var init = await h.ReadAsync(TimeSpan.FromSeconds(2));
+        var init = await h.ReadAsync();
 
         Assert.Equal(Connector.OfflineMessage, init["result"]!["instructions"]!.GetValue<string>());
         AssertAllJson(h);
