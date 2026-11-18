@@ -43,7 +43,7 @@ Reuse endpoints and shared contracts the brief names before adding new ones. Pro
 
 Tests use a fake Dataverse HTTP surface. Follow plugin registration: MSW handlers and local fixtures under the tool's tests, as in `desktop/src/ui/tools/plugin-registration/tests/`. Do not require organization credentials, connection secrets, or a live environment.
 
-From `desktop/`, run `npm test`, `npm run lint`, and `npm run build`. When `npm run check` exists, run it as the aggregate gate. From `website/`, run `pnpm install --frozen-lockfile` once and then `pnpm build`, which fails when the tool page is missing or its frontmatter is invalid.
+From `desktop/`, run `npm test`, `npm run lint`, and `npm run build`, then `npm run check` as the aggregate gate. From `website/`, run `pnpm install --frozen-lockfile` once and then `pnpm build`, which fails when the tool page is missing or its frontmatter is invalid.
 
 ## Output
 

@@ -182,7 +182,7 @@ The important part. Include:
 - Reuse existing endpoints, contracts, hooks, and UI
 - New sidecar endpoints with method, path, request/response shape, and the Dataverse call behind each
 - New desktop tool id, title, tooltip, and folder layout (`tool.ts`, `api/`, `model/`, `components/`, `tests/`)
-- Whether this is a new activity-bar tool or an extension of FetchXML Builder / Data Migration
+- Whether this is a new activity-bar tool or an extension of an existing tool in `desktop/src/ui/tools/registry.tsx`
 
 ### Recommended implementation
 
