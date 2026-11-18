@@ -1,6 +1,8 @@
 # Power Tools guidance
 
-Read and follow `AGENTS.md` in this directory and any closer `AGENTS.md` for the files being changed. The `AGENTS.md` files are the canonical repository instructions.
+@AGENTS.md
+
+The `AGENTS.md` files are the canonical repository instructions. Also follow any closer `AGENTS.md` for the files being changed.
 
 ## Agents
 

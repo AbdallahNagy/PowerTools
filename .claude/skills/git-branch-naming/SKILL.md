@@ -40,7 +40,7 @@ When a change fits more than one type, pick the one that matters most to users: 
 - Describe the change: `feature/solution-translator`, not `feature/new-stuff`, `feature/update`, or `feature/abdallah`.
 - Never use random, generated, or tool-branded names: `claude/vibrant-turing-gqlqpf`, `ccr-af344bcf-94pqou`, `cursor/...`, `codex/...`, `patch-1`.
 - One branch per change. Do not reuse a branch after its pull request is merged; start a new one from `main`.
-- Do not mix desktop, API, and website work on one branch (see `AGENTS.md`).
+- Keep unrelated desktop, API, and website work on separate branches. One feature may span all three (see `AGENTS.md`).
 
 ## Workflow
 
