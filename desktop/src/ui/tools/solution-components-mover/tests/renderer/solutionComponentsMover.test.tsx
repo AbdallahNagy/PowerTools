@@ -395,7 +395,10 @@ describe("Solution Components Mover", () => {
       `https://dev.example.test/tools/solution/edit.aspx?id=${alphaId}`,
     ));
     expect(screen.queryByRole("button", { name: "Open in browser" })).not.toBeInTheDocument();
-    expect(document.querySelector("[data-toast-type]")).toBeNull();
+    // Only the "opening" notice: no fallback or error toast.
+    expect([...document.querySelectorAll("[data-toast-type]")].map((toast) => toast.textContent)).toEqual([
+      "Opening in your browser…",
+    ]);
   });
 
   it("says so when the chosen browser is missing", async () => {

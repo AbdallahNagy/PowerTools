@@ -21,6 +21,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 - An agent connected to Power Tools no longer blocks app updates. Agents now start a small connector that Power Tools copies to `%LOCALAPPDATA%\Power Tools\mcp`, outside the install folder. Settings > Agents (MCP) warns about agent setups that still use the old `PowerTools.API.exe --mcp-connector` command and shows the new one.
 - The minimize, maximize, and close buttons keep the normal arrow cursor instead of the hand.
+- Opening a record or solution in the browser (for example from FetchXML Builder results) no longer stalls the first time. Power Tools finds the installed browsers when it starts instead of on the first click, and shows "Opening in your browser…" right away.
 
 ## [1.3.0] - 2026-11-03
 

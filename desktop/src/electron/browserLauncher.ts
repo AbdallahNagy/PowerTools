@@ -6,9 +6,6 @@ export interface BrowserLauncherDeps {
   listBrowsers: () => Promise<InstalledBrowser[]>;
   spawn: (executable: string, args: string[]) => ChildProcess;
   openExternal: (url: string) => Promise<void>;
-  /** How long the browser list is reused before it is read again. */
-  cacheMs?: number;
-  now?: () => number;
 }
 
 /** Only web pages may be opened; anything else could start a local program. */
@@ -25,19 +22,49 @@ export function createBrowserLauncher({
   listBrowsers,
   spawn,
   openExternal,
-  cacheMs = 60_000,
-  now = Date.now,
 }: BrowserLauncherDeps) {
-  let cached: { at: number; browsers: Promise<InstalledBrowser[]> } | null = null;
+  // The browser list is read once and kept. It is read again only when asked
+  // (a connection changed, or a form lists the browsers).
+  let reading: Promise<InstalledBrowser[]> | null = null;
+  // The last list that finished reading. Opening a page uses it while a newer
+  // list is being read, so a click does not wait on the registry scan.
+  let lastKnown: InstalledBrowser[] | null = null;
+
+  function scan() {
+    const current = listBrowsers().catch(() => []);
+    reading = current;
+    void current.then((list) => {
+      if (reading === current) lastKnown = list;
+    });
+    return current;
+  }
 
   function browsers() {
-    if (!cached || now() - cached.at > cacheMs) {
-      cached = { at: now(), browsers: listBrowsers().catch(() => []) };
-    }
-    return cached.browsers;
+    return reading ?? scan();
+  }
+
+  /** The chosen browser, or null when it or its profile is not installed. */
+  function match(list: InstalledBrowser[], choice: BrowserChoice) {
+    const browser = list.find((candidate) => candidate.id === choice.id);
+    if (!browser) return null;
+    const profileMissing =
+      choice.profile !== undefined &&
+      browser.profiles.length > 0 &&
+      !browser.profiles.some((profile) => profile.id === choice.profile);
+    return profileMissing ? null : browser;
+  }
+
+  /** Uses the last list, and waits for a newer one only when the last one lacks the choice. */
+  async function findBrowser(choice: BrowserChoice) {
+    return (lastKnown && match(lastKnown, choice)) ?? match(await browsers(), choice);
   }
 
   return {
+    /** Starts reading the browser list so the first open does not wait for it. */
+    warm() {
+      void browsers();
+    },
+
     /** Installed browsers, without executable paths, for the renderer. */
     async list() {
       return (await browsers()).map(({ id, name, profiles }) => ({ id, name, profiles }));
@@ -54,13 +81,8 @@ export function createBrowserLauncher({
         return { fallback: false };
       }
 
-      const browser = (await browsers()).find((candidate) => candidate.id === choice.id);
-      const profileMissing =
-        choice.profile !== undefined &&
-        browser !== undefined &&
-        browser.profiles.length > 0 &&
-        !browser.profiles.some((profile) => profile.id === choice.profile);
-      if (!browser || profileMissing) {
+      const browser = await findBrowser(choice);
+      if (!browser) {
         await openExternal(target);
         return { fallback: true };
       }
@@ -78,9 +100,9 @@ export function createBrowserLauncher({
       }
     },
 
-    /** Forgets the browser list, so a newly installed browser shows up. */
+    /** Reads the browser list again, so a newly installed browser or profile shows up. */
     refresh() {
-      cached = null;
+      void scan();
     },
   };
 }

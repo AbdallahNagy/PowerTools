@@ -127,10 +127,13 @@ export function registerConnectionIpc({
   }
 
   function broadcastConnections() {
+    // A connection may now name a browser or profile installed since the last scan.
+    launcher.refresh();
     sendToAll("connections-updated", store.summaries());
   }
 
   function broadcastActive() {
+    launcher.refresh();
     getMainWindow()?.webContents.send("connection-status-update", store.activeId);
   }
 
