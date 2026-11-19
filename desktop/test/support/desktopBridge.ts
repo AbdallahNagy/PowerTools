@@ -187,6 +187,8 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
       return () => appSettingsChangedListeners.delete(callback);
     },
     getAppSettings: async () => appSettings,
+    getInitialThemePreference: () => appSettings.theme,
+    onThemePreferenceChanged: () => () => undefined,
     setThemePreference: async (theme) => (appSettings = { ...appSettings, theme }),
     setUsageStatsEnabled: async (usageStats) => (appSettings = { ...appSettings, usageStats }),
     setCrashReportsEnabled: async (crashReports) => (appSettings = { ...appSettings, crashReports }),

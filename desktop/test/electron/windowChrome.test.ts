@@ -109,7 +109,7 @@ describe("window chrome", () => {
     expect(getMainWindowOptions({}).backgroundColor).toBe("#ffffff");
   });
 
-  it("offers System, Dark, and Light under View > Theme", async () => {
+  it("offers System, Dark, Light, and Dark Orange under View > Theme", async () => {
     const { createApplicationMenuTemplate } = await import("../../src/electron/windowChrome.ts");
     const onThemeChange = vi.fn();
     const template = createApplicationMenuTemplate({ theme: "light", onThemeChange });
@@ -122,6 +122,7 @@ describe("window chrome", () => {
       ["System", "radio", false],
       ["Dark", "radio", false],
       ["Light", "radio", true],
+      ["Dark Orange", "radio", false],
     ]);
     expect(viewItems.some((item) => item.role === "toggleDevTools")).toBe(true);
 

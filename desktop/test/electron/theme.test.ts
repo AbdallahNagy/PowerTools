@@ -14,7 +14,11 @@ const { state } = vi.hoisted(() => ({
         this.listeners.push(listener);
       },
     },
-    windows: [] as Array<{ isDestroyed: () => boolean; setBackgroundColor: ReturnType<typeof vi.fn> }>,
+    windows: [] as Array<{
+      isDestroyed: () => boolean;
+      setBackgroundColor: ReturnType<typeof vi.fn>;
+      webContents?: { send: ReturnType<typeof vi.fn> };
+    }>,
   },
 }));
 
@@ -70,5 +74,35 @@ describe("theme preference", () => {
     state.nativeTheme.listeners.forEach((listener) => listener());
 
     expect(window.setBackgroundColor).toHaveBeenCalledWith("#ffffff");
+  });
+
+  it("runs Dark Orange as a dark native theme with its own window colors", async () => {
+    writeFileSync(join(state.userData, "settings.json"), JSON.stringify({ theme: "dark-orange" }));
+    const { initializeTheme, themeArgument, windowBackgroundColor } = await import("../../src/electron/theme.ts");
+
+    expect(initializeTheme()).toBe("dark-orange");
+    expect(state.nativeTheme.themeSource).toBe("dark");
+    expect(windowBackgroundColor()).toBe("#262624");
+    expect(windowBackgroundColor("canvas")).toBe("#1f1e1d");
+    expect(themeArgument()).toBe("--power-tools-theme=dark-orange");
+  });
+
+  it("tells every window when switching between Dark and Dark Orange", async () => {
+    const window = { isDestroyed: () => false, setBackgroundColor: vi.fn(), webContents: { send: vi.fn() } };
+    state.windows = [window];
+    const { applyThemePreference } = await import("../../src/electron/theme.ts");
+
+    applyThemePreference("dark");
+    window.webContents.send.mockClear();
+    window.setBackgroundColor.mockClear();
+
+    applyThemePreference("dark-orange");
+    expect(state.nativeTheme.themeSource).toBe("dark");
+    expect(window.webContents.send).toHaveBeenCalledWith("theme-preference-changed", "dark-orange");
+    expect(window.setBackgroundColor).toHaveBeenCalledWith("#262624");
+
+    applyThemePreference("dark");
+    expect(window.webContents.send).toHaveBeenLastCalledWith("theme-preference-changed", "dark");
+    expect(window.setBackgroundColor).toHaveBeenLastCalledWith("#1b1f26");
   });
 });

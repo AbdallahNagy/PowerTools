@@ -1,10 +1,10 @@
-export function buildStartupSplashHtml(iconDataUrl?: string) {
+export function buildStartupSplashHtml(iconDataUrl?: string, scheme: "default" | "dark-orange" = "default") {
   const markHtml = iconDataUrl
     ? `<img class="mark" src="${iconDataUrl}" alt="" />`
     : `<div class="mark">PT</div>`;
 
   return `<!doctype html>
-<html lang="en">
+<html lang="en"${scheme === "dark-orange" ? ' data-theme="dark-orange"' : ""}>
   <head>
     <meta charset="UTF-8" />
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'" />
@@ -33,6 +33,16 @@ export function buildStartupSplashHtml(iconDataUrl?: string) {
           --accent-text: #1a6e64;
           --shadow: rgba(15, 18, 22, 0.12);
         }
+      }
+
+      /* Dark Orange. Mirrors the [data-theme="dark-orange"] values in theme.css. */
+      :root[data-theme="dark-orange"] {
+        --canvas: #1f1e1d;
+        --fg-strong: #faf9f5;
+        --fg: #c2c0b6;
+        --line: #3e3d39;
+        --accent-text: #d97757;
+        --shadow: rgba(0, 0, 0, 0.28);
       }
 
       * {

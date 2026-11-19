@@ -9,70 +9,71 @@ description: "Use when making any UI modification that involves color or shared 
 
 - Tokens live in `src/ui/styles/theme.css`, inside Tailwind's `@theme`.
 - Each `--color-<name>` token generates utilities: `bg-<name>`, `text-<name>`, `border-<name>`, `ring-<name>`, `accent-<name>`, `fill-<name>`, and so on.
-- Tokens are named by **role**, not by value. Dark is the default theme. `[data-theme="light"]` redefines the same names, so a component that uses tokens works in both themes without changes.
-- The user picks **System**, **Dark**, or **Light** in **View > Theme**. The main process (`src/electron/theme.ts`) saves the choice in `settings.json` and sets `nativeTheme.themeSource`. The renderer follows `prefers-color-scheme` and sets `data-theme` on `<html>` (`src/ui/shell/theme/colorScheme.ts`). Window background colors in `theme.ts` mirror `surface` and `canvas`; change both places together.
+- Tokens are named by **role**, not by value. Dark is the default theme. `[data-theme="light"]` and `[data-theme="dark-orange"]` redefine the same names, so a component that uses tokens works in every theme without changes.
+- The user picks **System**, **Dark**, **Light**, or **Dark Orange** in **View > Theme**. The main process (`src/electron/theme.ts`) saves the choice in `settings.json` and sets `nativeTheme.themeSource` (`dark` for Dark Orange). The renderer follows `prefers-color-scheme`, or the Dark Orange preference that main passes to each window, and sets `data-theme` on `<html>` (`src/ui/shell/theme/colorScheme.ts`). Window background colors in `theme.ts` and the startup splash (`startupSplashHtml.ts`) mirror `surface` and `canvas`; change those places together.
+- **Dark Orange** uses the tokens of Claude's dark mode: warm neutral surfaces, ivory text, and a clay (orange) accent instead of teal. Its `alt` is Claude's blue, because the accent is already orange. `test/themeTokens.test.ts` fails if it leaves out a token that the light theme defines.
 - `[data-theme="dark"]` and `[data-theme="light"]` also work on any element, which then draws its subtree in that theme. The Settings theme previews use this. The nested dark block repeats the default values (`test/themeTokens.test.ts` keeps them equal); when you change a dark value, change both. Do not use the `-soft` tokens inside such a subtree: they are mixed on `<html>`.
-- Always check a change in both themes. Anything drawn with a fixed color, such as an image or an inverted icon, breaks in one of them.
-- Identity: cool slate neutrals with one deep teal accent. Teal is the only brand color. Blue is not part of the palette.
+- Always check a change in every theme. Anything drawn with a fixed color, such as an image or an inverted icon, breaks in one of them.
+- Identity: cool slate neutrals with one deep teal accent. Teal is the only brand color. Blue is not part of the Dark and Light palettes; Dark Orange is the one theme that brings its own identity.
 
 ## Palette
 
 ### Surfaces (back to front)
 
-| Token | Dark | Light | Use |
-|---|---|---|---|
-| `canvas` | `#14171c` | `#f6f7f9` | App background, tool content area, input fields on surface |
-| `surface` | `#1b1f26` | `#ffffff` | Title bar, sidebar, panels, tab strip, modals |
-| `raised` | `#232832` | `#eef0f3` | Cards, secondary buttons, menus, popovers |
-| `hover` | `#2a303a` | `#e4e7ec` | Hover background for rows, list items, ghost buttons |
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `canvas` | `#14171c` | `#f6f7f9` | `#1f1e1d` | App background, tool content area, input fields on surface |
+| `surface` | `#1b1f26` | `#ffffff` | `#262624` | Title bar, sidebar, panels, tab strip, modals |
+| `raised` | `#232832` | `#eef0f3` | `#30302e` | Cards, secondary buttons, menus, popovers |
+| `hover` | `#2a303a` | `#e4e7ec` | `#3a3936` | Hover background for rows, list items, ghost buttons |
 
 ### Lines
 
-| Token | Dark | Light | Use |
-|---|---|---|---|
-| `line` | `#2e3540` | `#d6dae1` | Default borders, dividers, table grid, input borders |
-| `line-strong` | `#3d4654` | `#c1c7d0` | Secondary button borders, scrollbar thumb, emphasized dividers |
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `line` | `#2e3540` | `#d6dae1` | `#3e3d39` | Default borders, dividers, table grid, input borders |
+| `line-strong` | `#3d4654` | `#c1c7d0` | `#55534e` | Secondary button borders, scrollbar thumb, emphasized dividers |
 
 ### Text
 
-| Token | Dark | Light | Use |
-|---|---|---|---|
-| `fg-strong` | `#f3f5f8` | `#0f1216` | Headings, selected item labels, emphasis |
-| `fg` | `#d3d8df` | `#2a303a` | Body text, input values, default labels |
-| `fg-muted` | `#8b94a3` | `#5f6877` | Hints, placeholders, column headers, metadata, disabled text |
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `fg-strong` | `#f3f5f8` | `#0f1216` | `#faf9f5` | Headings, selected item labels, emphasis |
+| `fg` | `#d3d8df` | `#2a303a` | `#c2c0b6` | Body text, input values, default labels |
+| `fg-muted` | `#8b94a3` | `#5f6877` | `#9c9a92` | Hints, placeholders, column headers, metadata, disabled text |
 
-### Accent (teal)
+### Accent (teal; clay in Dark Orange)
 
-| Token | Dark | Light | Use |
-|---|---|---|---|
-| `accent` | `#1f8075` | `#1f7f74` | **Fill**: primary buttons, status bar, progress bars, checked checkboxes |
-| `accent-hover` | `#1a6d64` | `#1a6d64` | Hover fill for anything using `accent` |
-| `accent-fg` | `#ffffff` | `#ffffff` | Text and icons placed on an `accent` fill |
-| `accent-text` | `#3fbfae` | `#1a6e64` | **Foreground**: links, active tab underline, selected indicators, "Custom" tags |
-| `accent-soft` | `accent-text` at 14% | same | Selected row background, tag background, drop targets, text selection |
-| `focus` | = `accent-text` | = `accent-text` | Focus border on inputs and the global keyboard focus ring |
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `accent` | `#1f8075` | `#1f7f74` | `#c6613f` | **Fill**: primary buttons, status bar, progress bars, checked checkboxes |
+| `accent-hover` | `#1a6d64` | `#1a6d64` | `#ae5630` | Hover fill for anything using `accent` |
+| `accent-fg` | `#ffffff` | `#ffffff` | `#ffffff` | Text and icons placed on an `accent` fill |
+| `accent-text` | `#3fbfae` | `#1a6e64` | `#d97757` | **Foreground**: links, active tab underline, selected indicators, "Custom" tags |
+| `accent-soft` | `accent-text` at 14% | same | same | Selected row background, tag background, drop targets, text selection |
+| `focus` | = `accent-text` | = `accent-text` | = `accent-text` | Focus border on inputs and the global keyboard focus ring |
 
-`accent` and `accent-text` are different on purpose. White text on `accent` passes WCAG AA (4.8:1). `accent-text` passes AA as text on `canvas`, `surface` and `raised`. Never put body text in `accent`, and never put `accent-fg` on `accent-text`.
+`accent` and `accent-text` are different on purpose. White text on `accent` passes WCAG AA (4.8:1). `accent-text` passes AA as text on `canvas`, `surface` and `raised`. Dark Orange keeps Claude's own values, which are a little lower: white on its `accent` is 4.0:1, and its `accent-text` is 4.2:1 on `raised` (AA on `canvas` and `surface`). Never put body text in `accent`, and never put `accent-fg` on `accent-text`.
 
 ### Status
 
-| Token | Dark | Light | Use |
-|---|---|---|---|
-| `danger` | `#f0846f` | `#c2412d` | Errors, failed rows, destructive actions |
-| `danger-soft` | `danger` at 14% | same | Error banner and row background |
-| `warn` | `#e0b13a` | `#9a6b00` | Warnings, risky or large operations |
-| `warn-soft` | `warn` at 14% | same | Warning banner background |
-| `ok` | `#5cbf7a` | `#2f7d45` | Success, connected state, completed rows |
-| `ok-soft` | `ok` at 14% | same | Success banner background |
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `danger` | `#f0846f` | `#c2412d` | `#ea928a` | Errors, failed rows, destructive actions |
+| `danger-soft` | `danger` at 14% | same | same | Error banner and row background |
+| `warn` | `#e0b13a` | `#9a6b00` | `#e0a84e` | Warnings, risky or large operations |
+| `warn-soft` | `warn` at 14% | same | same | Warning banner background |
+| `ok` | `#5cbf7a` | `#2f7d45` | `#8fb86b` | Success, connected state, completed rows |
+| `ok-soft` | `ok` at 14% | same | same | Success banner background |
 
 ### Secondary hue and nesting
 
-| Token | Dark | Light | Use |
-|---|---|---|---|
-| `alt` | `#e39a5f` | `#a3541c` | Second category color next to `accent-text`: the OR toggle in filter groups, "Application required" field tags. Not a status. |
-| `alt-soft` | `alt` at 14% | same | Background behind `alt` text |
-| `nest-a` | `#3a4d2a` | `#a9c79a` | Left guide line for the third level of nested filter groups |
-| `nest-b` | `#4d2e52` | `#cfaed6` | Left guide line for the fourth level of nested filter groups |
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `alt` | `#e39a5f` | `#a3541c` | `#6a9bcc` | Second category color next to `accent-text`: the OR toggle in filter groups, "Application required" field tags. Not a status. |
+| `alt-soft` | `alt` at 14% | same | same | Background behind `alt` text |
+| `nest-a` | `#3a4d2a` | `#a9c79a` | `#44502f` | Left guide line for the third level of nested filter groups |
+| `nest-b` | `#4d2e52` | `#cfaed6` | `#2f4152` | Left guide line for the fourth level of nested filter groups |
 
 Filter-group nesting cycles `line`, `accent-text/30`, `nest-a`, `nest-b`.
 

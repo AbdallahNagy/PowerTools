@@ -14,11 +14,18 @@ import { initRendererCrashReports, rootErrorHandlers } from "./platform/sentry.t
 
 initRendererCrashReports();
 
-followColorScheme();
+const desktop = getDesktopBridge();
+followColorScheme(
+  undefined,
+  undefined,
+  desktop
+    ? { initial: desktop.getInitialThemePreference(), subscribe: (callback) => desktop.onThemePreferenceChanged(callback) }
+    : undefined,
+);
 
 // When the active connection changes, drop cached auth and any server data
 // from the previous org so the next query fetches fresh.
-getDesktopBridge()?.onConnectionStatusUpdate(() => {
+desktop?.onConnectionStatusUpdate(() => {
   clearAuthCache();
   queryClient.invalidateQueries();
 });
