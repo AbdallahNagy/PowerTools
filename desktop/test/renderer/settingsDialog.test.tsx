@@ -374,7 +374,7 @@ describe("Settings dialog", () => {
   });
 
   it("changes the theme through main", async () => {
-    const setThemePreference = vi.fn(async (theme: "system" | "dark" | "light") => ({
+    const setThemePreference = vi.fn(async (theme: "system" | "dark" | "light" | "claude") => ({
       theme,
       usageStats: true,
       crashReports: true,
@@ -383,12 +383,16 @@ describe("Settings dialog", () => {
     }));
     renderShell({ bridgeOverrides: { setThemePreference } });
     fireEvent.click(screen.getByText("open settings"));
-    const dark = await screen.findByRole("radio", { name: /Dark/ });
+    const dark = await screen.findByRole("radio", { name: /^Dark/ });
     await waitFor(() => expect(dark).not.toBeDisabled());
     expect(screen.getByRole("radio", { name: /System/ })).toBeChecked();
     fireEvent.click(dark);
     await waitFor(() => expect(setThemePreference).toHaveBeenCalledWith("dark"));
-    await waitFor(() => expect(screen.getByRole("radio", { name: /Dark/ })).toBeChecked());
+    await waitFor(() => expect(screen.getByRole("radio", { name: /^Dark/ })).toBeChecked());
+
+    fireEvent.click(screen.getByRole("radio", { name: /Claude Dark/ }));
+    await waitFor(() => expect(setThemePreference).toHaveBeenCalledWith("claude"));
+    await waitFor(() => expect(screen.getByRole("radio", { name: /Claude Dark/ })).toBeChecked());
   });
 
   it("switches usage stats and crash reports off", async () => {

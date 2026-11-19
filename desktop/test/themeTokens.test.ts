@@ -30,4 +30,11 @@ describe("theme tokens", () => {
       expect(`${token}: ${value}`).toBe(`${token}: ${defaults[token]}`);
     }
   });
+
+  it("defines every themed token in Claude Dark", () => {
+    const light = block('[data-theme="light"]');
+    const claude = block('[data-theme="claude"]');
+
+    expect(Object.keys(claude).sort()).toEqual(Object.keys(light).sort());
+  });
 });

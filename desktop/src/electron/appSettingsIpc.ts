@@ -55,7 +55,7 @@ export function registerAppSettingsIpc(deps: AppSettingsIpcDeps) {
 
   ipcMain.handle("app-settings-set-theme", async (event, theme: unknown) => {
     assertMainWindow(event);
-    if (!isThemePreference(theme)) throw new Error("Theme must be system, dark, or light");
+    if (!isThemePreference(theme)) throw new Error("Theme must be system, dark, light, or claude");
     deps.theme.apply(theme);
     deps.theme.save(theme);
     deps.refreshMenu();

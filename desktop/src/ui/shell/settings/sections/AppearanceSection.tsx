@@ -8,13 +8,14 @@ const THEMES: Array<{ value: ThemePreference; label: string; hint: string }> = [
   { value: "system", label: "System", hint: "Follow the Windows setting." },
   { value: "dark", label: "Dark", hint: "Always dark." },
   { value: "light", label: "Light", hint: "Always light." },
+  { value: "claude", label: "Claude Dark", hint: "Claude's warm dark palette." },
 ];
 
 /**
  * A small drawing of the app window in one theme. `data-theme` scopes the
  * color tokens to it, so it shows that theme whatever the app is using.
  */
-function WindowSketch({ scheme, className }: { scheme: "dark" | "light"; className?: string }) {
+function WindowSketch({ scheme, className }: { scheme: Exclude<ThemePreference, "system">; className?: string }) {
   return (
     <span data-theme={scheme} className={cn("absolute inset-0 flex flex-col bg-canvas", className)}>
       <span className="flex h-3 shrink-0 items-center gap-1 border-b border-line bg-surface px-1.5">
@@ -52,7 +53,7 @@ export function AppearanceSection({ app }: { app: AppSettingsState }) {
       {app.error ? <Alert tone="danger">{app.error}</Alert> : null}
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-sm font-semibold text-fg-strong">Theme</legend>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           {THEMES.map((theme) => {
             const checked = current === theme.value;
             return (
@@ -75,7 +76,7 @@ export function AppearanceSection({ app }: { app: AppSettingsState }) {
                   onChange={() => void app.setTheme(theme.value)}
                 />
                 <span aria-hidden="true" className="relative block aspect-[16/10] overflow-hidden rounded-sm border border-line">
-                  <WindowSketch scheme={theme.value === "light" ? "light" : "dark"} />
+                  <WindowSketch scheme={theme.value === "system" ? "dark" : theme.value} />
                   {/* System shows both: the light half is cut along a diagonal. */}
                   {theme.value === "system" ? (
                     <WindowSketch scheme="light" className="[clip-path:polygon(58%_0,100%_0,100%_100%,42%_100%)]" />

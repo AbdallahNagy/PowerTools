@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 type CreatePreloadApi = (
   ipcRenderer: Pick<IpcRenderer, "invoke" | "on" | "removeListener">,
+  argv?: readonly string[],
 ) => Window["electron"];
 
 const require = createRequire(import.meta.url);
@@ -120,6 +121,24 @@ describe("createPreloadApi", () => {
 
     expect(result).toBeUndefined();
     expect(received).toEqual([null]);
+  });
+
+  it("reads the starting theme from the window arguments and forwards theme changes", () => {
+    const { ipcRenderer, listeners, removals } = createIpcRendererFake();
+    const fake = ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">;
+
+    expect(createPreloadApi(fake).getInitialThemePreference()).toBe("system");
+    const api = createPreloadApi(fake, ["electron", "--power-tools-theme=claude"]);
+    expect(api.getInitialThemePreference()).toBe("claude");
+
+    const received: unknown[] = [];
+    const unsubscribe = api.onThemePreferenceChanged((theme) => received.push(theme));
+    const listener = listeners.get("theme-preference-changed");
+    listener?.({ ignored: true }, "light");
+    unsubscribe();
+
+    expect(received).toEqual(["light"]);
+    expect(removals).toEqual([{ channel: "theme-preference-changed", listener }]);
   });
 
   it("forwards connection updates and unsubscribes the same listener", () => {
@@ -284,6 +303,8 @@ describe("createPreloadApi", () => {
       "onOpenSettings",
       "onAppSettingsChanged",
       "getAppSettings",
+      "getInitialThemePreference",
+      "onThemePreferenceChanged",
       "setThemePreference",
       "setUsageStatsEnabled",
       "setCrashReportsEnabled",

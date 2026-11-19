@@ -118,7 +118,7 @@ export interface McpToolInfo {
   enabled: boolean;
 }
 
-export type ThemePreference = "system" | "dark" | "light";
+export type ThemePreference = "system" | "dark" | "light" | "claude";
 export type SettingsFolder = "data" | "mcp-activity";
 
 /** App preferences shown in Settings. Mirrors AppSettings in src/electron/appSettingsIpc.ts. */
@@ -273,6 +273,10 @@ export interface DesktopBridge {
   /** A preference changed outside Settings (the native menu). */
   onAppSettingsChanged(callback: () => void): () => void;
   getAppSettings(): Promise<AppSettings>;
+  /** The theme preference this window was opened with. Any window may read it. */
+  getInitialThemePreference(): ThemePreference;
+  /** The theme preference changed, from Settings or the native menu. Sent to every window. */
+  onThemePreferenceChanged(callback: (theme: ThemePreference) => void): () => void;
   setThemePreference(theme: ThemePreference): Promise<AppSettings>;
   setUsageStatsEnabled(enabled: boolean): Promise<AppSettings>;
   setCrashReportsEnabled(enabled: boolean): Promise<AppSettings>;
@@ -358,6 +362,8 @@ export const desktopBridge: DesktopBridge = {
   onOpenSettings: (callback) => bridge().onOpenSettings(callback),
   onAppSettingsChanged: (callback) => bridge().onAppSettingsChanged(callback),
   getAppSettings: () => bridge().getAppSettings(),
+  getInitialThemePreference: () => bridge().getInitialThemePreference(),
+  onThemePreferenceChanged: (callback) => bridge().onThemePreferenceChanged(callback),
   setThemePreference: (theme) => bridge().setThemePreference(theme),
   setUsageStatsEnabled: (enabled) => bridge().setUsageStatsEnabled(enabled),
   setCrashReportsEnabled: (enabled) => bridge().setCrashReportsEnabled(enabled),

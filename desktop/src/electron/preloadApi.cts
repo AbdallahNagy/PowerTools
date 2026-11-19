@@ -5,7 +5,14 @@ export type PreloadIpcRenderer = Pick<
   "invoke" | "on" | "removeListener"
 >;
 
-export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
+// Mirrors THEME_ARGUMENT_PREFIX and THEME_CHANGED_CHANNEL in theme.ts. The preload is CommonJS, so it cannot import them.
+const THEME_ARGUMENT_PREFIX = "--power-tools-theme=";
+const THEME_CHANGED_CHANNEL = "theme-preference-changed";
+
+export function createPreloadApi(ipcRenderer: PreloadIpcRenderer, argv: readonly string[] = []) {
+  const initialTheme =
+    argv.find((arg) => arg.startsWith(THEME_ARGUMENT_PREFIX))?.slice(THEME_ARGUMENT_PREFIX.length) ?? "system";
+
   return {
     createConnectionWindow: () =>
       ipcRenderer.invoke("create-connection-window"),
@@ -134,6 +141,12 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer) {
       return () => ipcRenderer.removeListener("app-settings-changed", listener);
     },
     getAppSettings: () => ipcRenderer.invoke("app-settings-get"),
+    getInitialThemePreference: () => initialTheme,
+    onThemePreferenceChanged: (callback: (theme: string) => void) => {
+      const listener = (_: unknown, theme: string) => callback(theme);
+      ipcRenderer.on(THEME_CHANGED_CHANNEL, listener);
+      return () => ipcRenderer.removeListener(THEME_CHANGED_CHANNEL, listener);
+    },
     setThemePreference: (theme: string) => ipcRenderer.invoke("app-settings-set-theme", theme),
     setUsageStatsEnabled: (enabled: boolean) => ipcRenderer.invoke("app-settings-set-usage-stats", enabled),
     setCrashReportsEnabled: (enabled: boolean) => ipcRenderer.invoke("app-settings-set-crash-reports", enabled),

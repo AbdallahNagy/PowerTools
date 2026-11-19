@@ -6,9 +6,10 @@
  *   --color-canvas   -> bg-canvas, text-canvas, border-canvas
  *   --color-fg-muted -> text-fg-muted
  *
- * Dark is the default. Light values live under [data-theme="light"]. The user
- * picks System, Dark, or Light in View > Theme; src/ui/shell/theme/colorScheme.ts
- * sets data-theme on <html> to match.
+ * Dark is the default. Light values live under [data-theme="light"], and the
+ * Claude Dark values under [data-theme="claude"]. The user picks System, Dark,
+ * Light, or Claude Dark in View > Theme; src/ui/shell/theme/colorScheme.ts sets
+ * data-theme on <html> to match.
  * See desktop/.agents/skills/ui-colors/SKILL.md before adding a token.
  */
 
@@ -138,4 +139,41 @@
 
   --color-nest-a: #a9c79a;
   --color-nest-b: #cfaed6;
+}
+
+/*
+ * Claude Dark: the warm neutrals and clay accent of Claude's dark mode.
+ * Surfaces are Claude's bg-200, bg-100 and bg-000; text is text-000, text-200
+ * and text-400; the accent fill is accent-main-000 and its text is
+ * accent-main-100. Claude's blue takes the secondary hue, since the accent
+ * is already orange.
+ */
+[data-theme="claude"] {
+  color-scheme: dark;
+
+  --color-canvas: #1f1e1d;
+  --color-surface: #262624;
+  --color-raised: #30302e;
+  --color-hover: #3a3936;
+
+  --color-line: #3e3d39;
+  --color-line-strong: #55534e;
+
+  --color-fg-strong: #faf9f5;
+  --color-fg: #c2c0b6;
+  --color-fg-muted: #9c9a92;
+
+  --color-accent: #c6613f;
+  --color-accent-hover: #ae5630;
+  --color-accent-fg: #ffffff;
+  --color-accent-text: #d97757;
+
+  --color-danger: #ea928a;
+  --color-warn: #e0a84e;
+  --color-ok: #8fb86b;
+
+  --color-alt: #6a9bcc;
+
+  --color-nest-a: #44502f;
+  --color-nest-b: #2f4152;
 }

@@ -20,3 +20,8 @@ test("startup splash html can show the packaged app icon", () => {
   expect(html).not.toMatch(/<div class="mark">PT<\/div>/);
   expect(html).not.toMatch(/https?:\/\//);
 });
+
+test("startup splash html can draw Claude Dark", () => {
+  expect(buildStartupSplashHtml()).not.toMatch(/<html lang="en" data-theme="claude">/);
+  expect(buildStartupSplashHtml(undefined, "claude")).toMatch(/<html lang="en" data-theme="claude">/);
+});

@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getAppIconPath } from "./pathResolver.js";
 import { buildStartupSplashHtml } from "./startupSplashHtml.js";
-import { windowBackgroundColor } from "./theme.js";
+import { currentColorScheme, windowBackgroundColor } from "./theme.js";
 
 function getStartupIconDataUrl() {
   const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -60,7 +60,7 @@ export function createStartupSplashWindow() {
 
   void splashWindow.loadURL(
     `data:text/html;charset=utf-8,${encodeURIComponent(
-      buildStartupSplashHtml(getStartupIconDataUrl())
+      buildStartupSplashHtml(getStartupIconDataUrl(), currentColorScheme() === "claude" ? "claude" : "default")
     )}`
   );
 
