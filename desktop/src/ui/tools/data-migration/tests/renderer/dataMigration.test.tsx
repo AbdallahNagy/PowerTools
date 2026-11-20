@@ -191,6 +191,30 @@ describe("Data Migration", () => {
     ]);
   });
 
+  it("selects and clears every field from the header checkbox, keeping the primary id", async () => {
+    const requests = mockMigrationApi();
+    renderMigration();
+
+    await addTarget("Migration Target");
+    fireEvent.click(await screen.findByRole("button", { name: /Account.*account/ }));
+    const selectAll = await screen.findByRole("checkbox", { name: "Select all fields" });
+    const nameBox = screen.getByRole("checkbox", { name: "Select Account Name" });
+    expect(selectAll).not.toBeChecked();
+
+    fireEvent.click(selectAll);
+    expect(selectAll).toBeChecked();
+    expect(nameBox).toBeChecked();
+
+    fireEvent.click(selectAll);
+    expect(selectAll).not.toBeChecked();
+    expect(nameBox).not.toBeChecked();
+
+    fireEvent.click(selectAll);
+    fireEvent.click(screen.getByRole("button", { name: "▶ Migrate to Migration Target" }));
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].body).toMatchObject({ attributes: ["accountid", "name"] });
+  });
+
   it("migrates to each target in order with the same settings, one click apart", async () => {
     const requests = mockMigrationApi();
     renderMigration();

@@ -60,11 +60,21 @@ export function FieldsPanel({
     else onChange([...selected, logicalName]);
   };
 
-  const selectAll = () => onChange(usable.map((a) => a.logicalName));
-  const selectNone = () =>
-    onChange(
-      (data ?? []).filter((a) => a.isPrimaryId).map((a) => a.logicalName)
-    );
+  // The header checkbox acts on the visible fields; primary ids stay selected.
+  const toggleable = filtered.filter((a) => !a.isPrimaryId).map((a) => a.logicalName);
+  const visibleCheckedCount = toggleable.filter((name) => checked.has(name)).length;
+  const allVisibleChecked = toggleable.length > 0 && visibleCheckedCount === toggleable.length;
+  const someVisibleChecked = visibleCheckedCount > 0 && !allVisibleChecked;
+
+  const toggleAllVisible = () => {
+    if (allVisibleChecked) {
+      const visible = new Set(toggleable);
+      onChange(selected.filter((name) => !visible.has(name)));
+    } else {
+      onChange([...selected, ...toggleable.filter((name) => !checked.has(name))]);
+    }
+  };
+  const selectAllLabel = search.trim() ? "Select all matching fields" : "Select all fields";
 
   if (!entityLogicalName) {
     return (
@@ -82,25 +92,9 @@ export function FieldsPanel({
           onChange={setSearch}
           placeholder="Search fields…"
         />
-        <div className="flex items-center gap-3 ml-4">
-          <button
-            type="button"
-            onClick={selectAll}
-            className="text-xs text-accent-text hover:underline whitespace-nowrap"
-          >
-            Select all
-          </button>
-          <button
-            type="button"
-            onClick={selectNone}
-            className="text-xs text-fg-muted hover:text-fg-strong whitespace-nowrap"
-          >
-            Select none
-          </button>
-          <span className="text-xs text-fg-muted whitespace-nowrap">
-            {selected.length} selected
-          </span>
-        </div>
+        <span className="text-xs text-fg-muted whitespace-nowrap ml-4">
+          {selected.length} selected
+        </span>
       </div>
 
       {error && (
@@ -118,7 +112,15 @@ export function FieldsPanel({
           <table ref={resize.tableRef} className="w-full text-sm" style={resize.tableStyle}>
             <thead className="bg-surface sticky top-0">
               <tr>
-                <th {...resize.headerProps("select")} className="w-10 px-3 py-2" />
+                <th {...resize.headerProps("select")} className="w-10 px-3 py-2 text-left">
+                  <Checkbox
+                    checked={allVisibleChecked}
+                    indeterminate={someVisibleChecked}
+                    disabled={toggleable.length === 0}
+                    onChange={toggleAllVisible}
+                    aria-label={selectAllLabel}
+                  />
+                </th>
                 {FIELD_COLUMNS.slice(1).map((col) => (
                   <th
                     key={col.key}
@@ -150,6 +152,7 @@ export function FieldsPanel({
                         checked={isChecked}
                         onChange={() => !isLocked && toggle(attr.logicalName)}
                         disabled={isLocked}
+                        aria-label={`Select ${attr.displayName}`}
                       />
                     </td>
                     <td className={`px-3 py-2 text-fg font-medium ${resize.resized ? "truncate" : ""}`}>
