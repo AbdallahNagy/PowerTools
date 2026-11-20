@@ -108,6 +108,8 @@ app.whenReady().then(async () => {
       spawn(executable, args, { detached: true, stdio: "ignore", windowsHide: false }),
     openExternal: (url) => shell.openExternal(url),
   });
+  // Find the installed browsers now, so opening the first record is not held up by the scan.
+  launcher.warm();
   const connectionIpc = registerConnectionIpc({
     ipcMain,
     store,

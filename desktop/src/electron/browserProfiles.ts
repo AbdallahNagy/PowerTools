@@ -134,9 +134,15 @@ function readOr(env: BrowserEnvironment, path: string): string | null {
 export async function listInstalledBrowsers(env: BrowserEnvironment): Promise<InstalledBrowser[]> {
   const browsers: InstalledBrowser[] = [];
 
-  for (const spec of CHROMIUM) {
-    const executable = await findExecutable(env, spec.exeName, spec.installPath);
-    if (!executable) continue;
+  // Each lookup may start reg.exe, so look for every browser at once.
+  const [firefox, ...chromiumExecutables] = await Promise.all([
+    findExecutable(env, FIREFOX.exeName, FIREFOX.installPath),
+    ...CHROMIUM.map((spec) => findExecutable(env, spec.exeName, spec.installPath)),
+  ]);
+
+  CHROMIUM.forEach((spec, index) => {
+    const executable = chromiumExecutables[index];
+    if (!executable) return;
     const localState = readOr(env, join(env.localAppData, ...spec.userData, "Local State"));
     browsers.push({
       id: spec.id,
@@ -144,9 +150,8 @@ export async function listInstalledBrowsers(env: BrowserEnvironment): Promise<In
       executable,
       profiles: localState ? parseChromiumProfiles(localState) : [],
     });
-  }
+  });
 
-  const firefox = await findExecutable(env, FIREFOX.exeName, FIREFOX.installPath);
   if (firefox) {
     const ini = readOr(env, join(env.appData, "Mozilla", "Firefox", "profiles.ini"));
     browsers.push({
@@ -173,11 +178,11 @@ function readAppPathFromRegistry(exeName: string): Promise<string | null> {
     `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\${exeName}`,
     `HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\${exeName}`,
   ];
-  return keys.reduce<Promise<string | null>>(
-    (found, key) =>
-      found.then((value) =>
-        value ??
-        new Promise((resolve) => {
+  // Query both hives at once; the per-user entry still wins.
+  return Promise.all(
+    keys.map(
+      (key) =>
+        new Promise<string | null>((resolve) => {
           execFile("reg", ["query", key, "/ve"], { windowsHide: true }, (error, stdout) => {
             if (error) {
               resolve(null);
@@ -186,9 +191,9 @@ function readAppPathFromRegistry(exeName: string): Promise<string | null> {
             const match = /REG_(?:EXPAND_)?SZ\s+(.+)/.exec(stdout);
             resolve(match ? match[1].trim().replace(/^"|"$/g, "") : null);
           });
-        })),
-    Promise.resolve(null),
-  );
+        }),
+    ),
+  ).then(([user, machine]) => user ?? machine);
 }
 
 /** The real Windows locations. Other platforms find no browsers and use the system default. */

@@ -162,13 +162,55 @@ describe("browser launcher", () => {
     expect(() => parseWebUrl("javascript:alert(1)")).toThrow();
   });
 
-  it("lists browsers without their executable paths and reads them once a minute", async () => {
+  it("lists browsers without their executable paths and keeps the list until refreshed", async () => {
     const { launcher: subject, listBrowsers } = launcher();
     expect(await subject.list()).toEqual([{ id: "edge", name: "Microsoft Edge", profiles: edge.profiles }]);
     await subject.list();
+    await subject.openUrl("https://x.test/", { id: "edge" });
     expect(listBrowsers).toHaveBeenCalledTimes(1);
     subject.refresh();
     await subject.list();
     expect(listBrowsers).toHaveBeenCalledTimes(2);
+  });
+
+  it("reads the browser list ahead of the first open", async () => {
+    const { launcher: subject, listBrowsers, spawn } = launcher();
+    subject.warm();
+    await subject.openUrl("https://x.test/", { id: "edge" });
+    expect(listBrowsers).toHaveBeenCalledTimes(1);
+    expect(spawn).toHaveBeenCalledTimes(1);
+  });
+
+  function pendingRescan(first: InstalledBrowser[], second: InstalledBrowser[]) {
+    const child = Object.assign(new EventEmitter(), { unref: vi.fn() }) as unknown as ChildProcess;
+    const spawn = vi.fn(() => child);
+    let finish: () => void = () => undefined;
+    const listBrowsers = vi
+      .fn<() => Promise<InstalledBrowser[]>>()
+      .mockResolvedValueOnce(first)
+      .mockImplementationOnce(() => new Promise((resolve) => { finish = () => resolve(second); }));
+    const subject = createBrowserLauncher({ listBrowsers, spawn, openExternal: vi.fn(async () => undefined) });
+    return { subject, spawn, finish: () => finish() };
+  }
+
+  it("opens with the last known list while a refresh is read", async () => {
+    const { subject, spawn, finish } = pendingRescan([edge], [edge]);
+    await subject.openUrl("https://x.test/", { id: "edge" });
+    subject.refresh();
+    // The refresh has not finished, and the open must not wait for it.
+    await expect(subject.openUrl("https://x.test/b", { id: "edge" })).resolves.toEqual({ fallback: false });
+    expect(spawn).toHaveBeenCalledTimes(2);
+    finish();
+  });
+
+  it("waits for a refresh when the last list lacks the chosen profile", async () => {
+    const withNewProfile = { ...edge, profiles: [...edge.profiles, { id: "Profile 2", name: "Client" }] };
+    const { subject, spawn, finish } = pendingRescan([edge], [withNewProfile]);
+    await subject.list();
+    subject.refresh();
+    const opening = subject.openUrl("https://x.test/", { id: "edge", profile: "Profile 2" });
+    finish();
+    await expect(opening).resolves.toEqual({ fallback: false });
+    expect(spawn).toHaveBeenCalledWith("msedge.exe", ["--profile-directory=Profile 2", "https://x.test/"]);
   });
 });

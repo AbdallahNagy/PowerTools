@@ -19,6 +19,8 @@ export function useOpenInBrowser(connectionId?: string | null): (url: string) =>
 
   return useCallback(
     async (url: string) => {
+      // A cold browser can take a few seconds to show the page; say right away that it is on its way.
+      toast?.showToast("Opening in your browser…", "info");
       try {
         const result = await desktopBridge.openUrlForConnection(id, url);
         if (result.fallback) {
