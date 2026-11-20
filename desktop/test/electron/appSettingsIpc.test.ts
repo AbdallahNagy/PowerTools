@@ -6,7 +6,7 @@ type Handler = (event: unknown, ...args: unknown[]) => Promise<unknown>;
 function setup(openPathResult = "") {
   const handlers = new Map<string, Handler>();
   const mainContents = { id: 1 };
-  let theme: "system" | "dark" | "light" = "system";
+  let theme: "system" | "dark" | "light" | "dark-orange" = "system";
   let usageStats = true;
   let crashReports = true;
   const deps = {
@@ -59,7 +59,7 @@ describe("app settings IPC", () => {
 
   it("refuses an unknown theme without changing anything", async () => {
     const { call, mainContents, deps } = setup();
-    await expect(call("app-settings-set-theme", mainContents, "neon")).rejects.toThrow(/system, dark, or light/);
+    await expect(call("app-settings-set-theme", mainContents, "neon")).rejects.toThrow(/system, dark, light, or dark-orange/);
     expect(deps.apply).not.toHaveBeenCalled();
     expect(deps.refreshMenu).not.toHaveBeenCalled();
   });

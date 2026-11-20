@@ -30,4 +30,11 @@ describe("theme tokens", () => {
       expect(`${token}: ${value}`).toBe(`${token}: ${defaults[token]}`);
     }
   });
+
+  it("defines every themed token in Dark Orange", () => {
+    const light = block('[data-theme="light"]');
+    const darkOrange = block('[data-theme="dark-orange"]');
+
+    expect(Object.keys(darkOrange).sort()).toEqual(Object.keys(light).sort());
+  });
 });

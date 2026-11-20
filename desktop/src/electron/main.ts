@@ -39,6 +39,7 @@ import {
   initializeTheme,
   loadThemePreference,
   saveThemePreference,
+  themeArgument,
   windowBackgroundColor,
 } from "./theme.js";
 import { loadUsageStatsEnabled, saveUsageStatsEnabled, startUsageStats } from "./usageStats.js";
@@ -142,6 +143,7 @@ app.whenReady().then(async () => {
       const window = new BrowserWindow({
         webPreferences: {
           preload: getPreloadPath(),
+          additionalArguments: [themeArgument()],
         },
         width,
         height,
@@ -359,6 +361,7 @@ app.whenReady().then(async () => {
   const mainWindow = new BrowserWindow(getMainWindowOptions({
     webPreferences: {
       preload: getPreloadPath(),
+      additionalArguments: [themeArgument()],
     },
     width: 800,
     height: 600,
