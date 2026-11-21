@@ -101,6 +101,7 @@ public class McpConnectorTests
         Assert.Equal("2025-03-26", init["result"]!["protocolVersion"]!.GetValue<string>());
         Assert.Equal("powertools", init["result"]!["serverInfo"]!["name"]!.GetValue<string>());
         Assert.True(init["result"]!["capabilities"]!["tools"]!["listChanged"]!.GetValue<bool>());
+        Assert.NotNull(init["result"]!["capabilities"]!["resources"]);
         Assert.Equal(Connector.OfflineMessage, init["result"]!["instructions"]!.GetValue<string>());
 
         h.Send(ConnectorHarness.Initialized());
@@ -110,6 +111,9 @@ public class McpConnectorTests
 
         h.Send(ConnectorHarness.Request(3, "ping"));
         Assert.Empty((await h.ReadAsync())["result"]!.AsObject());
+
+        h.Send(ConnectorHarness.Request(5, "resources/list"));
+        Assert.Empty((await h.ReadAsync())["result"]!["resources"]!.AsArray());
 
         h.Send(ConnectorHarness.Request(4, "tools/call"));
         var error = await h.ReadAsync();

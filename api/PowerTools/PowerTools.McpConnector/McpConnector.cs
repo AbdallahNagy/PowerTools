@@ -241,6 +241,9 @@ public static class McpConnector
                 case "tools/list":
                     WriteResult(id, new JsonObject { ["tools"] = new JsonArray() });
                     break;
+                case "resources/list":
+                    WriteResult(id, new JsonObject { ["resources"] = new JsonArray() });
+                    break;
                 case "ping":
                     WriteResult(id, new JsonObject());
                     break;
@@ -252,7 +255,7 @@ public static class McpConnector
 
         /// <remarks>
         /// The client keeps the capabilities it gets here for the whole session, even after the app appears. They must
-        /// match what the app offers (createSession in desktop/src/electron/mcp/mcpServer.ts): today, tools only.
+        /// match what the app offers (createSession in desktop/src/electron/mcp/mcpServer.ts): tools, and resources for the guides.
         /// </remarks>
         private void WriteOfflineInitialize(JsonObject message)
         {
@@ -260,7 +263,11 @@ public static class McpConnector
             {
                 ["protocolVersion"] = message["params"]?["protocolVersion"]?.DeepClone() ?? "2025-03-26",
                 ["serverInfo"] = new JsonObject { ["name"] = "powertools", ["version"] = "connector" },
-                ["capabilities"] = new JsonObject { ["tools"] = new JsonObject { ["listChanged"] = true } },
+                ["capabilities"] = new JsonObject
+                {
+                    ["tools"] = new JsonObject { ["listChanged"] = true },
+                    ["resources"] = new JsonObject(),
+                },
                 ["instructions"] = OfflineMessage,
             };
             WriteResult(message["id"], result);

@@ -6,14 +6,17 @@ import {
   CallToolRequestSchema,
   ErrorCode,
   isInitializeRequest,
+  ListResourcesRequestSchema,
   ListToolsRequestSchema,
   McpError,
+  ReadResourceRequestSchema,
   type CallToolResult,
 } from "@modelcontextprotocol/sdk/types.js";
 import type { EffectClass } from "../communityTools/messageEffects.js";
 import type { ActivityEntry, ActivityLog } from "./activityLog.js";
 import type { ApprovalGate } from "./approval.js";
 import { toToolResult } from "./errors.js";
+import { findGuide, MCP_GUIDES } from "./guides.js";
 import type { AgentToolRegistry } from "./registry.js";
 import type { ApprovalPlan } from "./approval.js";
 import { planForDialog, planRemoves } from "./planDialog.js";
@@ -128,7 +131,7 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
   function createSession(): Session {
     const server = new Server(
       { name: "powertools", version: opts.appVersion ?? "0.0.0" },
-      { capabilities: { tools: { listChanged: true } }, instructions: opts.instructions },
+      { capabilities: { tools: { listChanged: true }, resources: {} }, instructions: opts.instructions },
     );
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
@@ -142,6 +145,16 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
     };
 
     server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: opts.registry.list() }));
+
+    // Guides are static text the tool descriptions link to, so reading one needs no connection or approval.
+    server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+      resources: MCP_GUIDES.map(({ uri, name, title, description }) => ({ uri, name, title, description, mimeType: "text/markdown" })),
+    }));
+    server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      const guide = findGuide(request.params.uri);
+      if (!guide) throw new McpError(ErrorCode.InvalidParams, `Unknown resource "${request.params.uri}"`);
+      return { contents: [{ uri: guide.uri, mimeType: "text/markdown", text: guide.text }] };
+    });
 
     server.setRequestHandler(CallToolRequestSchema, async (request, extra): Promise<CallToolResult> => {
       const tool = opts.registry.get(request.params.name);
