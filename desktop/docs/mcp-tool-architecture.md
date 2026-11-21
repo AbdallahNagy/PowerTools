@@ -1,6 +1,6 @@
 # MCP tool architecture
 
-Status: agreed plan. Phases 0 and 1 are built (see Phase 0 status and Phase 1 status). The current server is described in `mcp-server.md`.
+Status: agreed plan. Phases 0, 1 and 2 are built (see Phase 0 status, Phase 1 status and Phase 2 status); Phase 2 is the first release set of 19 tools. The current server is described in `mcp-server.md`.
 
 ## Decisions
 
@@ -352,7 +352,7 @@ No UX agent is needed, apart from the plan text in the approval dialog.
 
 ## Phases
 
-The old 57 tools stay in the code while Phases 0 and 1 are built, so development can compare old and new on the same sandbox. They are deleted in one change in Phase 2, which is the first release of the MCP server.
+The old 57 tools stayed in the code while Phases 0 and 1 were built, so development could compare old and new on the same sandbox. Phase 2 deleted them in one change, with their sidecar routes; it is the first release of the MCP server.
 
 | Phase | Ships | Tools after |
 |---|---|---|
@@ -415,6 +415,42 @@ Decisions made while building:
 - **Approval dialog.** Steps are listed in run order (Phase 0 grouped them by effect), so the user sees which changes run before a step that stops the apply.
 
 Still open for Phase 1: running the live tests and evals on the two sandboxes, and the Dataverse expert's check of the on-premises versions to support (open question 2), in particular for file and image columns and connection references in an import.
+
+## Phase 2 status
+
+Built on 2026-11-21. The server now offers exactly the 19 tools of the first release; the 57 old tools, their sidecar routes (`/api/agent/schema/*`, `/solutions/*`, `/plugins/*`, `/envvars/*`, `/metadata/publishers`), services and tests are deleted.
+
+| Part | Where |
+|---|---|
+| Component lookup shared by `solution_apply`, `remove` and the inspectors: 21 kinds, metadata kinds through `Retrieve*Request`, row kinds through queries, the solution component type of each | `Components/Shared/ComponentKinds.cs` |
+| `records_write`, `records_delete` | `Components/Records/` |
+| `choice_apply` | `Components/Choices/ChoiceApply.cs` |
+| `view_apply` (`ViewXml` writes FetchXML and layoutxml together) | `Components/Views/ViewApply.cs` |
+| `form_apply` (`FormEditor` edits FormXml; one `updateForm` step) | `Components/Forms/FormApply.cs` |
+| `solution_apply`, `config_apply` | `Components/Solutions/SolutionApply.cs`, `Components/Config/ConfigApply.cs` |
+| `plugin_deploy`, `plugin_step_apply` | `Components/Plugins/` |
+| `remove` | `Components/Remove/Remove.cs` |
+| `inspect_ui`, `inspect_solution` and their routes (`POST /api/agent/inspect/ui`, `/inspect/solution`) | `Components/Inspect/`, `Components/AgentComponentEndpoints.cs` |
+| Ids of created records and components in the result (`steps[].ids`) | `Kernel/ApplyResult.cs`, `Kernel/PlanExecutor.cs` |
+| Desktop tools and Settings groups (`connections`, `read`, `records`, `records-delete`, `schema`, `ui`, `logic`, `solutions`, `remove`) | `desktop/src/electron/mcp/tools/`, `types.ts`, `src/ui/shell/settings/sections/agentTools.ts` |
+| Planner tests against an in-memory environment of rows and metadata (`RowWorld`): each spec is applied, verified and planned again | `PowerTools.API.Tests/Tools/Agent/Components/` |
+| Live lifecycles for `choice_apply`, `config_apply`, `records_write` and `records_delete`, parity reads for the three inspect tools, and two new eval scenarios | `desktop/test/live/mcp/parity.live.ts`, `evals/mcp/scenarios/` |
+
+Decisions made while building:
+
+- **Required level is not a form operation.** Dataverse keeps a column's required level on the column, not on a form, so a form cannot set it without changing it for every form and API call. `form_apply` sets labels and visibility; the required level is set with `table_apply` (`requiredLevel` on the column). The `form_apply` description says so.
+- **Records are data, not components.** `records_write` plans one step per operation (or one `ExecuteTransaction` step for `allOrNothing`) with the values in the step detail, so the approved hash covers them; it does not compare with the environment, and verification plans nothing. `records_delete` reads each record first and names it by its primary name; a record already gone is a warning. A query delete asks for `maxCount + 1` rows and plans a blocked step when more match.
+- **Choices.** Options match by value, else by label; a new option gets the next free value from the publisher's prefix. Colors go through the request's `Color` parameter, which the SDK classes do not expose. Options left out are kept; `remove` kind `choiceoption` deletes one.
+- **Views.** Only public views can be created; the other types exist once per table and are updated. Column names are checked against the table's metadata. The state token hashes the current FetchXML, layout and name, so an edit made elsewhere refuses the call.
+- **Forms.** Every operation is skipped when the form already has it, so the same spec plans nothing the second time. The edited FormXml is written in one step that also adds the form to the solution. The state token hashes the current FormXml.
+- **Solutions.** `createSolution` finds its publisher at run time, so one spec can create both. A publisher cannot change on an existing solution (blocked). Rolling up patches (`CloneAsSolution`) is a destructive step. A missing component is blocked; a kind without a component type on this environment is unsupported.
+- **Config.** A variable's type and a connection reference's connector cannot change (blocked). Secret variables are not set by `config_apply`. Connection references are unsupported where the `connectionreference` table is missing, with `process_apply` named as the route.
+- **Plug-ins.** `plugin_deploy` compares the file's SHA-256 with the registered content; types missing from a new build block the update and are never deleted. Isolation `none` is blocked where plug-in packages exist (online is sandbox only). A `.nupkg` needs the `pluginpackage` table and is compared by version. `plugin_step_apply` matches steps by name and compares every registered column, so an inspected step sent back plans nothing.
+- **Remove.** Managed components and components others depend on (`RetrieveDependenciesForDelete`, up to 10 named) are blocked. Processes and flows are deactivated first. Plug-in kinds unregister through the Plugin Registration services, which also remove their steps and images. An environment variable's values are deleted before its definition. A component already gone is an empty plan with a warning.
+- **`records_query`** builds FetchXML in the desktop from a table, columns, filter and order (every name is checked by the schema and every value escaped), or sends FetchXML as given, or reads one record by id. It replaces `records_get`.
+- **`systemform`'s key** is `formid`, not `systemformid`; lookups by id use `ComponentKinds.IdColumn`.
+
+Still open for Phase 2: running the live tests and evals on the two sandboxes (open question 3), in particular `plugin_deploy` of a `.nupkg` online, `inspect_solution` kind `layers` and `remove` kind `activelayer` on-premises (open question 4), and connection references in `config_apply` online.
 
 ## Open questions
 
