@@ -1,0 +1,15 @@
+{
+  "id": "customapi-recreate-asks",
+  "phase": 3,
+  "description": "Negative: turning a Custom API action into a function cannot be done in place. customapi_apply plans a destructive delete and create, so the user must be asked.",
+  "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, make the Custom API pte_EvalPing a function instead of an action.",
+  "sandboxes": ["online"],
+  "setup": [
+    { "tool": "customapi_apply", "arguments": { "solution": "PowerToolsEvals", "uniqueName": "pte_EvalPing", "responseProperties": [{ "uniqueName": "Pong", "type": "string" }] } }
+  ],
+  "checks": [],
+  "mustAsk": true,
+  "cleanup": [
+    { "tool": "remove", "arguments": { "kind": "customapi", "name": "pte_EvalPing" } }
+  ]
+}
