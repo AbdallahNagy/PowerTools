@@ -323,16 +323,16 @@ public sealed class FlowPlanner : IComponentPlanner<FlowApplySpec>
             $"{r.Key}|{r.Value?["connection"]?["connectionReferenceLogicalName"]?.GetValue<string>()?.ToLowerInvariant()}|{r.Value?["api"]?["name"]?.GetValue<string>()?.ToLowerInvariant()}")
         .ToHashSet(StringComparer.Ordinal);
 
-    /// <summary>The flow in the shape flow_apply takes, for inspect_solution kind flow.</summary>
+    /// <summary>The flow in the shape flow_apply takes (without solution), for inspect_solution kind flow.</summary>
     public static Dictionary<string, object?> Describe(Entity row)
     {
         var result = new Dictionary<string, object?>
         {
             ["name"] = row.GetAttributeValue<string>("name"),
-            ["description"] = row.GetAttributeValue<string>("description"),
             ["state"] = row.GetAttributeValue<OptionSetValue>("statecode")?.Value == 1 ? "on" : "off",
-            ["managed"] = row.GetAttributeValue<bool?>("ismanaged") == true,
         };
+        // Only spec properties, so the result can be sent back to flow_apply with solution added.
+        if (row.GetAttributeValue<string>("description") is { } description) result["description"] = description;
         JsonNode? data = null;
         try
         {

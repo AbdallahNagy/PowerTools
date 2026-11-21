@@ -39,7 +39,9 @@
         "additionalProperties": false
       }
     },
-    "definition": true,
+    "definition": {
+      "description": "The Logic Apps workflow definition: triggers and actions. Needed for a new flow."
+    },
     "state": {
       "description": "on turns the flow on; it stays off while a connection reference has no connection. Default: a new flow is off, an existing one keeps its state.",
       "enum": [

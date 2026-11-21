@@ -51,6 +51,9 @@ public static class KernelSchemas
             TreatNullObliviousAsNonNullable = true,
             TransformSchemaNode = (context, node) =>
             {
+                // Any JSON (a JsonElement) exports as true; a described property still gets its description.
+                if (node is JsonValue any && any.GetValueKind() == JsonValueKind.True && Describe(context.PropertyInfo?.AttributeProvider) is { } anyDescription)
+                    return new JsonObject { ["description"] = anyDescription };
                 if (node is not JsonObject obj) return node;
 
                 // A closed shape: agents and the desktop see exactly the documented properties.
