@@ -1,13 +1,17 @@
 import type { AgentTool } from "../types.js";
 import {
+  appApply,
   choiceApply,
   configApply,
+  customApiApply,
   formApply,
   pluginDeploy,
   pluginStepApply,
   remove,
+  roleApply,
   solutionApply,
   viewApply,
+  webResourceApply,
 } from "./components.js";
 import { connectionsList } from "./connections.js";
 import { inspectSolution, inspectUi, recordsQuery } from "./read.js";
@@ -31,8 +35,12 @@ export const AGENT_TOOLS: AgentTool[] = [
   choiceApply,
   formApply,
   viewApply,
+  webResourceApply,
+  appApply,
   pluginDeploy,
   pluginStepApply,
+  customApiApply,
+  roleApply,
   solutionApply,
   configApply,
   executeMessage,

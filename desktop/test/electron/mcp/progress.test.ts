@@ -85,9 +85,9 @@ describe("progress notifications", () => {
     expect(seen).toEqual([]);
   });
 
-  it("marks exactly the four long operations", () => {
+  it("marks exactly the five long operations", () => {
     const names = AGENT_TOOLS.filter((t) => t.reportsProgress).map((t) => t.name).sort();
-    expect(names).toEqual(["plugin_deploy", "solution_apply", "solution_export", "solution_import"]);
+    expect(names).toEqual(["plugin_deploy", "solution_apply", "solution_export", "solution_import", "webresource_apply"]);
   });
 });
 

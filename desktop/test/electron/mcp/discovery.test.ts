@@ -106,9 +106,9 @@ describe("createMcpService", () => {
   it("lists every group with its tool count, all on by default", () => {
     const s = makeService();
     const groups = s.status().groups;
-    expect(groups.map((g) => g.group)).toEqual(["connections", "read", "records", "records-delete", "schema", "ui", "logic", "solutions", "remove"]);
+    expect(groups.map((g) => g.group)).toEqual(["connections", "read", "records", "records-delete", "schema", "ui", "logic", "security", "solutions", "remove"]);
     expect(groups.every((g) => g.enabled && g.tools > 0)).toBe(true);
-    // The 19 tools of the first release (desktop/docs/mcp-tool-architecture.md). A change here means the user guide
+    // The 23 tools after Phase 3 (desktop/docs/mcp-tool-architecture.md). A change here means the user guide
     // and the tool set section of the spec need a look.
     expect(Object.fromEntries(groups.map((g) => [g.group, g.tools]))).toEqual({
       connections: 1,
@@ -116,8 +116,9 @@ describe("createMcpService", () => {
       records: 2,
       "records-delete": 1,
       schema: 2,
-      ui: 2,
-      logic: 2,
+      ui: 4,
+      logic: 3,
+      security: 1,
       solutions: 4,
       remove: 1,
     });
@@ -155,7 +156,7 @@ describe("createMcpService", () => {
     const off = s.setTool("records_delete", false);
     expect(off.tools.find((t) => t.name === "records_delete")!.enabled).toBe(false);
     expect(off.tools.filter((t) => !t.enabled)).toHaveLength(1);
-    expect(off.tools).toHaveLength(19);
+    expect(off.tools).toHaveLength(23);
     expect(s.setTool("records_delete", true).tools.every((t) => t.enabled)).toBe(true);
     expect(() => s.setTool("nonsense", false)).toThrow(/Unknown tool/);
   });
