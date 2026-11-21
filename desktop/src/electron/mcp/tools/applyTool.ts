@@ -113,6 +113,8 @@ export interface ApplyToolOptions {
   /** The approval dialog title after "An agent wants to". */
   describe?(args: Record<string, unknown>, plan: PlanPreview): string;
   summarize?(args: Record<string, unknown>): string;
+  /** A long apply, such as an import: the server reports progress at its start and end. */
+  reportsProgress?: boolean;
 }
 
 function specOf(args: Record<string, unknown>): Record<string, unknown> {
@@ -149,6 +151,7 @@ export function applyTool(options: ApplyToolOptions): AgentTool {
     describePlan: (args, plan) =>
       options.describe?.(args, plan) ?? `${options.title.toLowerCase()} (${plan.steps.length} step${plan.steps.length === 1 ? "" : "s"})`,
     summarize: options.summarize,
+    ...(options.reportsProgress ? { reportsProgress: true } : {}),
     async run(args, ctx) {
       if (!ctx.approvedPlan) throw new AgentToolError("Internal", "An apply ran without an approved plan");
       const conn = await ctx.resolveConnection(args.connection as string | undefined);

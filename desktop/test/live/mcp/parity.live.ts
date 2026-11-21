@@ -60,6 +60,60 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
    * Apply needs the sandbox connection's "allow changes" switch on; remove is destructive and always asks, so a
    * person answers those dialogs until an unattended approval for sandbox connections exists (see evals/mcp/README.md).
    */
-  it.todo("table_apply lifecycle on every sandbox (Phase 1)");
-  it.todo("solution_export and solution_import round trip on every sandbox (Phase 1)");
+  const lifecycleTable = {
+    solution: "PowerToolsEvals",
+    table: { schemaName: "pte_LiveProject", displayName: "Live Project", pluralName: "Live Projects" },
+    columns: [
+      { schemaName: "pte_Code", type: "text", displayName: "Code", maxLength: 40 },
+      { schemaName: "pte_Budget", type: "money", displayName: "Budget" },
+      { schemaName: "pte_Stage", type: "choice", displayName: "Stage", options: [{ label: "Planned" }, { label: "Active" }] },
+      { schemaName: "pte_Due", type: "dateonly", displayName: "Due", behavior: "dateOnly" },
+      { schemaName: "pte_AccountId", type: "lookup", displayName: "Customer", target: "account" },
+    ],
+    keys: [{ schemaName: "pte_LiveProjectCode", columns: ["pte_code"] }],
+  };
+
+  it("table_apply lifecycle on every sandbox: applied, unchanged, inspected as the same spec, removed", async () => {
+    const shapes = [];
+    for (const sandbox of sandboxes) {
+      const on = { connection: sandbox.connection };
+      try {
+        const first = await call("table_apply", { ...lifecycleTable, ...on });
+        expect(first.structuredContent, `apply on ${sandbox.name}`).toMatchObject({ outcome: "applied", remaining: { steps: [] } });
+        const again = await call("table_apply", { ...lifecycleTable, ...on });
+        expect(again.structuredContent, `apply again on ${sandbox.name}`).toMatchObject({ outcome: "unchanged" });
+
+        // What inspect returns applies as unchanged: read, change, apply works without translation.
+        const inspected = await call("inspect_schema", { kind: "table", name: "pte_liveproject", ...on });
+        const described = (inspected.structuredContent as { result: { table: unknown; columns: unknown[] } }).result;
+        const roundTrip = await call("table_apply", { solution: "PowerToolsEvals", table: described.table, columns: described.columns, dryRun: true, ...on });
+        expect(roundTrip.structuredContent, `inspected spec on ${sandbox.name}`).toMatchObject({ outcome: "unchanged" });
+
+        shapes.push({ sandbox: sandbox.name, shape: shapeOf(first.structuredContent) });
+      } finally {
+        // Destructive, so a person approves it until sandbox connections can approve unattended.
+        await call("schema_delete_table", { table: "pte_liveproject", ...on });
+      }
+    }
+    for (const other of shapes.slice(1)) {
+      expect(shapeDifferences(shapes[0].shape, other.shape), `${shapes[0].sandbox} vs ${other.sandbox}`).toEqual([]);
+    }
+  });
+
+  it("solution_export and solution_import round trip on every sandbox", async () => {
+    for (const sandbox of sandboxes) {
+      const on = { connection: sandbox.connection };
+      const exported = await call("solution_export", { solution: "PowerToolsEvals", ...on });
+      expect(exported.isError, `export on ${sandbox.name}`).toBeFalsy();
+      const path = (exported.structuredContent as { result: { path: string } }).result.path;
+
+      // The installed version: nothing to do without force.
+      const unchanged = await call("solution_import", { path, ...on });
+      expect(unchanged.structuredContent, `import on ${sandbox.name}`).toMatchObject({ outcome: "unchanged" });
+
+      // Destructive: a person approves the import dialog.
+      const forced = await call("solution_import", { path, force: true, ...on });
+      expect(forced.structuredContent, `forced import on ${sandbox.name}`).toMatchObject({ outcome: "applied" });
+    }
+  });
 });
