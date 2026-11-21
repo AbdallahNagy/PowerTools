@@ -74,7 +74,8 @@ public sealed class AsyncJobs(
         var started = (ExecuteAsyncResponse)await client.ExecuteAsync(new ExecuteAsyncRequest { Request = import }, ct);
         var status = await WaitAsync(started.AsyncJobId, () => ReportImportProgressAsync(importJobId, progress, ct), ct);
         var job = await ReadImportJobAsync(importJobId, ct);
-        var message = status.Succeeded ? null : status.Message ?? job.Message ?? "The import failed.";
+        // The import job names the component that failed, which says more than the async operation.
+        var message = status.Succeeded ? null : job.Message ?? status.Message ?? "The import failed.";
         return new ImportOutcome(status.Succeeded, importJobId, started.AsyncJobId, job.Progress, message);
     }
 
@@ -128,7 +129,7 @@ public sealed class AsyncJobs(
     }
 
     /// <summary>QueryBuilderNoAttribute: the column does not exist on this version.</summary>
-    internal const int MissingColumnCode = unchecked((int)0x80041103);
+    public const int MissingColumnCode = unchecked((int)0x80041103);
 
     private async Task ReportImportProgressAsync(Guid importJobId, Action<double>? progress, CancellationToken ct)
     {

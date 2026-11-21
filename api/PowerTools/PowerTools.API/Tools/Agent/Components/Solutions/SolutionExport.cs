@@ -21,8 +21,13 @@ public sealed record SolutionExportedDto(string Path, string Solution, string Ve
 /// </summary>
 public sealed partial class SolutionExport(IAgentClient client, Capabilities capabilities, Func<TimeSpan, CancellationToken, Task>? delay = null)
 {
-    public static string DefaultFolder() =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Power Tools", "Solutions");
+    public static string DefaultFolder()
+    {
+        var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        if (string.IsNullOrEmpty(documents)) documents = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        if (string.IsNullOrEmpty(documents)) documents = Path.GetTempPath();
+        return Path.Combine(documents, "Power Tools", "Solutions");
+    }
 
     [GeneratedRegex("[^A-Za-z0-9_.-]")]
     private static partial Regex Unsafe();
