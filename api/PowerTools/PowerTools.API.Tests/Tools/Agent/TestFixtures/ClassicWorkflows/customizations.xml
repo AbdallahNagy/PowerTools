@@ -1,0 +1,330 @@
+<ImportExportXml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" OrganizationVersion="9.2.26111.149" OrganizationSchemaType="Full" CRMServerServiceabilityVersion="9.2.26111.00149">
+  <Entities></Entities>
+  <Roles></Roles>
+  <Workflows>
+    <Workflow WorkflowId="{1dcd327f-761e-47cb-bb7e-8913655c1d15}" Name="[Action][LocalPermit] Assign and notify Provider">
+      <XamlFileName>/Workflows/ActionLocalPermitAssignandnotifyProvider-1DCD327F-761E-47CB-BB7E-8913655C1D15.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>3</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <RunAs>1</RunAs>
+      <SdkMessageId>{20b81d7f-8e9e-4bb8-b4a3-7b2b926271f2}</SdkMessageId>
+      <UniqueName>ActionLocalPermitAssignandnotifyProvider</UniqueName>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <FormId>{14c7fc1c-85f5-447a-b258-c319f97bf1b8}</FormId>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_LocalPermitRequest</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[Action][LocalPermit] Assign and notify Provider" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{8a9e1df7-e771-476e-ad78-3715ee6f7a8f}" Name="[Local Permit] Provider Failure Action">
+      <XamlFileName>/Workflows/LocalPermitProviderFailureAction-8A9E1DF7-E771-476E-AD78-3715EE6F7A8F.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>0</Category>
+      <Mode>1</Mode>
+      <Scope>4</Scope>
+      <OnDemand>1</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <RunAs>0</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.6</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_LocalPermitRequestTask</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[Local Permit] Provider Failure Action" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{aafaf84b-afd8-48d3-87f3-36da84c6a400}" Name="[Local Permit] [SLA] Permit Officer">
+      <XamlFileName>/Workflows/LocalPermitSLAPermitOfficer-AAFAF84B-AFD8-48D3-87F3-36DA84C6A400.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>0</Category>
+      <Mode>1</Mode>
+      <Scope>4</Scope>
+      <OnDemand>1</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <RunAs>0</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.6</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_LocalPermitRequestTask</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[Local Permit] [SLA] Permit Officer" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{c44a66f4-cf25-4346-9cbe-4f50bdbcda98}" Name="[Action][Local Permit] Notify Payment">
+      <XamlFileName>/Workflows/ActionLocalPermitNotifyPayment-C44A66F4-CF25-4346-9CBE-4F50BDBCDA98.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>3</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <RunAs>1</RunAs>
+      <SdkMessageId>{d26d4b5a-c542-4767-83f7-fbb2c1465919}</SdkMessageId>
+      <UniqueName>ActionLocalPermitNotifyPayment</UniqueName>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.2</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <FormId>{14c7fc1c-85f5-447a-b258-c319f97bf1b8}</FormId>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>Account</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[Action][Local Permit] Notify Payment" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{4f859933-fdf0-445f-97e4-85b6761978dd}" Name="[Action][LocalPermit] Warning1 Applicant">
+      <XamlFileName>/Workflows/ActionLocalPermitWarning1Applicant-4F859933-FDF0-445F-97E4-85B6761978DD.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>3</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>1</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <RunAs>1</RunAs>
+      <SdkMessageId>{92c3bfee-8e9f-4526-b4ab-769e1d4756cb}</SdkMessageId>
+      <UniqueName>ActionLocalPermitWarning1Applicant</UniqueName>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <FormId>{14c7fc1c-85f5-447a-b258-c319f97bf1b8}</FormId>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_LocalPermitRequest</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[Action][LocalPermit] Warning1 Applicant" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{310a853e-ec9a-42f2-8ea9-877af376bc25}" Name=" [Action]  Foreign Permit Request - Government Entity">
+      <XamlFileName>/Workflows/ActionForeignPermitRequest-GovernmentEntity-310A853E-EC9A-42F2-8EA9-877AF376BC25.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>3</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>1</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>0</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <RunAs>1</RunAs>
+      <SdkMessageId>{f82b08ea-79e1-4c25-ad03-75b49fbc5e01}</SdkMessageId>
+      <UniqueName>ActionMainForeignPermitRequest55f78cddae84f111ab0f7ced8dabf951</UniqueName>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <FormId>{e0776f79-4505-45f3-b345-ea49da86430a}</FormId>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_ForeignPermitRequest</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description=" [Action]  Foreign Permit Request - Government Entity" />
+      </LocalizedNames>
+      <labels>
+        <steplabels id="{79ded9f2-07d3-436c-905b-dd8f4ed3d99e}">
+          <label languagecode="1033" description="Success" />
+        </steplabels>
+      </labels>
+    </Workflow>
+    <Workflow WorkflowId="{47eaa099-2cb6-416d-86dc-283cf0480ff9}" Name="[Action][Provider] - Renewal Main Action">
+      <XamlFileName>/Workflows/ActionProvider-RenewalMainAction-47EAA099-2CB6-416D-86DC-283CF0480FF9.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>3</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <RunAs>1</RunAs>
+      <SdkMessageId>{72defbc6-89b4-4b2d-b586-b1ff50295142}</SdkMessageId>
+      <UniqueName>ActionProviderRenewalMainAction</UniqueName>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.1</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <BusinessProcessType>0</BusinessProcessType>
+      <FormId>{14c7fc1c-85f5-447a-b258-c319f97bf1b8}</FormId>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_licenseapplication</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[Action][Provider] - Renewal Main Action" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{c1a1dbfd-f049-4dc0-9392-e4527ea2fb2b}" Name="[WF][Local Permit] On Change Provider">
+      <XamlFileName>/Workflows/WFLocalPermitOnChangeProvider-C1A1DBFD-F049-4DC0-9392-E4527EA2FB2B.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>0</Category>
+      <Mode>1</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnUpdateAttributeList>contoso_accountversionid</TriggerOnUpdateAttributeList>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <UpdateStage>40</UpdateStage>
+      <RunAs>0</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_LocalPermitRequest</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[WF][Local Permit] On Change Provider" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{38bf8cc2-79b5-4a73-838e-4a118913c782}" Name="[WF][Local Permit] Auto finish BPF">
+      <XamlFileName>/Workflows/WFLocalPermitAutofinishBPF-38BF8CC2-79B5-4A73-838E-4A118913C782.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>1</Subprocess>
+      <Category>0</Category>
+      <Mode>0</Mode>
+      <Scope>4</Scope>
+      <OnDemand>1</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>1</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <RunAs>0</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_LocalPermitRequest</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[WF][Local Permit] Auto finish BPF" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{980f951c-e392-4fcd-b6d4-d9b1cac733f4}" Name="[WF][Local Permit] Closure">
+      <XamlFileName>/Workflows/WFLocalPermitClosure-980F951C-E392-4FCD-B6D4-D9B1CAC733F4.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>0</Category>
+      <Mode>1</Mode>
+      <Scope>4</Scope>
+      <OnDemand>1</OnDemand>
+      <TriggerOnCreate>0</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <RunAs>0</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_LocalPermitRequest</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[WF][Local Permit] Closure" />
+      </LocalizedNames>
+    </Workflow>
+    <Workflow WorkflowId="{88aaeb7c-b314-4f25-8e68-33eb0bd47e27}" Name="[WF][Local Permit] On Create">
+      <XamlFileName>/Workflows/WFLocalPermitOnCreate-88AAEB7C-B314-4F25-8E68-33EB0BD47E27.xaml</XamlFileName>
+      <Type>1</Type>
+      <Subprocess>0</Subprocess>
+      <Category>0</Category>
+      <Mode>1</Mode>
+      <Scope>4</Scope>
+      <OnDemand>0</OnDemand>
+      <TriggerOnCreate>1</TriggerOnCreate>
+      <TriggerOnDelete>0</TriggerOnDelete>
+      <AsyncAutodelete>0</AsyncAutodelete>
+      <SyncWorkflowLogOnFailure>1</SyncWorkflowLogOnFailure>
+      <StateCode>1</StateCode>
+      <StatusCode>2</StatusCode>
+      <CreateStage>40</CreateStage>
+      <RunAs>0</RunAs>
+      <IsTransacted>1</IsTransacted>
+      <IntroducedVersion>1.0.0.0</IntroducedVersion>
+      <IsCustomizable>1</IsCustomizable>
+      <IsCustomProcessingStepAllowedForOtherPublishers>1</IsCustomProcessingStepAllowedForOtherPublishers>
+      <ModernFlowType>0</ModernFlowType>
+      <PrimaryEntity>contoso_LocalPermitRequest</PrimaryEntity>
+      <LocalizedNames>
+        <LocalizedName languagecode="1033" description="[WF][Local Permit] On Create" />
+      </LocalizedNames>
+    </Workflow>
+  </Workflows>
+  <FieldSecurityProfiles></FieldSecurityProfiles>
+  <Templates />
+  <EntityMaps />
+  <EntityRelationships />
+  <OrganizationSettings />
+  <optionsets />
+  <CustomControls />
+  <EntityDataProviders />
+  <Languages>
+    <Language>1033</Language>
+    <Language>1025</Language>
+  </Languages>
+</ImportExportXml>
