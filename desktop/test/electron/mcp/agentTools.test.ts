@@ -41,7 +41,7 @@ const project = {
 };
 
 describe("the first release tool set", () => {
-  it("is 24 tools in their Settings groups, within the tool budget", () => {
+  it("is 25 tools in their Settings groups, within the tool budget", () => {
     expect(measureToolBudget(AGENT_TOOLS).problems).toEqual([]);
     expect(registry.tools().map((t) => [t.name, t.group, t.effect])).toEqual([
       ["connections_list", "connections", "read"],
@@ -61,6 +61,7 @@ describe("the first release tool set", () => {
       ["plugin_step_apply", "logic", "varies"],
       ["customapi_apply", "logic", "varies"],
       ["flow_apply", "logic", "varies"],
+      ["process_apply", "logic", "varies"],
       ["role_apply", "security", "varies"],
       ["solution_apply", "solutions", "varies"],
       ["config_apply", "solutions", "varies"],

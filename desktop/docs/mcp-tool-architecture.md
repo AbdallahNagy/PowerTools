@@ -10,7 +10,7 @@ Agreed on 2026-11-21:
 |---|---|
 | The MCP server has not been released. | The 57 current tools are replaced in one change. There is no side-by-side period, no compatibility layer, and no migration of the per-tool switches in Settings. |
 | Record deletes are separate from component removal. | `records_delete` deletes and disassociates data. `remove` deletes components such as tables, solutions and plug-ins. A user can allow one without the other. |
-| Users need new classic workflows built. | `process_apply` stays in the plan as a later phase. Its input format is an open question that the product owner will help answer with sample workflows. |
+| Users need new classic workflows built. | `process_apply` (Phase 5) writes classic workflows and actions from typed steps, built from the product owner's sample workflows. |
 | Online and on-premises behave the same. | Every tool works on both through the Power Tools connection abstraction, as the data migration tool does. This is the main selling point of the server and a design principle below. |
 
 ## Goal
@@ -53,9 +53,9 @@ The agent never needs to know where the environment runs. The same tool list, th
 | Tables | File columns, formula columns and elastic tables are online only. | `unsupported` step for that column; the rest of the spec still plans. |
 | Forms, views, web resources, roles | None known. Same FormXml, FetchXML, layoutxml and privilege model. | One code path. |
 | Apps | Modern commands (`appaction`) are online only. | Command entries plan as `unsupported`; the route is a ribbon change through `solution_import`. |
-| Custom APIs | May not exist in older on-premises versions. | Detected by `customapi` table. If missing, `unsupported`, and the route is a classic action imported with `solution_import` (`process_apply` once Phase 5 lands). |
+| Custom APIs | May not exist in older on-premises versions. | Detected by `customapi` table. If missing, `unsupported`, and the route is a custom process action written with `process_apply`. |
 | Plug-ins | NuGet plug-in packages are online only. On-premises allows isolation mode "none"; online refuses it. | Package deploy plans as `unsupported` on-premises. Isolation mode is validated against `Capabilities`, not against the agent's claim. |
-| Cloud flows | Power Automate does not exist on-premises. | `flow_apply` fails with `NotSupported` and names a classic workflow imported with `solution_import` as the on-premises route (switch to `process_apply` once Phase 5 lands). This is one reason classic workflows matter. |
+| Cloud flows | Power Automate does not exist on-premises. | `flow_apply` fails with `NotSupported` and names a classic workflow written with `process_apply` as the on-premises route. This is one reason classic workflows matter. |
 | Classic workflows | None known. On-premises also allows custom workflow activities outside the sandbox. | One code path. |
 | Solutions | `ExportSolutionAsync` is online only. Layer inspection uses `msdyn_componentlayer`, which may be missing on-premises. | Import uses `ExecuteAsync` with `ImportSolutionRequest` on both, then polls `asyncoperation` and `importjob`: one path. Export uses `ExportSolutionAsync` when present, otherwise `ExportSolution` with the long timeout. Layers plan as `unsupported` when the table is missing. |
 | Config | Secret environment variables and connection references are online only. Secrets are already refused on-premises by `EnvironmentVariablesRules.CanCreate`. | `unsupported` step for those entries. |
@@ -92,7 +92,7 @@ The agent never needs to know where the environment runs. The same tool list, th
 | `plugin_deploy` | An assembly, or a NuGet plug-in package online, from a local file. Registers or updates it and syncs its plug-in types (new types added; types removed from the code reported, not deleted). | `plugins_register_assembly`, `plugins_update_assembly` |
 | `plugin_step_apply` | Steps with their images and enabled state, for a plug-in type, a webhook or a Service Bus endpoint. A step is matched by name or id. | `plugins_register_step`, `plugins_update_step`, `plugins_set_step_state`, `plugins_register_image`, `plugins_update_image` |
 | `flow_apply` | A cloud flow (online only): name, definition, the connection references it uses, and on or off. | (new) |
-| `process_apply` | Classic workflows and actions (Phase 5). | (new) |
+| `process_apply` | A classic workflow or custom process action from typed steps, on both deployment types (Phase 5). | (new) |
 | `role_apply` | A security role with privileges per table and depth, plus miscellaneous privileges. Assigning it to users and teams. Field security profiles. | (new) |
 | `solution_apply` | Publisher, solution, patch, version, and adding components. Rolling up patches (`clone`) is a destructive step in the plan. | `solutions_create`, `solutions_create_patch`, `solutions_add_component`, `solutions_clone` |
 | `config_apply` | Environment variable definitions and values, and connection references. | `envvars_create_definition`, `envvars_set_value` |
@@ -287,7 +287,7 @@ On the Electron side every apply tool is made by one factory, `applyTool({ name,
 
 Power Tools builds `clientdata`, creates the missing connection references, and checks that every `referenceName` in the definition has an entry. It then saves the flow as `category 5`, `type 1`, `primaryentity none`, and turns it on if asked. If a connection reference has no connection, the flow stays off and the result names the connector the user has to sign in to in the maker portal. An agent cannot create connections.
 
-`process_apply` (Phase 5, input format still open):
+`process_apply` (Phase 5; the full format is in the guide `powertools://guides/classic-workflows`):
 
 ```json
 {
@@ -296,11 +296,10 @@ Power Tools builds `clientdata`, creates the missing connection references, and 
   "name": "Set project closed date",
   "table": "con_project",
   "mode": "realtime",
-  "trigger": { "onUpdate": ["con_stage"] },
-  "scope": "organization",
+  "triggers": { "onUpdate": ["con_stage"] },
   "steps": [
-    { "if": { "column": "con_stage", "operator": "equals", "value": 3 },
-      "then": [{ "update": { "record": "primary", "values": { "con_closedon": { "$fn": "now" } } } }] }
+    { "if": { "condition": { "column": "con_stage", "operator": "equals", "value": 3 },
+              "then": [{ "update": { "values": { "con_closedon": { "now": true } } } }] } }
   ],
   "state": "activated"
 }
@@ -366,7 +365,7 @@ The old 57 tools stayed in the code while Phases 0 and 1 were built, so developm
 | 2 | The rest of the consolidation, then the 57 old tools are deleted: `connections_list`, `inspect_ui`, `inspect_solution`, `records_query`, `records_write`, `records_delete`, `choice_apply`, `form_apply` (patch operations only: add, move and remove a field, add a section or tab, set a label or visibility, add a subgrid; required level stays on the column through `table_apply`), `view_apply`, `solution_apply`, `plugin_deploy`, `plugin_step_apply`, `config_apply`, `remove`, `execute_message`. New Settings groups, no migration. First release; `CHANGELOG.md` describes the new tool set. | 19 |
 | 3 | `form_apply` whole layouts, dashboards, form libraries and event handlers. `webresource_apply`, `app_apply`, `customapi_apply`, `role_apply`. A `security` Settings group for `role_apply`. | 23 |
 | 4 | `flow_apply` (online) and the cloud flow guide. | 24 |
-| 5 | `process_apply` for classic workflows and actions, on both deployment types. Starting set of steps: create, update, assign, set state, send email, condition, wait, child workflow, custom workflow activity, stop. Final list and input format decided with the product owner (see Open questions). | 25 |
+| 5 | `process_apply` for classic workflows and actions, on both deployment types: update, create, send email, assign, change status, conditions, child workflow, perform action, custom workflow activity, stop. Wait conditions are left for later. | 25 |
 
 ## Phase 0 status
 
@@ -479,7 +478,7 @@ Decisions made while building:
 - **Handlers** need a JavaScript web resource that exists (upload it with `webresource_apply`); adding a handler adds its library. Removing a library removes the handlers that call it. A handler is matched by event, column (for onchange), library and function, and only its parameters, context flag and enabled state are updated.
 - **Web resources.** A type cannot change (blocked). The size limit is the organization's `maxuploadfilesize`. A folder is read in name order, and at most 200 files go in one call. Publishing uses the web resource ids.
 - **Apps.** The app and its site map are read with `RetrieveUnpublishedMultiple`, since a new app is unpublished until the executor publishes it. The site map is generated whole from the spec, with ids made from titles, and compared with the current XML after normalizing. A table without forms, views or charts adds only the table, so the app shows all of them. Components and roles left out are kept. `validateApp` runs last whenever another step runs, and any error from `ValidateApp` fails the call with the issues listed. Modern commands need the `appaction` table; elsewhere they plan as unsupported with the ribbon through `solution_import` as the route. The default app icon is the system web resource `953b9fac-1e5e-e611-80d6-00155ded156f`.
-- **Custom APIs.** The fields Dataverse fixes once saved (unique name, binding, bound table, function, step type, workflow; a field's type, table and optional) plan a destructive delete and create when they differ; for the API that also deletes its parameters, properties and the steps registered on it, which the detail says. Parameters and properties the spec leaves out are kept with a warning. Without the `customapi` table the plan is unsupported, with a custom process action or `solution_import` as the route.
+- **Custom APIs.** The fields Dataverse fixes once saved (unique name, binding, bound table, function, step type, workflow; a field's type, table and optional) plan a destructive delete and create when they differ; for the API that also deletes its parameters, properties and the steps registered on it, which the detail says. Parameters and properties the spec leaves out are kept with a warning. Without the `customapi` table the plan is unsupported, with a custom process action written with `process_apply` as the route.
 - **Roles.** Depths use the Dataverse names (`basic`, `local`, `deep`, `global`); `none` takes a privilege away as a destructive step. A depth the privilege does not allow is refused with the depths it allows. Table privileges come from the table's metadata, other privileges by name from the `privilege` table, so the spec matches what `inspect_schema` kind `role` lists. A user or team gets the copy of the role in its own business unit. A role's business unit cannot change (blocked).
 - **Field security.** A column in a profile that is not secured yet gets a `secureColumn` step (`UpdateAttribute` with `IsSecured`) before its permission. Permissions are allowed (4) or not (0) for read, create and update.
 
@@ -500,7 +499,7 @@ Built on 2026-11-21. The server offers 24 tools and its first resource, the clou
 
 Decisions made while building:
 
-- **Online means Power Automate.** `Capabilities` tells by the `connectionreference` table. Without it the plan is one unsupported step whose route is a classic workflow imported with `solution_import`. Until Phase 5 ships `process_apply`, no route may name it; switch these messages when it lands.
+- **Online means Power Automate.** `Capabilities` tells by the `connectionreference` table. Without it the plan is one unsupported step whose route is a classic workflow written with `process_apply` (switched in Phase 5).
 - **References are checked by `host.connectionName`.** Every `connectionName` in the definition (triggers, actions, nested scopes) needs a key in `connectionReferences`; a missing key is refused before anything is written. An existing reference with another connector is refused too, so a reference is never changed under other flows.
 - **The definition is normalized.** Power Tools adds `$schema`, `contentVersion` and the `$connections` and `$authentication` parameters when they are missing. Whether the flow changed is decided by comparing the definition and the references (key, logical name, connector); other properties Dataverse adds to `clientdata` are ignored, so sending the same spec again plans nothing.
 - **Turning on waits for connections.** A new connection reference has no connection. While any reference lacks one, `turnOnFlow` is a blocked step that names each reference and its connector and says to sign in in the maker portal; the steps before it (references, flow) still run, so the result is `partlyApplied`. Once the user sets the connection (maker portal or `config_apply` `connectionId`), the same spec turns the flow on.
@@ -509,9 +508,34 @@ Decisions made while building:
 
 Still open for Phase 4: running the live test and evals on the online sandbox, in particular that Dataverse accepts the generated `clientdata` and turns the flow on once its references are connected, and that the flow opens in the Power Automate designer.
 
+## Phase 5 status
+
+Built on 2026-11-21. The server offers 25 tools and two guides.
+
+| Part | Where |
+|---|---|
+| The spec: kind, table, mode, triggers, run-as, action arguments, typed steps, state | `Components/Processes/ProcessApplySpec.cs` |
+| XAML writer: each step written with the activities the classic designer exports | `Components/Processes/ProcessXamlWriter.cs`, `ProcessValues.cs` |
+| XAML reader: XAML back into typed steps, with `keep` for what cannot be expressed | `Components/Processes/ProcessXamlReader.cs` |
+| Saving: an unmanaged solution with only the process, imported with `AsyncJobs` | `Components/Processes/ProcessPackage.cs`, `ProcessPlanner.cs` |
+| `inspect_solution` kind `process` with a name returns the process in the `process_apply` shape, child workflows by name | `Components/Inspect/SolutionInspector.cs` |
+| The guide `powertools://guides/classic-workflows`; desktop tool in the `logic` group, now "Plug-ins, APIs and processes" | `desktop/src/electron/mcp/guides.ts`, `tools/components.ts` |
+| The sample workflows (12, anonymized) and the tests that read and write them | `PowerTools.API.Tests/Tools/Agent/TestFixtures/ClassicWorkflows/`, `ProcessXamlTests.cs`, `ProcessPlannerTests.cs` |
+| On-premises routes of `flow_apply`, `config_apply`, `customapi_apply` and `inspect_solution` now name `process_apply` | |
+
+Decisions made while building:
+
+- **Typed steps, not templates.** The writer generates XAML from typed steps. Every sample reads, writes and reads back to the same steps, and six of them (all their steps supported) are written activity for activity as the designer exported them, apart from step numbers, GUID spelling and how a yes/no literal is spelled.
+- **Saved by solution import, on both deployment types.** Microsoft documents creating workflows from XAML in code as supported only on-premises. The designer's own exports move between environments by solution import, so `process_apply` imports an unmanaged solution named `PowerToolsProcess<id>` with the target solution's publisher, adds the process to the target solution, and deletes the temporary solution. An activated process is set to draft first and activated again after.
+- **Reading back.** `keep` carries a step the reader cannot express (for example a custom step whose outputs later steps use) with its id; it is written back exactly as it was, with its workflow variables, and new steps never reuse its step numbers. A process with output arguments is refused for writing.
+- **Idempotent.** The current XAML and the new one are compared after reading both, so step numbers and spelling the designer varies do not count. A new process's id comes from its table and name, so the plan hash is stable.
+
+Not in v1 (the samples do not cover them; the guide says so): wait conditions and timeouts, delete triggers, user and business unit scope, action output arguments, global actions, date and text-search condition operators, literal number, date and money values, and custom step outputs (kept, not written).
+
+Still open for Phase 5, unverified until the live tests run: the import itself on both sandboxes (online and on-premises), importing over a process that was activated, a new action created by import (its message name, prefix plus `UniqueName`), a stop step with status canceled, more than one recipient in a party list, and opening a written process in the classic designer.
+
 ## Open questions
 
-1. **Classic workflow input format (Phase 5).** The product owner will help with sample data. Needed: a solution export (unmanaged) with a few real workflows and actions that cover the step types users build most, from both an online and an on-premises environment, plus the list of step types that matter. With those we choose between generating XAML from typed steps (as in the example above) and filling templates taken from real workflows.
-2. **On-premises versions.** Which Dynamics 365 on-premises versions must be supported (for example 9.0 and 9.1 only)? This decides several lines of the parity table.
-3. **On-premises sandbox.** Is there an on-premises server the live tests and evals can use, or do we set one up?
-4. **Layers on-premises.** Do the current `solutions_list_layers` and `solutions_remove_active_layer` tools work on-premises today? The Dataverse expert checks this in Phase 0.
+1. **On-premises versions.** Which Dynamics 365 on-premises versions must be supported (for example 9.0 and 9.1 only)? This decides several lines of the parity table.
+2. **On-premises sandbox.** Is there an on-premises server the live tests and evals can use, or do we set one up?
+3. **Layers on-premises.** Do the current `solutions_list_layers` and `solutions_remove_active_layer` tools work on-premises today? The Dataverse expert checks this in Phase 0.

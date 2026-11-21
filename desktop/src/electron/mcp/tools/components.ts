@@ -5,6 +5,7 @@ import customApiSpec from "../schemas/customapi_apply.input.json" with { type: "
 import formSpec from "../schemas/form_apply.input.json" with { type: "json" };
 import flowSpec from "../schemas/flow_apply.input.json" with { type: "json" };
 import deploySpec from "../schemas/plugin_deploy.input.json" with { type: "json" };
+import processSpec from "../schemas/process_apply.input.json" with { type: "json" };
 import stepSpec from "../schemas/plugin_step_apply.input.json" with { type: "json" };
 import removeSpec from "../schemas/remove.input.json" with { type: "json" };
 import roleSpec from "../schemas/role_apply.input.json" with { type: "json" };
@@ -171,10 +172,23 @@ export const flowApply: AgentTool = applyTool({
   group: "logic",
   title: "Apply a cloud flow",
   description:
-    "Changes the environment. Creates or updates a cloud flow from its definition, creates missing connection references, and turns it on or off. A flow whose references have no connection stays off; the result names the connectors the user must sign in to. Online only; on-premises, import a solution with a classic workflow through solution_import. Read the guide powertools://guides/cloud-flows first.",
+    "Changes the environment. Creates or updates a cloud flow from its definition, creates missing connection references, and turns it on or off. A flow whose references have no connection stays off; the result names the connectors the user must sign in to. Online only; on-premises, build a classic workflow with process_apply. Read the guide powertools://guides/cloud-flows first.",
   spec: flowSpec,
   describe: (args, plan) => `apply cloud flow ${str(args.name)} (${steps(plan.steps.length)})`,
   summarize: (args) => `flow_apply ${str(args.name)}`,
+});
+
+/** process_apply: a classic workflow or custom process action from typed steps (online and on-premises). */
+export const processApply: AgentTool = applyTool({
+  name: "process_apply",
+  family: "process",
+  group: "logic",
+  title: "Apply a classic workflow",
+  description:
+    "Changes the environment. Creates or updates a classic workflow or custom process action from typed steps (update, create, send email, assign, change status, conditions, child workflow, action, custom step, stop) and activates it or leaves it in draft. Works online and on-premises. Read one with inspect_solution kind process. Read the guide powertools://guides/classic-workflows first.",
+  spec: processSpec,
+  describe: (args, plan) => `apply ${args.kind === "action" ? "action" : "workflow"} ${str(args.name)} (${steps(plan.steps.length)})`,
+  summarize: (args) => `process_apply ${str(args.name)}`,
 });
 
 /** role_apply: a security role, who has it, and field security profiles. */
