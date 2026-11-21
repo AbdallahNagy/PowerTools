@@ -10,6 +10,8 @@ import {
   metadataListViews,
 } from "./metadata.js";
 import { recordsGet, recordsQuery } from "./records.js";
+import { solutionExport, solutionImport } from "./solutionFileTools.js";
+import { inspectSchema, tableApply } from "./tableTools.js";
 
 export const READ_TOOLS: AgentTool[] = [
   connectionsList,
@@ -26,6 +28,7 @@ export const READ_TOOLS: AgentTool[] = [
 
 /**
  * The consolidated plan/apply tool set that replaces the tools above (desktop/docs/mcp-tool-architecture.md).
- * Phase 1 adds the pilot tools here; Phase 2 deletes the old tools. The tool budget test measures this list.
+ * Phase 1 is the pilot: table_apply, inspect_schema, solution_export and solution_import. Phase 2 adds the rest and
+ * deletes the old tools. The tool budget test measures this list.
  */
-export const PLAN_APPLY_TOOLS: AgentTool[] = [];
+export const PLAN_APPLY_TOOLS: AgentTool[] = [inspectSchema, tableApply, solutionExport, solutionImport];

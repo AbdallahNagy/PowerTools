@@ -170,7 +170,8 @@ describe("apply tools", () => {
 
     expect(requests[0].effect).toBe("destructive");
     expect(requests[0].removes).toBe("con_old");
-    expect(requests[0].plan!.groups[0].effect).toBe("destructive");
+    expect(requests[0].plan!.steps.map((s) => s.effect)).toEqual(["change", "destructive"]);
+    expect(requests[0].plan!.counts).toEqual({ destructive: 1, change: 1, unsupported: 0 });
   });
 
   it("returns unchanged for an empty plan without asking or applying", async () => {
@@ -248,27 +249,36 @@ describe("apply tools", () => {
 });
 
 describe("plan dialog", () => {
-  it("lists destructive steps first and cuts long plans to the limit with counts", () => {
+  it("lists the steps in run order and cuts long plans to the limit with counts", () => {
     const steps = [
-      ...Array.from({ length: 30 }, (_, i) => step(`col${i}`)),
+      step("first"),
       step("old", "destructive"),
+      ...Array.from({ length: 30 }, (_, i) => step(`col${i}`)),
       step("file", "change", { kind: "unsupported", reason: "Online only.", route: "solution_import" }),
     ];
 
     const dialog = planForDialog(plan(steps), 20);
 
-    expect(dialog.groups.map((g) => [g.effect, g.count, g.steps.length])).toEqual([
-      ["destructive", 1, 1],
-      ["change", 30, 19],
-      ["unsupported", 1, 0],
-    ]);
-    expect(dialog.total).toBe(32);
-    expect(dialog.hidden).toBe(12);
+    expect(dialog.steps.map((s) => s.target)).toEqual(["first", "old", ...Array.from({ length: 18 }, (_, i) => `col${i}`)]);
+    expect(dialog.steps[1].effect).toBe("destructive");
+    expect(dialog.counts).toEqual({ destructive: 1, change: 31, unsupported: 1 });
+    expect(dialog.total).toBe(33);
+    expect(dialog.hidden).toBe(13);
+    // The unsupported step is last, so nothing after it is held back.
+    expect(dialog.stopsAt).toBeUndefined();
+  });
+
+  it("says where the apply stops when a step that cannot run has steps after it", () => {
+    const dialog = planForDialog(
+      plan([step("a"), step("file", "change", { kind: "blocked", reason: "Managed." }), step("b")]),
+    );
+    expect(dialog.stopsAt).toBe(1);
+    expect(dialog.steps.map((s) => s.effect)).toEqual(["change", "unsupported", "change"]);
   });
 
   it("explains unsupported steps with their route", () => {
     const dialog = planForDialog(plan([step("file", "change", { kind: "unsupported", reason: "Online only.", route: "solution_import" })]));
-    expect(dialog.groups[0].steps[0].detail).toBe("Online only. Instead: solution_import");
+    expect(dialog.steps[0].detail).toBe("Online only. Instead: solution_import");
   });
 
   it("names what a destructive plan removes", () => {

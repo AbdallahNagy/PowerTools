@@ -1,0 +1,19 @@
+{
+  "id": "inspect-then-change",
+  "phase": 1,
+  "description": "Pilot: the agent reads an existing table with inspect_schema and changes it through table_apply, keeping the columns it did not mention.",
+  "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, make the Code column of the Eval Project table 80 characters long and required, and add a whole number column Head Count.",
+  "setup": [
+    { "tool": "table_apply", "arguments": { "solution": "PowerToolsEvals", "table": { "schemaName": "pte_EvalProject", "displayName": "Eval Project", "pluralName": "Eval Projects" }, "columns": [{ "schemaName": "pte_Code", "type": "text", "displayName": "Code", "maxLength": 20 }, { "schemaName": "pte_Budget", "type": "money", "displayName": "Budget" }] } }
+  ],
+  "checks": [
+    { "description": "Code is 80 long", "tool": "inspect_schema", "arguments": { "kind": "column", "table": "pte_evalproject", "name": "pte_code" }, "path": "result.maxLength", "equals": 80 },
+    { "description": "Code is required", "tool": "inspect_schema", "arguments": { "kind": "column", "table": "pte_evalproject", "name": "pte_code" }, "path": "result.requiredLevel", "equals": "required" },
+    { "description": "Head Count exists", "tool": "inspect_schema", "arguments": { "kind": "column", "table": "pte_evalproject", "name": "pte_headcount" }, "path": "result.type", "equals": "integer" },
+    { "description": "Budget is kept", "tool": "inspect_schema", "arguments": { "kind": "column", "table": "pte_evalproject", "name": "pte_budget" }, "path": "result.type", "equals": "money" }
+  ],
+  "cleanup": [
+    { "tool": "schema_delete_table", "arguments": { "table": "pte_evalproject" } }
+  ],
+  "mustNotCall": ["execute_message", "schema_update_column", "schema_create_column"]
+}

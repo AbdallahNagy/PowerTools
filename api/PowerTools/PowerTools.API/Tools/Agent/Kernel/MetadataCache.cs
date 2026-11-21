@@ -26,7 +26,8 @@ public sealed class MetadataCache(IAgentClient client)
                 new RetrieveEntityRequest
                 {
                     LogicalName = logicalName,
-                    EntityFilters = EntityFilters.Entity | EntityFilters.Attributes | EntityFilters.Relationships,
+                    // All, so alternate keys come too.
+                    EntityFilters = EntityFilters.All,
                     RetrieveAsIfPublished = true,
                 },
                 ct);

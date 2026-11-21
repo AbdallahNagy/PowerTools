@@ -85,7 +85,22 @@ Data that comes back from Dataverse is marked as untrusted. Agents are told neve
 
 ## Tools
 
-**Tools** lists the groups: `connections` (1), `metadata` (7), `records` (8), `schema` (16), `solutions` (11), `plugins` (10) and `envvars` (4). Expand a group to see each tool with its description and whether it reads, changes, or destroys data. Search filters by name or description. Turn a group off to stop offering all its tools, or turn single tools off inside a group that is on. Connected agents are told right away.
+**Tools** lists the groups: `connections` (1), `metadata` (8), `records` (8), `schema` (17), `solutions` (13), `plugins` (10) and `envvars` (4). Expand a group to see each tool with its description and whether it reads, changes, or destroys data. Search filters by name or description. Turn a group off to stop offering all its tools, or turn single tools off inside a group that is on. Connected agents are told right away.
+
+### Plan-based tools (preview)
+
+Four tools work the new way described in [mcp-tool-architecture.md](mcp-tool-architecture.md). They replace most of the other tools before the server's first release.
+
+| Tool | Does | Asks |
+| --- | --- | --- |
+| `inspect_schema` | Describes a table, column, relationship, key, global choice or role, or lists them. A table comes back in the shape `table_apply` takes. | Never (read). |
+| `table_apply` | Brings one table to a spec: its columns of every type, choice options, lookups, many-to-many relationships and alternate keys. Only what differs runs; running the same spec again changes nothing. It never removes what the spec leaves out. | Like any change, unless a step of the plan is destructive. |
+| `solution_export` | Exports an unmanaged solution, managed or unmanaged, to a new .zip on this computer (by default in Documents\Power Tools\Solutions). It never overwrites a file. | Never (it changes nothing in the environment). |
+| `solution_import` | Imports a solution .zip from this computer: update, upgrade or stage, with environment variable values and connection references. It waits for the import and reports the import job's error. Importing the installed version again changes nothing unless the agent asks for it. | **Always**, because an import can overwrite customizations. |
+
+Before an apply tool changes anything, Power Tools reads the environment and makes a plan. The dialog shows that plan, step by step in the order the steps run, not the agent's arguments. What runs is exactly what you approved: if the environment changes between the dialog and the run, the call is refused and nothing changes. A step that cannot run on this environment (for example a file column where there is no file storage) or that Dataverse does not allow (for example changing a column's type) is shown with the reason; the apply stops there, and the dialog says which steps run before it.
+
+These tools work the same on Dataverse online and on-premises. Where a feature is missing, the plan says so and names what works instead.
 
 ## Activity log
 

@@ -105,7 +105,7 @@ export interface McpApprovalRequest {
   effect: "change" | "destructive";
   summary: string;
   removes?: string;
-  /** For apply tools: the steps to approve, grouped destructive first. Mirrors ApprovalPlan in approval.ts. */
+  /** For apply tools: the steps to approve, in run order. Mirrors ApprovalPlan in approval.ts. */
   plan?: McpApprovalPlan;
   args: Record<string, unknown>;
 }
@@ -113,12 +113,14 @@ export interface McpApprovalRequest {
 export interface McpApprovalPlan {
   hash: string;
   total: number;
-  groups: Array<{
-    effect: "destructive" | "change" | "unsupported";
-    count: number;
-    steps: Array<{ op: string; target: string; detail?: string }>;
-  }>;
+  /** The first steps, in the order they run. */
+  steps: Array<{ op: string; target: string; effect: "destructive" | "change" | "unsupported"; detail?: string }>;
+  /** How many steps of each kind the whole plan has. */
+  counts: { destructive: number; change: number; unsupported: number };
+  /** Steps not listed because the plan is long. */
   hidden: number;
+  /** Index of the first step that cannot run, when steps follow it: the apply stops there and they do not run. */
+  stopsAt?: number;
   warnings: string[];
 }
 

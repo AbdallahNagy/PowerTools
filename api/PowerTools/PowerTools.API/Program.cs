@@ -78,6 +78,7 @@ builder.Services.AddScoped<AssemblyService>();
 builder.Services.AddScoped<UnregisterService>();
 builder.Services.AddSingleton<ISolutionLayersCache>(_ => new SolutionLayersCache());
 builder.Services.AddSingleton<PowerTools.API.Tools.Agent.Kernel.ICapabilitiesCache>(_ => new PowerTools.API.Tools.Agent.Kernel.CapabilitiesCache());
+PowerTools.API.Tools.Agent.Components.AgentComponentEndpoints.AddAgentApplyFamilies(builder.Services);
 
 var app = builder.Build();
 

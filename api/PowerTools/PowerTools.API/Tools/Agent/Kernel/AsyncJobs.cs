@@ -74,7 +74,8 @@ public sealed class AsyncJobs(
         var started = (ExecuteAsyncResponse)await client.ExecuteAsync(new ExecuteAsyncRequest { Request = import }, ct);
         var status = await WaitAsync(started.AsyncJobId, () => ReportImportProgressAsync(importJobId, progress, ct), ct);
         var job = await ReadImportJobAsync(importJobId, ct);
-        var message = status.Succeeded ? null : status.Message ?? job.Message ?? "The import failed.";
+        // The import job names the component that failed, which says more than the async operation.
+        var message = status.Succeeded ? null : job.Message ?? status.Message ?? "The import failed.";
         return new ImportOutcome(status.Succeeded, importJobId, started.AsyncJobId, job.Progress, message);
     }
 
@@ -83,9 +84,7 @@ public sealed class AsyncJobs(
     {
         while (true)
         {
-            var row = await retry.RunAsync(
-                token => client.RetrieveAsync("asyncoperation", operationId, new ColumnSet("statecode", "statuscode", "message", "friendlymessage"), token),
-                ct);
+            var row = await ReadOperationAsync(operationId, ct);
             var state = row.GetAttributeValue<OptionSetValue>("statecode")?.Value;
             if (state == Completed)
             {
@@ -100,6 +99,37 @@ public sealed class AsyncJobs(
             await delay(pollInterval, ct);
         }
     }
+
+    private bool hasFriendlyMessage = true;
+
+    /// <summary>
+    /// Reads an asyncoperation's state. friendlymessage is missing on older on-premises versions, and asking for a
+    /// column that does not exist is a fault, so after one such fault the poll asks without it.
+    /// </summary>
+    private async Task<Entity> ReadOperationAsync(Guid operationId, CancellationToken ct)
+    {
+        if (hasFriendlyMessage)
+        {
+            try
+            {
+                return await retry.RunAsync(
+                    token => client.RetrieveAsync("asyncoperation", operationId, new ColumnSet("statecode", "statuscode", "message", "friendlymessage"), token),
+                    ct);
+            }
+            catch (Exception ex) when (RetryPolicy.FindFault(ex) is { } fault
+                && (fault.ErrorCode == MissingColumnCode || fault.Message?.Contains("friendlymessage", StringComparison.OrdinalIgnoreCase) == true))
+            {
+                hasFriendlyMessage = false;
+            }
+        }
+
+        return await retry.RunAsync(
+            token => client.RetrieveAsync("asyncoperation", operationId, new ColumnSet("statecode", "statuscode", "message"), token),
+            ct);
+    }
+
+    /// <summary>QueryBuilderNoAttribute: the column does not exist on this version.</summary>
+    public const int MissingColumnCode = unchecked((int)0x80041103);
 
     private async Task ReportImportProgressAsync(Guid importJobId, Action<double>? progress, CancellationToken ct)
     {

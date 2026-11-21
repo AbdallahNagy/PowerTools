@@ -59,40 +59,43 @@ export function ApprovalDialog() {
   );
 }
 
-const GROUP_LABEL: Record<McpApprovalPlan["groups"][number]["effect"], string> = {
-  destructive: "Removes or replaces",
-  change: "Changes",
-  unsupported: "Cannot run on this environment",
+const COUNT_LABEL: Array<[keyof McpApprovalPlan["counts"], string]> = [
+  ["destructive", "removes or replaces"],
+  ["change", "changes"],
+  ["unsupported", "cannot run here"],
+];
+
+const STEP_CLASS: Record<McpApprovalPlan["steps"][number]["effect"], string> = {
+  destructive: "text-danger",
+  change: "",
+  unsupported: "text-fg-muted",
 };
 
-/** The steps an apply tool will run, destructive first. Step text comes from the environment and the agent: text only. */
+/** The steps an apply tool will run, in run order. Step text comes from the environment and the agent: text only. */
 function PlanSteps({ plan }: { plan: McpApprovalPlan }) {
+  const kinds = COUNT_LABEL.filter(([key]) => plan.counts[key] > 0).map(([key, label]) => `${plan.counts[key]} ${label}`);
   return (
     <section aria-label="Plan" className="flex flex-col gap-2 text-sm text-fg">
       <p>
-        {plan.total} step{plan.total === 1 ? "" : "s"}
+        {plan.total} step{plan.total === 1 ? "" : "s"} in run order
         {plan.hidden > 0 ? `, the first ${plan.total - plan.hidden} shown` : ""}
+        {kinds.length > 0 ? `: ${kinds.join(", ")}` : ""}
       </p>
-      <div className="flex max-h-72 flex-col gap-2 overflow-auto">
-        {plan.groups.map((group) => (
-          <div key={group.effect}>
-            <p className={group.effect === "destructive" ? "text-xs font-medium text-danger" : "text-xs font-medium text-fg-muted"}>
-              {GROUP_LABEL[group.effect]} ({group.count})
-            </p>
-            <ul className="mt-1 flex flex-col gap-0.5 font-mono text-xs">
-              {group.steps.map((step, index) => (
-                <li key={`${step.op}-${step.target}-${index}`} className="break-all">
-                  {step.op} {step.target}
-                  {step.detail ? <span className="text-fg-muted"> · {step.detail}</span> : null}
-                </li>
-              ))}
-              {group.count > group.steps.length ? (
-                <li className="text-fg-muted">and {group.count - group.steps.length} more</li>
-              ) : null}
-            </ul>
-          </div>
+      <ol className="flex max-h-72 list-decimal flex-col gap-0.5 overflow-auto pl-6 font-mono text-xs">
+        {plan.steps.map((step, index) => (
+          <li key={`${step.op}-${step.target}-${index}`} className={`break-all ${STEP_CLASS[step.effect]}`}>
+            {step.effect === "destructive" ? "Removes or replaces: " : step.effect === "unsupported" ? "Cannot run: " : ""}
+            {step.op} {step.target}
+            {step.detail ? <span className="text-fg-muted"> · {step.detail}</span> : null}
+          </li>
         ))}
-      </div>
+        {plan.hidden > 0 ? <li className="list-none text-fg-muted">and {plan.hidden} more</li> : null}
+      </ol>
+      {plan.stopsAt !== undefined ? (
+        <p className="text-xs text-danger">
+          The apply stops at step {plan.stopsAt + 1}, which cannot run. The steps before it run; the steps after it do not.
+        </p>
+      ) : null}
       {plan.warnings.map((warning) => (
         <p key={warning} className="text-xs text-fg-muted">
           {warning}

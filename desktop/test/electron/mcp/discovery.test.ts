@@ -108,13 +108,14 @@ describe("createMcpService", () => {
     const groups = s.status().groups;
     expect(groups.map((g) => g.group)).toEqual(["connections", "metadata", "records", "schema", "solutions", "plugins", "envvars"]);
     expect(groups.every((g) => g.enabled && g.tools > 0)).toBe(true);
-    // The v1 catalog: 57 tools. A change here means the user guide and the catalog section of the spec need a look.
+    // The v1 catalog of 57 tools plus the 4 Phase 1 pilot tools (inspect_schema, table_apply, solution_export,
+    // solution_import). A change here means the user guide and the catalog section of the spec need a look.
     expect(Object.fromEntries(groups.map((g) => [g.group, g.tools]))).toEqual({
       connections: 1,
-      metadata: 7,
+      metadata: 8,
       records: 8,
-      schema: 16,
-      solutions: 11,
+      schema: 17,
+      solutions: 13,
       plugins: 10,
       envvars: 4,
     });
@@ -152,7 +153,7 @@ describe("createMcpService", () => {
     const off = s.setTool("records_delete", false);
     expect(off.tools.find((t) => t.name === "records_delete")!.enabled).toBe(false);
     expect(off.tools.filter((t) => !t.enabled)).toHaveLength(1);
-    expect(off.tools).toHaveLength(57);
+    expect(off.tools).toHaveLength(61);
     expect(s.setTool("records_delete", true).tools.every((t) => t.enabled)).toBe(true);
     expect(() => s.setTool("nonsense", false)).toThrow(/Unknown tool/);
   });

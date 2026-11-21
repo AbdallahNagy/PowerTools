@@ -24,7 +24,7 @@ public sealed class KernelSchemaTests
     [MemberData(nameof(Names))]
     public void Checked_in_schema_matches_the_csharp_type(string name)
     {
-        var expected = KernelSchemas.Export(KernelSchemas.Types[name]);
+        var expected = KernelSchemas.Export(name);
         var path = Path.Combine(SchemaFolder(), $"{name}.json");
         if (Environment.GetEnvironmentVariable("POWERTOOLS_UPDATE_SCHEMAS") == "1")
             File.WriteAllText(path, expected);

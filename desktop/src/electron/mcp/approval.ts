@@ -13,17 +13,18 @@ export interface ApprovalRequest {
   args: Record<string, unknown>;
 }
 
-/** A plan as the approval dialog shows it: destructive steps first, long plans cut to the first steps plus counts. */
+/** A plan as the approval dialog shows it: steps in run order, long plans cut to the first steps plus counts. */
 export interface ApprovalPlan {
   hash: string;
   total: number;
-  groups: Array<{
-    effect: "destructive" | "change" | "unsupported";
-    count: number;
-    steps: Array<{ op: string; target: string; detail?: string }>;
-  }>;
+  /** The first steps, in the order they run. */
+  steps: Array<{ op: string; target: string; effect: "destructive" | "change" | "unsupported"; detail?: string }>;
+  /** How many steps of each kind the whole plan has. */
+  counts: { destructive: number; change: number; unsupported: number };
   /** Steps not listed because the plan is long. */
   hidden: number;
+  /** Index of the first step that cannot run, when steps follow it: the apply stops there and they do not run. */
+  stopsAt?: number;
   warnings: string[];
 }
 

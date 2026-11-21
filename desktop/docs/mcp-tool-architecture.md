@@ -1,6 +1,6 @@
 # MCP tool architecture
 
-Status: agreed plan. Phase 0 is built (see Phase 0 status); no apply tool exists yet. The current server is described in `mcp-server.md`.
+Status: agreed plan. Phases 0 and 1 are built (see Phase 0 status and Phase 1 status). The current server is described in `mcp-server.md`.
 
 ## Decisions
 
@@ -43,7 +43,7 @@ The agent never needs to know where the environment runs. The same tool list, th
 - `Capabilities` (kernel) probes a connection once and caches the answer per connection key (the same key `AgentSolutionsEndpoints` builds for the layers cache): the organization version (`RetrieveVersion`), whether feature tables exist (`appaction`, `customapi`, `pluginpackage`, `connectionreference`, `msdyn_componentlayer`), and whether `ExportSolutionAsync` is available.
 - When a feature is missing, the plan contains an `unsupported` step with the reason and the route instead, and the call fails with the new error code `NotSupported`. The tool stays in the list, because the connection is an argument of each call and can change between calls.
 - Long operations go through `AsyncJobs`, which hides the difference between the online async messages and the on-premises ones (see the table).
-- Online throttling (429 with `Retry-After`) and on-premises SOAP timeouts are handled in one retry policy in the executor. Calls that can take minutes (publish all, import, export) use a longer timeout on both.
+- Online throttling (429 with `Retry-After`) and the customization lock are retried by one retry policy in the executor, on both deployment types. A timeout is not retried, because the request may have run; the result says where the call stopped (see Phase 0 status). Calls that can take minutes (publish all, import, export) are bounded only by the call's own cancellation.
 
 **Where on-premises differs, and how each family handles it.** The Dataverse expert confirms each line for the on-premises versions we support (see Open questions) before the family is built.
 
@@ -133,7 +133,7 @@ Today the approval path is synchronous: `AgentTool.describe(args)` in `types.ts`
 
 - `AgentTool` gets `plan?(args, ctx): Promise<PlanPreview>`. For apply tools it replaces both `effect` and `describe`: the effect is `PlanPreview.effect`. `registry.ts` requires `plan` or `describe` for any tool that can change the environment.
 - `mcpServer.ts` calls `plan` after resolving the connection and before `gate.decide()`. Building the plan has its own timeout and honours the call's `AbortSignal`. The approval timeout starts when the dialog shows, not when the call arrives.
-- `PlanPreview` is `{ effect, hash, steps: [{ op, target, effect, detail }], removes?, unsupported? }`. The approval window (`approvalWindow.ts`) lists the steps grouped by effect, destructive first, and collapses long plans to the first 20 steps plus counts.
+- `PlanPreview` is `{ effect, hash, steps: [{ op, target, effect, detail }], removes?, unsupported? }`. The approval window (`approvalWindow.ts`) lists the steps in the order they run, marks destructive and unsupported ones, collapses long plans to the first 20 steps plus counts, and says where the apply stops when a step that cannot run has steps after it.
 - The decision carries the `hash`. `run` sends it to `/apply`, so what runs is what was approved.
 - The activity log stores the plan hash and the steps, so the user can see afterwards what was approved.
 - `records_delete` and `remove` use the same path: their plan is the dependency check or the matched records.
@@ -206,7 +206,8 @@ api/PowerTools/PowerTools.API/Tools/Agent/
     Flows/       FlowSpec, FlowPlanner, ClientDataBuilder, FlowDefinitionValidator
     Processes/   ProcessSpec, ProcessPlanner, WorkflowXamlBuilder
     Security/    RoleSpec, RolePlanner (privilege names and depths)
-    Solutions/   SolutionSpec, SolutionPlanner, Export, Import
+    Solutions/   SolutionSpec, SolutionPlanner, SolutionImportPlanner, SolutionExport, SolutionZip
+    Inspect/     SchemaInspector (inspect_schema)
     Config/      envvars and connection references
     Remove/      one handler per kind
 ```
@@ -385,6 +386,35 @@ Decisions made while building:
 - The plan hash covers the steps and an optional state token (for example a form's `versionnumber`), so a change made outside Power Tools that leaves the steps the same still refuses the call.
 
 Still open for Phase 0: the sandboxes, so the live tests and evals can run (see `evals/mcp/README.md`).
+
+## Phase 1 status
+
+Built on 2026-11-21:
+
+| Part | Where |
+|---|---|
+| `table_apply`: `TableApplySpec`, `TableSpecRules` (spec checks), `TableColumns` (type mapping and allowed changes), `TablePlanner` | `api/PowerTools/PowerTools.API/Tools/Agent/Components/Tables/` |
+| `solution_import`: `SolutionImportSpec`, `SolutionImportPlanner`, `SolutionZip`. `solution_export`: `SolutionExport` | `Components/Solutions/` |
+| `inspect_schema`: `SchemaInspector` (table, column, relationship, key, choice, role) | `Components/Inspect/` |
+| Family registration and the two read routes (`POST /api/agent/inspect/schema`, `POST /api/agent/solution/export`) | `Components/AgentComponentEndpoints.cs` |
+| Desktop tools, from the generated `table_apply.input.json` and `solution_import.input.json` | `desktop/src/electron/mcp/tools/tableTools.ts`, `solutionFileTools.ts` |
+| Planner tests against an in-memory metadata world that answers the SDK messages, so each spec is applied and planned again | `PowerTools.API.Tests/Tools/Agent/Components/` |
+| Live lifecycle tests and three new eval scenarios | `desktop/test/live/mcp/parity.live.ts`, `evals/mcp/scenarios/` |
+
+Decisions made while building:
+
+- **Run order.** The table planner plans the table, then each column in spec order with its options right after it, then many-to-many relationships, then keys. Keys come last because they name columns the same spec may create.
+- **Blocked, not refused.** A change Dataverse does not allow (a column's type, a lookup's target, a table's ownership, the primary name column, a file column's size, which choice a column uses, a date behavior other than from user local, a key's columns, turning notes or activities off) and a change to a managed component that forbids it plan as `blocked` steps with the reason, so the user and the agent see the whole plan. A bad spec (a missing display name on a new column, a wrong prefix, a property for another column type) is refused before planning with one message that says what to change.
+- **One path for column updates.** A column update reads the column again just before the write and sends it whole with `UpdateAttribute` and `MergeLabels`, including the required level. The older `schema_update_column` tool changes the required level through the Web API, which on-premises connections do not have; `table_apply` does not. Verification catches it if a server ignores a change.
+- **File storage.** File and image columns need the `fileattachment` table, which `Capabilities` now probes. Without it they plan as `unsupported`; the rest of the spec still plans.
+- **Keys.** Creating or reactivating a key waits up to five minutes for its index. A failed index fails the step, and the next plan reactivates the key. A key still being built is a warning, not a step.
+- **Option values.** An option without a value is matched by its label in the base language; a new one gets the next free value from the publisher's option value prefix. Options the spec leaves out are kept.
+- **Import.** The plan's detail names the file's SHA-256 and every option and value, so the approved hash covers exactly that file. The publish lock is one of the plan's lock keys, so an import waits for a publish by Power Tools on the same environment, and the other way round. An unmanaged import adds a `publishAll` step; `upgrade` adds a destructive `applyUpgrade` (`DeleteAndPromote`) step. Importing the installed version is an empty plan unless `force`; verification ignores `force` (`IApplyFamily.ForVerification`). On a failed import the result gives the import job's first error, which names the component.
+- **Older on-premises versions.** Polling an async operation falls back to reading it without `friendlymessage` when that column does not exist.
+- **Export** writes a new file and never overwrites one; it is a read for the environment, so it does not ask.
+- **Approval dialog.** Steps are listed in run order (Phase 0 grouped them by effect), so the user sees which changes run before a step that stops the apply.
+
+Still open for Phase 1: running the live tests and evals on the two sandboxes, and the Dataverse expert's check of the on-premises versions to support (open question 2), in particular for file and image columns and connection references in an import.
 
 ## Open questions
 

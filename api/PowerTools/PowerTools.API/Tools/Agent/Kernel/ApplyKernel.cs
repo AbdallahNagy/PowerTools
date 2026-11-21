@@ -47,12 +47,20 @@ public interface IApplyFamily
     IApplySpec ReadSpec(JsonElement spec);
 
     Task<Plan> PlanAsync(IApplySpec spec, PlanContext context, CancellationToken ct);
+
+    /// <summary>
+    /// The spec verification plans with after the steps ran. Normally the same spec; a family whose spec asks to run
+    /// a step even when nothing differs (a forced re-import) answers the spec without that request.
+    /// </summary>
+    IApplySpec ForVerification(IApplySpec spec) => spec;
 }
 
-public sealed class ApplyFamily<TSpec>(string name, IComponentPlanner<TSpec> planner) : IApplyFamily
+public sealed class ApplyFamily<TSpec>(string name, IComponentPlanner<TSpec> planner, Func<TSpec, TSpec>? forVerification = null) : IApplyFamily
     where TSpec : class, IApplySpec
 {
     public string Name => name;
+
+    public IApplySpec ForVerification(IApplySpec spec) => forVerification is null ? spec : forVerification((TSpec)spec);
 
     public IApplySpec ReadSpec(JsonElement spec)
     {
@@ -111,7 +119,7 @@ public sealed class ApplyKernel(IApplyFamily family, Func<PlanContext> newContex
         if (plan.IsEmpty) return ApplyResult.Unchanged(plan.Warnings);
 
         var execution = await new PlanExecutor(context.Client, options.Retry, context.ConnectionKey).RunAsync(plan, spec.Solution, ct);
-        var verification = await family.PlanAsync(spec, newContext(), ct);
+        var verification = await family.PlanAsync(family.ForVerification(spec), newContext(), ct);
         return Combine(plan, execution, verification);
     }
 
