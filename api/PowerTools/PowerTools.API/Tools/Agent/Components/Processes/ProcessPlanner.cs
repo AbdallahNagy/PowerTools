@@ -189,6 +189,8 @@ public sealed class ProcessPlanner(
             AsChild = !action && (triggers?.AsChild ?? row?.GetAttributeValue<bool?>("subprocess") ?? false),
             OnCreate = !action && (triggers?.OnCreate ?? row?.GetAttributeValue<bool?>("triggeroncreate") ?? false),
             OnUpdate = action ? [] : onUpdate,
+            OnDelete = !action && row?.GetAttributeValue<bool?>("triggerondelete") == true,
+            Scope = row?.GetAttributeValue<OptionSetValue>("scope")?.Value ?? 4,
             RunAs = mode == ProcessMode.Realtime && !action
                 ? spec.RunAs ?? (row?.GetAttributeValue<OptionSetValue>("runas")?.Value == 1 ? ProcessRunAs.User : ProcessRunAs.Owner)
                 : ProcessRunAs.Owner,
@@ -538,7 +540,10 @@ public sealed class ProcessPlanner(
                 ["onCreate"] = row.GetAttributeValue<bool?>("triggeroncreate") ?? false,
             };
             if (row.GetAttributeValue<string>("triggeronupdateattributelist") is { Length: > 0 } update) triggers["onUpdate"] = update.Split(',');
-            if (row.GetAttributeValue<bool?>("triggerondelete") == true) result["note"] = "It also starts on delete, which process_apply does not write yet; saving it from process_apply drops that trigger.";
+            var notes = new List<string>();
+            if (row.GetAttributeValue<bool?>("triggerondelete") == true) notes.Add("It also starts on delete; process_apply keeps that trigger but cannot set it.");
+            if (row.GetAttributeValue<OptionSetValue>("scope")?.Value is { } scope and not 4) notes.Add($"Its scope is {ScopeName(scope)}; process_apply keeps it but cannot set it.");
+            if (notes.Count > 0) result["note"] = string.Join(" ", notes);
             result["triggers"] = triggers;
             if (realtime) result["runAs"] = row.GetAttributeValue<OptionSetValue>("runas")?.Value == 1 ? "user" : "owner";
         }
@@ -548,7 +553,7 @@ public sealed class ProcessPlanner(
         }
 
         var reading = ProcessXamlReader.Read(row.GetAttributeValue<string>("xaml") ?? "");
-        if (category == ActionCategory) result["arguments"] = JsonSerializer.SerializeToElement(reading.Arguments, JsonSerializerOptions.Web);
+        if (category == ActionCategory) result["arguments"] = JsonSerializer.SerializeToElement(reading.Arguments, Spec);
         if (childNames is not null) NameChildren(reading.Steps, childNames);
         result["steps"] = JsonSerializer.Deserialize<JsonElement>(reading.Steps.ToJsonString());
         result["state"] = row.GetAttributeValue<OptionSetValue>("statecode")?.Value == 1 ? "activated" : "draft";
@@ -578,6 +583,19 @@ public sealed class ProcessPlanner(
         var joined = string.Concat(words.Select(w => char.ToUpperInvariant(w[0]) + w[1..]));
         return joined.Length == 0 ? "Action" : joined;
     }
+
+    private static readonly JsonSerializerOptions Spec = new(JsonSerializerOptions.Web)
+    {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
+    private static string ScopeName(int scope) => scope switch
+    {
+        1 => "user",
+        2 => "business unit",
+        3 => "parent and child business units",
+        _ => $"{scope}",
+    };
 
     private static string Hash(string text) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..12];
 

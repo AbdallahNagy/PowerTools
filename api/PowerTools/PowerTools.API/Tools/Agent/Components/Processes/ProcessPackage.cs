@@ -29,6 +29,12 @@ public sealed record ProcessDefinition
 
     public IReadOnlyList<string> OnUpdate { get; init; } = [];
 
+    /// <summary>Kept from an existing workflow: process_apply cannot set a delete trigger, but it does not drop one.</summary>
+    public bool OnDelete { get; init; }
+
+    /// <summary>Kept from an existing workflow: 1 user, 2 business unit, 3 parent-child business units, 4 organization.</summary>
+    public int Scope { get; init; } = 4;
+
     public ProcessRunAs RunAs { get; init; }
 
     public bool Activated { get; init; }
@@ -135,12 +141,12 @@ public static class ProcessPackage
             new XElement("Subprocess", Bit(!action && process.AsChild)),
             new XElement("Category", action ? "3" : "0"),
             new XElement("Mode", realtime ? "1" : "0"),
-            new XElement("Scope", "4"),
+            new XElement("Scope", process.Scope.ToString(CultureInfo.InvariantCulture)),
             new XElement("OnDemand", Bit(!action && process.OnDemand)));
         if (!action && process.OnUpdate.Count > 0) workflow.Add(new XElement("TriggerOnUpdateAttributeList", string.Join(",", process.OnUpdate)));
         workflow.Add(
             new XElement("TriggerOnCreate", Bit(!action && process.OnCreate)),
-            new XElement("TriggerOnDelete", "0"),
+            new XElement("TriggerOnDelete", Bit(!action && process.OnDelete)),
             new XElement("AsyncAutodelete", "0"),
             new XElement("SyncWorkflowLogOnFailure", Bit(realtime || action)),
             new XElement("StateCode", process.Activated ? "1" : "0"),

@@ -155,9 +155,10 @@ be written back.
 
 ## Not written yet
 
-Wait conditions and timeouts, delete triggers, user or business unit scope, action output arguments, global (unbound)
-actions, date and text-search condition operators (on or after, contains, begins with), custom step outputs (kept as
-they are), and literal number, date or money values. Build those in the classic designer.
+Wait conditions and timeouts, delete triggers and user or business unit scope (an existing process keeps them),
+action output arguments, global (unbound) actions, date and text-search condition operators (on or after, contains,
+begins with), custom step outputs (kept as they are), and literal number, date or money values. Build those in the
+classic designer.
 `;
 
 export const MCP_GUIDES: readonly McpGuide[] = [

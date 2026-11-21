@@ -75,7 +75,7 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
         string[] columns = ["name", "category", "mode", "primaryentity", "statecode", "ismanaged", "description"];
         if (body.Name is null) return await RowsWhere(body, "process", "workflow", "name", columns, processes, ct);
         var row = await RowInspect.FindAsync(client, "workflow", "name", body.Name,
-            [.. columns, "xaml", "ondemand", "subprocess", "triggeroncreate", "triggerondelete", "triggeronupdateattributelist", "runas", "sdkmessageid"], processes, ct)
+            [.. columns, "xaml", "ondemand", "subprocess", "triggeroncreate", "triggerondelete", "triggeronupdateattributelist", "runas", "scope", "sdkmessageid"], processes, ct)
             ?? throw RowInspect.NotFound($"process {body.Name}");
 
         // Child workflows come back by name, so the steps can be sent back as they are.

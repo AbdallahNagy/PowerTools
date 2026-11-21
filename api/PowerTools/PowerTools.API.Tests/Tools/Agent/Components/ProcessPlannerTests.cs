@@ -261,15 +261,21 @@ public sealed class ProcessPlannerTests
     }
 
     [Fact]
-    public async Task Inspect_names_child_workflows_and_flags_a_delete_trigger()
+    public async Task A_delete_trigger_and_a_user_scope_it_cannot_set_are_flagged_and_kept_on_save()
     {
         await world.ApplyAsync(Family, Spec());
         Process["triggerondelete"] = true;
+        Process["scope"] = new OptionSetValue(1);
 
         var described = ProcessPlanner.Describe(Process);
+        await world.ApplyAsync(Family, Spec(Steps.Replace("Reviewed: ", "Checked: ")));
 
         Assert.Contains("delete", (string)described["note"]!);
+        Assert.Contains("user", (string)described["note"]!);
         Assert.Equal("realtime", described["mode"]);
+        var saved = Entry(imports[^1], "customizations.xml");
+        Assert.Equal("1", saved.Descendants("TriggerOnDelete").Single().Value);
+        Assert.Equal("1", saved.Descendants("Scope").Single().Value);
     }
 
     // ── The import Dataverse runs ────────────────────────────────────────────
