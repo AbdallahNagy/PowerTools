@@ -20,7 +20,13 @@ public sealed record ImportOptions(
 /// is polled through asyncoperation and importjob. Export uses ExportSolutionAsync where it exists and the
 /// synchronous ExportSolution otherwise; the caller's token bounds how long either may take.
 /// </summary>
-public sealed class AsyncJobs(IAgentClient client, Func<TimeSpan, CancellationToken, Task>? delay = null, TimeSpan? pollInterval = null)
+/// Polls go through <see cref="RetryPolicy"/>, so a throttled poll during a long online import waits instead of
+/// failing the call while the import keeps running.
+public sealed class AsyncJobs(
+    IAgentClient client,
+    Func<TimeSpan, CancellationToken, Task>? delay = null,
+    TimeSpan? pollInterval = null,
+    RetryPolicy? retry = null)
 {
     // asyncoperation: statecode 3 = Completed; statuscode 30 = Succeeded, 31 = Failed, 32 = Canceled.
     private const int Completed = 3;
@@ -28,6 +34,7 @@ public sealed class AsyncJobs(IAgentClient client, Func<TimeSpan, CancellationTo
 
     private readonly Func<TimeSpan, CancellationToken, Task> delay = delay ?? Task.Delay;
     private readonly TimeSpan pollInterval = pollInterval ?? TimeSpan.FromSeconds(3);
+    private readonly RetryPolicy retry = retry ?? new RetryPolicy(delay);
 
     public async Task<byte[]> ExportAsync(string solution, bool managed, Capabilities capabilities, CancellationToken ct)
     {
@@ -76,7 +83,9 @@ public sealed class AsyncJobs(IAgentClient client, Func<TimeSpan, CancellationTo
     {
         while (true)
         {
-            var row = await client.RetrieveAsync("asyncoperation", operationId, new ColumnSet("statecode", "statuscode", "message", "friendlymessage"), ct);
+            var row = await retry.RunAsync(
+                token => client.RetrieveAsync("asyncoperation", operationId, new ColumnSet("statecode", "statuscode", "message", "friendlymessage"), token),
+                ct);
             var state = row.GetAttributeValue<OptionSetValue>("statecode")?.Value;
             if (state == Completed)
             {
@@ -103,7 +112,7 @@ public sealed class AsyncJobs(IAgentClient client, Func<TimeSpan, CancellationTo
     {
         try
         {
-            var row = await client.RetrieveAsync("importjob", importJobId, new ColumnSet("progress", "data"), ct);
+            var row = await retry.RunAsync(token => client.RetrieveAsync("importjob", importJobId, new ColumnSet("progress", "data"), token), ct);
             return (row.GetAttributeValue<double?>("progress"), ImportJobLog.FirstError(row.GetAttributeValue<string>("data")));
         }
         catch (Exception ex) when (RetryPolicy.FindFault(ex) is not null)

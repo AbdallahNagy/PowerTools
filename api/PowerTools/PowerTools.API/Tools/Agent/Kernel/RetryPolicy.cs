@@ -65,9 +65,12 @@ public sealed class RetryPolicy(Func<TimeSpan, CancellationToken, Task>? delay =
                 && details.TryGetValue("Retry-After", out var value)
                 && value is not null)
             {
+                // Seconds first: TimeSpan.TryParse reads a bare "30" as 30 days.
                 if (value is TimeSpan span) return span;
-                if (TimeSpan.TryParse(value.ToString(), out var parsed)) return parsed;
-                if (double.TryParse(value.ToString(), out var seconds)) return TimeSpan.FromSeconds(seconds);
+                var text = value.ToString();
+                if (double.TryParse(text, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var seconds))
+                    return TimeSpan.FromSeconds(seconds);
+                if (TimeSpan.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var parsed)) return parsed;
             }
 
             return Backoff(attempt);

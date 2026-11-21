@@ -204,6 +204,35 @@ public sealed class KernelServicesTests
         Assert.Equal([7], file);
         Assert.Equal(exportJobId, client.Executed.Single(r => r.RequestName == "DownloadSolutionExportData")["ExportJobId"]);
     }
+
+    [Fact]
+    public async Task A_throttled_poll_waits_and_polls_again_instead_of_failing()
+    {
+        var client = Data.Client();
+        var operationId = Guid.NewGuid();
+        client.Records[("asyncoperation", operationId)] = new Entity("asyncoperation", operationId)
+        {
+            ["statecode"] = new OptionSetValue(3),
+            ["statuscode"] = new OptionSetValue(30),
+        };
+        var throttled = 0;
+        client.BeforeRetrieve = (table, _) =>
+        {
+            if (table == "asyncoperation" && throttled++ == 0)
+            {
+                var fault = new OrganizationServiceFault { ErrorCode = -2147015902, Message = "Number of requests exceeded the limit." };
+                fault.ErrorDetails["Retry-After"] = TimeSpan.FromSeconds(5);
+                throw new System.ServiceModel.FaultException<OrganizationServiceFault>(fault, "throttled");
+            }
+        };
+        var waits = new List<TimeSpan>();
+
+        var status = await new AsyncJobs(client, (wait, _) => { waits.Add(wait); return Task.CompletedTask; })
+            .WaitAsync(operationId, null, CancellationToken.None);
+
+        Assert.True(status.Succeeded);
+        Assert.Equal([TimeSpan.FromSeconds(5)], waits);
+    }
 }
 
 internal sealed class ManualTime : TimeProvider

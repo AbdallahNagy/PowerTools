@@ -32,6 +32,14 @@ public sealed class RetryAndLockTests
         Assert.Equal([TimeSpan.FromSeconds(7)], waits);
     }
 
+    [Theory]
+    [InlineData("30", 30)]
+    [InlineData("00:00:12", 12)]
+    public void Retry_after_text_is_read_as_seconds_or_a_time_span(string retryAfter, int expectedSeconds)
+    {
+        Assert.Equal(TimeSpan.FromSeconds(expectedSeconds), RetryPolicy.RetryDelay(Fault(-2147015902, retryAfter), 1));
+    }
+
     [Fact]
     public async Task Customization_lock_is_retried_with_backoff()
     {
