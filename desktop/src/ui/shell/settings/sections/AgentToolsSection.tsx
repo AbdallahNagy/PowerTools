@@ -20,9 +20,9 @@ const FILTERS: ReadonlyArray<{ id: EffectFilter; label: string }> = [
 function asksFirst(tool: McpToolInfo): string | undefined {
   if (tool.effect === "destructive") return "Always asks you first.";
   if (tool.effect !== "change") return undefined;
-  // An apply tool's plan can remove or replace something, and then it asks whatever the connection allows.
+  // A per-call tool's plan or message can be destructive, and then it asks whatever the connection allows.
   return tool.perCall
-    ? "Asks you first when it removes something, or unless the connection allows changes."
+    ? "Asks you first unless the connection allows changes. A call that removes or replaces something always asks."
     : "Asks you first unless the connection allows changes.";
 }
 

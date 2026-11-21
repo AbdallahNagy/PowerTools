@@ -297,7 +297,7 @@ describe("Settings: MCP server", () => {
     expect(screen.getByText("No matching tools")).toBeInTheDocument();
   });
 
-  it("counts apply tools under Change or Destructive, by the most they can do", async () => {
+  it("counts apply tools under Change or Destructive, by the effect their descriptions state", async () => {
     const status: McpStatusInfo = {
       ...OFF,
       groups: [...OFF.groups, { group: "records-delete", enabled: true, tools: 1 }],
@@ -316,7 +316,7 @@ describe("Settings: MCP server", () => {
     expect(within(filter).getByRole("button", { name: /^Change/ })).toHaveTextContent("2");
     expect(within(filter).getByRole("button", { name: /^Destructive/ })).toHaveTextContent("1");
     fireEvent.click(within(filter).getByRole("button", { name: /^Change/ }));
-    expect(screen.getByText(/Creates or updates a table\. Asks you first when it removes something/)).toBeInTheDocument();
+    expect(screen.getByText(/Creates or updates a table\. Asks you first unless the connection allows changes\. A call that removes or replaces something always asks/)).toBeInTheDocument();
   });
 
   it("shows declined calls and errors in the activity and filters to errors", async () => {

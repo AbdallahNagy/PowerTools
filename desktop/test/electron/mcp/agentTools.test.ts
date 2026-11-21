@@ -72,7 +72,7 @@ describe("the first release tool set", () => {
     ]);
   });
 
-  it("counts every tool under Read, Change or Destructive in Settings, by the most it can do", () => {
+  it("counts every tool under Read, Change or Destructive in Settings, by the effect its description states", () => {
     const count = (effect: string) => registry.tools().filter((t) => t.effect === effect).length;
     expect([count("read"), count("change"), count("destructive")]).toEqual([6, 16, 3]);
     expect(registry.tools().filter((t) => t.perCall).map((t) => t.name)).toHaveLength(19);

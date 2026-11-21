@@ -124,7 +124,7 @@ export interface McpApprovalPlan {
   warnings: string[];
 }
 
-/** One agent tool as Settings lists it. effect is the most the tool can do. */
+/** One agent tool as Settings lists it. effect is the class its description states. */
 export interface McpToolInfo {
   name: string;
   title: string;

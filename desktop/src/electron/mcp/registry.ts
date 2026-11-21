@@ -7,7 +7,7 @@ const NAME_PATTERN = /^[a-z0-9_]{1,64}$/;
 const EFFECT_MARKERS = ["Read-only.", "Changes the environment.", "Destructive:"];
 const MAX_DESCRIPTION = 400;
 
-/** The most a tool can do, as Settings groups it: the effect class its description states. */
+/** How Settings groups a tool: the effect class its description states. Per-call tools can ask for more on a given call. */
 export type AgentToolEffectLabel = EffectClass;
 
 export interface AgentToolInfo {
