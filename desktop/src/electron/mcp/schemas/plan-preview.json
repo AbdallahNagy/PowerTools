@@ -1,0 +1,84 @@
+{
+  "type": "object",
+  "properties": {
+    "effect": {
+      "enum": [
+        "read",
+        "change",
+        "destructive"
+      ]
+    },
+    "hash": {
+      "type": "string"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "effect": {
+            "enum": [
+              "read",
+              "change",
+              "destructive"
+            ]
+          },
+          "kind": {
+            "enum": [
+              "run",
+              "unsupported",
+              "blocked"
+            ]
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "route": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "op",
+          "target",
+          "effect",
+          "kind"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "effect",
+    "hash",
+    "steps",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

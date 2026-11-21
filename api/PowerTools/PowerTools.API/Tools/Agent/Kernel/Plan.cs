@@ -141,9 +141,9 @@ public sealed record PlanStepDto(
     string Target,
     PlanEffect Effect,
     PlanStepKind Kind,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Detail,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Reason,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Route)
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Detail = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Reason = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Route = null)
 {
     public static PlanStepDto From(PlanStep step) =>
         new(step.Op, step.Target, step.Effect, step.Kind, step.Detail, step.Reason, step.Route);
