@@ -41,7 +41,7 @@ const project = {
 };
 
 describe("the first release tool set", () => {
-  it("is 19 tools in their Settings groups, within the tool budget", () => {
+  it("is 23 tools in their Settings groups, within the tool budget", () => {
     expect(measureToolBudget(AGENT_TOOLS).problems).toEqual([]);
     expect(registry.tools().map((t) => [t.name, t.group, t.effect])).toEqual([
       ["connections_list", "connections", "read"],
@@ -55,8 +55,12 @@ describe("the first release tool set", () => {
       ["choice_apply", "schema", "varies"],
       ["form_apply", "ui", "varies"],
       ["view_apply", "ui", "varies"],
+      ["webresource_apply", "ui", "varies"],
+      ["app_apply", "ui", "varies"],
       ["plugin_deploy", "logic", "varies"],
       ["plugin_step_apply", "logic", "varies"],
+      ["customapi_apply", "logic", "varies"],
+      ["role_apply", "security", "varies"],
       ["solution_apply", "solutions", "varies"],
       ["config_apply", "solutions", "varies"],
       ["execute_message", "records", "varies"],
@@ -77,6 +81,10 @@ describe("the first release tool set", () => {
     ["plugin_deploy", "plugin_deploy.input.json", "plugin_deploy"],
     ["plugin_step_apply", "plugin_step_apply.input.json", "plugin_step"],
     ["remove", "remove.input.json", "remove"],
+    ["webresource_apply", "webresource_apply.input.json", "webresource"],
+    ["app_apply", "app_apply.input.json", "app"],
+    ["customapi_apply", "customapi_apply.input.json", "customapi"],
+    ["role_apply", "role_apply.input.json", "role"],
   ])("%s takes the spec generated from C# and plans with the %s family", async (name, file, family) => {
     const schema = (await import(`../../../src/electron/mcp/schemas/${file}`)).default as { properties: object; required?: string[] };
     const apply = tool(name);
@@ -87,6 +95,13 @@ describe("the first release tool set", () => {
     const call = vi.fn(async () => plan);
     await apply.plan!({ connection: "A · Dev" }, ctx(call));
     expect(call.mock.calls[0].slice(1, 3)).toEqual(["POST", `/api/agent/${family}/plan`]);
+  });
+
+  it("describes the Phase 3 apply tools for the approval dialog", () => {
+    const plan: PlanPreview = { effect: "change", hash: "h", steps: [{ op: "createRole", target: "R", effect: "change", kind: "run" }], warnings: [] };
+    expect(tool("role_apply").describePlan!({ role: { name: "Sales" }, fieldSecurityProfiles: [{ name: "F" }] }, plan)).toBe("apply role Sales and field security (1 step)");
+    expect(tool("form_apply").describePlan!({ form: "Overview", formType: "dashboard" }, plan)).toBe("apply dashboard Overview (1 step)");
+    expect(tool("app_apply").describePlan!({ uniqueName: "new_App" }, plan)).toBe("apply app new_App (1 step)");
   });
 
   it("records_delete describes what goes from the plan", () => {
@@ -108,6 +123,10 @@ describe("the first release tool set", () => {
     const form = { solution: "Core", table: "account", form: "Information" };
     expect(registry.validate(tool("form_apply"), { ...form, operations: [{ op: "addField", column: "name", section: "summary" }] })).toMatchObject({ ok: true });
     expect(registry.validate(tool("form_apply"), { ...form, operations: [{ op: "replaceLayout" }] })).toMatchObject({ ok: false });
+    const layout = { tabs: [{ name: "general", sections: [{ name: "summary", fields: ["name"] }] }] };
+    expect(registry.validate(tool("form_apply"), { ...form, layout })).toMatchObject({ ok: true });
+    expect(registry.validate(tool("form_apply"), { solution: "Core", form: "Overview", formType: "dashboard", layout })).toMatchObject({ ok: true });
+    expect(registry.validate(tool("form_apply"), { ...form, operations: [{ op: "addHandler", event: "onload", library: "new_/a.js", function: "f" }] })).toMatchObject({ ok: true });
     expect(registry.validate(tool("remove"), { kind: "choiceoption", name: "new_priority", value: 100000000 })).toMatchObject({ ok: true });
     expect(registry.validate(tool("remove"), { kind: "record", name: "x" })).toMatchObject({ ok: false });
   });

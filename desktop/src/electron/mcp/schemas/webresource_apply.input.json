@@ -1,0 +1,50 @@
+{
+  "description": "Web resources from files on this computer: listed files, or every file of a folder. A file whose content is already there plans nothing.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the web resources go into. Its publisher decides the prefix.",
+      "type": "string"
+    },
+    "files": {
+      "description": "Files to create or update.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": {
+            "description": "Absolute path of the file. The extension decides the type: html, css, js, xml, png, jpg, gif, xap, xsl, ico, svg, resx.",
+            "type": "string"
+          },
+          "name": {
+            "description": "The web resource\u0027s name, starting with the publisher prefix, for example con_/project/form.js. Default: basePath plus the file name.",
+            "type": "string"
+          },
+          "displayName": {
+            "description": "Default: the name.",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "path"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "folder": {
+      "description": "Absolute path of a folder: every file in it and its subfolders with a known extension becomes a web resource named basePath plus its path in the folder.",
+      "type": "string"
+    },
+    "basePath": {
+      "description": "For folder, and for files without a name: the start of each name, for example con_/project/. Default: the publisher prefix and _/.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "solution"
+  ],
+  "additionalProperties": false
+}

@@ -65,7 +65,7 @@ describe("createAgentToolRegistry", () => {
     expect(registry.get("b")).toBeUndefined();
     expect(registry.get("a")).toBeDefined();
     expect(registry.groups().find((g) => g.group === "schema")!.tools).toBe(2);
-    expect(registry.groups().map((g) => g.group)).toEqual(["connections", "read", "records", "records-delete", "schema", "ui", "logic", "solutions", "remove"]);
+    expect(registry.groups().map((g) => g.group)).toEqual(["connections", "read", "records", "records-delete", "schema", "ui", "logic", "security", "solutions", "remove"]);
     off.delete("schema");
     expect(registry.list().map((t) => t.name)).toEqual(["a", "b", "c"]);
   });

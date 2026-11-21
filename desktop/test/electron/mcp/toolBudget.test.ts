@@ -15,9 +15,9 @@ const tool = (name: string, description = "Read-only. Lists things."): AgentTool
 });
 
 describe("tool budget", () => {
-  it("the first release tool set of 19 tools fits the agreed budget", () => {
+  it("the tool set of 23 tools fits the agreed budget", () => {
     const use = measureToolBudget(AGENT_TOOLS);
-    expect(AGENT_TOOLS).toHaveLength(19);
+    expect(AGENT_TOOLS).toHaveLength(23);
     expect(use.problems).toEqual([]);
   });
 

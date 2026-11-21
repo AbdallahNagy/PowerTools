@@ -1,6 +1,6 @@
 # MCP tool architecture
 
-Status: agreed plan. Phases 0, 1 and 2 are built (see Phase 0 status, Phase 1 status and Phase 2 status); Phase 2 is the first release set of 19 tools. The current server is described in `mcp-server.md`.
+Status: agreed plan. Phases 0 to 3 are built (see the status section of each); Phase 2 was the first release set of 19 tools, and Phase 3 brings it to 23. The current server is described in `mcp-server.md`.
 
 ## Decisions
 
@@ -84,7 +84,7 @@ The agent never needs to know where the environment runs. The same tool list, th
 | `records_write` | Up to 100 operations: create, update, upsert (by id or alternate key), associate. Optional all-or-nothing. | `records_create`, `records_update`, `records_associate` |
 | `table_apply` | A table and its columns (all types the environment supports), lookups, N:N relationships, alternate keys (waits for the key index), local choices and their options. Settings such as auditing and change tracking. | `schema_create_table`, `schema_create_column`, `schema_create_lookup`, `schema_create_many_to_many`, `schema_update_column`, `schema_add_choice_option` (local), `schema_publish` |
 | `choice_apply` | A global choice and its options, labels, colors and order. | `schema_create_choice`, `schema_add_choice_option` (global) |
-| `form_apply` | Patch operations on main, quick create, quick view and card forms (see Phase 2). Whole layouts, dashboards, libraries and event handlers come in Phase 3. | `schema_add_column_to_form`, `schema_remove_column_from_form` |
+| `form_apply` | Main, quick create, quick view and card forms and system dashboards: a whole layout (which creates the form when it is missing), then patch operations, form libraries and event handlers (see Phase 2 and Phase 3). | `schema_add_column_to_form`, `schema_remove_column_from_form` |
 | `view_apply` | Public, associated, lookup, quick find and advanced find views. Columns and widths, filter, sort, default view. Power Tools writes the FetchXML and layoutxml so they always match. | `schema_add_column_to_view`, `schema_remove_column_from_view` |
 | `app_apply` | A model-driven app: its tables, forms, views, charts and dashboards, the site map, modern commands where supported, and roles. Runs `AddAppComponents`, `ValidateApp` and the publish. | (new) |
 | `webresource_apply` | One or more web resources from local files or a folder. The type comes from the extension, the name from the publisher prefix and path. | (new) |
@@ -249,18 +249,23 @@ On the Electron side every apply tool is made by one factory, `applyTool({ name,
 }
 ```
 
-`form_apply` (Phase 2, patch operations):
+`form_apply` (Phase 2 patch operations, Phase 3 layout and handlers):
 
 ```json
 {
   "solution": "ContosoCore",
   "table": "con_project",
   "form": "Information",
+  "layout": {
+    "tabs": [
+      { "name": "general", "sections": [
+        { "name": "summary", "fields": ["con_name", "con_accountid"] },
+        { "name": "budget", "label": "Budget", "column": 2, "fields": ["con_budget", "con_stage"] }
+      ] }
+    ]
+  },
   "operations": [
-    { "op": "addSection", "tab": "General", "name": "budget", "label": "Budget", "after": "summary" },
-    { "op": "addField", "column": "con_budget", "section": "budget" },
-    { "op": "moveField", "column": "con_stage", "section": "budget", "after": "con_budget" },
-    { "op": "setFieldProperty", "column": "con_stage", "required": true }
+    { "op": "addHandler", "event": "onchange", "column": "con_stage", "library": "con_/project/form.js", "function": "Contoso.Project.onStage" }
   ]
 }
 ```
@@ -359,7 +364,7 @@ The old 57 tools stayed in the code while Phases 0 and 1 were built, so developm
 | 0 | Kernel: `Plan`, `PlanExecutor`, the result contract with `partlyApplied`, verification, `Capabilities`, locks and hash checks, `AsyncJobs`. Async approval: `plan()` on `AgentTool`, the approval window listing steps, the hash carried from approval to apply. `dryRun`, schema generation, `outputSchema`, tool budget test. The online and on-premises sandboxes, the live test runner and the eval harness. | 57 (not released) |
 | 1 | Pilot: `table_apply` and `inspect_schema`, end to end on both sandboxes, with planner tests, live tests and the first evals. Plus `solution_export` and `solution_import`, which carry little planning risk and prove `AsyncJobs` on both deployment types. Review the pilot before starting Phase 2. | 57 + 4 (not released) |
 | 2 | The rest of the consolidation, then the 57 old tools are deleted: `connections_list`, `inspect_ui`, `inspect_solution`, `records_query`, `records_write`, `records_delete`, `choice_apply`, `form_apply` (patch operations only: add, move and remove a field, add a section or tab, set a label or visibility, add a subgrid; required level stays on the column through `table_apply`), `view_apply`, `solution_apply`, `plugin_deploy`, `plugin_step_apply`, `config_apply`, `remove`, `execute_message`. New Settings groups, no migration. First release; `CHANGELOG.md` describes the new tool set. | 19 |
-| 3 | `form_apply` whole layouts, dashboards, form libraries and event handlers. `webresource_apply`, `app_apply`, `customapi_apply`, `role_apply`. | 23 |
+| 3 | `form_apply` whole layouts, dashboards, form libraries and event handlers. `webresource_apply`, `app_apply`, `customapi_apply`, `role_apply`. A `security` Settings group for `role_apply`. | 23 |
 | 4 | `flow_apply` (online) and the cloud flow guide. | 24 |
 | 5 | `process_apply` for classic workflows and actions, on both deployment types. Starting set of steps: create, update, assign, set state, send email, condition, wait, child workflow, custom workflow activity, stop. Final list and input format decided with the product owner (see Open questions). | 25 |
 
@@ -451,6 +456,34 @@ Decisions made while building:
 - **`systemform`'s key** is `formid`, not `systemformid`; lookups by id use `ComponentKinds.IdColumn`.
 
 Still open for Phase 2: running the live tests and evals on the two sandboxes (open question 3), in particular `plugin_deploy` of a `.nupkg` online, `inspect_solution` kind `layers` and `remove` kind `activelayer` on-premises (open question 4), and connection references in `config_apply` online.
+
+## Phase 3 status
+
+Built on 2026-11-21. The server offers 23 tools.
+
+| Part | Where |
+|---|---|
+| `webresource_apply`: files or a folder, the type from the extension, the name from `basePath` (default the publisher prefix and `_/`) and the path; content compared byte for byte | `Components/WebResources/WebResourceApply.cs` |
+| `form_apply` whole layouts (`FormLayoutWriter`), new forms and system dashboards, form libraries and event handlers (`FormEvents`) | `Components/Forms/FormLayout.cs`, `FormApply.cs` |
+| `app_apply` (`AppPlanner`, `SiteMapXmlBuilder`) | `Components/Apps/AppApply.cs` |
+| `customapi_apply` | `Components/CustomApis/CustomApiApply.cs` |
+| `role_apply`: roles, privileges, assignment, field security profiles | `Components/Security/RoleApply.cs` |
+| Desktop tools and the `security` Settings group; `ui` is now "Apps, forms and views", `logic` "Plug-ins and Custom APIs" | `desktop/src/electron/mcp/tools/components.ts`, `types.ts`, `src/ui/shell/settings/sections/agentTools.ts` |
+| Planner tests: each spec is applied, checked and planned again (empty) | `PowerTools.API.Tests/Tools/Agent/Components/` (`WebResourcePlannerTests`, `FormLayoutTests`, `AppPlannerTests`, `CustomApiPlannerTests`, `RolePlannerTests`) |
+
+Decisions made while building:
+
+- **Whole layouts reuse what is there.** A tab, section or field cell already on the form keeps its id, label, events and parameters; subgrids, web resources and other controls without a column stay at the end of a kept section with the rows they span. Tabs, sections and fields the layout leaves out are taken off the form (not deleted from the table), and the step detail names the fields added and taken off. Whether anything changed is decided by comparing a text summary of the layout, so sending the same spec again plans nothing.
+- **A missing form is created from its layout.** Without a layout, a missing form is still `NotFound`.
+- **Dashboards** are system forms of type 0 with table `none`. Each component is a grid control on a public view, shown as a chart when `chart` names a system chart; one per section row, 12 rows high. They publish as dashboards.
+- **Handlers** need a JavaScript web resource that exists (upload it with `webresource_apply`); adding a handler adds its library. Removing a library removes the handlers that call it. A handler is matched by event, column (for onchange), library and function, and only its parameters, context flag and enabled state are updated.
+- **Web resources.** A type cannot change (blocked). The size limit is the organization's `maxuploadfilesize`. A folder is read in name order, and at most 200 files go in one call. Publishing uses the web resource ids.
+- **Apps.** The app and its site map are read with `RetrieveUnpublishedMultiple`, since a new app is unpublished until the executor publishes it. The site map is generated whole from the spec, with ids made from titles, and compared with the current XML after normalizing. A table without forms, views or charts adds only the table, so the app shows all of them. Components and roles left out are kept. `validateApp` runs last whenever another step runs, and any error from `ValidateApp` fails the call with the issues listed. Modern commands need the `appaction` table; elsewhere they plan as unsupported with the ribbon through `solution_import` as the route. The default app icon is the system web resource `953b9fac-1e5e-e611-80d6-00155ded156f`.
+- **Custom APIs.** The fields Dataverse fixes once saved (unique name, binding, bound table, function, step type, workflow; a field's type, table and optional) plan a destructive delete and create when they differ; for the API that also deletes its parameters, properties and the steps registered on it, which the detail says. Parameters and properties the spec leaves out are kept with a warning. Without the `customapi` table the plan is unsupported, with a custom process action or `solution_import` as the route.
+- **Roles.** Depths use the Dataverse names (`basic`, `local`, `deep`, `global`); `none` takes a privilege away as a destructive step. A depth the privilege does not allow is refused with the depths it allows. Table privileges come from the table's metadata, other privileges by name from the `privilege` table, so the spec matches what `inspect_schema` kind `role` lists. A user or team gets the copy of the role in its own business unit. A role's business unit cannot change (blocked).
+- **Field security.** A column in a profile that is not secured yet gets a `secureColumn` step (`UpdateAttribute` with `IsSecured`) before its permission. Permissions are allowed (4) or not (0) for read, create and update.
+
+Still open for Phase 3: running the live tests and evals on the two sandboxes, in particular `ValidateApp` and the app designer opening a generated app, modern command columns on `appaction` online, the dashboard XML in the dashboard designer, assigning a role to a user in a child business unit, and `secureColumn` on-premises.
 
 ## Open questions
 

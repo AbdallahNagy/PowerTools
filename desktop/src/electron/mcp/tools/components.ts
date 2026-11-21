@@ -1,11 +1,15 @@
+import appSpec from "../schemas/app_apply.input.json" with { type: "json" };
 import choiceSpec from "../schemas/choice_apply.input.json" with { type: "json" };
 import configSpec from "../schemas/config_apply.input.json" with { type: "json" };
+import customApiSpec from "../schemas/customapi_apply.input.json" with { type: "json" };
 import formSpec from "../schemas/form_apply.input.json" with { type: "json" };
 import deploySpec from "../schemas/plugin_deploy.input.json" with { type: "json" };
 import stepSpec from "../schemas/plugin_step_apply.input.json" with { type: "json" };
 import removeSpec from "../schemas/remove.input.json" with { type: "json" };
+import roleSpec from "../schemas/role_apply.input.json" with { type: "json" };
 import solutionSpec from "../schemas/solution_apply.input.json" with { type: "json" };
 import viewSpec from "../schemas/view_apply.input.json" with { type: "json" };
+import webResourceSpec from "../schemas/webresource_apply.input.json" with { type: "json" };
 import type { AgentTool } from "../types.js";
 import { applyTool } from "./applyTool.js";
 import { steps, str } from "./common.js";
@@ -33,10 +37,10 @@ export const formApply: AgentTool = applyTool({
   group: "ui",
   title: "Change a form",
   description:
-    "Changes the environment. Runs operations on one existing main, quick create, quick view or card form: addField, moveField, removeField, addSection, addTab, setLabel, setVisible, addSubgrid. Each is skipped when the form already has it. Read the form's tabs and sections with inspect_ui kind form. A column's required level is set with table_apply.",
+    "Changes the environment. A form or system dashboard: a whole layout (tabs, sections, fields; a dashboard's lists and charts) that creates it when missing, then operations: add, move or remove fields, sections, tabs, subgrids, labels, visibility, libraries and event handlers. What it already has is skipped. Read it first with inspect_ui kind form. Required level is set with table_apply.",
   spec: formSpec,
-  describe: (args, plan) => `change form ${str(args.table)}/${str(args.form)} (${steps(plan.steps.length)})`,
-  summarize: (args) => `form_apply ${str(args.table)}/${str(args.form)}`,
+  describe: (args, plan) => `apply ${args.formType === "dashboard" ? "dashboard " : `form ${str(args.table)}/`}${str(args.form)} (${steps(plan.steps.length)})`,
+  summarize: (args) => `form_apply ${args.table ? `${str(args.table)}/` : ""}${str(args.form)}`,
 });
 
 /** view_apply: one system view, written so its FetchXML and layout match. */
@@ -117,4 +121,58 @@ export const remove: AgentTool = applyTool({
   spec: removeSpec,
   describe: (args) => `remove ${str(args.kind)} ${str(args.name)}`,
   summarize: (args) => `remove ${str(args.kind)} ${str(args.name)}`,
+});
+
+/** webresource_apply: web resources from local files or a folder. */
+export const webResourceApply: AgentTool = applyTool({
+  name: "webresource_apply",
+  family: "webresource",
+  group: "ui",
+  title: "Upload web resources",
+  description:
+    "Changes the environment. Creates or updates web resources from files on this computer, listed or a whole folder. The type comes from the extension; the name is basePath (default prefix_/) plus the file name or path in the folder. Unchanged content plans nothing; a type cannot change. Then use them in form_apply libraries or app_apply commands.",
+  spec: webResourceSpec,
+  reportsProgress: true,
+  describe: (args, plan) => `upload web resources${args.folder ? ` from ${fileName(args.folder)}` : ""} (${steps(plan.steps.length)})`,
+  summarize: (args) => `webresource_apply ${args.folder ? fileName(args.folder) : `${(args.files as unknown[] | undefined)?.length ?? 0} file(s)`}`,
+});
+
+/** app_apply: a model-driven app, its site map, components, roles and commands. */
+export const appApply: AgentTool = applyTool({
+  name: "app_apply",
+  family: "app",
+  group: "ui",
+  title: "Apply a model-driven app",
+  description:
+    "Changes the environment. Creates or updates a model-driven app: its tables with their forms, views and charts, dashboards, the site map, the roles that can open it, and modern commands (online only). Then runs ValidateApp and publishes. Components and roles left out are kept. Read apps with inspect_ui kind app.",
+  spec: appSpec,
+  describe: (args, plan) => `apply app ${str(args.uniqueName)} (${steps(plan.steps.length)})`,
+  summarize: (args) => `app_apply ${str(args.uniqueName)}`,
+});
+
+/** customapi_apply: a Custom API with its parameters and properties. */
+export const customApiApply: AgentTool = applyTool({
+  name: "customapi_apply",
+  family: "customapi",
+  group: "logic",
+  title: "Apply a Custom API",
+  description:
+    "Changes the environment. Creates or updates a Custom API, its request parameters and response properties, and the plug-in type that runs it. Fields Dataverse fixes once saved (binding, function, step type, a parameter's type) are changed by deleting and creating again: the plan marks that destructive. Read one with inspect_solution kind customapi.",
+  spec: customApiSpec,
+  describe: (args, plan) => `apply Custom API ${str(args.uniqueName)} (${steps(plan.steps.length)})`,
+  summarize: (args) => `customapi_apply ${str(args.uniqueName)}`,
+});
+
+/** role_apply: a security role, who has it, and field security profiles. */
+export const roleApply: AgentTool = applyTool({
+  name: "role_apply",
+  family: "role",
+  group: "security",
+  title: "Apply security",
+  description:
+    "Changes the environment. Creates or updates a security role: privileges per table and depth (basic, local, deep, global; none takes one away, destructive), other privileges by name, and the users and teams that have it. Also field security profiles: column permissions and members. Nothing left out is taken away. Read a role with inspect_schema kind role.",
+  spec: roleSpec,
+  describe: (args, plan) =>
+    `apply ${[(args.role as { name?: unknown } | undefined)?.name ? `role ${str((args.role as { name?: unknown }).name)}` : "", (args.fieldSecurityProfiles as unknown[] | undefined)?.length ? "field security" : ""].filter(Boolean).join(" and ")} (${steps(plan.steps.length)})`,
+  summarize: (args) => `role_apply ${str((args.role as { name?: unknown } | undefined)?.name ?? "field security")}`,
 });

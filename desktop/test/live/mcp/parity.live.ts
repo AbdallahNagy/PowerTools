@@ -3,6 +3,10 @@
  *   npm run test:live:mcp
  * Needs a running Power Tools with the MCP server on, and a saved connection per sandbox. Never point it at production.
  */
+import { mkdtempSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { connect, loadLiveConfig, shapeDifferences, shapeOf, type Sandbox } from "./harness";
@@ -11,6 +15,13 @@ const { config, problem } = loadLiveConfig();
 if (problem) console.warn(`[mcp live] skipped: ${problem}`);
 
 type ToolResult = { isError?: boolean; structuredContent?: unknown };
+
+/** A small script on this computer for the webresource_apply lifecycle; Power Tools reads it from the same machine. */
+function liveScript(): string {
+  const path = join(mkdtempSync(join(tmpdir(), "pte-live-")), "form.js");
+  writeFileSync(path, "function pteLive() { return 1; }\n");
+  return path;
+}
 
 describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
   let client: Client;
@@ -114,6 +125,38 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
       "config_apply",
       { solution: "PowerToolsEvals", environmentVariables: [{ schemaName: "pte_LiveUrl", displayName: "Live URL", defaultValue: "https://a", value: "https://b" }] },
       { kind: "envvar", name: "pte_LiveUrl" },
+    ],
+    // Phase 3 families.
+    [
+      "webresource_apply",
+      { solution: "PowerToolsEvals", files: [{ path: liveScript(), name: "pte_/live/form.js" }] },
+      { kind: "webresource", name: "pte_/live/form.js" },
+    ],
+    [
+      "role_apply",
+      { solution: "PowerToolsEvals", role: { name: "PTE Live Role", tables: [{ table: "account", read: "global", write: "basic" }], privileges: [{ name: "prvExportToExcel", depth: "global" }] } },
+      { kind: "role", name: "PTE Live Role" },
+    ],
+    [
+      "form_apply",
+      {
+        solution: "PowerToolsEvals",
+        form: "PTE Live Dashboard",
+        formType: "dashboard",
+        layout: { tabs: [{ name: "tab_0", sections: [{ name: "accounts", components: [{ name: "accounts", table: "account" }] }] }] },
+      },
+      { kind: "form", table: "none", name: "PTE Live Dashboard" },
+    ],
+    [
+      "app_apply",
+      {
+        solution: "PowerToolsEvals",
+        uniqueName: "pte_LiveApp",
+        name: "PTE Live App",
+        tables: [{ table: "account" }],
+        siteMap: { areas: [{ title: "Main", groups: [{ title: "Customers", subareas: [{ table: "account" }] }] }] },
+      },
+      { kind: "app", name: "pte_LiveApp" },
     ],
   ];
 
