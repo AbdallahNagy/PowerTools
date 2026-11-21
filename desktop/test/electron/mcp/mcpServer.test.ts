@@ -81,6 +81,16 @@ describe("MCP server", () => {
     expect(client.getServerVersion()).toMatchObject({ name: "powertools", version: "1.0.0" });
   });
 
+  it("lists the guides as resources and reads one", async () => {
+    const { client } = await setup();
+    expect(client.getServerCapabilities()?.resources).toBeDefined();
+    const { resources } = await client.listResources();
+    expect(resources.map((r) => r.uri)).toContain("powertools://guides/cloud-flows");
+    const { contents } = await client.readResource({ uri: "powertools://guides/cloud-flows" });
+    expect(contents[0]).toMatchObject({ mimeType: "text/markdown", text: expect.stringContaining("connectionReferences") });
+    await expect(client.readResource({ uri: "powertools://guides/nope" })).rejects.toMatchObject({ code: -32602 });
+  });
+
   it("calls connections_list", async () => {
     const { client } = await setup();
     const result = await client.callTool({ name: "connections_list", arguments: {} });

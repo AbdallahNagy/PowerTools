@@ -1,0 +1,58 @@
+{
+  "description": "A solution-aware cloud flow (online only). Leave a property out to keep it. See the guide powertools://guides/cloud-flows.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the flow and its connection references go into.",
+      "type": "string"
+    },
+    "name": {
+      "description": "The flow\u0027s name; an existing cloud flow matches by name.",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "connectionReferences": {
+      "description": "The connections the definition uses, by the connectionName its actions give in host.connectionName. A missing reference is created.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "logicalName": {
+            "description": "Logical name of the connection reference, with the publisher prefix.",
+            "type": "string"
+          },
+          "connector": {
+            "description": "The connector, for example shared_commondataserviceforapps.",
+            "type": "string"
+          },
+          "displayName": {
+            "description": "For a new reference. Default: the logical name.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "logicalName",
+          "connector"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "definition": {
+      "description": "The Logic Apps workflow definition: triggers and actions. Needed for a new flow."
+    },
+    "state": {
+      "description": "on turns the flow on; it stays off while a connection reference has no connection. Default: a new flow is off, an existing one keeps its state.",
+      "enum": [
+        "on",
+        "off"
+      ]
+    }
+  },
+  "required": [
+    "solution",
+    "name"
+  ],
+  "additionalProperties": false
+}

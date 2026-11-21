@@ -3,6 +3,7 @@ import choiceSpec from "../schemas/choice_apply.input.json" with { type: "json" 
 import configSpec from "../schemas/config_apply.input.json" with { type: "json" };
 import customApiSpec from "../schemas/customapi_apply.input.json" with { type: "json" };
 import formSpec from "../schemas/form_apply.input.json" with { type: "json" };
+import flowSpec from "../schemas/flow_apply.input.json" with { type: "json" };
 import deploySpec from "../schemas/plugin_deploy.input.json" with { type: "json" };
 import stepSpec from "../schemas/plugin_step_apply.input.json" with { type: "json" };
 import removeSpec from "../schemas/remove.input.json" with { type: "json" };
@@ -161,6 +162,19 @@ export const customApiApply: AgentTool = applyTool({
   spec: customApiSpec,
   describe: (args, plan) => `apply Custom API ${str(args.uniqueName)} (${steps(plan.steps.length)})`,
   summarize: (args) => `customapi_apply ${str(args.uniqueName)}`,
+});
+
+/** flow_apply: a solution-aware cloud flow and its connection references (online only). */
+export const flowApply: AgentTool = applyTool({
+  name: "flow_apply",
+  family: "flow",
+  group: "logic",
+  title: "Apply a cloud flow",
+  description:
+    "Changes the environment. Creates or updates a cloud flow from its definition, creates missing connection references, and turns it on or off. A flow whose references have no connection stays off; the result names the connectors the user must sign in to. Online only; on-premises, import a solution with a classic workflow through solution_import. Read the guide powertools://guides/cloud-flows first.",
+  spec: flowSpec,
+  describe: (args, plan) => `apply cloud flow ${str(args.name)} (${steps(plan.steps.length)})`,
+  summarize: (args) => `flow_apply ${str(args.name)}`,
 });
 
 /** role_apply: a security role, who has it, and field security profiles. */

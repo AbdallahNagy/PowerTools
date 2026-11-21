@@ -28,7 +28,7 @@ const GROUPS: Record<string, { label: string; description: string; icon: LucideI
   "records-delete": { label: "Record deletes", description: "Delete rows and remove links between them.", icon: Trash2 },
   schema: { label: "Schema", description: "Create and change tables, columns, keys and choices.", icon: Database },
   ui: { label: "Apps, forms and views", description: "Change apps, forms, dashboards, views and web resources.", icon: LayoutGrid },
-  logic: { label: "Plug-ins and Custom APIs", description: "Deploy plug-in assemblies, register their steps and define Custom APIs.", icon: Plug },
+  logic: { label: "Plug-ins, APIs and flows", description: "Deploy plug-in assemblies, register their steps, define Custom APIs and build cloud flows.", icon: Plug },
   security: { label: "Security", description: "Change security roles, who has them, and field security profiles.", icon: Shield },
   solutions: { label: "Solutions", description: "Manage solutions, patches, environment variables and imports.", icon: Package },
   remove: { label: "Remove components", description: "Delete tables, columns, forms, plug-ins and other components.", icon: Unlink },
