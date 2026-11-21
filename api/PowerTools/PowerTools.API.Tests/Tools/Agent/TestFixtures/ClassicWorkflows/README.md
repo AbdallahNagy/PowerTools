@@ -7,6 +7,8 @@ Input for Phase 5 (`process_apply`) in `desktop/docs/mcp-tool-architecture.md`. 
 
 ## Anonymization
 
+`TestWorkflow-SendEmail-Assign` came separately, from another online org, and was anonymized the same way: the prefix became `contoso_`, record names in lookups became `Sample User 1`, `Sample Account 1` and so on, and every GUID was regenerated.
+
 The XAML structure is exactly as exported. Only names and ids changed:
 
 - Publisher prefixes became `contoso_`, `fab_` and `aw_`, and custom activity assemblies became `Contoso.*` and `Fabrikam.*`.
@@ -33,6 +35,7 @@ Category 0 is a workflow and 3 is an action. Mode 1 is real-time and 0 is backgr
 | `ActionProvider-RenewalMainAction` | action | `contoso_licenseapplication` | bound action | A dispatcher: 14 `StartChildWorkflow` steps chosen by condition branches on a stage id string. |
 | `WFLocalPermitOnCreate` | workflow, real-time | `contoso_localpermitrequest` | create | Create of a related record, values from a related `contact`, `Add` arithmetic, child workflow, four custom activities. |
 | `WFLocalPermitClosure` | workflow, real-time | `contoso_localpermitrequest` | on demand | The large one (240 KB): deep nesting, `And`/`Or`, `In`, `SetState`, stop, child workflow, current time, many updates and custom activities. Use it as the round-trip and performance case. |
+| `TestWorkflow-SendEmail-Assign` | workflow (added later, no `customizations.xml` entry) | `contoso_permitreviewrequest` | not in the export | Native Send Email (`mxswa:SendEmail` after building an `email` with `from`, `to` and `cc` party lists, subject, body and regarding), Assign to a user (`mxswa:AssignEntity` with an `Owner` value), and Change status. |
 
 The export had 18 processes. The seven left out repeat patterns above: three large variants of `Closure`, a second dispatcher like `RenewalMainAction`, a second notification action, and two reminder actions like `ProviderFailureAction`.
 
@@ -48,6 +51,8 @@ The export had 18 processes. The seven left out repeat patterns above: three lar
 | Perform action | `mcwa:InvokeSdkMessageActivity` | 3 |
 | Check condition / conditional branch | `ConditionSequence`, `ConditionBranch`, `EvaluateCondition`, `EvaluateLogicalCondition` | 73 branches |
 | Custom workflow activity | `mxswa:ActivityReference` to a non-Microsoft type | 43 |
+| Send email (separate sample) | `mxswa:SendEmail` | 1 |
+| Assign record (separate sample) | `mxswa:AssignEntity` | 1 |
 
 Building blocks inside the steps:
 
@@ -62,8 +67,6 @@ Building blocks inside the steps:
 
 These are not in the export, so Phase 5 needs another source for them (a second export, or the Microsoft samples):
 
-- Send email (the native `SendEmail` step). Every notification here goes through a custom activity.
-- Assign record (`AssignEntity`). Assignment is done by custom activities.
 - Wait conditions and timeouts (`Postpone`, `WaitCondition`), and any background workflow that waits.
 - Delete-triggered workflows, and user, business unit or parent-child business unit scope (everything is organization scope).
 - Action output arguments, and actions not bound to a table (global actions).
