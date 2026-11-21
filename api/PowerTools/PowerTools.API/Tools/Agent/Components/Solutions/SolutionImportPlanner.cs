@@ -45,7 +45,8 @@ public sealed class SolutionImportPlanner(
         var warnings = new List<string>();
 
         var installed = await InstalledAsync(context.Client, name, ct);
-        var holding = mode == ImportMode.Stage ? await InstalledAsync(context.Client, $"{name}_Upgrade", ct) : null;
+        // A staged upgrade: the holding solution an earlier stage, or an upgrade that stopped before applyUpgrade, left.
+        var holding = mode != ImportMode.Update ? await InstalledAsync(context.Client, $"{name}_Upgrade", ct) : null;
         var kind = zip.Managed ? "managed" : "unmanaged";
         Plan Blocked(string reason) => new([PlanStep.Blocked("importSolution", name, reason)], warnings, lockKeys);
 
@@ -69,6 +70,32 @@ public sealed class SolutionImportPlanner(
             return Blocked($"{name} {installed.Version} is installed and the file is the older {zip.Version}. A managed solution cannot be downgraded.");
         if (mode != ImportMode.Update && order <= 0)
             return Blocked($"Mode {Mode(mode)} needs a newer version than the installed {installed!.Version}; the file is {zip.Version}.");
+        if (holding is not null && (mode == ImportMode.Stage || Compare(zip.Version, holding.Version) != 0))
+        {
+            return Blocked(
+                $"{name}_Upgrade {holding.Version} is already staged. Apply it with mode upgrade and that version's file, or delete it, then import again.");
+        }
+
+        // An upgrade whose import ran but whose applyUpgrade did not: only the promote is left, so sending the same
+        // spec again finishes it instead of failing on the holding solution that already exists.
+        if (mode == ImportMode.Upgrade && holding is not null)
+        {
+            return new Plan(
+                [
+                    new PlanStep
+                    {
+                        Op = "applyUpgrade",
+                        Target = name,
+                        Effect = PlanEffect.Destructive,
+                        Detail = $"{name}_Upgrade {holding.Version} is already staged; replaces {name} {installed!.Version} with it and deletes the components {holding.Version} no longer has, with their data",
+                        SolutionAware = false,
+                        Request = new DeleteAndPromoteRequest { UniqueName = name },
+                    },
+                ],
+                warnings,
+                lockKeys);
+        }
+
         if (installed is not null && !zip.Managed && order < 0)
             warnings.Add($"The file has {name} {zip.Version}, older than the installed {installed.Version}.");
 

@@ -233,6 +233,38 @@ public sealed class SolutionToolsTests
     }
 
     [Fact]
+    public async Task An_upgrade_that_stopped_before_promote_finishes_with_only_the_promote()
+    {
+        files[FilePath] = SolutionFile("Contoso", "1.2.0.0", managed: true);
+        client.Solutions.Add(Installed("Contoso", "1.0.0.0", managed: true));
+        client.Solutions.Add(Installed("Contoso_Upgrade", "1.2.0.0", managed: true));
+
+        var plan = await PlanAsync(Spec(ImportMode.Upgrade));
+        Assert.Equal(["applyUpgrade"], plan.Steps.Select(s => s.Op));
+
+        var result = await ApplyAsync(Spec(ImportMode.Upgrade));
+
+        Assert.Equal(ApplyOutcome.Applied, result.Outcome);
+        Assert.Empty(imports);
+        Assert.Single(client.Executed.OfType<DeleteAndPromoteRequest>());
+    }
+
+    [Theory]
+    [InlineData(ImportMode.Upgrade, "1.1.0.0")]
+    [InlineData(ImportMode.Stage, "1.1.0.0")]
+    public async Task A_different_staged_upgrade_blocks_the_import(ImportMode mode, string staged)
+    {
+        files[FilePath] = SolutionFile("Contoso", "1.2.0.0", managed: true);
+        client.Solutions.Add(Installed("Contoso", "1.0.0.0", managed: true));
+        client.Solutions.Add(Installed("Contoso_Upgrade", staged, managed: true));
+
+        var step = Assert.Single((await PlanAsync(Spec(mode))).Steps);
+
+        Assert.Equal(PlanStepKind.Blocked, step.Kind);
+        Assert.Contains("already staged", step.Reason);
+    }
+
+    [Fact]
     public async Task Stage_stops_at_the_holding_solution_and_staging_it_again_is_unchanged()
     {
         files[FilePath] = SolutionFile("Contoso", "1.2.0.0", managed: true);
