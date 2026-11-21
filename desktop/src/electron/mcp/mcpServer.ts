@@ -15,7 +15,10 @@ import type { ActivityEntry, ActivityLog } from "./activityLog.js";
 import type { ApprovalGate } from "./approval.js";
 import { toToolResult } from "./errors.js";
 import type { AgentToolRegistry } from "./registry.js";
-import { AgentToolError, type AgentToolContext, type ResolvedConnection } from "./types.js";
+import type { ApprovalPlan } from "./approval.js";
+import { planForDialog, planRemoves } from "./planDialog.js";
+import { plannedResult, unchangedResult } from "./tools/applyTool.js";
+import { AgentToolError, type AgentTool, type AgentToolContext, type PlanPreview, type ResolvedConnection } from "./types.js";
 
 export interface McpRequestHandlerOptions {
   registry: AgentToolRegistry;
@@ -25,6 +28,8 @@ export interface McpRequestHandlerOptions {
   gate: Pick<ApprovalGate, "decide">;
   instructions: string;
   appVersion?: string;
+  /** How long an apply tool may take to build its plan. Default 2 minutes. */
+  planTimeoutMs?: number;
   /** Clock for session idle tracking. Tests inject one. */
   now?: () => number;
   /** A session with no request and no open stream for this long is closed. Default 30 minutes. */
@@ -63,6 +68,33 @@ function approvalError(outcome: "denied" | "timed-out" | "unavailable" | "cancel
   return new AgentToolError("ApprovalUnavailable", "Power Tools could not ask the user", "Ask the user to look at Power Tools.");
 }
 
+/**
+ * Asks an apply tool for its plan. Building the plan has its own timeout and follows the client's cancel; the
+ * approval timeout only starts once the dialog shows.
+ */
+async function buildPlanWith(
+  tool: AgentTool,
+  args: Record<string, unknown>,
+  ctx: AgentToolContext,
+  clientSignal: AbortSignal,
+  timeoutMs: number,
+): Promise<PlanPreview> {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  const signal = AbortSignal.any([clientSignal, timeout]);
+  try {
+    return await tool.plan!(args, {
+      ...ctx,
+      signal,
+      callSidecar: (conn, method, path, body) => ctx.callSidecar(conn, method, path, body, signal),
+    });
+  } catch (error) {
+    if (timeout.aborted && !clientSignal.aborted) {
+      throw new AgentToolError("Timeout", "Building the plan took too long", "Try a smaller spec, or try again.");
+    }
+    throw error;
+  }
+}
+
 function jsonRpcError(res: ServerResponse, status: number, code: number, message: string) {
   if (res.headersSent) return;
   res.writeHead(status, { "Content-Type": "application/json" });
@@ -74,6 +106,9 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
   const now = opts.now ?? Date.now;
   const idleMs = opts.idleMs ?? 30 * 60_000;
   const maxSessions = opts.maxSessions ?? 32;
+  const planTimeoutMs = opts.planTimeoutMs ?? 120_000;
+  const buildPlan = (tool: AgentTool, args: Record<string, unknown>, ctx: AgentToolContext, signal: AbortSignal) =>
+    buildPlanWith(tool, args, ctx, signal, planTimeoutMs);
 
   function closeSession(id: string): Promise<void> {
     const session = sessions.get(id);
@@ -113,6 +148,8 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
       if (!tool) throw new McpError(ErrorCode.InvalidParams, `Unknown tool "${request.params.name}"`);
       const checked = opts.registry.validate(tool, request.params.arguments);
       if (!checked.ok) throw new McpError(ErrorCode.InvalidParams, checked.message);
+      const called: AgentTool = tool;
+      const args = checked.args;
 
       // A client that sent a progress token wants to hear about long operations, at the start and at the end.
       const progressToken = tool.reportsProgress ? extra._meta?.progressToken : undefined;
@@ -133,22 +170,48 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
         ...base,
         // Remember what a tool resolved, so the log names the connection even when the call fails.
         resolveConnection: async (name) => (resolved = await base.resolveConnection(name)),
-        callSidecar: (conn, method, path, body) => base.callSidecar(conn, method, path, body, extra.signal),
+        callSidecar: (conn, method, path, body, signal) => base.callSidecar(conn, method, path, body, signal ?? extra.signal),
         signal: extra.signal,
       };
 
       let approval: ActivityEntry["approval"] = "not-needed";
       // Until it is known, a tool that is not plainly a read is logged as the worst case.
       let effect: EffectClass = tool.effect === "read" ? "read" : "destructive";
+      let approvedPlan: PlanPreview | undefined;
       try {
         let runCtx = ctx;
         if (tool.effect !== "read") {
           // Resolve the connection once, here, so what the user approves is what runs.
           const connection = await ctx.resolveConnection(checked.args.connection as string | undefined);
           runCtx = { ...ctx, resolveConnection: async () => connection };
-          effect = typeof tool.effect === "function" ? await tool.effect(checked.args, runCtx) : tool.effect;
+
+          let described: { summary: string; removes?: string; plan?: ApprovalPlan };
+          if (tool.plan) {
+            const plan = await buildPlan(tool, checked.args, runCtx, extra.signal);
+            effect = plan.effect;
+            if (checked.args.dryRun === true) {
+              effect = "read";
+              result = plannedResult(plan);
+              return await finish(result);
+            }
+            if (plan.steps.length === 0) {
+              effect = "read";
+              result = unchangedResult(plan);
+              return await finish(result);
+            }
+            approvedPlan = plan;
+            runCtx = { ...runCtx, approvedPlan: plan };
+            described = {
+              summary: tool.describePlan?.(checked.args, plan) ?? tool.title,
+              removes: planRemoves(plan),
+              plan: planForDialog(plan),
+            };
+          } else {
+            effect = typeof tool.effect === "function" ? await tool.effect(checked.args, runCtx) : tool.effect!;
+            described = tool.describe?.(checked.args) ?? { summary: tool.title };
+          }
+
           if (effect !== "read") {
-            const described = tool.describe?.(checked.args) ?? { summary: tool.title };
             const outcome = await opts.gate.decide(
               {
                 tool: tool.name,
@@ -157,6 +220,7 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
                 effect,
                 summary: described.summary,
                 ...(described.removes ? { removes: described.removes } : {}),
+                ...(described.plan ? { plan: described.plan } : {}),
                 args: checked.args,
               },
               connection.allowsChanges,
@@ -171,26 +235,33 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
         result = toToolResult(error);
       }
 
-      await reportProgress(1);
+      return await finish(result);
 
-      const structured = result.structuredContent as { connection?: unknown; code?: unknown } | undefined;
-      const failed = result.isError === true;
-      try {
-        await opts.log.append({
-          time: new Date().toISOString(),
-          client: server.getClientVersion()?.name ?? null,
-          tool: tool.name,
-          connection: resolved?.displayName ?? (!failed && typeof structured?.connection === "string" ? structured.connection : null),
-          effect,
-          approval,
-          outcome: failed ? "error" : "ok",
-          ...(failed && typeof structured?.code === "string" ? { code: structured.code } : {}),
-          summary: tool.summarize?.(checked.args) ?? tool.name,
-        });
-      } catch {
-        // A log failure must not fail the call.
+      async function finish(final: CallToolResult): Promise<CallToolResult> {
+        await reportProgress(1);
+
+        const structured = final.structuredContent as { connection?: unknown; code?: unknown } | undefined;
+        const failed = final.isError === true;
+        try {
+          await opts.log.append({
+            time: new Date().toISOString(),
+            client: server.getClientVersion()?.name ?? null,
+            tool: called.name,
+            connection: resolved?.displayName ?? (!failed && typeof structured?.connection === "string" ? structured.connection : null),
+            effect,
+            approval,
+            outcome: failed ? "error" : "ok",
+            ...(failed && typeof structured?.code === "string" ? { code: structured.code } : {}),
+            summary: called.summarize?.(args) ?? called.name,
+            ...(approvedPlan
+              ? { planHash: approvedPlan.hash, steps: approvedPlan.steps.map(({ op, target, effect: stepEffect }) => ({ op, target, effect: stepEffect })) }
+              : {}),
+          });
+        } catch {
+          // A log failure must not fail the call.
+        }
+        return final;
       }
-      return result;
     });
 
     return session;

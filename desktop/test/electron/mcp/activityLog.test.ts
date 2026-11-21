@@ -54,6 +54,16 @@ describe("activity log", () => {
     expect(text).not.toContain("secret-value");
   });
 
+  it("keeps an approved plan's hash and at most 50 steps, with only op, target and effect", async () => {
+    const log = createActivityLog(dir);
+    const steps = Array.from({ length: 60 }, (_, i) => ({ op: "createColumn", target: `c${i}`, effect: "change", secret: "s" }));
+    await log.append(entry("2026-11-11T10:00:00.000Z", { planHash: "abc", steps }));
+    const saved = (await log.recent(1))[0];
+    expect(saved.planHash).toBe("abc");
+    expect(saved.steps).toHaveLength(50);
+    expect(saved.steps![0]).toEqual({ op: "createColumn", target: "c0", effect: "change" });
+  });
+
   it("truncates the summary to 200 characters", async () => {
     const log = createActivityLog(dir);
     await log.append(entry("2026-11-11T10:00:00.000Z", { summary: "x".repeat(500) }));

@@ -22,7 +22,7 @@ function ctx(callSidecar: (...a: unknown[]) => unknown): AgentToolContext {
 
 type EffectFn = (args: Record<string, unknown>, ctx: AgentToolContext) => Promise<string> | string;
 const GUID = "11111111-1111-1111-1111-111111111111";
-const effectOf = (t: { effect: unknown }) => t.effect as EffectFn;
+const effectOf = (t: { effect?: unknown }) => t.effect as EffectFn;
 
 const registry = createAgentToolRegistry([...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS]);
 const tool = (name: string) => registry.get(name)!;

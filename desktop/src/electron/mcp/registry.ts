@@ -59,8 +59,14 @@ export function createAgentToolRegistry(tools: AgentTool[], options: RegistryOpt
     if (!EFFECT_MARKERS.some((marker) => tool.description.includes(marker))) {
       throw new Error(`Description of "${tool.name}" must state its effect class`);
     }
-    if (tool.effect !== "read" && !tool.describe) {
-      throw new Error(`"${tool.name}" can change the environment, so it needs a describe() for the approval dialog`);
+    if (tool.plan && tool.effect !== undefined) {
+      throw new Error(`"${tool.name}" has a plan(), so its effect comes from the plan; remove its effect`);
+    }
+    if (!tool.plan && tool.effect === undefined) {
+      throw new Error(`"${tool.name}" needs an effect or a plan()`);
+    }
+    if (!tool.plan && tool.effect !== "read" && !tool.describe) {
+      throw new Error(`"${tool.name}" can change the environment, so it needs a describe() or a plan() for the approval dialog`);
     }
     byName.set(tool.name, tool);
   }

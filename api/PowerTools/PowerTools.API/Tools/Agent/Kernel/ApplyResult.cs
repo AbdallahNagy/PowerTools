@@ -19,6 +19,9 @@ public enum ApplyOutcome
 
     /// <summary>The environment changed since approval, or a lock could not be taken. Nothing changed.</summary>
     [JsonStringEnumMemberName("refused")] Refused,
+
+    /// <summary>A dry run: nothing ran, and remaining holds the plan. Built by the desktop, never by apply.</summary>
+    [JsonStringEnumMemberName("planned")] Planned,
 }
 
 [JsonConverter(typeof(JsonStringEnumConverter<StepStatus>))]

@@ -110,4 +110,33 @@ describe("approval dialog", () => {
     const pre = document.querySelector("pre");
     expect(pre?.textContent).toContain("<img src=x onerror=alert(1)>");
   });
+
+  it("lists an apply tool's plan, destructive first, with counts for long groups", () => {
+    const { present } = setup();
+    present(
+      request({
+        effect: "destructive",
+        summary: "apply table con_project (3 steps)",
+        removes: "con_old",
+        plan: {
+          hash: "h",
+          total: 25,
+          hidden: 5,
+          warnings: ["Labels compared in English only."],
+          groups: [
+            { effect: "destructive", count: 1, steps: [{ op: "deleteColumn", target: "con_old" }] },
+            { effect: "change", count: 24, steps: [{ op: "createColumn", target: "con_budget", detail: "money" }] },
+          ],
+        },
+      }),
+    );
+    const plan = screen.getByRole("region", { name: "Plan" });
+    expect(plan).toHaveTextContent("25 steps, the first 20 shown");
+    expect(plan).toHaveTextContent("Removes or replaces (1)");
+    expect(plan).toHaveTextContent("deleteColumn con_old");
+    expect(plan).toHaveTextContent("createColumn con_budget · money");
+    expect(plan).toHaveTextContent("and 23 more");
+    expect(plan).toHaveTextContent("Labels compared in English only.");
+    expect(screen.getByText("Spec")).toBeInTheDocument();
+  });
 });

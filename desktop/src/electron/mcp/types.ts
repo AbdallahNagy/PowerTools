@@ -14,6 +14,8 @@ export type AgentErrorCode =
   | "ApprovalTimedOut"
   | "ApprovalUnavailable"
   | "PublisherRequired"
+  | "NotSupported"
+  | "Timeout"
   | "Internal";
 
 export class AgentToolError extends Error {
@@ -64,6 +66,30 @@ export interface AgentToolContext {
   ): Promise<unknown>;
   listConnections(): ConnectionListing[];
   signal: AbortSignal;
+  /** For a tool with plan(): the plan the user approved (or that ran without asking). run() sends its hash to apply. */
+  approvedPlan?: PlanPreview;
+}
+
+export type PlanStepEffect = "read" | "change" | "destructive";
+export type PlanStepKind = "run" | "unsupported" | "blocked";
+
+/** One step of a plan, as the sidecar's /plan answers it. Mirrors schemas/plan-preview.json. */
+export interface PlanStep {
+  op: string;
+  target: string;
+  effect: PlanStepEffect;
+  kind: PlanStepKind;
+  detail?: string | null;
+  reason?: string | null;
+  route?: string | null;
+}
+
+/** What an apply tool would do. Built by the sidecar from the current state of the environment. */
+export interface PlanPreview {
+  effect: PlanStepEffect;
+  hash: string;
+  steps: PlanStep[];
+  warnings: string[];
 }
 
 export interface JsonSchemaObject {
@@ -86,8 +112,16 @@ export interface AgentTool {
   /**
    * Decided in main, never by the agent. A function sees the arguments and the connection the call will use,
    * and may throw an AgentToolError (for example InvalidRequest for a message that is never allowed).
+   * A tool with plan() has no effect of its own: the plan's effect decides.
    */
-  effect: EffectClass | ((args: Record<string, unknown>, ctx: AgentToolContext) => EffectClass | Promise<EffectClass>);
+  effect?: EffectClass | ((args: Record<string, unknown>, ctx: AgentToolContext) => EffectClass | Promise<EffectClass>);
+  /**
+   * For apply tools: asks the sidecar what the call would do, before the user is asked. Replaces effect and
+   * describe. The server calls it with the call's connection resolved; an empty plan never asks the user.
+   */
+  plan?(args: Record<string, unknown>, ctx: AgentToolContext): Promise<PlanPreview>;
+  /** For apply tools: the dialog title, "An agent wants to <summary>". Defaults to the tool title. */
+  describePlan?(args: Record<string, unknown>, plan: PlanPreview): string;
   /** A long operation: report progress to a client that asked for it with a progress token. */
   reportsProgress?: boolean;
   /** What the approval dialog says. Required for a tool whose effect can be other than read. */

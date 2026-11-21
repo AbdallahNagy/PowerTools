@@ -23,3 +23,9 @@ export const READ_TOOLS: AgentTool[] = [
   recordsQuery,
   recordsGet,
 ];
+
+/**
+ * The consolidated plan/apply tool set that replaces the tools above (desktop/docs/mcp-tool-architecture.md).
+ * Phase 1 adds the pilot tools here; Phase 2 deletes the old tools. The tool budget test measures this list.
+ */
+export const PLAN_APPLY_TOOLS: AgentTool[] = [];

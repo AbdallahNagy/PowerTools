@@ -41,7 +41,7 @@ function tools(files: PluginFiles) {
 }
 
 type EffectFn = (args: Record<string, unknown>, ctx: AgentToolContext) => Promise<string> | string;
-const effectOf = (t: { effect: unknown }) => t.effect as EffectFn;
+const effectOf = (t: { effect?: unknown }) => t.effect as EffectFn;
 
 describe("plug-in assembly path rules", () => {
   it.each([

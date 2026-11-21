@@ -105,7 +105,21 @@ export interface McpApprovalRequest {
   effect: "change" | "destructive";
   summary: string;
   removes?: string;
+  /** For apply tools: the steps to approve, grouped destructive first. Mirrors ApprovalPlan in approval.ts. */
+  plan?: McpApprovalPlan;
   args: Record<string, unknown>;
+}
+
+export interface McpApprovalPlan {
+  hash: string;
+  total: number;
+  groups: Array<{
+    effect: "destructive" | "change" | "unsupported";
+    count: number;
+    steps: Array<{ op: string; target: string; detail?: string }>;
+  }>;
+  hidden: number;
+  warnings: string[];
 }
 
 /** One agent tool as Settings lists it. "varies" means the effect depends on the arguments. */
