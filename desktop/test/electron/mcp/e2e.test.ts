@@ -64,8 +64,8 @@ describe("stdio connector end to end", () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name)).toContain("connections_list");
-    // The v1 catalog of 57 tools plus the 4 Phase 1 pilot tools.
-    expect(tools).toHaveLength(61);
+    // The 19 tools of the first release.
+    expect(tools).toHaveLength(19);
 
     const result = await client.callTool({ name: "connections_list", arguments: {} });
     expect(result.isError).toBeFalsy();

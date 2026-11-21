@@ -13,7 +13,7 @@ public sealed class RecordsPlannerTests
     private readonly RowWorld world = new();
 
     private static readonly IApplyFamily Write = new ApplyFamily<RecordsWriteSpec>(
-        RecordsWritePlanner.Family, new RecordsWritePlanner(), RecordsWritePlanner.ForVerification);
+        RecordsWritePlanner.Family, new RecordsWritePlanner(), RecordsWritePlanner.ForVerification, idempotent: false);
 
     private static readonly IApplyFamily Delete = new ApplyFamily<RecordsDeleteSpec>(
         RecordsDeletePlanner.Family, new RecordsDeletePlanner(), RecordsDeletePlanner.ForVerification);
@@ -61,6 +61,27 @@ public sealed class RecordsPlannerTests
         var row = world.Row("account", Guid.Parse(id));
         Assert.Equal("Fabrikam", row["name"]);
         Assert.Equal(12, row["numberofemployees"]);
+    }
+
+    [Fact]
+    public async Task A_partial_write_lists_only_the_operations_that_did_not_run_as_remaining()
+    {
+        var result = await world.ApplyAsync(Write, new RecordsWriteSpec
+        {
+            Operations =
+            [
+                new() { Op = RecordOp.Create, Table = "account", Values = Values("""{"name":"Fabrikam"}""") },
+                new() { Op = RecordOp.Update, Table = "account", Id = Guid.NewGuid().ToString(), Values = Values("""{"name":"Gone"}""") },
+                new() { Op = RecordOp.Create, Table = "account", Values = Values("""{"name":"Tailspin"}""") },
+            ],
+        });
+
+        Assert.Equal(ApplyOutcome.PartlyApplied, result.Outcome);
+        Assert.Equal([StepStatus.Done, StepStatus.Failed, StepStatus.NotRun], result.Steps.Select(s => s.Status));
+        // The done create is not in remaining: sending it again would create a second Fabrikam.
+        Assert.Equal(["update", "create"], result.Remaining.Steps.Select(s => s.Op));
+        Assert.Contains(result.Warnings, w => w.Contains("Send only the operations listed in remaining"));
+        Assert.Single(world.Table("account"));
     }
 
     [Fact]

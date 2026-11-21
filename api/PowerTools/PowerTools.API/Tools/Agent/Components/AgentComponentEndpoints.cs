@@ -37,7 +37,7 @@ public static class AgentComponentEndpoints
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<SolutionImportSpec>(
             SolutionImportPlanner.Family, new SolutionImportPlanner(), SolutionImportPlanner.ForVerification));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<RecordsWriteSpec>(
-            RecordsWritePlanner.Family, new RecordsWritePlanner(), RecordsWritePlanner.ForVerification));
+            RecordsWritePlanner.Family, new RecordsWritePlanner(), RecordsWritePlanner.ForVerification, idempotent: false));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<RecordsDeleteSpec>(
             RecordsDeletePlanner.Family, new RecordsDeletePlanner(), RecordsDeletePlanner.ForVerification));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<ChoiceApplySpec>(ChoicePlanner.Family, new ChoicePlanner()));
