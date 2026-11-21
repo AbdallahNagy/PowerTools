@@ -23,6 +23,7 @@ public static class AgentEndpoints
         AgentSolutionsEndpoints.Map(group);
         AgentPluginsEndpoints.Map(group);
         AgentEnvVarsEndpoints.Map(group);
+        Kernel.AgentApplyEndpoints.Map(group);
         return app;
     }
 
