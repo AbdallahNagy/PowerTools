@@ -1,6 +1,6 @@
 # MCP tool architecture
 
-Status: agreed plan, ready to build. Nothing here is built yet. The current server is described in `mcp-server.md`.
+Status: agreed plan. Phase 0 is built (see Phase 0 status); no apply tool exists yet. The current server is described in `mcp-server.md`.
 
 ## Decisions
 
@@ -361,6 +361,30 @@ The old 57 tools stay in the code while Phases 0 and 1 are built, so development
 | 3 | `form_apply` whole layouts, dashboards, form libraries and event handlers. `webresource_apply`, `app_apply`, `customapi_apply`, `role_apply`. | 23 |
 | 4 | `flow_apply` (online) and the cloud flow guide. | 24 |
 | 5 | `process_apply` for classic workflows and actions, on both deployment types. Starting set of steps: create, update, assign, set state, send email, condition, wait, child workflow, custom workflow activity, stop. Final list and input format decided with the product owner (see Open questions). | 25 |
+
+## Phase 0 status
+
+Built on 2026-11-21:
+
+| Part | Where |
+|---|---|
+| Kernel: `Plan`, `PlanExecutor`, `ApplyResult` (with `partlyApplied` and verification), `RetryPolicy`, `Capabilities` and its cache, `Locks`, `SolutionContext`, `Labels`, `Publisher`, `AsyncJobs`, `MetadataCache`, `Dependencies`, `ApplyKernel` | `api/PowerTools/PowerTools.API/Tools/Agent/Kernel/` |
+| Routes: `POST /api/agent/{family}/plan`, `POST /api/agent/{family}/apply`, `GET /api/agent/capabilities`. A family is one `IApplyFamily` registered in DI. | `Kernel/AgentApplyEndpoints.cs` |
+| Async approval: `plan()` on `AgentTool`, plan timeout, the dialog listing steps, the hash sent to apply, the plan in the activity log, `dryRun` | `desktop/src/electron/mcp/mcpServer.ts`, `planDialog.ts`, `ApprovalDialog.tsx` |
+| `applyTool()` factory with the generated `outputSchema` | `desktop/src/electron/mcp/tools/applyTool.ts` |
+| Schema generation from C# and the drift test | `Kernel/KernelSchemas.cs`, `desktop/src/electron/mcp/schemas/` |
+| Tool budget test | `desktop/src/electron/mcp/toolBudget.ts` |
+| Live test runner and eval harness | `desktop/test/live/mcp/`, `evals/mcp/` |
+
+Decisions made while building:
+
+- The retry policy retries only service protection faults and the customization lock, because Dataverse did not run those requests. A timeout is not retried, since the request may have run; the result says where the call stopped, and sending the spec again runs only what is left.
+- An unsupported step stops the run like a failed step, with the code `NotSupported`. A blocked step (managed, not customizable) stops it with `InvalidRequest`.
+- A dry run returns the apply result shape with the outcome `planned` and the plan in `remaining`, so every apply tool has one `outputSchema`.
+- `refused` also sets `isError`, so the agent notices it must run the call again.
+- The plan hash covers the steps and an optional state token (for example a form's `versionnumber`), so a change made outside Power Tools that leaves the steps the same still refuses the call.
+
+Still open for Phase 0: the sandboxes, so the live tests and evals can run (see `evals/mcp/README.md`).
 
 ## Open questions
 

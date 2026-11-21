@@ -16,6 +16,8 @@
     "test": "npm run transpile:electron && node scripts/vitest.mjs run",
     "test:coverage": "npm run transpile:electron && node scripts/vitest.mjs run --coverage",
     "test:smoke": "npm run transpile:electron && npm run build:renderer && npm run test:smoke:run",
+    "test:live:mcp": "node scripts/vitest.mjs run --config vitest.live.config.ts",
+    "eval:mcp": "cross-env POWERTOOLS_LIVE_SUITE=evals node scripts/vitest.mjs run --config vitest.live.config.ts",
     "test:smoke:run": "playwright test test/smoke/app.spec.ts test/smoke/communityTool.spec.ts",
     "typecheck": "tsc -b && tsc --project tsconfig.test.json",
     "lint": "eslint .",
