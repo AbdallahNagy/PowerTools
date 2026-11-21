@@ -1,0 +1,263 @@
+{
+  "description": "The desired state of a table. Leave a property out to keep it as it is. Nothing left out is removed.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the changes go into. Its publisher decides the prefix.",
+      "type": "string"
+    },
+    "table": {
+      "description": "The table. schemaName finds it; a new table needs displayName and pluralName.",
+      "type": "object",
+      "properties": {
+        "schemaName": {
+          "description": "Schema name, for example con_Project. A new table needs the publisher prefix.",
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "pluralName": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "ownership": {
+          "description": "Fixed when the table is created. Default user.",
+          "enum": [
+            "user",
+            "organization"
+          ]
+        },
+        "primaryName": {
+          "description": "The primary name column. Fixed when the table is created, apart from its label and length.",
+          "type": "object",
+          "properties": {
+            "schemaName": {
+              "description": "Default \u003Cprefix\u003E_Name.",
+              "type": "string"
+            },
+            "displayName": {
+              "description": "Default Name.",
+              "type": "string"
+            },
+            "maxLength": {
+              "description": "1 to 4000. Default 100.",
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "auditEnabled": {
+          "type": "boolean"
+        },
+        "changeTracking": {
+          "type": "boolean"
+        },
+        "notes": {
+          "description": "Notes and attachments. Cannot be turned off once on.",
+          "type": "boolean"
+        },
+        "activities": {
+          "description": "Activities can be regarding this table. Cannot be turned off once on.",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "schemaName"
+      ],
+      "additionalProperties": false
+    },
+    "columns": {
+      "description": "Columns to create or update, in order. Columns not listed are kept.",
+      "type": "array",
+      "items": {
+        "description": "A column. schemaName finds it; its type cannot change once created.",
+        "type": "object",
+        "properties": {
+          "schemaName": {
+            "description": "Schema name, for example con_Budget. A new column needs the publisher prefix.",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "text",
+              "memo",
+              "integer",
+              "decimal",
+              "float",
+              "money",
+              "boolean",
+              "datetime",
+              "dateonly",
+              "choice",
+              "multichoice",
+              "lookup",
+              "file",
+              "image"
+            ]
+          },
+          "displayName": {
+            "description": "Required for a new column.",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "requiredLevel": {
+            "enum": [
+              "none",
+              "recommended",
+              "required"
+            ]
+          },
+          "auditEnabled": {
+            "type": "boolean"
+          },
+          "maxLength": {
+            "description": "text: 1 to 4000 (default 100). memo: 1 to 1048576 (default 2000).",
+            "type": "integer"
+          },
+          "format": {
+            "description": "text only. Default text.",
+            "enum": [
+              "text",
+              "email",
+              "url",
+              "phone",
+              "textarea"
+            ]
+          },
+          "minValue": {
+            "description": "integer, decimal, float, money.",
+            "type": "number"
+          },
+          "maxValue": {
+            "description": "integer, decimal, float, money.",
+            "type": "number"
+          },
+          "precision": {
+            "description": "Decimal places. decimal 0 to 10, float 0 to 5, money 0 to 4 (default: the currency\u0027s).",
+            "type": "integer"
+          },
+          "behavior": {
+            "description": "datetime and dateonly. Can change only from userLocal, once.",
+            "enum": [
+              "userLocal",
+              "dateOnly",
+              "timeZoneIndependent"
+            ]
+          },
+          "options": {
+            "description": "choice and multichoice: the column\u0027s own options. Existing options not listed are kept.",
+            "type": "array",
+            "items": {
+              "description": "An option. value finds it; without value the label does, and a new option gets the next value from the publisher\u0027s option prefix.",
+              "type": "object",
+              "properties": {
+                "label": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "globalChoice": {
+            "description": "choice and multichoice: the name of an existing global choice, instead of options.",
+            "type": "string"
+          },
+          "trueLabel": {
+            "description": "boolean only. Default Yes.",
+            "type": "string"
+          },
+          "falseLabel": {
+            "description": "boolean only. Default No.",
+            "type": "string"
+          },
+          "target": {
+            "description": "lookup only: the logical name of the table it points to. Fixed once created.",
+            "type": "string"
+          },
+          "relationshipName": {
+            "description": "lookup only: the relationship\u0027s schema name. Default \u003Cprefix\u003E_\u003Ctarget\u003E_\u003Ctable\u003E_\u003Ccolumn\u003E.",
+            "type": "string"
+          },
+          "maxSizeInKb": {
+            "description": "file only: maximum size in KB, 1 to 10485760 (default 32768). Fixed once created.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "schemaName",
+          "type"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "manyToMany": {
+      "description": "Many-to-many relationships between this table and another.",
+      "type": "array",
+      "items": {
+        "description": "A many-to-many relationship. schemaName finds it.",
+        "type": "object",
+        "properties": {
+          "schemaName": {
+            "description": "Schema name with the publisher prefix. It also names the intersect table.",
+            "type": "string"
+          },
+          "table": {
+            "description": "Logical name of the other table. Fixed once created.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaName",
+          "table"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "keys": {
+      "description": "Alternate keys. Apply waits until the key\u0027s index is active.",
+      "type": "array",
+      "items": {
+        "description": "An alternate key. schemaName finds it; its columns are fixed once created.",
+        "type": "object",
+        "properties": {
+          "schemaName": {
+            "description": "Schema name with the publisher prefix.",
+            "type": "string"
+          },
+          "displayName": {
+            "description": "Default: the schema name.",
+            "type": "string"
+          },
+          "columns": {
+            "description": "Logical names of the key\u0027s columns.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "schemaName",
+          "columns"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "solution",
+    "table"
+  ],
+  "additionalProperties": false
+}

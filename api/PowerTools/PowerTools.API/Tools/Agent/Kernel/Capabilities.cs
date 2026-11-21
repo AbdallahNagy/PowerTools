@@ -21,6 +21,7 @@ public sealed record Capabilities(string Version, IReadOnlySet<string> Tables, b
         "connectionreference",    // connection references (online)
         "msdyn_componentlayer",   // solution layers
         "environmentvariabledefinition",
+        "fileattachment",         // file storage for file and image columns
     ];
 
     public bool HasTable(string logicalName) => Tables.Contains(logicalName);

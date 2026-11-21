@@ -1,0 +1,48 @@
+{
+  "description": "A solution .zip to import. Importing the version that is already installed changes nothing unless force is set.",
+  "type": "object",
+  "properties": {
+    "path": {
+      "description": "Absolute path of the solution .zip on this computer.",
+      "type": "string"
+    },
+    "mode": {
+      "description": "update (default): import over the installed version. upgrade (managed): also delete components the new version no longer has. stage (managed): import as a holding solution only.",
+      "enum": [
+        "update",
+        "upgrade",
+        "stage"
+      ]
+    },
+    "overwriteUnmanagedCustomizations": {
+      "description": "Overwrite unmanaged customizations of the same components. Default false.",
+      "type": "boolean"
+    },
+    "publishWorkflows": {
+      "description": "Turn on the solution\u0027s workflows after the import. Default true.",
+      "type": "boolean"
+    },
+    "force": {
+      "description": "Import even when the same version is already installed.",
+      "type": "boolean"
+    },
+    "environmentVariables": {
+      "description": "Environment variable values for the target: schema name \u2192 value.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "connectionReferences": {
+      "description": "Connections for connection references: logical name \u2192 connection id. Online only.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "path"
+  ],
+  "additionalProperties": false
+}
