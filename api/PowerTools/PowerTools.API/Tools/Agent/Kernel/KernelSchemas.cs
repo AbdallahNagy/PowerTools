@@ -31,6 +31,7 @@ public static class KernelSchemas
         ["webresource_apply.input"] = typeof(Components.WebResources.WebResourceApplySpec),
         ["customapi_apply.input"] = typeof(Components.CustomApis.CustomApiApplySpec),
         ["role_apply.input"] = typeof(Components.Security.RoleApplySpec),
+        ["flow_apply.input"] = typeof(Components.Flows.FlowApplySpec),
         ["app_apply.input"] = typeof(Components.Apps.AppApplySpec),
     };
 

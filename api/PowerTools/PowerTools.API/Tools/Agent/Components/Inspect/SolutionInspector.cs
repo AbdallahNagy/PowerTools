@@ -42,8 +42,7 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
                     : throw NotSupported("This environment has no Custom APIs. Use a classic action (process_apply) instead."),
                 "process" => await RowsWhere(body, "process", "workflow", "name", ["name", "category", "mode", "primaryentity", "statecode", "ismanaged", "description"],
                     q => { q.Criteria.AddCondition("type", ConditionOperator.Equal, 1); q.Criteria.AddCondition("category", ConditionOperator.NotEqual, ComponentKinds.FlowCategory); }, ct),
-                "flow" => await RowsWhere(body, "flow", "workflow", "name", ["name", "statecode", "ismanaged", "description", "modifiedon"],
-                    q => { q.Criteria.AddCondition("type", ConditionOperator.Equal, 1); q.Criteria.AddCondition("category", ConditionOperator.Equal, ComponentKinds.FlowCategory); }, ct),
+                "flow" => await FlowAsync(body, ct),
                 _ => throw Invalid($"kind must be one of: {string.Join(", ", Kinds)}."),
             };
             return AgentResult<object>.Ok(result);
@@ -64,6 +63,20 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
         if (body.Name is null) return await RowInspect.ListAsync(client, kind, table, nameColumn, columns, narrow, body.Filter, body.Top, ct);
         var row = await RowInspect.FindAsync(client, table, nameColumn, body.Name, columns, narrow, ct) ?? throw RowInspect.NotFound($"{kind} {body.Name}");
         return RowInspect.Plain(row, columns);
+    }
+
+    /// <summary>Cloud flows: a list, or one flow in the shape flow_apply takes.</summary>
+    private async Task<object> FlowAsync(InspectBody body, CancellationToken ct)
+    {
+        Action<QueryExpression> flows = q =>
+        {
+            q.Criteria.AddCondition("type", ConditionOperator.Equal, 1);
+            q.Criteria.AddCondition("category", ConditionOperator.Equal, ComponentKinds.FlowCategory);
+        };
+        if (body.Name is null) return await RowsWhere(body, "flow", "workflow", "name", ["name", "statecode", "ismanaged", "description", "modifiedon"], flows, ct);
+        var row = await RowInspect.FindAsync(client, "workflow", "name", body.Name, ["name", "statecode", "ismanaged", "description", "clientdata"], flows, ct)
+            ?? throw RowInspect.NotFound($"flow {body.Name}");
+        return Flows.FlowPlanner.Describe(row);
     }
 
     private async Task<object> SolutionAsync(InspectBody body, CancellationToken ct)

@@ -5,6 +5,7 @@ using PowerTools.API.Tools.Agent.Components.Apps;
 using PowerTools.API.Tools.Agent.Components.Choices;
 using PowerTools.API.Tools.Agent.Components.Config;
 using PowerTools.API.Tools.Agent.Components.CustomApis;
+using PowerTools.API.Tools.Agent.Components.Flows;
 using PowerTools.API.Tools.Agent.Components.Forms;
 using PowerTools.API.Tools.Agent.Components.Inspect;
 using PowerTools.API.Tools.Agent.Components.Plugins;
@@ -58,6 +59,7 @@ public static class AgentComponentEndpoints
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<CustomApiApplySpec>(CustomApiPlanner.Family, new CustomApiPlanner()));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<RoleApplySpec>(RolePlanner.Family, new RolePlanner()));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<AppApplySpec>(AppPlanner.Family, new AppPlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<FlowApplySpec>(FlowPlanner.Family, new FlowPlanner()));
         return services;
     }
 
