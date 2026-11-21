@@ -75,16 +75,18 @@ public sealed class RolePlannerTests
     }
 
     [Fact]
-    public async Task A_lower_depth_is_a_change_and_none_takes_the_privilege_away_as_a_destructive_step()
+    public async Task A_lower_depth_and_none_take_access_away_as_destructive_steps()
     {
         await world.ApplyAsync(Family, Spec(delete: AccessDepth.Basic));
 
         var plan = await PlanAsync(Spec(read: AccessDepth.Basic, delete: AccessDepth.None));
 
-        Assert.Equal(["setPrivileges", "removePrivileges"], plan.Steps.Select(s => s.Op));
+        Assert.Equal(["lowerPrivileges", "removePrivileges"], plan.Steps.Select(s => s.Op));
         Assert.Contains("prvReadAccount: global → basic", plan.Steps[0].Detail);
-        Assert.Equal(PlanEffect.Destructive, plan.Steps[1].Effect);
-        await world.ApplyAsync(Family, Spec(read: AccessDepth.Basic, delete: AccessDepth.None));
+        Assert.All(plan.Steps, s => Assert.Equal(PlanEffect.Destructive, s.Effect));
+        var result = await world.ApplyAsync(Family, Spec(read: AccessDepth.Basic, delete: AccessDepth.None));
+        Assert.Equal(ApplyOutcome.Applied, result.Outcome);
+        Assert.Equal(PrivilegeDepth.Basic, world.RolePrivileges[Role.Id][account[PrivilegeType.Read]]);
         Assert.False(world.RolePrivileges[Role.Id].ContainsKey(account[PrivilegeType.Delete]));
         Assert.Contains(world.Writes.OfType<AddSolutionComponentRequest>(), r => r.ComponentId == Role.Id && r.ComponentType == 20);
     }
@@ -131,6 +133,23 @@ public sealed class RolePlannerTests
         var profile = world.Table("fieldsecurityprofile").Single();
         Assert.Contains(("systemuserprofiles_association", profile.Id, user.Id), world.Links);
         Assert.Empty((await PlanAsync(spec)).Steps);
+    }
+
+    [Fact]
+    public async Task Taking_a_column_right_away_is_destructive_and_shows_before_and_after()
+    {
+        FieldSecurityProfileSpec Profile(bool update) => new()
+        {
+            Name = "Finance",
+            Columns = [new ColumnPermission { Table = "account", Column = "new_secret", Read = true, Update = update }],
+        };
+        await world.ApplyAsync(Family, new RoleApplySpec { Solution = "Core", FieldSecurityProfiles = [Profile(update: true)] });
+
+        var step = Assert.Single((await PlanAsync(new RoleApplySpec { Solution = "Core", FieldSecurityProfiles = [Profile(update: false)] })).Steps);
+
+        Assert.Equal("updateColumnPermission", step.Op);
+        Assert.Equal(PlanEffect.Destructive, step.Effect);
+        Assert.Equal("read, update → read", step.Detail);
     }
 
     [Fact]

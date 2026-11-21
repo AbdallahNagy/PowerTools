@@ -80,18 +80,27 @@ public static class FormLayoutWriter
 {
     public const string GridClassId = FormEditor.SubgridClassId;
 
-    /// <summary>Replaces the tabs of the form with the layout. Answers what changed, or null when nothing did.</summary>
+    /// <summary>
+    /// Replaces the tabs of the form with the layout. Answers what changed, or null when nothing did.
+    /// <paramref name="dropsControls"/> is true when a subgrid, web resource or other control without a column leaves
+    /// the form: a layout cannot put those back, so the change takes something away.
+    /// </summary>
     public static string? Apply(
         FormEditor editor,
         FormLayout layout,
         Func<string, string> fieldLabel,
         Func<string, string> classId,
-        IReadOnlyDictionary<string, ResolvedComponent>? components)
+        IReadOnlyDictionary<string, ResolvedComponent>? components,
+        out bool dropsControls)
     {
+        dropsControls = false;
         Check(layout, components is not null);
         var doc = editor.Form;
         var before = Summary(doc, editor);
         var fieldsBefore = Fields(doc);
+        var tabsBefore = Names(doc, "tab");
+        var sectionsBefore = Names(doc, "section");
+        var othersBefore = OtherControls(doc);
         var root = doc.Root!;
         var oldTabs = root.Element("tabs");
         var newTabs = new XElement("tabs", oldTabs?.Attributes());
@@ -166,6 +175,18 @@ public static class FormLayoutWriter
         var removed = fieldsBefore.Except(fieldsAfter).ToList();
         if (added.Count > 0) parts.Add($"add {string.Join(", ", added)}");
         if (removed.Count > 0) parts.Add($"take off {string.Join(", ", removed)}");
+        var tabsGone = tabsBefore.Except(Names(doc, "tab"), StringComparer.OrdinalIgnoreCase).ToList();
+        var sectionsGone = sectionsBefore.Except(Names(doc, "section"), StringComparer.OrdinalIgnoreCase).ToList();
+        var othersAfter = OtherControls(doc);
+        var othersGone = othersBefore.Where(o => !othersAfter.Contains(o)).ToList();
+        if (tabsGone.Count > 0) parts.Add($"take off tab(s) {string.Join(", ", tabsGone)}");
+        if (sectionsGone.Count > 0) parts.Add($"take off section(s) {string.Join(", ", sectionsGone)}");
+        if (othersGone.Count > 0 && components is null)
+        {
+            parts.Add($"take off control(s) a layout cannot put back: {string.Join(", ", othersGone)}");
+            dropsControls = true;
+        }
+
         return string.Join("; ", parts);
     }
 
@@ -207,15 +228,36 @@ public static class FormLayoutWriter
             .OfType<string>()
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
+    private static List<string> Names(XDocument doc, string element) =>
+        (doc.Root?.Element("tabs")?.Descendants(element) ?? [])
+            .Select(e => (string?)e.Attribute("name") ?? (string?)e.Attribute("id"))
+            .OfType<string>()
+            .ToList();
+
+    /// <summary>Controls in the body that are not bound to a column (subgrids, web resources, quick views), by id.</summary>
+    private static HashSet<string> OtherControls(XDocument doc) =>
+        (doc.Root?.Element("tabs")?.Descendants("control") ?? [])
+            .Where(c => c.Attribute("datafieldname") is null)
+            .Select(c => (string?)c.Attribute("id"))
+            .OfType<string>()
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
     private static IEnumerable<XElement> OtherRows(XElement section)
     {
         var keep = false;
         foreach (var row in section.Element("rows")?.Elements("row") ?? [])
         {
             var cells = row.Elements("cell").ToList();
-            if (cells.Count > 0) keep = cells.Any(c => c.Element("control") is { } control && control.Attribute("datafieldname") is null);
-            if (keep) yield return new XElement(row);
+            if (cells.Count > 0) keep = cells.Any(IsOther);
+            if (!keep) continue;
+
+            // A field that shares the row is placed by the layout, so only the other cells are kept here.
+            var copy = new XElement(row);
+            copy.Elements("cell").Where(c => !IsOther(c) && c.Element("control") is not null).Remove();
+            yield return copy;
         }
+
+        static bool IsOther(XElement cell) => cell.Element("control") is { } control && control.Attribute("datafieldname") is null;
     }
 
     private static XElement ComponentCell(FormEditor editor, ResolvedComponent component, XElement? existingSection)

@@ -159,17 +159,26 @@ public sealed class CustomApiPlanner : IComponentPlanner<CustomApiApplySpec>
         if (fixedChanges.Count > 0)
         {
             var id = current.Id;
+            var parameters = await CurrentFieldsAsync(context.Client, ParameterTable, id, ct);
+            var properties = await CurrentFieldsAsync(context.Client, PropertyTable, id, ct);
+            var merged = Merged(spec, current, parameters, properties);
+            var carried = merged.RequestParameters!.Concat(merged.ResponseProperties!)
+                .Where(f => !Fields(spec).Any(w => string.Equals(w.UniqueName.Trim(), f.UniqueName, StringComparison.Ordinal)))
+                .Select(f => f.UniqueName)
+                .ToList();
             steps.Add(new PlanStep
             {
                 Op = "deleteCustomApi",
                 Target = uniqueName,
                 Effect = PlanEffect.Destructive,
-                Detail = $"{string.Join("; ", fixedChanges)} cannot change once saved, so the API is deleted and created again. Its parameters, properties and the plug-in steps registered on it are deleted with it.",
+                Detail = $"{string.Join("; ", fixedChanges)} cannot change once saved, so the API is deleted and created again. "
+                    + "The plug-in steps registered on it are deleted with it and are not registered again."
+                    + (carried.Count == 0 ? "" : $" Parameters and properties the spec leaves out are created again as they are: {string.Join(", ", carried)}."),
                 Request = new DeleteRequest { Target = new EntityReference("customapi", id) },
                 SolutionAware = false,
             });
-            AddCreate(steps, Merged(spec, current), Guid.NewGuid(), pluginType ?? current.GetAttributeValue<EntityReference>("plugintypeid")?.Id, " (again)");
-            return new Plan(steps, warnings: ["Parameters and properties the spec leaves out are not created again."], lockKeys: lockKeys);
+            AddCreate(steps, merged, Guid.NewGuid(), pluginType ?? current.GetAttributeValue<EntityReference>("plugintypeid")?.Id, " (again)");
+            return new Plan(steps, lockKeys: lockKeys);
         }
 
         var update = new Entity("customapi", current.Id);
@@ -362,8 +371,30 @@ public sealed class CustomApiPlanner : IComponentPlanner<CustomApiApplySpec>
         return changes;
     }
 
-    /// <summary>The spec with the fixed columns it leaves out taken from the current API, for creating it again.</summary>
-    private static CustomApiApplySpec Merged(CustomApiApplySpec spec, Entity current) => new()
+    private static async Task<List<CustomApiField>> CurrentFieldsAsync(IAgentClient client, string table, Guid apiId, CancellationToken ct)
+    {
+        var query = new QueryExpression(table) { NoLock = true, ColumnSet = new ColumnSet(true) };
+        query.Criteria.AddCondition("customapiid", ConditionOperator.Equal, apiId);
+        return (await client.RetrieveMultipleAsync(query, ct)).Entities
+            .Select(r => new CustomApiField
+            {
+                UniqueName = r.GetAttributeValue<string>("uniquename"),
+                Type = (CustomApiType)(r.GetAttributeValue<OptionSetValue>("type")?.Value ?? 0),
+                Table = r.GetAttributeValue<string>("logicalentityname"),
+                Optional = table == ParameterTable ? r.GetAttributeValue<bool?>("isoptional") ?? false : null,
+                DisplayName = r.GetAttributeValue<string>("displayname"),
+                Description = r.GetAttributeValue<string>("description"),
+            })
+            .OrderBy(f => f.UniqueName, StringComparer.Ordinal)
+            .ToList();
+    }
+
+    /// <summary>The spec's fields, then the current ones it leaves out, so creating the API again loses none of them.</summary>
+    private static List<CustomApiField> Keep(List<CustomApiField>? wanted, List<CustomApiField> current) =>
+        [.. wanted ?? [], .. current.Where(c => !(wanted ?? []).Any(w => string.Equals(w.UniqueName.Trim(), c.UniqueName, StringComparison.Ordinal)))];
+
+    /// <summary>The spec with what it leaves out taken from the current API, for creating it again.</summary>
+    private static CustomApiApplySpec Merged(CustomApiApplySpec spec, Entity current, List<CustomApiField> parameters, List<CustomApiField> properties) => new()
     {
         Solution = spec.Solution,
         UniqueName = spec.UniqueName,
@@ -377,8 +408,8 @@ public sealed class CustomApiPlanner : IComponentPlanner<CustomApiApplySpec>
         WorkflowEnabled = spec.WorkflowEnabled ?? current.GetAttributeValue<bool?>("workflowsdkstepenabled"),
         ExecutePrivilege = spec.ExecutePrivilege ?? current.GetAttributeValue<string>("executeprivilegename"),
         PluginType = spec.PluginType,
-        RequestParameters = spec.RequestParameters,
-        ResponseProperties = spec.ResponseProperties,
+        RequestParameters = Keep(spec.RequestParameters, parameters),
+        ResponseProperties = Keep(spec.ResponseProperties, properties),
     };
 
     private static void Check(CustomApiApplySpec spec)

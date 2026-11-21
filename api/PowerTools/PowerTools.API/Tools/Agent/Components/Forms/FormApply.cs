@@ -324,6 +324,7 @@ public sealed class FormPlanner : IComponentPlanner<FormApplySpec>
 
         var editor = new FormEditor(doc, language);
         var changes = new List<string>();
+        var dropsControls = false;
         if (spec.Layout is { } layout)
         {
             var components = dashboard ? await ResolveComponentsAsync(context, layout, language, ct) : null;
@@ -332,7 +333,8 @@ public sealed class FormPlanner : IComponentPlanner<FormApplySpec>
                 layout,
                 column => Labels.Text(Attribute(metadata!, column).DisplayName, language) ?? column,
                 column => AgentFormXml.ClassId(ControlKind(Attribute(metadata!, column))),
-                components);
+                components,
+                out dropsControls);
             if (change is not null) changes.Add($"0. {change}");
         }
 
@@ -372,6 +374,7 @@ public sealed class FormPlanner : IComponentPlanner<FormApplySpec>
             {
                 Op = dashboard ? "updateDashboard" : "updateForm",
                 Target = label,
+                Effect = dropsControls ? PlanEffect.Destructive : PlanEffect.Change,
                 Detail = string.Join("\n", changes),
                 Action = async (step, token) =>
                 {

@@ -70,6 +70,32 @@ public sealed class CustomApiPlannerTests
     }
 
     [Fact]
+    public async Task Recreating_the_api_keeps_the_parameters_and_properties_the_spec_leaves_out()
+    {
+        await world.ApplyAsync(Family, Spec());
+        var spec = Spec(isFunction: true);
+        spec = new CustomApiApplySpec
+        {
+            Solution = spec.Solution,
+            UniqueName = spec.UniqueName,
+            Binding = spec.Binding,
+            BoundTable = spec.BoundTable,
+            IsFunction = true,
+            PluginType = spec.PluginType,
+        };
+
+        var plan = await PlanAsync(spec);
+
+        Assert.Equal(["deleteCustomApi", "createCustomApi", "createParameter", "createProperty"], plan.Steps.Select(s => s.Op));
+        Assert.Contains("created again as they are: Reason", plan.Steps[0].Detail);
+        Assert.Contains("optional", plan.Steps[2].Detail);
+        var result = await world.ApplyAsync(Family, spec);
+        Assert.Equal(ApplyOutcome.Applied, result.Outcome);
+        var parameter = world.Table("customapirequestparameter").Single(p => p.GetAttributeValue<EntityReference>("customapiid").Id == Api.Id);
+        Assert.Equal(true, parameter["isoptional"]);
+    }
+
+    [Fact]
     public async Task A_parameter_type_change_recreates_only_the_parameter()
     {
         await world.ApplyAsync(Family, Spec());

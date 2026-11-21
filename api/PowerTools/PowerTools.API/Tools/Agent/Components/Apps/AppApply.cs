@@ -464,7 +464,9 @@ public sealed class AppPlanner : IComponentPlanner<AppApplySpec>
                 current = (await context.Client.RetrieveMultipleAsync(query, ct)).Entities.FirstOrDefault();
             }
 
-            var detail = $"{command.Location} of {table}: {command.Label} → {command.Library} {command.Function}";
+            // Name every value the request writes, so the approved hash covers them.
+            var detail = $"{command.Location} of {table}: {command.Label} → {command.Library} {command.Function}"
+                + $"({command.Parameters ?? ""}), icon '{command.Icon ?? ""}', sequence {command.Sequence ?? 10}, hidden {(command.Hidden ?? false ? "yes" : "no")}";
             if (current is null)
             {
                 var row = new Entity("appaction") { ["uniquename"] = name };

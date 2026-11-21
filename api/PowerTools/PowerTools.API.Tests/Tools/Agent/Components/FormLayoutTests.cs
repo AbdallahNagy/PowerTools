@@ -120,6 +120,54 @@ public sealed class FormLayoutTests
     }
 
     [Fact]
+    public async Task A_layout_that_leaves_out_a_section_with_a_subgrid_names_it_and_is_destructive()
+    {
+        await world.ApplyAsync(Family, new FormApplySpec
+        {
+            Solution = "Core", Table = "account", Form = "Information",
+            Operations = [new FormOperation { Op = FormOp.AddSubgrid, Name = "contacts", SubgridTable = "account", Section = "notes" }],
+        });
+        var spec = new FormApplySpec
+        {
+            Solution = "Core", Table = "account", Form = "Information",
+            Layout = Layout(new LayoutTab { Name = "general", Sections = [new LayoutSection { Name = "summary", Fields = ["name"] }] }),
+        };
+
+        var step = Assert.Single((await PlanAsync(spec)).Steps);
+
+        Assert.Equal(PlanEffect.Destructive, step.Effect);
+        Assert.Contains("take off tab(s) details_tab", step.Detail);
+        Assert.Contains("take off section(s) address, notes", step.Detail);
+        Assert.Contains("cannot put back: contacts", step.Detail);
+    }
+
+    [Fact]
+    public async Task A_field_that_shares_a_row_with_a_subgrid_is_not_placed_twice()
+    {
+        await world.ApplyAsync(Family, new FormApplySpec
+        {
+            Solution = "Core", Table = "account", Form = "Information",
+            Operations = [new FormOperation { Op = FormOp.AddSubgrid, Name = "contacts", SubgridTable = "account", Section = "notes" }],
+        });
+        var stored = Xml(form.Id);
+        var grid = stored.Descendants("control").Single(c => (string?)c.Attribute("id") == "contacts").Parent!;
+        var field = stored.Descendants("control").Single(c => (string?)c.Attribute("datafieldname") == "websiteurl").Parent!;
+        field.Remove();
+        grid.AddBeforeSelf(field);
+        world.Row("systemform", form.Id)["formxml"] = stored.Root!.ToString(SaveOptions.DisableFormatting);
+        var spec = new FormApplySpec
+        {
+            Solution = "Core", Table = "account", Form = "Information",
+            Layout = Layout(new LayoutTab { Name = "details_tab", Sections = [new LayoutSection { Name = "notes", Fields = ["websiteurl"] }] }),
+        };
+
+        await world.ApplyAsync(Family, spec);
+
+        Assert.Equal(["websiteurl", "contacts"], Controls(Xml(form.Id).Descendants("section").Single()));
+        Assert.Empty((await PlanAsync(spec)).Steps);
+    }
+
+    [Fact]
     public async Task A_handler_adds_its_library_and_a_second_run_changes_nothing()
     {
         var spec = new FormApplySpec

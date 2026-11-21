@@ -205,6 +205,9 @@ public sealed class RolePlanner : IComponentPlanner<RoleApplySpec>
 
         var add = new List<RolePrivilege>();
         var addDetail = new List<string>();
+        // A lower depth takes access away, like a removed privilege, so it is its own destructive step.
+        var lower = new List<RolePrivilege>();
+        var lowerDetail = new List<string>();
         var remove = new List<(Guid Id, string Name)>();
         foreach (var (privilege, depth) in wanted)
         {
@@ -217,8 +220,16 @@ public sealed class RolePlanner : IComponentPlanner<RoleApplySpec>
 
             var sdkDepth = ToSdk(depth);
             if (has == sdkDepth) continue;
+            var change = $"{privilege.Name}: {(has is null ? "none" : Name(has.Value))} → {Name(sdkDepth)}";
+            if (has is { } before && sdkDepth < before)
+            {
+                lower.Add(new RolePrivilege { PrivilegeId = privilege.Id, Depth = sdkDepth });
+                lowerDetail.Add(change);
+                continue;
+            }
+
             add.Add(new RolePrivilege { PrivilegeId = privilege.Id, Depth = sdkDepth });
-            addDetail.Add($"{privilege.Name}: {(has is null ? "none" : Name(has.Value))} → {Name(sdkDepth)}");
+            addDetail.Add(change);
         }
 
         if (add.Count > 0)
@@ -232,6 +243,27 @@ public sealed class RolePlanner : IComponentPlanner<RoleApplySpec>
                 Action = async (step, token) =>
                 {
                     await step.Client.ExecuteAsync(request, token);
+                    await WebResourcePlanner.AddToSolutionAsync(step, roleId, ComponentKinds.RoleType, token);
+                },
+            });
+        }
+
+        if (lower.Count > 0)
+        {
+            // AddPrivilegesRole adds a privilege the role already has at its own depth, so lowering one means
+            // removing it and adding it again at the lower depth.
+            var lowered = lower.ToList();
+            steps.Add(new PlanStep
+            {
+                Op = "lowerPrivileges",
+                Target = name,
+                Effect = PlanEffect.Destructive,
+                Detail = $"Users with only this role lose access: {string.Join("\n", lowerDetail)}",
+                Action = async (step, token) =>
+                {
+                    foreach (var privilege in lowered)
+                        await step.Client.ExecuteAsync(new RemovePrivilegeRoleRequest { RoleId = roleId, PrivilegeId = privilege.PrivilegeId }, token);
+                    await step.Client.ExecuteAsync(new AddPrivilegesRoleRequest { RoleId = roleId, Privileges = [.. lowered] }, token);
                     await WebResourcePlanner.AddToSolutionAsync(step, roleId, ComponentKinds.RoleType, token);
                 },
             });
@@ -415,6 +447,8 @@ public sealed class RolePlanner : IComponentPlanner<RoleApplySpec>
                 {
                     Op = "secureColumn",
                     Target = $"{table}.{column}",
+                    // Everyone outside a profile that allows it stops seeing the column's values.
+                    Effect = PlanEffect.Destructive,
                     Detail = "turn on column security; only members of a profile that allows it can then see the column's values",
                     Action = async (step, token) =>
                     {
@@ -456,12 +490,22 @@ public sealed class RolePlanner : IComponentPlanner<RoleApplySpec>
                 row["attributelogicalname"] = column;
             }
 
-            var rights = string.Join(", ", new[] { wanted.Read ? "read" : null, wanted.Create ? "create" : null, wanted.Update ? "update" : null }.OfType<string>());
+            static string Rights(bool read, bool create, bool update)
+            {
+                var list = string.Join(", ", new[] { read ? "read" : null, create ? "create" : null, update ? "update" : null }.OfType<string>());
+                return list.Length == 0 ? "no access" : list;
+            }
+
+            var rights = Rights(wanted.Read, wanted.Create, wanted.Update);
+            // Taking a right away from the profile's members is destructive.
+            var takesAway = existing is not null
+                && ((Is("canread") && !wanted.Read) || (Is("cancreate") && !wanted.Create) || (Is("canupdate") && !wanted.Update));
             steps.Add(new PlanStep
             {
                 Op = existing is null ? "addColumnPermission" : "updateColumnPermission",
                 Target = $"{name}: {table}.{column}",
-                Detail = rights.Length == 0 ? "no access" : rights,
+                Effect = takesAway ? PlanEffect.Destructive : PlanEffect.Change,
+                Detail = existing is null ? rights : $"{Rights(Is("canread"), Is("cancreate"), Is("canupdate"))} → {rights}",
                 Request = existing is null ? new CreateRequest { Target = row } : new UpdateRequest { Target = row },
                 SolutionAware = false,
             });
