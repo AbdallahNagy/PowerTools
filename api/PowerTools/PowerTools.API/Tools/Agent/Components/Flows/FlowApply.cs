@@ -74,7 +74,7 @@ public sealed class FlowPlanner : IComponentPlanner<FlowApplySpec>
         {
             return new Plan([PlanStep.Unsupported("createFlow", name,
                 "This environment has no cloud flows (Power Automate is online only).",
-                "Build the logic as a classic workflow in the classic designer of a development environment, add it to a solution, and import that solution here with solution_import.")]);
+                "Build the logic as a classic workflow with process_apply.")]);
         }
 
         var solution = await context.SolutionAsync(spec.Solution, ct);

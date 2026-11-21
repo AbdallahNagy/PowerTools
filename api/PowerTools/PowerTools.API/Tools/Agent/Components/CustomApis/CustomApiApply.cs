@@ -126,7 +126,7 @@ public sealed class CustomApiPlanner : IComponentPlanner<CustomApiApplySpec>
         {
             return new Plan([PlanStep.Unsupported("createCustomApi", uniqueName,
                 "This environment has no Custom APIs.",
-                "Define the message as a custom process action in the maker portal, or import a solution that has it with solution_import.")]);
+                "Define the message as a custom process action with process_apply (kind action).")]);
         }
 
         var solution = await context.SolutionAsync(spec.Solution, ct);

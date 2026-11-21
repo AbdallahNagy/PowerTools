@@ -183,15 +183,14 @@ public sealed class FlowPlannerTests
     }
 
     [Fact]
-    public async Task Without_cloud_flows_the_plan_is_unsupported_and_names_solution_import()
+    public async Task Without_cloud_flows_the_plan_is_unsupported_and_names_process_apply()
     {
         world.Features.Remove("connectionreference");
 
         var step = Assert.Single((await PlanAsync(Spec(FlowState.On))).Steps);
 
         Assert.Equal(PlanStepKind.Unsupported, step.Kind);
-        Assert.Contains("solution_import", step.Route);
-        Assert.DoesNotContain("process_apply", step.Route);
+        Assert.Contains("process_apply", step.Route);
     }
 
     [Fact]

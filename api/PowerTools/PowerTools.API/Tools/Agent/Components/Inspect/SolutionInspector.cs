@@ -39,9 +39,8 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
                 "pluginstep" => await StepAsync(body, ct),
                 "customapi" => Feature("customapi")
                     ? await CustomApiAsync(body, ct)
-                    : throw NotSupported("This environment has no Custom APIs. Use a classic custom process action instead, imported in a solution with solution_import."),
-                "process" => await RowsWhere(body, "process", "workflow", "name", ["name", "category", "mode", "primaryentity", "statecode", "ismanaged", "description"],
-                    q => { q.Criteria.AddCondition("type", ConditionOperator.Equal, 1); q.Criteria.AddCondition("category", ConditionOperator.NotEqual, ComponentKinds.FlowCategory); }, ct),
+                    : throw NotSupported("This environment has no Custom APIs. Use a classic custom process action instead, written with process_apply."),
+                "process" => await ProcessAsync(body, ct),
                 "flow" => await FlowAsync(body, ct),
                 _ => throw Invalid($"kind must be one of: {string.Join(", ", Kinds)}."),
             };
@@ -63,6 +62,39 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
         if (body.Name is null) return await RowInspect.ListAsync(client, kind, table, nameColumn, columns, narrow, body.Filter, body.Top, ct);
         var row = await RowInspect.FindAsync(client, table, nameColumn, body.Name, columns, narrow, ct) ?? throw RowInspect.NotFound($"{kind} {body.Name}");
         return RowInspect.Plain(row, columns);
+    }
+
+    /// <summary>Classic processes: a list, or one workflow or action in the shape process_apply takes.</summary>
+    private async Task<object> ProcessAsync(InspectBody body, CancellationToken ct)
+    {
+        Action<QueryExpression> processes = q =>
+        {
+            q.Criteria.AddCondition("type", ConditionOperator.Equal, 1);
+            q.Criteria.AddCondition("category", ConditionOperator.NotEqual, ComponentKinds.FlowCategory);
+        };
+        string[] columns = ["name", "category", "mode", "primaryentity", "statecode", "ismanaged", "description"];
+        if (body.Name is null) return await RowsWhere(body, "process", "workflow", "name", columns, processes, ct);
+        var row = await RowInspect.FindAsync(client, "workflow", "name", body.Name,
+            [.. columns, "xaml", "ondemand", "subprocess", "triggeroncreate", "triggerondelete", "triggeronupdateattributelist", "runas", "sdkmessageid"], processes, ct)
+            ?? throw RowInspect.NotFound($"process {body.Name}");
+
+        // Child workflows come back by name, so the steps can be sent back as they are.
+        var reading = Processes.ProcessXamlReader.Read(row.GetAttributeValue<string>("xaml") ?? "");
+        var names = new Dictionary<Guid, string>();
+        if (reading.ChildWorkflows.Count > 0)
+        {
+            var children = new QueryExpression("workflow") { NoLock = true, ColumnSet = new ColumnSet("name") };
+            children.Criteria.AddCondition("workflowid", ConditionOperator.In, reading.ChildWorkflows.Cast<object>().ToArray());
+            foreach (var child in (await client.RetrieveMultipleAsync(children, ct)).Entities)
+            {
+                if (child.GetAttributeValue<string>("name") is { } childName) names[child.Id] = childName;
+            }
+        }
+
+        string? message = null;
+        if (row.GetAttributeValue<EntityReference>("sdkmessageid") is { } messageId)
+            message = (await client.RetrieveAsync("sdkmessage", messageId.Id, new ColumnSet("name"), ct)).GetAttributeValue<string>("name");
+        return Processes.ProcessPlanner.Describe(row, names, message);
     }
 
     /// <summary>Cloud flows: a list, or one flow in the shape flow_apply takes.</summary>

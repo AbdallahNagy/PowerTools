@@ -111,7 +111,7 @@ public sealed class ProcessTriggers
 
     public bool? OnCreate { get; init; }
 
-    [Description("Columns whose update starts it. Empty means any column.")]
+    [Description("Columns whose change starts it. An empty list removes the update trigger.")]
     public List<string>? OnUpdate { get; init; }
 }
 
@@ -160,6 +160,9 @@ public sealed class ProcessStep
 
     [Description("A step Power Tools reads but cannot write (for example a custom step with outputs): its id from inspect_solution, kept exactly as it is.")]
     public string? Keep { get; init; }
+
+    [Description("Read back only, with keep: what the kept step does. Ignored when written.")]
+    public string? Summary { get; init; }
 }
 
 public sealed class ProcessRecordUpdate

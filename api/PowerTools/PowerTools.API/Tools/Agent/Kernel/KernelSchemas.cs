@@ -32,6 +32,7 @@ public static class KernelSchemas
         ["customapi_apply.input"] = typeof(Components.CustomApis.CustomApiApplySpec),
         ["role_apply.input"] = typeof(Components.Security.RoleApplySpec),
         ["flow_apply.input"] = typeof(Components.Flows.FlowApplySpec),
+        ["process_apply.input"] = typeof(Components.Processes.ProcessApplySpec),
         ["app_apply.input"] = typeof(Components.Apps.AppApplySpec),
     };
 
