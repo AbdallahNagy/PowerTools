@@ -28,6 +28,10 @@
   <ItemGroup>
     <ProjectReference Include="..\PowerTools.API\PowerTools.API.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Exported classic workflows that process_apply reads and writes back. -->
+    <None Include="Tools\Agent\TestFixtures\ClassicWorkflows\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 
   <!-- Plugin Registration inspects real plugin assemblies. Build the fixture projects and copy them to
        $(OutDir)Fixtures before compiling; they are not part of this project's own sources. -->
