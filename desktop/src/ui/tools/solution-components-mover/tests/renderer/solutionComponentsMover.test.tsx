@@ -250,6 +250,8 @@ describe("Solution Components Mover", () => {
 
     await waitFor(() => expect(body).not.toBeNull());
     expect(body).toMatchObject({ componentTypes: [1, 26, 29], allComponents: false });
+    // Let the copy finish so its status poll does not outlive this test's handlers.
+    await waitFor(() => expect(screen.getByLabelText("tool statuses")).toHaveTextContent("Copy finished"));
   });
 
   it("clears the targets after a copy finishes so the next copy starts with no target", async () => {

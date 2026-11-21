@@ -37,6 +37,10 @@ export default defineConfig({
         test: {
           name: "renderer",
           environment: "jsdom",
+          // jsdom runs several times slower on Windows (the production target) than on
+          // Linux. The heaviest tool tests take about 0.5s on Linux and over 5s on Windows.
+          testTimeout: 20_000,
+          hookTimeout: 30_000,
           include: [
             "test/renderer/**/*.test.{ts,tsx}",
             "src/ui/tools/**/tests/renderer/**/*.test.{ts,tsx}",
