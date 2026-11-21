@@ -77,6 +77,7 @@ builder.Services.AddSingleton<IPluginAssemblyInspector, PluginAssemblyInspector>
 builder.Services.AddScoped<AssemblyService>();
 builder.Services.AddScoped<UnregisterService>();
 builder.Services.AddSingleton<ISolutionLayersCache>(_ => new SolutionLayersCache());
+builder.Services.AddSingleton<PowerTools.API.Tools.Agent.Kernel.ICapabilitiesCache>(_ => new PowerTools.API.Tools.Agent.Kernel.CapabilitiesCache());
 
 var app = builder.Build();
 

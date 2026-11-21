@@ -8,7 +8,23 @@ export interface ApprovalRequest {
   effect: "change" | "destructive";
   summary: string;
   removes?: string;
+  /** For apply tools: the steps the user approves, grouped for the dialog. */
+  plan?: ApprovalPlan;
   args: Record<string, unknown>;
+}
+
+/** A plan as the approval dialog shows it: destructive steps first, long plans cut to the first steps plus counts. */
+export interface ApprovalPlan {
+  hash: string;
+  total: number;
+  groups: Array<{
+    effect: "destructive" | "change" | "unsupported";
+    count: number;
+    steps: Array<{ op: string; target: string; detail?: string }>;
+  }>;
+  /** Steps not listed because the plan is long. */
+  hidden: number;
+  warnings: string[];
 }
 
 export type ApprovalOutcome = "auto" | "allowed" | "denied" | "timed-out" | "unavailable" | "cancelled";

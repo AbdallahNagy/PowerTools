@@ -27,11 +27,14 @@ const MAPPED_CODES: Record<string, AgentErrorCode> = {
   // The agent routes say NotFound for a missing solution or publisher; to the agent that is a bad argument.
   NotFound: "InvalidRequest",
   PublisherRequired: "PublisherRequired",
+  NotSupported: "NotSupported",
   Internal: "Internal",
 };
 
 // POST paths that only read, so a 401 can safely be replayed.
 const REPLAYABLE_POSTS = new Set(["/api/community-tools/data/fetch", "/api/community-tools/data/retrieve"]);
+// A plan only reads, so it can be replayed too. An apply never is.
+const REPLAYABLE_PATH = /^\/api\/agent\/[a-z_]+\/plan$/;
 
 function retryAfterSeconds(response: Response, message: string | undefined): number | undefined {
   const header = Number(response.headers.get("Retry-After"));
@@ -87,7 +90,7 @@ export function createSidecarCaller(deps: SidecarCallerDeps): SidecarCall {
   return async (conn, method, path, body, signal) => {
     try {
       let response = await send(conn, method, path, body, signal);
-      const replayable = method === "GET" || REPLAYABLE_POSTS.has(path);
+      const replayable = method === "GET" || REPLAYABLE_POSTS.has(path) || REPLAYABLE_PATH.test(path);
       if (response.status === 401 && replayable && deps.refresh) {
         response = await send(await deps.refresh(conn), method, path, body, signal);
       }

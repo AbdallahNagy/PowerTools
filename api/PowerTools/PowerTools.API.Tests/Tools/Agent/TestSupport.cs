@@ -52,10 +52,16 @@ public sealed class FakeAgentClient : IAgentClient
         return Task.FromResult(new EntityCollection(rows));
     }
 
-    public Task<Entity> RetrieveAsync(string table, Guid id, ColumnSet columns, CancellationToken cancellationToken) =>
-        Records.TryGetValue((table, id), out var entity)
+    /// <summary>Runs before each retrieve; throw from it to make the retrieve fail (for example a throttling fault).</summary>
+    public Action<string, Guid>? BeforeRetrieve { get; set; }
+
+    public Task<Entity> RetrieveAsync(string table, Guid id, ColumnSet columns, CancellationToken cancellationToken)
+    {
+        BeforeRetrieve?.Invoke(table, id);
+        return Records.TryGetValue((table, id), out var entity)
             ? Task.FromResult(entity)
             : throw Fault(unchecked((int)0x80040217), $"{table} {id} does not exist.");
+    }
 
     public Task UpdateAsync(Entity entity, CancellationToken cancellationToken)
     {

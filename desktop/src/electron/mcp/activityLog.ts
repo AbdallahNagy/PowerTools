@@ -12,6 +12,9 @@ export interface ActivityEntry {
   outcome: "ok" | "error";
   code?: string;
   summary: string;
+  /** For apply tools: the hash of the plan that was approved, and its steps, so the user can see what ran. */
+  planHash?: string;
+  steps?: Array<{ op: string; target: string; effect: string }>;
 }
 
 export interface ActivityLog {
@@ -21,6 +24,8 @@ export interface ActivityLog {
 }
 
 const MAX_SUMMARY = 200;
+const MAX_STEPS = 50;
+const MAX_STEP_TEXT = 120;
 const RETENTION_DAYS = 30;
 const DAY_FILE = /^(\d{4}-\d{2}-\d{2})\.jsonl$/;
 
@@ -36,6 +41,16 @@ function sanitize(entry: ActivityEntry): ActivityEntry {
     outcome: entry.outcome,
     ...(entry.code ? { code: entry.code } : {}),
     summary: entry.summary.slice(0, MAX_SUMMARY),
+    ...(entry.planHash ? { planHash: entry.planHash.slice(0, 64) } : {}),
+    ...(entry.steps
+      ? {
+          steps: entry.steps.slice(0, MAX_STEPS).map((step) => ({
+            op: String(step.op).slice(0, MAX_STEP_TEXT),
+            target: String(step.target).slice(0, MAX_STEP_TEXT),
+            effect: String(step.effect).slice(0, 16),
+          })),
+        }
+      : {}),
   };
 }
 

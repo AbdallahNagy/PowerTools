@@ -1,0 +1,157 @@
+{
+  "type": "object",
+  "properties": {
+    "outcome": {
+      "enum": [
+        "applied",
+        "unchanged",
+        "partlyApplied",
+        "failed",
+        "refused",
+        "planned"
+      ]
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "done",
+              "skipped",
+              "failed",
+              "notRun",
+              "unsupported"
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "default": null
+          },
+          "dataverseCode": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "op",
+          "target",
+          "status"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "published": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "remaining": {
+      "type": "object",
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "op": {
+                "type": "string"
+              },
+              "target": {
+                "type": "string"
+              },
+              "effect": {
+                "enum": [
+                  "read",
+                  "change",
+                  "destructive"
+                ]
+              },
+              "kind": {
+                "enum": [
+                  "run",
+                  "unsupported",
+                  "blocked"
+                ]
+              },
+              "detail": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              },
+              "route": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "default": null
+              }
+            },
+            "required": [
+              "op",
+              "target",
+              "effect",
+              "kind"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "steps"
+      ],
+      "additionalProperties": false
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "code": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "message": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "outcome",
+    "steps",
+    "published",
+    "remaining",
+    "warnings"
+  ],
+  "additionalProperties": false
+}

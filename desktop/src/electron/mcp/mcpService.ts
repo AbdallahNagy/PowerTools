@@ -8,7 +8,7 @@ import { startHttpHost, type HttpHost } from "./httpHost.js";
 import { createMcpRequestHandler, type McpRequestHandler } from "./mcpServer.js";
 import { createAgentToolRegistry, type AgentToolInfo } from "./registry.js";
 import { createSidecarCaller } from "./sidecarCaller.js";
-import { READ_TOOLS } from "./tools/index.js";
+import { PLAN_APPLY_TOOLS, READ_TOOLS } from "./tools/index.js";
 import { WRITE_TOOLS } from "./tools/recordWrites.js";
 import { ENVVAR_TOOLS } from "./tools/envvars.js";
 import { PLUGIN_TOOLS } from "./tools/plugins.js";
@@ -101,7 +101,7 @@ export function createMcpService(deps: McpServiceDeps): McpService {
     return new Set(Array.isArray(saved) ? saved.filter((name): name is string => typeof name === "string") : []);
   };
   const registry = createAgentToolRegistry(
-    [...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS, ...SOLUTION_TOOLS, ...PLUGIN_TOOLS, ...ENVVAR_TOOLS],
+    [...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS, ...SOLUTION_TOOLS, ...PLUGIN_TOOLS, ...ENVVAR_TOOLS, ...PLAN_APPLY_TOOLS],
     {
       isGroupEnabled: (group) => readGroups()[group] !== false,
       isToolEnabled: (name) => !readDisabledTools().has(name),

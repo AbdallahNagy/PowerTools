@@ -28,11 +28,7 @@ internal static class AgentSolutionsEndpoints
 
     private static AgentSolutionsService Service(HttpContext ctx, DataverseClientFactory factory, ISolutionLayersCache cache)
     {
-        var connection = ctx.GetDataverseConnectionContext();
-        var key = connection is OnPremisesConnectionContext onPremises
-            ? $"{connection.EnvironmentUrl.ToLowerInvariant()}|{onPremises.Domain}\\{onPremises.Username}"
-            : connection.EnvironmentUrl.ToLowerInvariant();
-        return new AgentSolutionsService(AgentEndpoints.Client(ctx, factory), cache, key);
+        return new AgentSolutionsService(AgentEndpoints.Client(ctx, factory), cache, AgentConnectionKey.For(ctx));
     }
 
     private static void Post<TRequest, TResult>(

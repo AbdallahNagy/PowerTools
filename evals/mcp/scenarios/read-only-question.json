@@ -1,0 +1,10 @@
+{
+  "id": "read-only-question",
+  "phase": 0,
+  "description": "A question needs only reads: the agent answers it without any change or approval.",
+  "prompt": "Using the Power Tools MCP server and the connection \"{connection}\", tell me the display name and primary name column of the account table. Do not change anything.",
+  "checks": [
+    { "description": "account still exists", "tool": "metadata_get_table", "arguments": { "table": "account" }, "path": "table.logicalName", "equals": "account" }
+  ],
+  "mustNotCall": ["records_create", "records_update", "records_delete", "schema_create_column", "schema_delete_table", "execute_message"]
+}

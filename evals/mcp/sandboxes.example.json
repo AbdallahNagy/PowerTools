@@ -1,0 +1,8 @@
+{
+  "sandboxes": [
+    { "name": "online", "kind": "online", "connection": "Contoso · Sandbox (online)" },
+    { "name": "onprem", "kind": "onpremise", "connection": "Contoso · Sandbox (on-premises)" }
+  ],
+  "claudeCommand": "claude",
+  "claudeMcpConfig": "C:\\path\\to\\powertools-mcp.json"
+}

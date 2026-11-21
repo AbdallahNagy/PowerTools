@@ -1,5 +1,6 @@
 import { TriangleAlert } from "lucide-react";
 
+import type { McpApprovalPlan } from "../../platform/desktopBridge";
 import { Button, Modal } from "../../shared/ui";
 import { useApprovalRequests } from "./useApprovalRequests";
 
@@ -37,8 +38,10 @@ export function ApprovalDialog() {
         </div>
       ) : null}
 
+      {current.plan ? <PlanSteps plan={current.plan} /> : null}
+
       <details className="text-xs text-fg-muted">
-        <summary className="cursor-pointer select-none">Arguments</summary>
+        <summary className="cursor-pointer select-none">{current.plan ? "Spec" : "Arguments"}</summary>
         <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-all rounded-sm border border-line bg-canvas p-2 font-mono text-fg">
           {JSON.stringify(current.args, null, 2)}
         </pre>
@@ -53,5 +56,48 @@ export function ApprovalDialog() {
         </Button>
       </div>
     </Modal>
+  );
+}
+
+const GROUP_LABEL: Record<McpApprovalPlan["groups"][number]["effect"], string> = {
+  destructive: "Removes or replaces",
+  change: "Changes",
+  unsupported: "Cannot run on this environment",
+};
+
+/** The steps an apply tool will run, destructive first. Step text comes from the environment and the agent: text only. */
+function PlanSteps({ plan }: { plan: McpApprovalPlan }) {
+  return (
+    <section aria-label="Plan" className="flex flex-col gap-2 text-sm text-fg">
+      <p>
+        {plan.total} step{plan.total === 1 ? "" : "s"}
+        {plan.hidden > 0 ? `, the first ${plan.total - plan.hidden} shown` : ""}
+      </p>
+      <div className="flex max-h-72 flex-col gap-2 overflow-auto">
+        {plan.groups.map((group) => (
+          <div key={group.effect}>
+            <p className={group.effect === "destructive" ? "text-xs font-medium text-danger" : "text-xs font-medium text-fg-muted"}>
+              {GROUP_LABEL[group.effect]} ({group.count})
+            </p>
+            <ul className="mt-1 flex flex-col gap-0.5 font-mono text-xs">
+              {group.steps.map((step, index) => (
+                <li key={`${step.op}-${step.target}-${index}`} className="break-all">
+                  {step.op} {step.target}
+                  {step.detail ? <span className="text-fg-muted"> · {step.detail}</span> : null}
+                </li>
+              ))}
+              {group.count > group.steps.length ? (
+                <li className="text-fg-muted">and {group.count - group.steps.length} more</li>
+              ) : null}
+            </ul>
+          </div>
+        ))}
+      </div>
+      {plan.warnings.map((warning) => (
+        <p key={warning} className="text-xs text-fg-muted">
+          {warning}
+        </p>
+      ))}
+    </section>
   );
 }
