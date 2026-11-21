@@ -1,0 +1,213 @@
+<Activity x:Class="XrmWorkflowc44a66f4cf2543469cbe4f50bdbcda98" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mva="clr-namespace:Microsoft.VisualBasic.Activities;assembly=System.Activities, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" xmlns:mxs="clr-namespace:Microsoft.Xrm.Sdk;assembly=Microsoft.Xrm.Sdk, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" xmlns:mxsw="clr-namespace:Microsoft.Xrm.Sdk.Workflow;assembly=Microsoft.Xrm.Sdk.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" xmlns:mxswa="clr-namespace:Microsoft.Xrm.Sdk.Workflow.Activities;assembly=Microsoft.Xrm.Sdk.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" xmlns:s="clr-namespace:System;assembly=mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" xmlns:srs="clr-namespace:System.Runtime.Serialization;assembly=System.Runtime.Serialization, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" xmlns:this="clr-namespace:" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="InputEntities" Type="InArgument(scg:IDictionary(x:String, mxs:Entity))" />
+    <x:Property Name="CreatedEntities" Type="InArgument(scg:IDictionary(x:String, mxs:Entity))" />
+    <x:Property Name="OrganizationId" Type="InArgument(x:String)">
+      <x:Property.Attributes>
+        <mxsw:ArgumentRequiredAttribute Value="False" />
+        <mxsw:ArgumentTargetAttribute Value="False" />
+        <mxsw:ArgumentDescriptionAttribute Value="New Argument" />
+        <mxsw:ArgumentDirectionAttribute Value="Input" />
+        <mxsw:ArgumentEntityAttribute Value="" />
+      </x:Property.Attributes>
+    </x:Property>
+    <x:Property Name="TotalAmount" Type="InArgument(x:Double)">
+      <x:Property.Attributes>
+        <mxsw:ArgumentRequiredAttribute Value="False" />
+        <mxsw:ArgumentTargetAttribute Value="False" />
+        <mxsw:ArgumentDescriptionAttribute Value="New Argument" />
+        <mxsw:ArgumentDirectionAttribute Value="Input" />
+        <mxsw:ArgumentEntityAttribute Value="" />
+      </x:Property.Attributes>
+    </x:Property>
+    <x:Property Name="Target" Type="InArgument(mxs:EntityReference)">
+      <x:Property.Attributes>
+        <mxsw:ArgumentRequiredAttribute Value="True" />
+        <mxsw:ArgumentTargetAttribute Value="True" />
+        <mxsw:ArgumentDescriptionAttribute Value="Target Argument" />
+        <mxsw:ArgumentDirectionAttribute Value="Input" />
+        <mxsw:ArgumentEntityAttribute Value="account" />
+      </x:Property.Attributes>
+    </x:Property>
+  </x:Members>
+  <this:XrmWorkflowc44a66f4cf2543469cbe4f50bdbcda98.InputEntities>
+    <InArgument x:TypeArguments="scg:IDictionary(x:String, mxs:Entity)" />
+  </this:XrmWorkflowc44a66f4cf2543469cbe4f50bdbcda98.InputEntities>
+  <this:XrmWorkflowc44a66f4cf2543469cbe4f50bdbcda98.CreatedEntities>
+    <InArgument x:TypeArguments="scg:IDictionary(x:String, mxs:Entity)" />
+  </this:XrmWorkflowc44a66f4cf2543469cbe4f50bdbcda98.CreatedEntities>
+  <this:XrmWorkflowc44a66f4cf2543469cbe4f50bdbcda98.Target>
+    <InArgument x:TypeArguments="mxs:EntityReference" />
+  </this:XrmWorkflowc44a66f4cf2543469cbe4f50bdbcda98.Target>
+  <mva:VisualBasic.Settings>Assembly references and imported namespaces for internal implementation</mva:VisualBasic.Settings>
+  <mxswa:Workflow>
+    <mxswa:Workflow.Variables>
+      <Variable x:TypeArguments="mxs:EntityReference" Default="[New EntityReference()]" Name="CustomActivityStep1EmailReference_localParameter" />
+      <Variable x:TypeArguments="x:String" Default="[Nothing]" Name="CustomActivityStep1EmailIds_localParameter" />
+      <Variable x:TypeArguments="mxs:EntityReference" Default="[New EntityReference()]" Name="CustomActivityStep1SmsReference_localParameter" />
+      <Variable x:TypeArguments="x:String" Default="[Nothing]" Name="CustomActivityStep1SmsIds_localParameter" />
+      <Variable x:TypeArguments="mxs:EntityReference" Default="[New EntityReference()]" Name="CustomActivityStep1WhatsAppReference_localParameter" />
+      <Variable x:TypeArguments="x:String" Default="[Nothing]" Name="CustomActivityStep1WhatsAppIds_localParameter" />
+      <Variable x:TypeArguments="mxs:EntityReference" Default="[New EntityReference()]" Name="CustomActivityStep1PushReference_localParameter" />
+      <Variable x:TypeArguments="x:String" Default="[Nothing]" Name="CustomActivityStep1PushIds_localParameter" />
+    </mxswa:Workflow.Variables>
+    <Sequence DisplayName="UpdateStep2: update total amount">
+      <Sequence.Variables>
+        <Variable x:TypeArguments="x:Object" Name="UpdateStep2_1" />
+        <Variable x:TypeArguments="x:Object" Name="UpdateStep2_2" />
+      </Sequence.Variables>
+      <Assign x:TypeArguments="mxs:Entity" To="[CreatedEntities(&quot;primaryEntity#Temp&quot;)]" Value="[New Entity(&quot;account&quot;)]" />
+      <Assign x:TypeArguments="s:Guid" To="[CreatedEntities(&quot;primaryEntity#Temp&quot;).Id]" Value="[InputEntities(&quot;primaryEntity&quot;).Id]" />
+      <mxswa:ActivityReference AssemblyQualifiedName="Microsoft.Crm.Workflow.Activities.EvaluateExpression, Microsoft.Crm.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" DisplayName="EvaluateExpression">
+        <mxswa:ActivityReference.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="ExpressionOperator">CustomOperationArguments</InArgument>
+          <InArgument x:TypeArguments="s:Object[]" x:Key="Parameters">[New Object() { TotalAmount }]</InArgument>
+          <InArgument x:TypeArguments="s:Type" x:Key="TargetType">
+            <mxswa:ReferenceLiteral x:TypeArguments="s:Type" Value="mxs:Money" />
+          </InArgument>
+          <OutArgument x:TypeArguments="x:Object" x:Key="Result">[UpdateStep2_2]</OutArgument>
+        </mxswa:ActivityReference.Arguments>
+      </mxswa:ActivityReference>
+      <mxswa:ActivityReference AssemblyQualifiedName="Microsoft.Crm.Workflow.Activities.EvaluateExpression, Microsoft.Crm.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" DisplayName="EvaluateExpression">
+        <mxswa:ActivityReference.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="ExpressionOperator">SelectFirstNonNull</InArgument>
+          <InArgument x:TypeArguments="s:Object[]" x:Key="Parameters">[New Object() { UpdateStep2_2 }]</InArgument>
+          <InArgument x:TypeArguments="s:Type" x:Key="TargetType">
+            <mxswa:ReferenceLiteral x:TypeArguments="s:Type" Value="mxs:Money" />
+          </InArgument>
+          <OutArgument x:TypeArguments="x:Object" x:Key="Result">[UpdateStep2_1]</OutArgument>
+        </mxswa:ActivityReference.Arguments>
+      </mxswa:ActivityReference>
+      <mxswa:SetEntityProperty Attribute="contoso_totalamount" Entity="[CreatedEntities(&quot;primaryEntity#Temp&quot;)]" EntityName="account" Value="[UpdateStep2_1]">
+        <mxswa:SetEntityProperty.TargetType>
+          <InArgument x:TypeArguments="s:Type">
+            <mxswa:ReferenceLiteral x:TypeArguments="s:Type" Value="mxs:Money" />
+          </InArgument>
+        </mxswa:SetEntityProperty.TargetType>
+      </mxswa:SetEntityProperty>
+      <mxswa:UpdateEntity DisplayName="UpdateStep2" Entity="[CreatedEntities(&quot;primaryEntity#Temp&quot;)]" EntityName="account" />
+      <Assign x:TypeArguments="mxs:Entity" To="[InputEntities(&quot;primaryEntity&quot;)]" Value="[CreatedEntities(&quot;primaryEntity#Temp&quot;)]" />
+    </Sequence>
+    <mxswa:ActivityReference AssemblyQualifiedName="Microsoft.Crm.Workflow.Activities.Composite, Microsoft.Crm.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" DisplayName="CustomActivityStep1">
+      <mxswa:ActivityReference.Properties>
+        <sco:Collection x:TypeArguments="Variable" x:Key="Variables">
+          <Variable x:TypeArguments="x:Object" Name="CustomActivityStep1_1" />
+          <Variable x:TypeArguments="x:Object" Name="CustomActivityStep1_1_converted" />
+          <Variable x:TypeArguments="x:Object" Name="CustomActivityStep1_2" />
+          <Variable x:TypeArguments="x:Object" Name="CustomActivityStep1_2_converted" />
+          <Variable x:TypeArguments="x:Object" Name="CustomActivityStep1_3" />
+          <Variable x:TypeArguments="x:Object" Name="CustomActivityStep1_4" />
+          <Variable x:TypeArguments="x:Object" Name="CustomActivityStep1_3_converted" />
+          <Variable x:TypeArguments="x:Object" Name="CustomActivityStep1_5" />
+          <Variable x:TypeArguments="x:Object" Name="CustomActivityStep1_5_converted" />
+        </sco:Collection>
+        <sco:Collection x:TypeArguments="Activity" x:Key="Activities">
+          <mxswa:ActivityReference AssemblyQualifiedName="Microsoft.Crm.Workflow.Activities.ConvertCrmXrmTypes, Microsoft.Crm.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" DisplayName="ConvertCrmXrmTypes">
+            <mxswa:ActivityReference.Arguments>
+              <InArgument x:TypeArguments="x:Object" x:Key="Value">[CustomActivityStep1_1]</InArgument>
+              <InArgument x:TypeArguments="s:Type" x:Key="TargetType">
+                <mxswa:ReferenceLiteral x:TypeArguments="s:Type" Value="x:String" />
+              </InArgument>
+              <OutArgument x:TypeArguments="x:Object" x:Key="Result">[CustomActivityStep1_1_converted]</OutArgument>
+            </mxswa:ActivityReference.Arguments>
+          </mxswa:ActivityReference>
+          <mxswa:ActivityReference AssemblyQualifiedName="Microsoft.Crm.Workflow.Activities.ConvertCrmXrmTypes, Microsoft.Crm.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" DisplayName="ConvertCrmXrmTypes">
+            <mxswa:ActivityReference.Arguments>
+              <InArgument x:TypeArguments="x:Object" x:Key="Value">[CustomActivityStep1_2]</InArgument>
+              <InArgument x:TypeArguments="s:Type" x:Key="TargetType">
+                <mxswa:ReferenceLiteral x:TypeArguments="s:Type" Value="x:String" />
+              </InArgument>
+              <OutArgument x:TypeArguments="x:Object" x:Key="Result">[CustomActivityStep1_2_converted]</OutArgument>
+            </mxswa:ActivityReference.Arguments>
+          </mxswa:ActivityReference>
+          <mxswa:ActivityReference AssemblyQualifiedName="Microsoft.Crm.Workflow.Activities.EvaluateExpression, Microsoft.Crm.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" DisplayName="EvaluateExpression">
+            <mxswa:ActivityReference.Arguments>
+              <InArgument x:TypeArguments="x:String" x:Key="ExpressionOperator">CreateCrmType</InArgument>
+              <InArgument x:TypeArguments="s:Object[]" x:Key="Parameters">[New Object() { Microsoft.Xrm.Sdk.Workflow.WorkflowPropertyType.Guid, "1e2ed6cb-6470-4f1f-934b-8db4b18fbdb1", "UniqueIdentifier" }]</InArgument>
+              <InArgument x:TypeArguments="s:Type" x:Key="TargetType">
+                <mxswa:ReferenceLiteral x:TypeArguments="s:Type" Value="mxs:EntityReference" />
+              </InArgument>
+              <OutArgument x:TypeArguments="x:Object" x:Key="Result">[CustomActivityStep1_4]</OutArgument>
+            </mxswa:ActivityReference.Arguments>
+          </mxswa:ActivityReference>
+          <mxswa:ActivityReference AssemblyQualifiedName="Microsoft.Crm.Workflow.Activities.EvaluateExpression, Microsoft.Crm.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" DisplayName="EvaluateExpression">
+            <mxswa:ActivityReference.Arguments>
+              <InArgument x:TypeArguments="x:String" x:Key="ExpressionOperator">CreateCrmType</InArgument>
+              <InArgument x:TypeArguments="s:Object[]" x:Key="Parameters">[New Object() { Microsoft.Xrm.Sdk.Workflow.WorkflowPropertyType.EntityReference, "fab_notifications", "", CustomActivityStep1_4, "Lookup" }]</InArgument>
+              <InArgument x:TypeArguments="s:Type" x:Key="TargetType">
+                <mxswa:ReferenceLiteral x:TypeArguments="s:Type" Value="mxs:EntityReference" />
+              </InArgument>
+              <OutArgument x:TypeArguments="x:Object" x:Key="Result">[CustomActivityStep1_3]</OutArgument>
+            </mxswa:ActivityReference.Arguments>
+          </mxswa:ActivityReference>
+          <mxswa:ActivityReference AssemblyQualifiedName="Microsoft.Crm.Workflow.Activities.ConvertCrmXrmTypes, Microsoft.Crm.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" DisplayName="ConvertCrmXrmTypes">
+            <mxswa:ActivityReference.Arguments>
+              <InArgument x:TypeArguments="x:Object" x:Key="Value">[CustomActivityStep1_3]</InArgument>
+              <InArgument x:TypeArguments="s:Type" x:Key="TargetType">
+                <mxswa:ReferenceLiteral x:TypeArguments="s:Type" Value="mxs:EntityReference" />
+              </InArgument>
+              <OutArgument x:TypeArguments="x:Object" x:Key="Result">[CustomActivityStep1_3_converted]</OutArgument>
+            </mxswa:ActivityReference.Arguments>
+          </mxswa:ActivityReference>
+          <mxswa:ActivityReference AssemblyQualifiedName="Microsoft.Crm.Workflow.Activities.ConvertCrmXrmTypes, Microsoft.Crm.Workflow, Version=9.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35" DisplayName="ConvertCrmXrmTypes">
+            <mxswa:ActivityReference.Arguments>
+              <InArgument x:TypeArguments="x:Object" x:Key="Value">[CustomActivityStep1_5]</InArgument>
+              <InArgument x:TypeArguments="s:Type" x:Key="TargetType">
+                <mxswa:ReferenceLiteral x:TypeArguments="s:Type" Value="x:Boolean" />
+              </InArgument>
+              <OutArgument x:TypeArguments="x:Object" x:Key="Result">[CustomActivityStep1_5_converted]</OutArgument>
+            </mxswa:ActivityReference.Arguments>
+          </mxswa:ActivityReference>
+          <mxswa:ActivityReference AssemblyQualifiedName="Fabrikam.Notifications.Steps.CustomNotification, Fabrikam.Notifications.Steps, Version=1.0.9734.34192, Culture=neutral, PublicKeyToken=96f110ab5b32e2f5" DisplayName="CustomActivityStep1">
+            <mxswa:ActivityReference.Arguments>
+              <InArgument x:TypeArguments="x:String" x:Key="TargetRecordUrls">[DirectCast(CustomActivityStep1_1_converted, System.String)]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="TargetRecordInfo">[DirectCast(CustomActivityStep1_2_converted, System.String)]</InArgument>
+              <InArgument x:TypeArguments="mxs:EntityReference" x:Key="NotificationReference">[DirectCast(CustomActivityStep1_3_converted, Microsoft.Xrm.Sdk.EntityReference)]</InArgument>
+              <InArgument x:TypeArguments="x:Boolean" x:Key="IsIgnoreSendMode">[DirectCast(CustomActivityStep1_5_converted, System.Boolean)]</InArgument>
+              <OutArgument x:TypeArguments="mxs:EntityReference" x:Key="EmailReference">[CustomActivityStep1EmailReference_localParameter]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="EmailIds">[CustomActivityStep1EmailIds_localParameter]</OutArgument>
+              <OutArgument x:TypeArguments="mxs:EntityReference" x:Key="SmsReference">[CustomActivityStep1SmsReference_localParameter]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="SmsIds">[CustomActivityStep1SmsIds_localParameter]</OutArgument>
+              <OutArgument x:TypeArguments="mxs:EntityReference" x:Key="WhatsAppReference">[CustomActivityStep1WhatsAppReference_localParameter]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="WhatsAppIds">[CustomActivityStep1WhatsAppIds_localParameter]</OutArgument>
+              <OutArgument x:TypeArguments="mxs:EntityReference" x:Key="PushReference">[CustomActivityStep1PushReference_localParameter]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="PushIds">[CustomActivityStep1PushIds_localParameter]</OutArgument>
+            </mxswa:ActivityReference.Arguments>
+          </mxswa:ActivityReference>
+          <If Condition="[Microsoft.VisualBasic.IsNothing(CustomActivityStep1EmailReference_localParameter)]">
+            <If.Then>
+              <Assign x:TypeArguments="mxs:Entity" To="[CreatedEntities(&quot;CustomActivityStep1EmailReference_entity&quot;)]" Value="[New Entity()]" />
+            </If.Then>
+            <If.Else>
+              <mxswa:RetrieveEntity Attributes="{x:Null}" Entity="[CreatedEntities(&quot;CustomActivityStep1EmailReference_entity&quot;)]" EntityId="[DirectCast(CustomActivityStep1EmailReference_localParameter.Id, System.Guid)]" EntityName="email" ThrowIfNotExists="False" />
+            </If.Else>
+          </If>
+          <If Condition="[Microsoft.VisualBasic.IsNothing(CustomActivityStep1SmsReference_localParameter)]">
+            <If.Then>
+              <Assign x:TypeArguments="mxs:Entity" To="[CreatedEntities(&quot;CustomActivityStep1SmsReference_entity&quot;)]" Value="[New Entity()]" />
+            </If.Then>
+            <If.Else>
+              <mxswa:RetrieveEntity Attributes="{x:Null}" Entity="[CreatedEntities(&quot;CustomActivityStep1SmsReference_entity&quot;)]" EntityId="[DirectCast(CustomActivityStep1SmsReference_localParameter.Id, System.Guid)]" EntityName="fab_sms" ThrowIfNotExists="False" />
+            </If.Else>
+          </If>
+          <If Condition="[Microsoft.VisualBasic.IsNothing(CustomActivityStep1WhatsAppReference_localParameter)]">
+            <If.Then>
+              <Assign x:TypeArguments="mxs:Entity" To="[CreatedEntities(&quot;CustomActivityStep1WhatsAppReference_entity&quot;)]" Value="[New Entity()]" />
+            </If.Then>
+            <If.Else>
+              <mxswa:RetrieveEntity Attributes="{x:Null}" Entity="[CreatedEntities(&quot;CustomActivityStep1WhatsAppReference_entity&quot;)]" EntityId="[DirectCast(CustomActivityStep1WhatsAppReference_localParameter.Id, System.Guid)]" EntityName="contoso_whatsappmessage" ThrowIfNotExists="False" />
+            </If.Else>
+          </If>
+          <If Condition="[Microsoft.VisualBasic.IsNothing(CustomActivityStep1PushReference_localParameter)]">
+            <If.Then>
+              <Assign x:TypeArguments="mxs:Entity" To="[CreatedEntities(&quot;CustomActivityStep1PushReference_entity&quot;)]" Value="[New Entity()]" />
+            </If.Then>
+            <If.Else>
+              <mxswa:RetrieveEntity Attributes="{x:Null}" Entity="[CreatedEntities(&quot;CustomActivityStep1PushReference_entity&quot;)]" EntityId="[DirectCast(CustomActivityStep1PushReference_localParameter.Id, System.Guid)]" EntityName="fab_pushmessage" ThrowIfNotExists="False" />
+            </If.Else>
+          </If>
+        </sco:Collection>
+      </mxswa:ActivityReference.Properties>
+    </mxswa:ActivityReference>
+  </mxswa:Workflow>
+</Activity>
