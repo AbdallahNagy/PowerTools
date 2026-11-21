@@ -108,7 +108,7 @@ describe("createMcpService", () => {
     const groups = s.status().groups;
     expect(groups.map((g) => g.group)).toEqual(["connections", "read", "records", "records-delete", "schema", "ui", "logic", "security", "solutions", "remove"]);
     expect(groups.every((g) => g.enabled && g.tools > 0)).toBe(true);
-    // The 23 tools after Phase 3 (desktop/docs/mcp-tool-architecture.md). A change here means the user guide
+    // The 24 tools after Phase 4 (desktop/docs/mcp-tool-architecture.md). A change here means the user guide
     // and the tool set section of the spec need a look.
     expect(Object.fromEntries(groups.map((g) => [g.group, g.tools]))).toEqual({
       connections: 1,
@@ -117,7 +117,7 @@ describe("createMcpService", () => {
       "records-delete": 1,
       schema: 2,
       ui: 4,
-      logic: 3,
+      logic: 4,
       security: 1,
       solutions: 4,
       remove: 1,
@@ -156,7 +156,7 @@ describe("createMcpService", () => {
     const off = s.setTool("records_delete", false);
     expect(off.tools.find((t) => t.name === "records_delete")!.enabled).toBe(false);
     expect(off.tools.filter((t) => !t.enabled)).toHaveLength(1);
-    expect(off.tools).toHaveLength(23);
+    expect(off.tools).toHaveLength(24);
     expect(s.setTool("records_delete", true).tools.every((t) => t.enabled)).toBe(true);
     expect(() => s.setTool("nonsense", false)).toThrow(/Unknown tool/);
   });
