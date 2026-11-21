@@ -1,16 +1,20 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using PowerTools.API.Services;
+using PowerTools.API.Tools.Agent.Components.Apps;
 using PowerTools.API.Tools.Agent.Components.Choices;
 using PowerTools.API.Tools.Agent.Components.Config;
+using PowerTools.API.Tools.Agent.Components.CustomApis;
 using PowerTools.API.Tools.Agent.Components.Forms;
 using PowerTools.API.Tools.Agent.Components.Inspect;
 using PowerTools.API.Tools.Agent.Components.Plugins;
 using PowerTools.API.Tools.Agent.Components.Records;
 using PowerTools.API.Tools.Agent.Components.Remove;
+using PowerTools.API.Tools.Agent.Components.Security;
 using PowerTools.API.Tools.Agent.Components.Solutions;
 using PowerTools.API.Tools.Agent.Components.Tables;
 using PowerTools.API.Tools.Agent.Components.Views;
+using PowerTools.API.Tools.Agent.Components.WebResources;
 using PowerTools.API.Tools.Agent.Kernel;
 using PowerTools.API.Tools.PluginRegistration.Inspection;
 using PowerTools.API.Tools.SolutionLayers;
@@ -50,6 +54,10 @@ public static class AgentComponentEndpoints
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<PluginStepApplySpec>(PluginStepPlanner.Family, new PluginStepPlanner()));
         services.AddSingleton<IApplyFamily>(sp => new ApplyFamily<RemoveSpec>(
             RemovePlanner.Family, new RemovePlanner(sp.GetRequiredService<ISolutionLayersCache>())));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<WebResourceApplySpec>(WebResourcePlanner.Family, new WebResourcePlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<CustomApiApplySpec>(CustomApiPlanner.Family, new CustomApiPlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<RoleApplySpec>(RolePlanner.Family, new RolePlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<AppApplySpec>(AppPlanner.Family, new AppPlanner()));
         return services;
     }
 

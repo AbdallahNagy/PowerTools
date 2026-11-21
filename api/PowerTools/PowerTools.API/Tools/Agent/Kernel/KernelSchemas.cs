@@ -28,6 +28,10 @@ public static class KernelSchemas
         ["plugin_deploy.input"] = typeof(Components.Plugins.PluginDeploySpec),
         ["plugin_step_apply.input"] = typeof(Components.Plugins.PluginStepApplySpec),
         ["remove.input"] = typeof(Components.Remove.RemoveSpec),
+        ["webresource_apply.input"] = typeof(Components.WebResources.WebResourceApplySpec),
+        ["customapi_apply.input"] = typeof(Components.CustomApis.CustomApiApplySpec),
+        ["role_apply.input"] = typeof(Components.Security.RoleApplySpec),
+        ["app_apply.input"] = typeof(Components.Apps.AppApplySpec),
     };
 
     /// <summary>Input schemas end in ".input"; they leave out null, since an agent leaves a property out instead.</summary>

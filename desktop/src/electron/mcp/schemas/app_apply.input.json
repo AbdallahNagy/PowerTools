@@ -1,0 +1,222 @@
+{
+  "description": "A model-driven app. Leave a property out to keep it. Components, roles and commands left out are kept.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the app goes into. Its publisher decides the prefix.",
+      "type": "string"
+    },
+    "uniqueName": {
+      "description": "The app\u0027s unique name with the publisher prefix, for example con_Projects. Cannot change.",
+      "type": "string"
+    },
+    "name": {
+      "description": "Needed for a new app.",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "icon": {
+      "description": "Name of an SVG or image web resource for the app\u0027s icon. Default: the standard icon.",
+      "type": "string"
+    },
+    "tables": {
+      "description": "Tables in the app. Without forms, views or charts, the app shows all of the table\u0027s.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "table": {
+            "description": "Table logical name.",
+            "type": "string"
+          },
+          "forms": {
+            "description": "Forms by name; only these are in the app.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "views": {
+            "description": "Views by name; only these are in the app.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "charts": {
+            "description": "System charts by name.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "table"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "dashboards": {
+      "description": "System dashboards in the app, by name.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "siteMap": {
+      "description": "The navigation. It replaces the app\u0027s site map as a whole.",
+      "type": "object",
+      "properties": {
+        "areas": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "description": "Default: made from the title.",
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              },
+              "groups": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "description": "Default: made from the title.",
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "subareas": {
+                      "type": "array",
+                      "items": {
+                        "description": "One of table, dashboards or url.",
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "description": "Default: made from the table or title.",
+                            "type": "string"
+                          },
+                          "title": {
+                            "description": "Default for a table: the table\u0027s plural name.",
+                            "type": "string"
+                          },
+                          "table": {
+                            "description": "Table logical name.",
+                            "type": "string"
+                          },
+                          "dashboards": {
+                            "description": "true: the dashboards page.",
+                            "type": "boolean"
+                          },
+                          "url": {
+                            "description": "A web resource ($webresource:con_/page.html) or an absolute URL.",
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "title",
+                    "subareas"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "title",
+              "groups"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "areas"
+      ],
+      "additionalProperties": false
+    },
+    "roles": {
+      "description": "Security roles that can open the app, by name.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "commands": {
+      "description": "Modern command bar buttons that run JavaScript. Online only.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "uniqueName": {
+            "description": "The command\u0027s unique name with the publisher prefix.",
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "table": {
+            "description": "Table logical name the command is on.",
+            "type": "string"
+          },
+          "location": {
+            "enum": [
+              "form",
+              "mainGrid",
+              "subGrid",
+              "associatedGrid"
+            ]
+          },
+          "library": {
+            "description": "Name of the JavaScript web resource.",
+            "type": "string"
+          },
+          "function": {
+            "description": "The function to call.",
+            "type": "string"
+          },
+          "parameters": {
+            "description": "Parameters, for example PrimaryControl.",
+            "type": "string"
+          },
+          "icon": {
+            "description": "A Fluent icon name, for example Add.",
+            "type": "string"
+          },
+          "sequence": {
+            "description": "Order among the buttons; lower comes first.",
+            "type": "integer"
+          },
+          "hidden": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "uniqueName",
+          "label",
+          "table",
+          "location",
+          "library",
+          "function"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "solution",
+    "uniqueName"
+  ],
+  "additionalProperties": false
+}

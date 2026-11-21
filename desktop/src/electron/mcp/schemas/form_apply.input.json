@@ -1,5 +1,5 @@
 {
-  "description": "Changes to one existing form, as operations run in order. Each one is skipped when the form already has it, so the same spec can be sent again.",
+  "description": "A form or dashboard: a whole layout, then operations run in order. Each part is skipped when the form already has it, so the same spec can be sent again. A form that does not exist is created from its layout.",
   "type": "object",
   "properties": {
     "solution": {
@@ -7,26 +7,134 @@
       "type": "string"
     },
     "table": {
-      "description": "Table logical name.",
+      "description": "Table logical name. Not for a dashboard.",
       "type": "string"
     },
     "form": {
-      "description": "The form\u0027s name, for example Information.",
+      "description": "The form\u0027s or dashboard\u0027s name, for example Information.",
       "type": "string"
     },
     "formType": {
-      "description": "Default main.",
+      "description": "Default main. dashboard is a system dashboard of lists and charts.",
       "enum": [
         "main",
         "quickCreate",
         "quickView",
-        "card"
+        "card",
+        "dashboard"
       ]
+    },
+    "description": {
+      "description": "For a new form or dashboard.",
+      "type": "string"
+    },
+    "layout": {
+      "description": "The whole layout: these tabs in this order, each with these sections and fields. Tabs and sections left out are taken off the form; a field keeps its control, label and settings when it is already on the form, and subgrids and web resources already in a kept section stay at its end.",
+      "type": "object",
+      "properties": {
+        "tabs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "description": "The tab\u0027s name; an existing tab matches by name.",
+                "type": "string"
+              },
+              "label": {
+                "description": "Default: the current label, or the name for a new tab.",
+                "type": "string"
+              },
+              "visible": {
+                "type": "boolean"
+              },
+              "sections": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "description": "The section\u0027s name; an existing section matches by name, in any tab.",
+                      "type": "string"
+                    },
+                    "label": {
+                      "description": "Default: the current label, or the name for a new section.",
+                      "type": "string"
+                    },
+                    "visible": {
+                      "type": "boolean"
+                    },
+                    "column": {
+                      "description": "Which column of the tab the section is in, 1 to 3. Default 1.",
+                      "type": "integer"
+                    },
+                    "fields": {
+                      "description": "Column logical names, one per row, in order. Not for dashboards.",
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "components": {
+                      "description": "Dashboards only: the charts and lists in this section, in order.",
+                      "type": "array",
+                      "items": {
+                        "description": "A list or chart on a dashboard: a public view of a table, shown as a grid, or with a system chart of the table.",
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "description": "The component\u0027s name, unique on the dashboard.",
+                            "type": "string"
+                          },
+                          "label": {
+                            "description": "Default: the view\u0027s name.",
+                            "type": "string"
+                          },
+                          "table": {
+                            "description": "Table logical name.",
+                            "type": "string"
+                          },
+                          "view": {
+                            "description": "A public view of the table. Default: its default public view.",
+                            "type": "string"
+                          },
+                          "chart": {
+                            "description": "A system chart of the table. With it the component shows the chart.",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "table"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "name",
+              "sections"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "tabs"
+      ],
+      "additionalProperties": false
     },
     "operations": {
       "type": "array",
       "items": {
-        "description": "addField/moveField: column into section (after a column). removeField: column. addSection: section into tab. addTab: tab. setLabel/setVisible: on column, else section, else tab. addSubgrid: name, subgridTable into section. Tabs and sections match by name or label.",
+        "description": "addField/moveField: column into section (after a column). removeField: column. addSection: section into tab. addTab: tab. setLabel/setVisible: on column, else section, else tab. addSubgrid: name, subgridTable into section. addLibrary/removeLibrary: library. addHandler/removeHandler: event (column for onchange), library, function. Tabs and sections match by name or label.",
         "type": "object",
         "properties": {
           "op": {
@@ -38,7 +146,11 @@
               "addTab",
               "setLabel",
               "setVisible",
-              "addSubgrid"
+              "addSubgrid",
+              "addLibrary",
+              "removeLibrary",
+              "addHandler",
+              "removeHandler"
             ]
           },
           "column": {
@@ -77,6 +189,33 @@
           "view": {
             "description": "addSubgrid: name of a public view of subgridTable. Default: its default view.",
             "type": "string"
+          },
+          "library": {
+            "description": "Name of a JavaScript web resource, for example con_/project/form.js.",
+            "type": "string"
+          },
+          "event": {
+            "enum": [
+              "onload",
+              "onsave",
+              "onchange"
+            ]
+          },
+          "function": {
+            "description": "addHandler: the function to call, for example Contoso.Project.onLoad.",
+            "type": "string"
+          },
+          "parameters": {
+            "description": "addHandler: comma-separated parameters passed to the function.",
+            "type": "string"
+          },
+          "passContext": {
+            "description": "addHandler: pass the execution context as the first parameter. Default true.",
+            "type": "boolean"
+          },
+          "enabled": {
+            "description": "addHandler: default true.",
+            "type": "boolean"
           }
         },
         "required": [
@@ -88,9 +227,7 @@
   },
   "required": [
     "solution",
-    "table",
-    "form",
-    "operations"
+    "form"
   ],
   "additionalProperties": false
 }

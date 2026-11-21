@@ -1,0 +1,230 @@
+{
+  "description": "A security role and field security profiles. Leave a property out to keep it. Privileges, members and column permissions left out are kept.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the role and profiles go into.",
+      "type": "string"
+    },
+    "role": {
+      "description": "Depths: basic is the user\u0027s own records, local their business unit, deep it and its child units, global the organization; none takes the privilege away.",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The role\u0027s name; an existing root role matches by name.",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "businessUnit": {
+          "description": "For a new role: the business unit\u0027s name. Default: the root business unit. Cannot change.",
+          "type": "string"
+        },
+        "tables": {
+          "description": "Privileges on tables, by table and access right.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "table": {
+                "description": "Table logical name.",
+                "type": "string"
+              },
+              "create": {
+                "enum": [
+                  "none",
+                  "basic",
+                  "local",
+                  "deep",
+                  "global"
+                ]
+              },
+              "read": {
+                "enum": [
+                  "none",
+                  "basic",
+                  "local",
+                  "deep",
+                  "global"
+                ]
+              },
+              "write": {
+                "enum": [
+                  "none",
+                  "basic",
+                  "local",
+                  "deep",
+                  "global"
+                ]
+              },
+              "delete": {
+                "enum": [
+                  "none",
+                  "basic",
+                  "local",
+                  "deep",
+                  "global"
+                ]
+              },
+              "append": {
+                "enum": [
+                  "none",
+                  "basic",
+                  "local",
+                  "deep",
+                  "global"
+                ]
+              },
+              "appendTo": {
+                "enum": [
+                  "none",
+                  "basic",
+                  "local",
+                  "deep",
+                  "global"
+                ]
+              },
+              "assign": {
+                "enum": [
+                  "none",
+                  "basic",
+                  "local",
+                  "deep",
+                  "global"
+                ]
+              },
+              "share": {
+                "enum": [
+                  "none",
+                  "basic",
+                  "local",
+                  "deep",
+                  "global"
+                ]
+              }
+            },
+            "required": [
+              "table"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "privileges": {
+          "description": "Any privilege by name, such as prvExportToExcel, in the shape inspect_schema kind role lists them.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "depth": {
+                "enum": [
+                  "none",
+                  "basic",
+                  "local",
+                  "deep",
+                  "global"
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "depth"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "users": {
+          "description": "Users to give the role: id, domain name or primary email.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "teams": {
+          "description": "Teams to give the role: id or name.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    },
+    "fieldSecurityProfiles": {
+      "type": "array",
+      "items": {
+        "description": "A field security profile: which secured columns its members may read, create and update. A column that is not secured yet is secured first.",
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "columns": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "table": {
+                  "description": "Table logical name.",
+                  "type": "string"
+                },
+                "column": {
+                  "description": "Column logical name.",
+                  "type": "string"
+                },
+                "read": {
+                  "description": "Default false.",
+                  "type": "boolean"
+                },
+                "create": {
+                  "description": "Default false.",
+                  "type": "boolean"
+                },
+                "update": {
+                  "description": "Default false.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "table",
+                "column"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "users": {
+            "description": "Users to add: id, domain name or primary email.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "teams": {
+            "description": "Teams to add: id or name.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "solution"
+  ],
+  "additionalProperties": false
+}

@@ -32,6 +32,22 @@ internal sealed class RowWorld : IAgentClient
 
     public HashSet<string> Features { get; } = new(StringComparer.OrdinalIgnoreCase);
 
+    /// <summary>The privileges of each role, as RetrieveRolePrivilegesRole answers them.</summary>
+    public Dictionary<Guid, Dictionary<Guid, PrivilegeDepth>> RolePrivileges { get; } = [];
+
+    /// <summary>What ValidateApp answers.</summary>
+    public List<ValidationIssue> AppIssues { get; } = [];
+
+    /// <summary>The intersect table each many-to-many relationship keeps its links in.</summary>
+    private static readonly Dictionary<string, string> Intersects = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["systemuserroles_association"] = "systemuserroles",
+        ["teamroles_association"] = "teamroles",
+        ["systemuserprofiles_association"] = "systemuserprofiles",
+        ["teamprofiles_association"] = "teamprofiles",
+        ["appmoduleroles_association"] = "appmoduleroles",
+    };
+
     public RowWorld()
     {
         foreach (var publisher in Schema.Client.Publishers) Add(publisher);
@@ -105,8 +121,67 @@ internal sealed class RowWorld : IAgentClient
             }
 
             case AssociateRequest associate:
-                foreach (var related in associate.RelatedEntities) Links.Add((associate.Relationship.SchemaName, associate.Target.Id, related.Id));
+                foreach (var related in associate.RelatedEntities)
+                {
+                    Links.Add((associate.Relationship.SchemaName, associate.Target.Id, related.Id));
+                    if (Intersects.TryGetValue(associate.Relationship.SchemaName, out var intersect))
+                    {
+                        Table(intersect).Add(new Entity(intersect, Guid.NewGuid())
+                        {
+                            [$"{associate.Target.LogicalName}id"] = associate.Target.Id,
+                            [$"{related.LogicalName}id"] = related.Id,
+                        });
+                    }
+                }
+
                 return new AssociateResponse();
+            case RetrieveUnpublishedMultipleRequest unpublished:
+                return new RetrieveUnpublishedMultipleResponse
+                {
+                    Results = new ParameterCollection { ["EntityCollection"] = RetrieveMultipleAsync(unpublished.Query, CancellationToken.None).Result },
+                };
+            case RetrieveRolePrivilegesRoleRequest privileges:
+                return new RetrieveRolePrivilegesRoleResponse
+                {
+                    Results = new ParameterCollection
+                    {
+                        ["RolePrivileges"] = RolePrivileges.GetValueOrDefault(privileges.RoleId, [])
+                            .Select(p => new RolePrivilege { PrivilegeId = p.Key, Depth = p.Value }).ToArray(),
+                    },
+                };
+            case AddPrivilegesRoleRequest add:
+            {
+                if (!RolePrivileges.TryGetValue(add.RoleId, out var granted)) RolePrivileges[add.RoleId] = granted = [];
+                foreach (var privilege in add.Privileges) granted[privilege.PrivilegeId] = privilege.Depth;
+                return new AddPrivilegesRoleResponse();
+            }
+
+            case RemovePrivilegeRoleRequest remove:
+                RolePrivileges.GetValueOrDefault(remove.RoleId)?.Remove(remove.PrivilegeId);
+                return new RemovePrivilegeRoleResponse();
+            case AddAppComponentsRequest add:
+                foreach (var component in add.Components)
+                {
+                    Add(new Entity("appmodulecomponent")
+                    {
+                        ["appmoduleidunique"] = add.AppId,
+                        ["objectid"] = component.Id,
+                        ["componenttype"] = new OptionSetValue(component.LogicalName switch
+                        {
+                            "entity" => 1, "systemform" => 60, "savedquery" => 26, "savedqueryvisualization" => 59, "sitemap" => 62, _ => 0,
+                        }),
+                    });
+                }
+
+                return new AddAppComponentsResponse();
+            case ValidateAppRequest:
+                return new ValidateAppResponse
+                {
+                    Results = new ParameterCollection
+                    {
+                        ["AppValidationResponse"] = new AppValidationResponse { ValidationSuccess = AppIssues.Count == 0, ValidationIssueList = [.. AppIssues] },
+                    },
+                };
             case DisassociateRequest disassociate:
                 foreach (var related in disassociate.RelatedEntities) Links.Remove((disassociate.Relationship.SchemaName, disassociate.Target.Id, related.Id));
                 return new DisassociateResponse();
@@ -231,7 +306,7 @@ internal sealed class RowWorld : IAgentClient
     {
         if (query is FetchExpression fetch) return Task.FromResult(Fetch(fetch.Query));
         var expression = (QueryExpression)query;
-        var rows = Table(expression.EntityName).Where(row => expression.Criteria.Conditions.All(c => Holds(row, c))).ToList();
+        var rows = Table(expression.EntityName).Where(row => Matches(row, expression.Criteria)).ToList();
         if (expression.TopCount is { } top) rows = rows.Take(top).ToList();
         return Task.FromResult(new EntityCollection(rows.Select(Copy).ToList()));
     }
@@ -290,6 +365,12 @@ internal sealed class RowWorld : IAgentClient
             (string?)c.Attribute("operator") != "eq" || string.Equals(Text(row.GetAttributeValue<object>((string)c.Attribute("attribute")!)), (string?)c.Attribute("value"), StringComparison.OrdinalIgnoreCase)));
         if ((int?)root.Attribute("count") is { } count) rows = rows.Take(count);
         return new EntityCollection(rows.Select(Copy).ToList());
+    }
+
+    private static bool Matches(Entity row, FilterExpression filter)
+    {
+        var results = filter.Conditions.Select(c => Holds(row, c)).Concat(filter.Filters.Select(f => Matches(row, f)));
+        return filter.FilterOperator == LogicalOperator.Or ? results.DefaultIfEmpty(true).Any(r => r) : results.All(r => r);
     }
 
     private static bool Holds(Entity row, ConditionExpression condition)

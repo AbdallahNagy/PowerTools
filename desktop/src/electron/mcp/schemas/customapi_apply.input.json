@@ -1,0 +1,123 @@
+{
+  "description": "A Custom API, its request parameters and response properties. Leave a property out to keep it. Parameters and properties left out are kept.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the API goes into. Its publisher decides the prefix.",
+      "type": "string"
+    },
+    "uniqueName": {
+      "description": "The message name, with the publisher prefix, for example con_CloseProject. Cannot change.",
+      "type": "string"
+    },
+    "displayName": {
+      "description": "Default: the unique name.",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "binding": {
+      "description": "Default global. Changing it recreates the API.",
+      "enum": [
+        "global",
+        "entity",
+        "entityCollection"
+      ]
+    },
+    "boundTable": {
+      "description": "Table logical name, for binding entity or entityCollection. Changing it recreates the API.",
+      "type": "string"
+    },
+    "isFunction": {
+      "description": "A function (GET in the Web API) instead of an action. Default false. Changing it recreates the API.",
+      "type": "boolean"
+    },
+    "isPrivate": {
+      "description": "Default false.",
+      "type": "boolean"
+    },
+    "stepType": {
+      "description": "Which plug-in steps others may register on the message. Default none. Changing it recreates the API.",
+      "enum": [
+        "none",
+        "asyncOnly",
+        "syncAndAsync"
+      ]
+    },
+    "workflowEnabled": {
+      "description": "Usable as a classic workflow step. Default false. Changing it recreates the API.",
+      "type": "boolean"
+    },
+    "executePrivilege": {
+      "description": "Name of a privilege a caller needs, for example prvReadcon_project.",
+      "type": "string"
+    },
+    "pluginType": {
+      "description": "Full type name of the registered plug-in type that runs the API. Deploy it with plugin_deploy first.",
+      "type": "string"
+    },
+    "requestParameters": {
+      "type": "array",
+      "items": {
+        "description": "A request parameter or response property. uniqueName, type, table and optional cannot change: changing one recreates it.",
+        "type": "object",
+        "properties": {
+          "uniqueName": {
+            "description": "The name callers use, for example Reason.",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "boolean",
+              "dateTime",
+              "decimal",
+              "entity",
+              "entityCollection",
+              "entityReference",
+              "float",
+              "integer",
+              "money",
+              "picklist",
+              "string",
+              "stringArray",
+              "guid"
+            ]
+          },
+          "table": {
+            "description": "Table logical name, for entity and entityReference.",
+            "type": "string"
+          },
+          "optional": {
+            "description": "Request parameters only. Default false.",
+            "type": "boolean"
+          },
+          "displayName": {
+            "description": "Default: the unique name.",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "uniqueName",
+          "type"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "responseProperties": {
+      "type": "array",
+      "items": {
+        "description": "A request parameter or response property. uniqueName, type, table and optional cannot change: changing one recreates it.",
+        "$ref": "#/properties/requestParameters/items"
+      }
+    }
+  },
+  "required": [
+    "solution",
+    "uniqueName"
+  ],
+  "additionalProperties": false
+}
