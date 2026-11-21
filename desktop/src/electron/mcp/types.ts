@@ -99,7 +99,8 @@ export interface JsonSchemaObject {
   additionalProperties: false;
 }
 
-export const AGENT_TOOL_GROUPS = ["connections", "metadata", "records", "schema", "solutions", "plugins", "envvars"] as const;
+/** Settings groups. records-delete and remove stand alone, so allowing record writes never allows deletes. */
+export const AGENT_TOOL_GROUPS = ["connections", "read", "records", "records-delete", "schema", "ui", "logic", "solutions", "remove"] as const;
 export type AgentToolGroup = (typeof AGENT_TOOL_GROUPS)[number];
 
 export interface AgentTool {

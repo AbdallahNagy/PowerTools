@@ -28,15 +28,14 @@
   ],
   "cleanup": [
     {
-      "tool": "schema_delete_table",
+      "tool": "remove",
       "arguments": {
-        "table": "pte_evalproject"
+        "kind": "table",
+        "name": "pte_evalproject"
       }
     }
   ],
   "mustNotCall": [
-    "execute_message",
-    "schema_create_table",
-    "schema_create_column"
+    "execute_message"
   ]
 }

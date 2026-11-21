@@ -2,7 +2,7 @@ import importSpec from "../schemas/solution_import.input.json" with { type: "jso
 import { dataverseResult } from "../results.js";
 import type { AgentTool } from "../types.js";
 import { applyTool } from "./applyTool.js";
-import { AGENT_API, bodyOf, connectionProp } from "./schema.js";
+import { AGENT_API, bodyOf, connectionProp } from "./common.js";
 
 const str = (value: unknown) => String(value);
 const fileName = (path: unknown) => str(path).split(/[\\/]/).pop() ?? str(path);

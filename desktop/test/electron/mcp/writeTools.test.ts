@@ -8,9 +8,7 @@ import { startHttpHost, type HttpHost } from "../../../src/electron/mcp/httpHost
 import { createMcpRequestHandler, type McpRequestHandler } from "../../../src/electron/mcp/mcpServer";
 import { createAgentToolRegistry } from "../../../src/electron/mcp/registry";
 import { createSidecarCaller } from "../../../src/electron/mcp/sidecarCaller";
-import { READ_TOOLS } from "../../../src/electron/mcp/tools/index";
-import { WRITE_TOOLS } from "../../../src/electron/mcp/tools/recordWrites";
-import { SCHEMA_TOOLS } from "../../../src/electron/mcp/tools/schema";
+import { AGENT_TOOLS } from "../../../src/electron/mcp/tools/index";
 import { bypassMsw } from "../../support/loopback";
 
 const TOKEN = "d".repeat(64);
@@ -60,7 +58,7 @@ async function setup(options: { answer?: "allow" | "deny" | "unavailable"; activ
     });
 
   handler = createMcpRequestHandler({
-    registry: createAgentToolRegistry([...READ_TOOLS, ...WRITE_TOOLS, ...SCHEMA_TOOLS]),
+    registry: createAgentToolRegistry(AGENT_TOOLS),
     context: () => ({
       resolveConnection: resolver.resolve,
       callSidecar: createSidecarCaller({ baseUrl: "http://sidecar", secret: "sec", fetch: fetchFake as never, refresh: resolver.refresh }),
@@ -81,36 +79,37 @@ async function setup(options: { answer?: "allow" | "deny" | "unavailable"; activ
   return { call, fetchFake, asked, entries };
 }
 
-const update = { table: "account", id: GUID, values: { name: "X" } };
+// Assign is a known write, so execute_message asks for it as a change; Delete is a known delete.
+const assign = { message: "Assign", parameters: { Target: { $type: "EntityReference", logicalName: "account", id: GUID } } };
+const remove = (table: string) => ({ message: "Delete", parameters: { Target: { $type: "EntityReference", logicalName: table, id: GUID } } });
 
 describe("write tools and approval", () => {
   it("lists the write tools with no hints that would skip approval", async () => {
     const { call } = await setup();
     void call;
     const { tools } = await client!.listTools();
-    for (const name of ["records_create", "records_update", "records_delete", "records_associate", "records_disassociate", "execute_message"]) {
+    for (const name of ["records_write", "records_delete", "execute_message", "table_apply", "remove"]) {
       const tool = tools.find((t) => t.name === name);
       expect(tool, name).toBeDefined();
       expect(tool!.annotations?.readOnlyHint).toBeUndefined();
     }
-    expect(tools.find((t) => t.name === "records_delete")!.annotations?.destructiveHint).toBe(true);
   });
 
   it("asks for a change when the switch is off, and runs only after the user allows", async () => {
     const { call, asked, fetchFake } = await setup({ answer: "allow" });
-    const result = await call("records_update", { ...update, connection: "A · Dev" });
+    const result = await call("execute_message", { ...assign, connection: "A · Dev" });
     expect(asked).toHaveLength(1);
-    expect(asked[0]).toMatchObject({ tool: "records_update", connection: "A · Dev", effect: "change" });
+    expect(asked[0]).toMatchObject({ tool: "execute_message", connection: "A · Dev", effect: "change" });
     expect(result.isError).toBeFalsy();
     expect(fetchFake).toHaveBeenCalledTimes(1);
     const [url, init] = fetchFake.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("http://sidecar/api/community-tools/data/update");
-    expect(JSON.parse(init.body as string)).toEqual(update);
+    expect(url).toBe("http://sidecar/api/community-tools/data/execute");
+    expect(JSON.parse(init.body as string)).toEqual(assign);
   });
 
   it("does not ask for a change when the connection switch is on", async () => {
     const { call, asked, entries } = await setup();
-    const result = await call("records_update", { ...update, connection: "A · Test" });
+    const result = await call("execute_message", { ...assign, connection: "A · Test" });
     expect(asked).toHaveLength(0);
     expect(result.isError).toBeFalsy();
     expect(entries[0]).toMatchObject({ approval: "auto", effect: "change", outcome: "ok" });
@@ -118,7 +117,7 @@ describe("write tools and approval", () => {
 
   it("returns ApprovalDenied with no sidecar call when the user denies", async () => {
     const { call, fetchFake, entries } = await setup({ answer: "deny" });
-    const result = await call("records_update", { ...update, connection: "A · Dev" });
+    const result = await call("execute_message", { ...assign, connection: "A · Dev" });
     expect(result.isError).toBe(true);
     expect(result.structuredContent).toMatchObject({ code: "ApprovalDenied" });
     expect((result.content as Array<{ text: string }>)[0].text).toContain("Do not retry; ask the user what to do instead.");
@@ -128,7 +127,7 @@ describe("write tools and approval", () => {
 
   it("returns ApprovalUnavailable with no sidecar call when nobody can be asked", async () => {
     const { call, fetchFake } = await setup({ answer: "unavailable" });
-    const result = await call("records_update", { ...update, connection: "A · Dev" });
+    const result = await call("execute_message", { ...assign, connection: "A · Dev" });
     expect(result.structuredContent).toMatchObject({ code: "ApprovalUnavailable" });
     expect(fetchFake).not.toHaveBeenCalled();
   });
@@ -136,17 +135,17 @@ describe("write tools and approval", () => {
   it("returns ApprovalTimedOut when the gate times out", async () => {
     const gate: ApprovalGate = { decide: async () => "timed-out", respond: () => undefined, failAll: () => undefined };
     const { call, fetchFake, entries } = await setup({ gate });
-    const result = await call("records_update", { ...update, connection: "A · Dev" });
+    const result = await call("execute_message", { ...assign, connection: "A · Dev" });
     expect(result.structuredContent).toMatchObject({ code: "ApprovalTimedOut" });
     expect(fetchFake).not.toHaveBeenCalled();
     expect(entries[0]).toMatchObject({ approval: "timed-out" });
   });
 
-  it("still asks for records_delete when the connection switch is on", async () => {
+  it("still asks for a delete when the connection switch is on", async () => {
     const { call, asked, fetchFake } = await setup({ answer: "allow" });
-    await call("records_delete", { table: "account", id: GUID, connection: "A · Test" });
+    await call("execute_message", { ...remove("account"), connection: "A · Test" });
     expect(asked).toHaveLength(1);
-    expect(asked[0]).toMatchObject({ effect: "destructive", connection: "A · Test", removes: `record account ${GUID}` });
+    expect(asked[0]).toMatchObject({ effect: "destructive", connection: "A · Test", removes: "whatever Delete removes or replaces" });
     expect(fetchFake).toHaveBeenCalledTimes(1);
   });
 
@@ -176,7 +175,7 @@ describe("write tools and approval", () => {
 
   it("asks about the connection it then uses, even if the active one changes meanwhile", async () => {
     const { call, asked, fetchFake } = await setup({ answer: "allow", activeIds: ["id-dev", "id-test"] });
-    await call("records_update", update);
+    await call("execute_message", assign);
     expect(asked[0].connection).toBe("A · Dev");
     const [, init] = fetchFake.mock.calls[0] as unknown as [string, RequestInit];
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer tok-id-dev");
@@ -184,14 +183,15 @@ describe("write tools and approval", () => {
 
   it("records the approval outcome in the activity log", async () => {
     const { call, entries } = await setup({ answer: "allow" });
-    await call("records_update", { ...update, connection: "A · Dev" });
-    await call("metadata_get_table", { table: "account" });
+    await call("execute_message", { ...assign, connection: "A · Dev" });
+    await call("connections_list", {});
     expect(entries.map((e) => e.approval)).toEqual(["allowed", "not-needed"]);
   });
 
   it("validates arguments before asking", async () => {
     const { call, asked } = await setup({ answer: "allow" });
-    await expect(call("records_update", { table: "account", id: "nope", values: {} })).rejects.toMatchObject({ code: -32602 });
+    await expect(call("records_query", { table: "account", id: "nope", columns: ["name"] })).rejects.toMatchObject({ code: -32602 });
+    await expect(call("execute_message", { message: "" })).rejects.toMatchObject({ code: -32602 });
     expect(asked).toHaveLength(0);
   });
 
@@ -200,21 +200,21 @@ describe("write tools and approval", () => {
     const gate = createApprovalGate({ present: (r) => void asked.push(r), dismiss: () => undefined, attention: () => undefined });
     const { entries } = await setup({ gate });
     const controller = new AbortController();
-    const first = client!.callTool({ name: "records_update", arguments: { ...update, connection: "A · Dev" } }, undefined, { signal: controller.signal });
+    const first = client!.callTool({ name: "execute_message", arguments: { ...assign, connection: "A · Dev" } }, undefined, { signal: controller.signal });
     const outcome = first.then(() => "done", () => "rejected");
-    const second = client!.callTool({ name: "records_delete", arguments: { table: "account", id: GUID } });
+    const second = client!.callTool({ name: "execute_message", arguments: remove("account") });
     await vi.waitFor(() => expect(asked).toHaveLength(1));
 
     controller.abort();
 
     expect(await outcome).toBe("rejected");
     await vi.waitFor(() => expect(asked).toHaveLength(2));
-    expect(entries.find((e) => e.tool === "records_update")).toMatchObject({ approval: "cancelled", outcome: "error", code: "Cancelled" });
+    expect(entries.find((e) => e.tool === "execute_message")).toMatchObject({ approval: "cancelled", outcome: "error", code: "Cancelled" });
     gate.respond(asked[1].id, false);
     await second;
   });
 
-  it("cancels the effect lookup of schema_update_column with the client", async () => {
+  it("cancels the plan request of an apply tool with the client", async () => {
     let lookupSignal: AbortSignal | null | undefined;
     let started!: () => void;
     const hasStarted = new Promise<void>((resolve) => (started = resolve));
@@ -226,7 +226,7 @@ describe("write tools and approval", () => {
     }) as never);
     const controller = new AbortController();
     const call = client!.callTool(
-      { name: "schema_update_column", arguments: { table: "account", column: "new_title", maxLength: 10, connection: "A · Dev" } },
+      { name: "records_write", arguments: { operations: [{ op: "update", table: "account", id: GUID, values: { name: "X" } }], connection: "A · Dev" } },
       undefined,
       { signal: controller.signal },
     ).then(() => "done", () => "rejected");
@@ -258,8 +258,8 @@ describe("write tools and approval", () => {
     });
     const { call } = await setup({ gate });
     await Promise.all([
-      call("records_delete", { table: "account", id: GUID }),
-      call("records_delete", { table: "contact", id: GUID }),
+      call("execute_message", remove("account")),
+      call("execute_message", remove("contact")),
     ]);
     expect(order).toHaveLength(2);
     expect(overlapped).toBe(false);

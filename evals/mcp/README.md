@@ -15,7 +15,7 @@ The code is in `desktop/test/live/mcp/`. Its pure parts (parity, scenario checks
 2. Save one connection per sandbox in Power Tools.
 3. Copy `sandboxes.example.json` to `sandboxes.json` (not committed) and fill in the connection display names. `POWERTOOLS_LIVE_CONFIG` can point at another file.
 4. For evals, write an MCP config file for Claude Code that adds the connector as `powertools` (the command Settings shows under "Connect a client"), and set `claudeMcpConfig` to it.
-5. Create an unmanaged solution `PowerToolsEvals` with publisher prefix `pte` on each sandbox. The Phase 1 scenarios build into it.
+5. Create an unmanaged solution `PowerToolsEvals` with publisher prefix `pte` on each sandbox. The Phase 1 and Phase 2 scenarios build into it.
 
 Without `sandboxes.json` both suites skip with a message.
 
@@ -40,4 +40,4 @@ These block running the suites for real. The harness is built and its logic is t
 1. **Two sandboxes.** An online environment and an on-premises server that the tests may change and reset. This is open question 3 in `desktop/docs/mcp-tool-architecture.md`. Without the on-premises one, the parity check proves nothing.
 2. **Supported on-premises versions** (open question 2). The `Capabilities` probe reads the version and the feature tables, but which versions to test on decides the sandbox to set up.
 3. **Unattended approvals.** Changes on a connection with "let agents make changes" turned on run without a dialog, so turn that on for the sandbox connections. Destructive steps (remove, record deletes, imports) always ask a person by design. Until there is a sandbox-only way to approve them, a person answers those dialogs during a run, or the destructive scenarios are run by hand.
-4. **Layers on-premises** (open question 4). Checking whether `solutions_list_layers` and `solutions_remove_active_layer` work on-premises needs the on-premises sandbox.
+4. **Layers on-premises** (open question 4). Checking whether `inspect_solution` kind layers and `remove` kind activelayer work on-premises needs the on-premises sandbox; without `msdyn_componentlayer` they answer NotSupported and plan as unsupported.

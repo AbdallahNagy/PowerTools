@@ -10,7 +10,9 @@ import { createMcpRequestHandler, type McpRequestHandler } from "../../../src/el
 import { MCP_INSTRUCTIONS } from "../../../src/electron/mcp/mcpService";
 import { createAgentToolRegistry } from "../../../src/electron/mcp/registry";
 import { createSidecarCaller } from "../../../src/electron/mcp/sidecarCaller";
-import { READ_TOOLS } from "../../../src/electron/mcp/tools/index";
+import { AGENT_TOOLS } from "../../../src/electron/mcp/tools/index";
+
+const READ_TOOLS = AGENT_TOOLS.filter((t) => t.group === "read" || t.group === "connections");
 
 const TOKEN = "c".repeat(64);
 let host: HttpHost | null = null;
@@ -65,19 +67,14 @@ async function setup() {
 }
 
 describe("MCP server", () => {
-  it("lists the ten read tools and sends instructions", async () => {
+  it("lists the read tools and sends instructions", async () => {
     const { client } = await setup();
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name).sort()).toEqual([
       "connections_list",
-      "metadata_get_choices",
-      "metadata_get_table",
-      "metadata_list_columns",
-      "metadata_list_forms",
-      "metadata_list_relationships",
-      "metadata_list_tables",
-      "metadata_list_views",
-      "records_get",
+      "inspect_schema",
+      "inspect_solution",
+      "inspect_ui",
       "records_query",
     ]);
     expect(client.getInstructions()).toBe(MCP_INSTRUCTIONS);
@@ -93,14 +90,14 @@ describe("MCP server", () => {
 
   it("calls the sidecar with the secret and connection headers", async () => {
     const { client, fetchFake, entries } = await setup();
-    const result = await client.callTool({ name: "metadata_get_table", arguments: { table: "account" } });
+    const result = await client.callTool({ name: "inspect_schema", arguments: { kind: "table", name: "account" } });
     expect(result._meta).toMatchObject({ "powertools/untrusted": true });
     const [url, init] = fetchFake.mock.calls[0] as unknown as [string, RequestInit];
-    expect(url).toBe("http://sidecar/api/community-tools/metadata/tables/account");
+    expect(url).toBe("http://sidecar/api/agent/inspect/schema");
     expect(init.headers).toMatchObject({ "X-Local-Secret": "sec", Authorization: "Bearer tok" });
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({
-      tool: "metadata_get_table",
+      tool: "inspect_schema",
       connection: "A · Dev",
       effect: "read",
       outcome: "ok",
@@ -112,7 +109,7 @@ describe("MCP server", () => {
   it("answers invalid arguments with -32602 naming the field", async () => {
     const { client } = await setup();
     await expect(
-      client.callTool({ name: "records_get", arguments: { table: "account", id: "nope", columns: ["name"] } }),
+      client.callTool({ name: "records_query", arguments: { table: "account", id: "nope", columns: ["name"] } }),
     ).rejects.toMatchObject({ code: -32602, message: expect.stringContaining("id") });
   });
 
@@ -123,7 +120,7 @@ describe("MCP server", () => {
 
   it("turns tool errors into error results and logs them", async () => {
     const { client, entries } = await setup();
-    const result = await client.callTool({ name: "metadata_get_table", arguments: { table: "account", connection: "Zed" } });
+    const result = await client.callTool({ name: "inspect_schema", arguments: { kind: "table", name: "account", connection: "Zed" } });
     expect(result.isError).toBe(true);
     expect(result.structuredContent).toMatchObject({ code: "ConnectionNotFound" });
     expect(entries[0]).toMatchObject({ outcome: "error", code: "ConnectionNotFound" });
@@ -134,7 +131,7 @@ describe("MCP server", () => {
     fetchFake.mockImplementationOnce(
       async () => new Response(JSON.stringify({ code: "DataverseFault", message: "boom" }), { status: 500 }),
     );
-    const result = await client.callTool({ name: "metadata_get_table", arguments: { table: "account" } });
+    const result = await client.callTool({ name: "inspect_schema", arguments: { kind: "table", name: "account" } });
     expect(result.isError).toBe(true);
     expect(entries[0]).toMatchObject({ outcome: "error", connection: "A · Dev" });
   });
@@ -168,17 +165,17 @@ describe("MCP group toggles", () => {
         requestInit: { headers: { Authorization: `Bearer ${TOKEN}` } },
       }),
     );
-    expect((await client.listTools()).tools.map((t) => t.name)).toContain("metadata_get_table");
+    expect((await client.listTools()).tools.map((t) => t.name)).toContain("inspect_schema");
     await new Promise((resolve) => setTimeout(resolve, 100)); // let the client open its notification stream
 
-    off.add("metadata");
+    off.add("read");
     handler.notifyToolsChanged();
     await vi.waitFor(() => expect(changed).toBe(1));
 
     const names = (await client.listTools()).tools.map((t) => t.name);
-    expect(names).not.toContain("metadata_get_table");
+    expect(names).not.toContain("inspect_schema");
     expect(names).toContain("connections_list");
-    await expect(client.callTool({ name: "metadata_get_table", arguments: { table: "account" } })).rejects.toMatchObject({
+    await expect(client.callTool({ name: "inspect_schema", arguments: { kind: "table", name: "account" } })).rejects.toMatchObject({
       code: -32602,
       message: expect.stringContaining("Unknown tool"),
     });

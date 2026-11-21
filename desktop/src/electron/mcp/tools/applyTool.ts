@@ -13,7 +13,7 @@ import {
 /** The result every apply tool returns. Mirrors schemas/apply-result.json, which is generated from ApplyResult.cs. */
 export interface ApplyResult {
   outcome: "applied" | "unchanged" | "partlyApplied" | "failed" | "refused" | "planned";
-  steps: Array<{ op: string; target: string; status: string; error?: string | null; dataverseCode?: number | null }>;
+  steps: Array<{ op: string; target: string; status: string; error?: string | null; dataverseCode?: number | null; ids?: string[] | null }>;
   published: string[];
   remaining: { steps: PlanStep[] };
   warnings: string[];

@@ -1,9 +1,9 @@
 import {
   Box,
-  Braces,
   Database,
   Eye,
   Globe,
+  LayoutGrid,
   Link,
   List,
   Package,
@@ -21,13 +21,15 @@ import type { McpToolInfo } from "../../../platform/desktopBridge";
 
 /** How the Agent tools and Agent activity tabs name and draw a tool group. Unknown groups fall back to their id. */
 const GROUPS: Record<string, { label: string; description: string; icon: LucideIcon }> = {
-  records: { label: "Records", description: "Read and edit rows in your tables.", icon: Table2 },
-  metadata: { label: "Table metadata", description: "Read tables, columns, relationships, forms and views.", icon: Database },
-  schema: { label: "Schema", description: "Create and change tables, columns, choices and relationships.", icon: Box },
-  solutions: { label: "Solutions", description: "Create solutions and manage their components and layers.", icon: Package },
-  plugins: { label: "Plugins", description: "Register assemblies, steps and images.", icon: Plug },
-  envvars: { label: "Environment variables", description: "Read and set values per environment.", icon: Braces },
   connections: { label: "Connections", description: "See which environments you are signed in to.", icon: Globe },
+  read: { label: "Read", description: "Read tables, forms, views, solutions, plug-ins and records.", icon: Eye },
+  records: { label: "Records", description: "Create, update and relate rows, and run Dataverse messages.", icon: Table2 },
+  "records-delete": { label: "Record deletes", description: "Delete rows and remove links between them.", icon: Trash2 },
+  schema: { label: "Schema", description: "Create and change tables, columns, keys and choices.", icon: Database },
+  ui: { label: "Forms and views", description: "Change forms and views.", icon: LayoutGrid },
+  logic: { label: "Plug-ins", description: "Deploy plug-in assemblies and register their steps.", icon: Plug },
+  solutions: { label: "Solutions", description: "Manage solutions, patches, environment variables and imports.", icon: Package },
+  remove: { label: "Remove components", description: "Delete tables, columns, forms, plug-ins and other components.", icon: Unlink },
 };
 
 export function groupDisplay(group: string): { label: string; description: string; icon: LucideIcon } {
@@ -36,14 +38,15 @@ export function groupDisplay(group: string): { label: string; description: strin
 
 /** Picks an icon from the verb in a tool's name, so a new tool gets one without a list to keep up to date. */
 const VERBS: Array<[RegExp, LucideIcon]> = [
-  [/_disassociate\b|_remove_/, Unlink],
+  [/^remove$|_disassociate\b|_remove_/, Unlink],
   [/_associate\b|_add_/, Link],
   [/_delete\b|_unregister\b/, Trash2],
+  [/_import\b|_deploy\b/, Plus],
   [/_create|_register|_clone\b/, Plus],
-  [/_update|_set_|_publish\b/, Pencil],
+  [/_apply\b|_write\b|_update|_set_|_publish\b/, Pencil],
   [/_query\b/, Search],
   [/_list/, List],
-  [/_get/, Eye],
+  [/^inspect_|_get/, Eye],
 ];
 
 export function toolIcon(name: string, effect: McpToolInfo["effect"]): LucideIcon {

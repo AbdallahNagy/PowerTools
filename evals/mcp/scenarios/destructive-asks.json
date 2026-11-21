@@ -9,6 +9,6 @@
   "checks": [],
   "mustAsk": true,
   "cleanup": [
-    { "tool": "schema_delete_table", "arguments": { "table": "pte_evalproject" } }
+    { "tool": "remove", "arguments": { "kind": "table", "name": "pte_evalproject" } }
   ]
 }

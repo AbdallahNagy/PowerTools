@@ -1,0 +1,18 @@
+{
+  "id": "form-and-choice",
+  "phase": 2,
+  "description": "The agent adds a global choice and puts a column on a form with choice_apply, table_apply and form_apply, without execute_message.",
+  "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, create a global choice Eval Priority with the options Low, Medium and High, add a Priority column using it to the Eval Project table, and put that column on the Information form of the table, in its first section.",
+  "setup": [
+    { "tool": "table_apply", "arguments": { "solution": "PowerToolsEvals", "table": { "schemaName": "pte_EvalProject", "displayName": "Eval Project", "pluralName": "Eval Projects" } } }
+  ],
+  "checks": [
+    { "description": "the choice has three options", "tool": "inspect_schema", "arguments": { "kind": "choice", "name": "pte_evalpriority" }, "path": "result.options.2.label", "equals": "High" },
+    { "description": "the column is on the form", "tool": "inspect_ui", "arguments": { "kind": "form", "table": "pte_evalproject", "name": "Information" }, "path": "result.tabs.0.sections.0.fields.1.column", "exists": true }
+  ],
+  "cleanup": [
+    { "tool": "remove", "arguments": { "kind": "table", "name": "pte_evalproject" } },
+    { "tool": "remove", "arguments": { "kind": "choice", "name": "pte_evalpriority" } }
+  ],
+  "mustNotCall": ["execute_message"]
+}

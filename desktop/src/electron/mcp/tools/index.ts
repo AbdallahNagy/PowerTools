@@ -1,34 +1,42 @@
 import type { AgentTool } from "../types.js";
-import { connectionsList } from "./connections.js";
 import {
-  metadataGetChoices,
-  metadataGetTable,
-  metadataListColumns,
-  metadataListForms,
-  metadataListRelationships,
-  metadataListTables,
-  metadataListViews,
-} from "./metadata.js";
-import { recordsGet, recordsQuery } from "./records.js";
+  choiceApply,
+  configApply,
+  formApply,
+  pluginDeploy,
+  pluginStepApply,
+  remove,
+  solutionApply,
+  viewApply,
+} from "./components.js";
+import { connectionsList } from "./connections.js";
+import { inspectSolution, inspectUi, recordsQuery } from "./read.js";
+import { executeMessage, recordsDelete, recordsWrite } from "./records.js";
 import { solutionExport, solutionImport } from "./solutionFileTools.js";
 import { inspectSchema, tableApply } from "./tableTools.js";
 
-export const READ_TOOLS: AgentTool[] = [
-  connectionsList,
-  metadataListTables,
-  metadataGetTable,
-  metadataListColumns,
-  metadataListRelationships,
-  metadataGetChoices,
-  metadataListForms,
-  metadataListViews,
-  recordsQuery,
-  recordsGet,
-];
-
 /**
- * The consolidated plan/apply tool set that replaces the tools above (desktop/docs/mcp-tool-architecture.md).
- * Phase 1 is the pilot: table_apply, inspect_schema, solution_export and solution_import. Phase 2 adds the rest and
- * deletes the old tools. The tool budget test measures this list.
+ * Every agent tool, in the order clients list them: reads first, then changes, then destructive tools
+ * (desktop/docs/mcp-tool-architecture.md). The tool budget test measures this list.
  */
-export const PLAN_APPLY_TOOLS: AgentTool[] = [inspectSchema, tableApply, solutionExport, solutionImport];
+export const AGENT_TOOLS: AgentTool[] = [
+  connectionsList,
+  inspectSchema,
+  inspectUi,
+  inspectSolution,
+  recordsQuery,
+  solutionExport,
+  recordsWrite,
+  tableApply,
+  choiceApply,
+  formApply,
+  viewApply,
+  pluginDeploy,
+  pluginStepApply,
+  solutionApply,
+  configApply,
+  executeMessage,
+  recordsDelete,
+  remove,
+  solutionImport,
+];

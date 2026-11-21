@@ -36,10 +36,13 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
     }
   });
 
-  // Read tools that exist today; each must answer with the same shape on every sandbox.
+  // Each read tool must answer with the same shape on every sandbox.
   const reads: Array<[string, Record<string, unknown>]> = [
-    ["metadata_get_table", { table: "account" }],
+    ["inspect_schema", { kind: "table", name: "account" }],
+    ["inspect_ui", { kind: "view", table: "account", top: 5 }],
+    ["inspect_solution", { kind: "solution", name: "PowerToolsEvals" }],
     ["records_query", { fetchXml: "<fetch top='1'><entity name='account'><attribute name='name' /></entity></fetch>" }],
+    ["records_query", { table: "account", columns: ["name"], filter: [{ column: "statecode", operator: "eq", value: 0 }], pageSize: 1 }],
   ];
 
   it.each(reads)("%s answers the same shape on every sandbox", async (tool, args) => {
@@ -92,11 +95,55 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
         shapes.push({ sandbox: sandbox.name, shape: shapeOf(first.structuredContent) });
       } finally {
         // Destructive, so a person approves it until sandbox connections can approve unattended.
-        await call("schema_delete_table", { table: "pte_liveproject", ...on });
+        await call("remove", { kind: "table", name: "pte_liveproject", ...on });
       }
     }
     for (const other of shapes.slice(1)) {
       expect(shapeDifferences(shapes[0].shape, other.shape), `${shapes[0].sandbox} vs ${other.sandbox}`).toEqual([]);
+    }
+  });
+
+  // Phase 2 families: apply, apply again (unchanged), remove, with the result shapes compared across sandboxes.
+  const lifecycles: Array<[string, Record<string, unknown>, Record<string, unknown>]> = [
+    [
+      "choice_apply",
+      { solution: "PowerToolsEvals", name: "pte_LivePriority", displayName: "Live Priority", options: [{ label: "Low" }, { label: "High", color: "#AA0000" }] },
+      { kind: "choice", name: "pte_livepriority" },
+    ],
+    [
+      "config_apply",
+      { solution: "PowerToolsEvals", environmentVariables: [{ schemaName: "pte_LiveUrl", displayName: "Live URL", defaultValue: "https://a", value: "https://b" }] },
+      { kind: "envvar", name: "pte_LiveUrl" },
+    ],
+  ];
+
+  it.each(lifecycles)("%s lifecycle on every sandbox: applied, unchanged, removed", async (tool, spec, removal) => {
+    const shapes = [];
+    for (const sandbox of sandboxes) {
+      const on = { connection: sandbox.connection };
+      try {
+        const first = await call(tool, { ...spec, ...on });
+        expect(first.structuredContent, `${tool} on ${sandbox.name}`).toMatchObject({ outcome: "applied" });
+        const again = await call(tool, { ...spec, ...on });
+        expect(again.structuredContent, `${tool} again on ${sandbox.name}`).toMatchObject({ outcome: "unchanged" });
+        shapes.push({ sandbox: sandbox.name, shape: shapeOf(first.structuredContent) });
+      } finally {
+        await call("remove", { ...removal, ...on });
+      }
+    }
+    for (const other of shapes.slice(1)) {
+      expect(shapeDifferences(shapes[0].shape, other.shape), `${shapes[0].sandbox} vs ${other.sandbox}`).toEqual([]);
+    }
+  });
+
+  it("records_write then records_delete on every sandbox", async () => {
+    for (const sandbox of sandboxes) {
+      const on = { connection: sandbox.connection };
+      const written = await call("records_write", { operations: [{ op: "create", table: "account", values: { name: "Power Tools Live" } }], ...on });
+      const id = (written.structuredContent as { steps: Array<{ ids?: string[] }> }).steps[0].ids?.[0];
+      expect(id, `created id on ${sandbox.name}`).toBeTruthy();
+      const deleted = await call("records_delete", { records: [{ table: "account", id }], ...on });
+      expect(deleted.structuredContent, `delete on ${sandbox.name}`).toMatchObject({ outcome: "applied" });
     }
   });
 
