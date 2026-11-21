@@ -1,4 +1,4 @@
-import { act, fireEvent, screen } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { McpApprovalRequest } from "../../src/ui/platform/desktopBridge";
@@ -111,7 +111,7 @@ describe("approval dialog", () => {
     expect(pre?.textContent).toContain("<img src=x onerror=alert(1)>");
   });
 
-  it("lists an apply tool's plan, destructive first, with counts for long groups", () => {
+  it("lists an apply tool's plan in run order, with counts for long plans and where it stops", () => {
     const { present } = setup();
     present(
       request({
@@ -121,21 +121,28 @@ describe("approval dialog", () => {
         plan: {
           hash: "h",
           total: 25,
-          hidden: 5,
+          hidden: 22,
+          stopsAt: 2,
+          counts: { destructive: 1, change: 23, unsupported: 1 },
           warnings: ["Labels compared in English only."],
-          groups: [
-            { effect: "destructive", count: 1, steps: [{ op: "deleteColumn", target: "con_old" }] },
-            { effect: "change", count: 24, steps: [{ op: "createColumn", target: "con_budget", detail: "money" }] },
+          steps: [
+            { op: "createColumn", target: "con_budget", effect: "change", detail: "money" },
+            { op: "deleteColumn", target: "con_old", effect: "destructive" },
+            { op: "createColumn", target: "con_file", effect: "unsupported", detail: "Online only." },
           ],
         },
       }),
     );
     const plan = screen.getByRole("region", { name: "Plan" });
-    expect(plan).toHaveTextContent("25 steps, the first 20 shown");
-    expect(plan).toHaveTextContent("Removes or replaces (1)");
-    expect(plan).toHaveTextContent("deleteColumn con_old");
-    expect(plan).toHaveTextContent("createColumn con_budget · money");
-    expect(plan).toHaveTextContent("and 23 more");
+    expect(plan).toHaveTextContent("25 steps in run order, the first 3 shown: 1 removes or replaces, 23 changes, 1 cannot run here");
+    const items = within(plan).getAllByRole("listitem").map((item) => item.textContent);
+    expect(items).toEqual([
+      "createColumn con_budget · money",
+      "Removes or replaces: deleteColumn con_old",
+      "Cannot run: createColumn con_file · Online only.",
+      "and 22 more",
+    ]);
+    expect(plan).toHaveTextContent("The apply stops at step 3, which cannot run.");
     expect(plan).toHaveTextContent("Labels compared in English only.");
     expect(screen.getByText("Spec")).toBeInTheDocument();
   });

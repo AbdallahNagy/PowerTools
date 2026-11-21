@@ -4,34 +4,33 @@ import type { PlanPreview, PlanStep } from "./types.js";
 /** Most steps the dialog lists; the rest are counted. */
 export const MAX_DIALOG_STEPS = 20;
 
-const ORDER = ["destructive", "change", "unsupported"] as const;
+type DialogEffect = ApprovalPlan["steps"][number]["effect"];
 
-function groupOf(step: PlanStep): (typeof ORDER)[number] {
+function effectOf(step: PlanStep): DialogEffect {
   if (step.kind !== "run") return "unsupported";
   return step.effect === "destructive" ? "destructive" : "change";
 }
 
-/** Groups a plan for the approval dialog, destructive first, listing at most MAX_DIALOG_STEPS steps in all. */
+/**
+ * The plan as the approval dialog shows it: the steps in the order they run, at most MAX_DIALOG_STEPS of them, and
+ * how many of each kind. Run order matters: a step that cannot run stops the apply, and the user must see which
+ * changes run before it.
+ */
 export function planForDialog(plan: PlanPreview, limit = MAX_DIALOG_STEPS): ApprovalPlan {
-  let room = limit;
-  const groups = ORDER.map((effect) => {
-    const all = plan.steps.filter((step) => groupOf(step) === effect);
-    const shown = all.slice(0, Math.max(0, room));
-    room -= shown.length;
-    return {
-      effect,
-      count: all.length,
-      steps: shown.map((step) => {
-        const detail = step.kind === "run" ? step.detail : [step.reason, step.route && `Instead: ${step.route}`].filter(Boolean).join(" ");
-        return { op: step.op, target: step.target, ...(detail ? { detail } : {}) };
-      }),
-    };
-  }).filter((group) => group.count > 0);
+  const counts = { destructive: 0, change: 0, unsupported: 0 };
+  for (const step of plan.steps) counts[effectOf(step)] += 1;
+  const steps = plan.steps.slice(0, Math.max(0, limit)).map((step) => {
+    const detail = step.kind === "run" ? step.detail : [step.reason, step.route && `Instead: ${step.route}`].filter(Boolean).join(" ");
+    return { op: step.op, target: step.target, effect: effectOf(step), ...(detail ? { detail } : {}) };
+  });
+  const firstStop = plan.steps.findIndex((step) => step.kind !== "run");
   return {
     hash: plan.hash,
     total: plan.steps.length,
-    groups,
-    hidden: plan.steps.length - groups.reduce((sum, group) => sum + group.steps.length, 0),
+    steps,
+    counts,
+    hidden: plan.steps.length - steps.length,
+    ...(firstStop >= 0 && firstStop < plan.steps.length - 1 ? { stopsAt: firstStop } : {}),
     warnings: plan.warnings,
   };
 }
