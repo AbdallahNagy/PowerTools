@@ -38,7 +38,8 @@ describe("registry rules for plan tools", () => {
 
   it("accepts a tool with a plan() and no effect or describe", () => {
     const registry = createAgentToolRegistry([{ ...base, plan: async () => ({ effect: "read", hash: "h", steps: [], warnings: [] }) }]);
-    expect(registry.tools()[0].effect).toBe("varies");
+    // Settings counts it by the effect its description states; each call's plan decides what it asks.
+    expect(registry.tools()[0]).toMatchObject({ effect: "change", perCall: true });
   });
 
   it("refuses a tool with both a plan() and an effect, or with neither", () => {

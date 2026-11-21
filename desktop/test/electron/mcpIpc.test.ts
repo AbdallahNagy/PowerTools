@@ -22,7 +22,7 @@ function setup() {
     respondApproval: vi.fn(),
     setTool: vi.fn((name: string, enabled: boolean) => ({
       ...status,
-      tools: [{ name, title: "T", description: "Read-only.", group: "records" as never, effect: "read" as const, enabled }],
+      tools: [{ name, title: "T", description: "Read-only.", group: "records" as never, effect: "read" as const, perCall: false, enabled }],
     })),
     setGroup: vi.fn((group: string, enabled: boolean) => ({
       ...status,
