@@ -162,7 +162,7 @@ public static class ComponentKinds
 
         var rowKind = Rows[kind];
         var query = new QueryExpression(rowKind.Table) { NoLock = true, TopCount = 2, ColumnSet = new ColumnSet(true) };
-        if (Guid.TryParse(name, out var id)) query.Criteria.AddCondition($"{rowKind.Table}id", ConditionOperator.Equal, id);
+        if (Guid.TryParse(name, out var id)) query.Criteria.AddCondition(IdColumn(rowKind.Table), ConditionOperator.Equal, id);
         else query.Criteria.AddCondition(rowKind.NameColumn, ConditionOperator.Equal, name);
         switch (kind)
         {
@@ -197,6 +197,9 @@ public static class ComponentKinds
 
     /// <summary>Category of cloud flows in the workflow table.</summary>
     public const int FlowCategory = 5;
+
+    /// <summary>The primary key column of a table. systemform is the one table whose key is not its name plus "id".</summary>
+    public static string IdColumn(string table) => table == "systemform" ? "formid" : $"{table}id";
 
     /// <summary>
     /// The component type of a solution-aware table that has no classic number (such as customapi), from

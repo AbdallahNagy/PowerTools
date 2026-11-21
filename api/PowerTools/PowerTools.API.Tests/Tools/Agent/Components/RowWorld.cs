@@ -60,7 +60,7 @@ internal sealed class RowWorld : IAgentClient
     public Entity Add(Entity row)
     {
         if (row.Id == Guid.Empty) row.Id = Guid.NewGuid();
-        row[$"{row.LogicalName}id"] = row.Id;
+        row[PowerTools.API.Tools.Agent.Components.Shared.ComponentKinds.IdColumn(row.LogicalName)] = row.Id;
         Table(row.LogicalName).Add(row);
         return row;
     }

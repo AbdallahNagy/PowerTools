@@ -53,7 +53,7 @@ internal static class RowInspect
     {
         var query = new QueryExpression(table) { NoLock = true, TopCount = 2, ColumnSet = new ColumnSet(columns) };
         narrow?.Invoke(query);
-        if (Guid.TryParse(name, out var id)) query.Criteria.AddCondition($"{table}id", ConditionOperator.Equal, id);
+        if (Guid.TryParse(name, out var id)) query.Criteria.AddCondition(ComponentKinds.IdColumn(table), ConditionOperator.Equal, id);
         else query.Criteria.AddCondition(nameColumn, ConditionOperator.Equal, name.Trim());
         var rows = (await client.RetrieveMultipleAsync(query, ct)).Entities;
         if (rows.Count > 1) throw new AgentProblemException(AgentFaults.InvalidRequest($"More than one {table} is named '{name}'. Give its id."));
