@@ -179,6 +179,49 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
     }
   });
 
+  // Phase 4: cloud flows are online only. Online the lifecycle runs; on-premises the plan is unsupported and names process_apply.
+  const liveFlow = {
+    solution: "PowerToolsEvals",
+    name: "PTE Live Flow",
+    connectionReferences: { shared_commondataserviceforapps: { logicalName: "pte_livedataverse", connector: "shared_commondataserviceforapps" } },
+    definition: {
+      triggers: {
+        When_an_account_is_added: {
+          type: "OpenApiConnectionWebhook",
+          inputs: {
+            host: { connectionName: "shared_commondataserviceforapps", operationId: "SubscribeWebhookTrigger", apiId: "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps" },
+            parameters: { "subscriptionRequest/message": 1, "subscriptionRequest/entityname": "account", "subscriptionRequest/scope": 4 },
+            authentication: "@parameters('$authentication')",
+          },
+        },
+      },
+      actions: {},
+    },
+  };
+
+  it("flow_apply: lifecycle online, NotSupported naming process_apply on-premises", async () => {
+    for (const sandbox of sandboxes) {
+      const on = { connection: sandbox.connection };
+      if (sandbox.kind !== "online") {
+        const refused = await call("flow_apply", { ...liveFlow, ...on });
+        expect(JSON.stringify(refused.structuredContent), `flow_apply on ${sandbox.name}`).toContain("process_apply");
+        continue;
+      }
+      try {
+        const first = await call("flow_apply", { ...liveFlow, ...on });
+        expect(first.structuredContent, `flow_apply on ${sandbox.name}`).toMatchObject({ outcome: "applied" });
+        const again = await call("flow_apply", { ...liveFlow, ...on });
+        expect(again.structuredContent, `flow_apply again on ${sandbox.name}`).toMatchObject({ outcome: "unchanged" });
+        const read = await call("inspect_solution", { kind: "flow", name: "PTE Live Flow", ...on });
+        const roundTrip = await call("flow_apply", { ...(read.structuredContent as { result: Record<string, unknown> }).result, solution: "PowerToolsEvals", ...on });
+        expect(roundTrip.structuredContent, `inspected flow sent back on ${sandbox.name}`).toMatchObject({ outcome: "unchanged" });
+      } finally {
+        await call("remove", { kind: "flow", name: "PTE Live Flow", ...on });
+        await call("remove", { kind: "connectionreference", name: "pte_livedataverse", ...on });
+      }
+    }
+  });
+
   it("records_write then records_delete on every sandbox", async () => {
     for (const sandbox of sandboxes) {
       const on = { connection: sandbox.connection };

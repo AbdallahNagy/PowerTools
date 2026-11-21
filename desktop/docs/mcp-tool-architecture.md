@@ -1,6 +1,6 @@
 # MCP tool architecture
 
-Status: agreed plan. Phases 0 to 3 are built (see the status section of each); Phase 2 was the first release set of 19 tools, and Phase 3 brings it to 23. The current server is described in `mcp-server.md`.
+Status: agreed plan. Phases 0 to 4 are built (see the status section of each); Phase 2 was the first release set of 19 tools, Phase 3 brings it to 23 and Phase 4 to 24. The current server is described in `mcp-server.md`.
 
 ## Decisions
 
@@ -484,6 +484,30 @@ Decisions made while building:
 - **Field security.** A column in a profile that is not secured yet gets a `secureColumn` step (`UpdateAttribute` with `IsSecured`) before its permission. Permissions are allowed (4) or not (0) for read, create and update.
 
 Still open for Phase 3: running the live tests and evals on the two sandboxes, in particular `ValidateApp` and the app designer opening a generated app, modern command columns on `appaction` online, the dashboard XML in the dashboard designer, assigning a role to a user in a child business unit, and `secureColumn` on-premises.
+
+## Phase 4 status
+
+Built on 2026-11-21. The server offers 24 tools and its first resource, the cloud flow guide.
+
+| Part | Where |
+|---|---|
+| `flow_apply` (`FlowPlanner`): connection references, `clientdata`, on and off | `Components/Flows/FlowApply.cs` |
+| `inspect_solution` kind `flow` with a name returns the flow in the `flow_apply` shape | `Components/Inspect/SolutionInspector.cs` |
+| The guide `powertools://guides/cloud-flows`, served by `resources/list` and `resources/read`; the connector advertises resources and answers `resources/list` while the app is closed | `desktop/src/electron/mcp/guides.ts`, `mcpServer.ts`, `PowerTools.McpConnector/McpConnector.cs` |
+| Desktop tool in the `logic` group, now "Plug-ins, APIs and flows" | `desktop/src/electron/mcp/tools/components.ts`, `src/ui/shell/settings/sections/agentTools.ts` |
+| Planner tests | `PowerTools.API.Tests/Tools/Agent/Components/FlowPlannerTests.cs` |
+| Evals and live test | `evals/mcp/scenarios/cloud-flow-names-connector.json`, `cloud-flow-onprem-route.json`; the flow lifecycle in `desktop/test/live/mcp/parity.live.ts` |
+
+Decisions made while building:
+
+- **Online means Power Automate.** `Capabilities` tells by the `connectionreference` table. Without it the plan is one unsupported step whose route names `process_apply` and `solution_import`.
+- **References are checked by `host.connectionName`.** Every `connectionName` in the definition (triggers, actions, nested scopes) needs a key in `connectionReferences`; a missing key is refused before anything is written. An existing reference with another connector is refused too, so a reference is never changed under other flows.
+- **The definition is normalized.** Power Tools adds `$schema`, `contentVersion` and the `$connections` and `$authentication` parameters when they are missing. Whether the flow changed is decided by comparing the definition and the references (key, logical name, connector); other properties Dataverse adds to `clientdata` are ignored, so sending the same spec again plans nothing.
+- **Turning on waits for connections.** A new connection reference has no connection. While any reference lacks one, `turnOnFlow` is a blocked step that names each reference and its connector and says to sign in in the maker portal; the steps before it (references, flow) still run, so the result is `partlyApplied`. Once the user sets the connection (maker portal or `config_apply` `connectionId`), the same spec turns the flow on.
+- **Saving a flow that is on** turns it off, updates it, and turns it on again, unless the spec says `off` or a reference has lost its connection.
+- **State.** Left out, a new flow is created off and an existing flow keeps its state. Managed flows are blocked.
+
+Still open for Phase 4: running the live test and evals on the online sandbox, in particular that Dataverse accepts the generated `clientdata` and turns the flow on once its references are connected, and that the flow opens in the Power Automate designer.
 
 ## Open questions
 
