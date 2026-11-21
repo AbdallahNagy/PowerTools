@@ -1,0 +1,149 @@
+{
+  "description": "The desired state of a solution: its publisher, the solution, a patch, the components in it, and a roll-up of its patches.",
+  "type": "object",
+  "properties": {
+    "publisher": {
+      "description": "A publisher to create or update.",
+      "type": "object",
+      "properties": {
+        "uniqueName": {
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        },
+        "prefix": {
+          "description": "Customization prefix, 2 to 8 letters or digits, starting with a letter.",
+          "type": "string"
+        },
+        "optionValuePrefix": {
+          "description": "Option value prefix, 10000 to 99999.",
+          "type": "integer"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uniqueName"
+      ],
+      "additionalProperties": false
+    },
+    "solution": {
+      "type": "object",
+      "properties": {
+        "uniqueName": {
+          "type": "string"
+        },
+        "displayName": {
+          "description": "Needed for a new solution.",
+          "type": "string"
+        },
+        "publisher": {
+          "description": "Unique name of the publisher. Needed for a new solution; fixed afterwards.",
+          "type": "string"
+        },
+        "version": {
+          "description": "Like 1.0.0.0.",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uniqueName"
+      ],
+      "additionalProperties": false
+    },
+    "components": {
+      "description": "Components that must be in the solution. Components already in it are skipped; none are removed.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "table",
+              "column",
+              "relationship",
+              "key",
+              "choice",
+              "form",
+              "view",
+              "app",
+              "sitemap",
+              "webresource",
+              "command",
+              "process",
+              "flow",
+              "customapi",
+              "pluginassembly",
+              "plugintype",
+              "pluginstep",
+              "pluginimage",
+              "role",
+              "envvar",
+              "connectionreference"
+            ]
+          },
+          "name": {
+            "description": "Logical, unique or schema name (by kind), or the id.",
+            "type": "string"
+          },
+          "table": {
+            "description": "Table logical name, for column, key, form and view.",
+            "type": "string"
+          },
+          "addRequired": {
+            "description": "Also add the components it needs. Default false.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "patch": {
+      "description": "A patch of the solution with this version. Created when the solution has none with it.",
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "The patch version, same major and minor as the solution, for example 1.0.1.0.",
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "rollUp": {
+      "description": "Destructive: rolls the solution\u0027s patches into it with a new version (clone). The patches are deleted.",
+      "type": "object",
+      "properties": {
+        "version": {
+          "description": "The solution\u0027s new version, for example 2.0.0.0.",
+          "type": "string"
+        },
+        "displayName": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "version"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "solution"
+  ],
+  "additionalProperties": false
+}

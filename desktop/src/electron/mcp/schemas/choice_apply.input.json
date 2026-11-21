@@ -1,0 +1,56 @@
+{
+  "description": "The desired state of a global choice. Options left out are kept.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the changes go into. Its publisher decides the prefix.",
+      "type": "string"
+    },
+    "name": {
+      "description": "Name of the global choice with the publisher prefix, for example con_priority.",
+      "type": "string"
+    },
+    "displayName": {
+      "description": "Needed for a new choice.",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "options": {
+      "description": "Options. One without a value is matched by its label; a new one gets the next value from the publisher\u0027s prefix.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "integer"
+          },
+          "label": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "color": {
+            "description": "Color as #RRGGBB.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "ordered": {
+      "description": "Order the options as listed (options not listed come after them).",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "solution",
+    "name"
+  ],
+  "additionalProperties": false
+}

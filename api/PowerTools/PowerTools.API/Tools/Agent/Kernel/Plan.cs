@@ -32,8 +32,11 @@ public sealed record PublishTarget(PublishKind Kind, string Name);
 
 public enum PublishKind { Entity, OptionSet, WebResource, SiteMap, AppModule, Dashboard }
 
-/// <summary>What a step's action gets when it runs.</summary>
-public sealed record StepContext(IAgentClient Client, string? SolutionUniqueName);
+/// <summary>What a step's action gets when it runs. An action that creates something adds its id to <see cref="Ids"/>.</summary>
+public sealed record StepContext(IAgentClient Client, string? SolutionUniqueName)
+{
+    public List<string> Ids { get; } = [];
+}
 
 /// <summary>
 /// One ordered step of a plan. The public part is what the approval dialog and the result show; the

@@ -1,0 +1,80 @@
+{
+  "description": "Writes up to 100 records. Each operation is one step; the result gives the ids of created records.",
+  "type": "object",
+  "properties": {
+    "operations": {
+      "description": "The operations, run in order.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "enum": [
+              "create",
+              "update",
+              "upsert",
+              "associate"
+            ]
+          },
+          "table": {
+            "description": "Table logical name.",
+            "type": "string"
+          },
+          "id": {
+            "description": "The record\u0027s id. update and associate need id or key; upsert may give either.",
+            "type": "string"
+          },
+          "key": {
+            "description": "Alternate key values by column, instead of id.",
+            "type": "object"
+          },
+          "values": {
+            "description": "Column logical names mapped to values. Plain strings, numbers, booleans and null are plain; other types are {\u0022$type\u0022:\u0022EntityReference\u0022,\u0022logicalName\u0022:\u0022account\u0022,\u0022id\u0022:\u0022\u003Cguid\u003E\u0022}, {\u0022$type\u0022:\u0022OptionSetValue\u0022,\u0022value\u0022:1}, Money, DateTime, Decimal, Double, Guid.",
+            "type": "object"
+          },
+          "relationship": {
+            "description": "associate: schema name of the relationship.",
+            "type": "string"
+          },
+          "related": {
+            "description": "associate: the records to relate.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "table": {
+                  "description": "Table logical name.",
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "key": {
+                  "description": "Alternate key values by column, instead of id.",
+                  "type": "object"
+                }
+              },
+              "required": [
+                "table"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "op",
+          "table"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "allOrNothing": {
+      "description": "Run every operation in one transaction: all are applied or none. Default false: stop at the first failure.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "operations"
+  ],
+  "additionalProperties": false
+}

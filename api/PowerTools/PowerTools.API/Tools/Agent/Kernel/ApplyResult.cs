@@ -39,7 +39,10 @@ public sealed record StepResult(
     string Target,
     StepStatus Status,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] string? Error = null,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? DataverseCode = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? DataverseCode = null,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    [property: System.ComponentModel.Description("Ids of the records or components a done step created, such as a new record's id.")]
+    IReadOnlyList<string>? Ids = null);
 
 public sealed record RemainingPlan(IReadOnlyList<PlanStepDto> Steps);
 

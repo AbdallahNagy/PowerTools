@@ -1,0 +1,124 @@
+{
+  "description": "Plug-in steps with their images and state. A step is matched by name; steps left out are kept.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution new steps go into.",
+      "type": "string"
+    },
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "The step\u0027s name; finds it.",
+            "type": "string"
+          },
+          "pluginType": {
+            "description": "Full type name of the plug-in, for example Contoso.Plugins.SetCode. Or give serviceEndpoint.",
+            "type": "string"
+          },
+          "serviceEndpoint": {
+            "description": "Name of a webhook or Service Bus endpoint, instead of pluginType.",
+            "type": "string"
+          },
+          "message": {
+            "description": "Message name, for example Create, Update, Delete.",
+            "type": "string"
+          },
+          "table": {
+            "description": "Table logical name. Leave out for a message without a table.",
+            "type": "string"
+          },
+          "stage": {
+            "enum": [
+              "preValidation",
+              "preOperation",
+              "postOperation"
+            ]
+          },
+          "mode": {
+            "description": "Default sync. async runs only in postOperation.",
+            "enum": [
+              "sync",
+              "async"
+            ]
+          },
+          "rank": {
+            "description": "Order among steps of the same stage. Default 1.",
+            "type": "integer"
+          },
+          "filteringAttributes": {
+            "description": "Update only: the columns whose change runs the step.",
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "configuration": {
+            "description": "Unsecure configuration passed to the plug-in.",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "asyncAutoDelete": {
+            "description": "async only: delete the system job when it succeeds.",
+            "type": "boolean"
+          },
+          "enabled": {
+            "description": "Default true.",
+            "type": "boolean"
+          },
+          "images": {
+            "description": "Images, matched by name.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "alias": {
+                  "description": "The alias the plug-in reads the image by. Default: name.",
+                  "type": "string"
+                },
+                "type": {
+                  "enum": [
+                    "pre",
+                    "post",
+                    "both"
+                  ]
+                },
+                "attributes": {
+                  "description": "Columns in the image. Leave out for all columns.",
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "name",
+                "type"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "name",
+          "message",
+          "stage"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "solution",
+    "steps"
+  ],
+  "additionalProperties": false
+}
