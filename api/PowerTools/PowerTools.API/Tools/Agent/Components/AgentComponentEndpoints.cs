@@ -9,6 +9,7 @@ using PowerTools.API.Tools.Agent.Components.Flows;
 using PowerTools.API.Tools.Agent.Components.Forms;
 using PowerTools.API.Tools.Agent.Components.Inspect;
 using PowerTools.API.Tools.Agent.Components.Plugins;
+using PowerTools.API.Tools.Agent.Components.Processes;
 using PowerTools.API.Tools.Agent.Components.Records;
 using PowerTools.API.Tools.Agent.Components.Remove;
 using PowerTools.API.Tools.Agent.Components.Security;
@@ -60,6 +61,7 @@ public static class AgentComponentEndpoints
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<RoleApplySpec>(RolePlanner.Family, new RolePlanner()));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<AppApplySpec>(AppPlanner.Family, new AppPlanner()));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<FlowApplySpec>(FlowPlanner.Family, new FlowPlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<ProcessApplySpec>(ProcessPlanner.Family, new ProcessPlanner()));
         return services;
     }
 

@@ -117,7 +117,7 @@ public sealed class CustomApiPlannerTests
         var step = Assert.Single((await PlanAsync(Spec())).Steps);
 
         Assert.Equal(PlanStepKind.Unsupported, step.Kind);
-        Assert.Contains("solution_import", step.Route);
+        Assert.Contains("process_apply", step.Route);
     }
 
     [Fact]

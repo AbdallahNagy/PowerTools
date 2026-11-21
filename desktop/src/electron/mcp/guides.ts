@@ -13,7 +13,7 @@ export interface McpGuide {
 const CLOUD_FLOWS = `# Cloud flows with flow_apply
 
 Cloud flows exist only online (Power Automate). On-premises flow_apply answers NotSupported: build the logic as a
-classic workflow in a development environment and import its solution with solution_import.
+classic workflow with process_apply (see powertools://guides/classic-workflows).
 
 ## The spec
 
@@ -82,6 +82,85 @@ inspect_solution kind flow with a name returns the flow in this same shape (name
 definition), so an agent can change it and send it back to flow_apply.
 `;
 
+const CLASSIC_WORKFLOWS = `# Classic workflows and actions with process_apply
+
+process_apply writes a classic workflow or a custom process action from typed steps. The XAML is the same the
+classic designer writes, and it is saved by importing a small unmanaged solution that holds only the process, so it
+works the same online and on-premises. The process then joins your solution, and the temporary solution is deleted.
+
+## The spec
+
+{
+  "solution": "Core",
+  "name": "Permit review",
+  "kind": "workflow",
+  "table": "new_permit",
+  "mode": "realtime",
+  "triggers": { "onCreate": true, "onUpdate": ["new_status"] },
+  "runAs": "owner",
+  "steps": [ ... ],
+  "state": "activated"
+}
+
+- kind (workflow or action) and table cannot change once the process exists.
+- Workflows: mode realtime (default) or background; triggers onDemand (default when triggers is left out), asChild,
+  onCreate, onUpdate (columns; an empty list removes the update trigger); runAs owner or user (real-time only).
+  The scope is always the organization.
+- Actions: uniqueName is the message name with the publisher prefix (default prefix_NameWithoutSpaces) and cannot
+  change; arguments are input arguments (string, integer, float, decimal, boolean, datetime, entityReference with
+  table). Target is added for the table. Actions are always bound to table.
+- steps replace all the steps. Leave steps out to change only properties or state.
+- state activated (default) or draft. Changing an activated process saves it in draft and activates it again.
+
+## Steps
+
+Each step has an optional label (the text after the step in the designer) and exactly one of these:
+
+{ "update": { "record": "new_applicantid", "values": { "new_status": 2 } } }   record: primary (default) or a lookup on it
+{ "create": { "table": "task", "values": { "subject": "Call", "regardingobjectid": { "column": "new_permitid" } } } }
+{ "sendEmail": { "from": <user>, "to": [<party>, ...], "cc": [...], "subject": "Hi", "body": { "column": "new_name" },
+                 "regarding": <default the primary record>, "values": { "prioritycode": 1 } } }
+{ "assign": { "record": "primary", "owner": { "lookup": { "table": "team", "id": "<guid>", "name": "Reviewers" } } } }
+{ "setState": { "record": "primary", "state": 1, "status": 2 } }
+{ "if": { "condition": <condition>, "then": [steps], "elseIf": [{ "condition": ..., "then": [...] }], "else": [steps] } }
+{ "childWorkflow": "Close tasks" }        a workflow on the same table that allows running as a child
+{ "action": { "name": "new_NotifyApplicant", "record": "primary" } }   an activated action bound to that record's table
+{ "customActivity": { "type": "Contoso.Steps.CloseTasks", "inputs": [{ "name": "Reason", "type": "string", "value": "Done" }] } }
+{ "stop": { "status": "succeeded", "message": "Nothing to do" } }
+{ "keep": "CustomActivityStep3" }         a step read back that Power Tools cannot write, kept as it is
+
+## Values
+
+- A literal: text "Hello", a choice number 2, a yes/no true, or a lookup { "lookup": { "table", "id", "name" } }.
+- A column of the primary record or a record a lookup points to: { "column": "emailaddress1", "from": "new_applicantid",
+  "default": "none" }. default (a literal) is used when the column is empty.
+- An action's input argument: { "argument": "Reason" }.
+- The current time: { "now": true } (date columns).
+- Text joined from parts: { "concat": ["Permit ", { "column": "new_name" }] }.
+
+Literal numbers, dates and money are not written yet: copy them from a column instead.
+
+## Conditions
+
+{ "column": "new_status", "from": "new_applicantid", "operator": "equals", "value": 2 }
+Operators: equals, notEquals, null, notNull, in (with values). Actions can test { "argument": "StageId", ... }.
+Combine with { "all": [conditions] } (and) or { "any": [conditions] } (or), nested as needed.
+
+## Reading a process
+
+inspect_solution kind process with a name returns the process in this shape (child workflows by name). Change it and
+send it back with solution added. Steps Power Tools cannot express come back as { "keep": id, "summary": ... }: leave
+them where they are (or remove them) and they are saved exactly as they were. A process with output arguments cannot
+be written back.
+
+## Not written yet
+
+Wait conditions and timeouts, delete triggers and user or business unit scope (an existing process keeps them),
+action output arguments, global (unbound) actions, date and text-search condition operators (on or after, contains,
+begins with), custom step outputs (kept as they are), and literal number, date or money values. Build those in the
+classic designer.
+`;
+
 export const MCP_GUIDES: readonly McpGuide[] = [
   {
     uri: "powertools://guides/cloud-flows",
@@ -89,6 +168,13 @@ export const MCP_GUIDES: readonly McpGuide[] = [
     title: "Cloud flows",
     description: "How to write a flow_apply spec: definition, connection references, connections and turning a flow on.",
     text: CLOUD_FLOWS,
+  },
+  {
+    uri: "powertools://guides/classic-workflows",
+    name: "classic-workflows",
+    title: "Classic workflows and actions",
+    description: "How to write a process_apply spec: kinds, triggers, steps, values, conditions and reading a process back.",
+    text: CLASSIC_WORKFLOWS,
   },
 ];
 

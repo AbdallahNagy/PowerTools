@@ -179,7 +179,7 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
     }
   });
 
-  // Phase 4: cloud flows are online only. Online the lifecycle runs; on-premises the plan is unsupported and names solution_import.
+  // Phase 4: cloud flows are online only. Online the lifecycle runs; on-premises the plan is unsupported and names process_apply.
   const liveFlow = {
     solution: "PowerToolsEvals",
     name: "PTE Live Flow",
@@ -199,12 +199,12 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
     },
   };
 
-  it("flow_apply: lifecycle online, NotSupported naming solution_import on-premises", async () => {
+  it("flow_apply: lifecycle online, NotSupported naming process_apply on-premises", async () => {
     for (const sandbox of sandboxes) {
       const on = { connection: sandbox.connection };
       if (sandbox.kind !== "online") {
         const refused = await call("flow_apply", { ...liveFlow, ...on });
-        expect(JSON.stringify(refused.structuredContent), `flow_apply on ${sandbox.name}`).toContain("solution_import");
+        expect(JSON.stringify(refused.structuredContent), `flow_apply on ${sandbox.name}`).toContain("process_apply");
         continue;
       }
       try {
@@ -219,6 +219,50 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
         await call("remove", { kind: "flow", name: "PTE Live Flow", ...on });
         await call("remove", { kind: "connectionreference", name: "pte_livedataverse", ...on });
       }
+    }
+  });
+
+  // Phase 5: classic workflows run the same on both deployment types: created, unchanged when sent again, read back
+  // and sent back unchanged, changed while activated, then removed. The result shape must match across sandboxes.
+  const liveWorkflow = {
+    solution: "PowerToolsEvals",
+    name: "PTE Live Workflow",
+    kind: "workflow",
+    table: "account",
+    triggers: { onCreate: true },
+    steps: [
+      { label: "Describe", update: { values: { description: { concat: ["Created as ", { column: "name" }] } } } },
+      {
+        if: {
+          condition: { column: "telephone1", operator: "null" },
+          then: [{ create: { table: "task", values: { subject: "Ask for a phone number", regardingobjectid: { column: "accountid" } } } }],
+          else: [{ stop: { status: "succeeded" } }],
+        },
+      },
+    ],
+  };
+
+  it("process_apply: the same lifecycle online and on-premises", async () => {
+    const shapes: Array<{ sandbox: string; shape: unknown }> = [];
+    for (const sandbox of sandboxes) {
+      const on = { connection: sandbox.connection };
+      try {
+        const first = await call("process_apply", { ...liveWorkflow, ...on });
+        expect(first.structuredContent, `process_apply on ${sandbox.name}`).toMatchObject({ outcome: "applied" });
+        const again = await call("process_apply", { ...liveWorkflow, ...on });
+        expect(again.structuredContent, `process_apply again on ${sandbox.name}`).toMatchObject({ outcome: "unchanged" });
+        const read = await call("inspect_solution", { kind: "process", name: "PTE Live Workflow", ...on });
+        const roundTrip = await call("process_apply", { ...(read.structuredContent as { result: Record<string, unknown> }).result, solution: "PowerToolsEvals", ...on });
+        expect(roundTrip.structuredContent, `inspected workflow sent back on ${sandbox.name}`).toMatchObject({ outcome: "unchanged" });
+        const changed = await call("process_apply", { ...liveWorkflow, steps: liveWorkflow.steps.slice(0, 1), ...on });
+        expect(changed.structuredContent, `activated workflow changed on ${sandbox.name}`).toMatchObject({ outcome: "applied" });
+        shapes.push({ sandbox: sandbox.name, shape: shapeOf(first.structuredContent) });
+      } finally {
+        await call("remove", { kind: "process", name: "PTE Live Workflow", ...on });
+      }
+    }
+    for (const other of shapes.slice(1)) {
+      expect(shapeDifferences(shapes[0].shape, other.shape), `${shapes[0].sandbox} vs ${other.sandbox}`).toEqual([]);
     }
   });
 

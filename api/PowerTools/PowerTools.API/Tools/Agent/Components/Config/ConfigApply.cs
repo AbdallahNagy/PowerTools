@@ -144,7 +144,7 @@ public sealed class ConfigPlanner : IComponentPlanner<ConfigApplySpec>
             {
                 steps.Add(PlanStep.Unsupported("createConnectionReference", name,
                     "This environment has no connection references (they are online only).",
-                    "Classic workflows use the connections of the environment instead; import one in a solution with solution_import."));
+                    "Classic workflows use the connections of the environment instead; write one with process_apply."));
                 continue;
             }
 

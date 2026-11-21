@@ -1,0 +1,56 @@
+{
+  "id": "classic-workflow-from-steps",
+  "phase": 5,
+  "description": "The agent reads the classic workflow guide and builds a real-time workflow with process_apply: on create of an account, a condition and a created task. The same spec works on both deployment types.",
+  "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, create a real-time classic workflow Eval Account Phone Check on account that starts when an account is created and, if the account has no main phone, creates a task 'Ask for a phone number' regarding the account. Activate it.",
+  "sandboxes": [
+    "online",
+    "onprem"
+  ],
+  "checks": [
+    {
+      "description": "the workflow exists and is activated",
+      "tool": "inspect_solution",
+      "arguments": {
+        "kind": "process",
+        "name": "Eval Account Phone Check"
+      },
+      "path": "result.state",
+      "equals": "activated"
+    },
+    {
+      "description": "it starts on create",
+      "tool": "inspect_solution",
+      "arguments": {
+        "kind": "process",
+        "name": "Eval Account Phone Check"
+      },
+      "path": "result.triggers.onCreate",
+      "equals": true
+    },
+    {
+      "description": "its first step is the condition",
+      "tool": "inspect_solution",
+      "arguments": {
+        "kind": "process",
+        "name": "Eval Account Phone Check"
+      },
+      "path": "result.steps.0.if.condition.column",
+      "equals": "telephone1"
+    }
+  ],
+  "cleanup": [
+    {
+      "tool": "remove",
+      "arguments": {
+        "kind": "process",
+        "name": "Eval Account Phone Check"
+      }
+    }
+  ],
+  "mustNotCall": [
+    "execute_message",
+    "records_write",
+    "solution_import"
+  ]
+}

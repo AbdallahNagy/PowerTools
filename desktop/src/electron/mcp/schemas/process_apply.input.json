@@ -1,0 +1,491 @@
+{
+  "description": "A classic workflow or custom process action, saved through a solution import so it behaves the same online and on-premises. The steps replace the process\u0027s steps. See the guide powertools://guides/classic-workflows.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the process goes into.",
+      "type": "string"
+    },
+    "name": {
+      "description": "The process name; an existing workflow or action matches by name.",
+      "type": "string"
+    },
+    "kind": {
+      "description": "workflow or action. Cannot change.",
+      "enum": [
+        "workflow",
+        "action"
+      ]
+    },
+    "table": {
+      "description": "Logical name of the primary table. Cannot change.",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "mode": {
+      "description": "Workflows: realtime or background. Default realtime.",
+      "enum": [
+        "realtime",
+        "background"
+      ]
+    },
+    "triggers": {
+      "description": "Workflows: when it starts. Default on demand only.",
+      "type": "object",
+      "properties": {
+        "onDemand": {
+          "description": "Users can run it on demand.",
+          "type": "boolean"
+        },
+        "asChild": {
+          "description": "Other workflows can start it as a child workflow.",
+          "type": "boolean"
+        },
+        "onCreate": {
+          "type": "boolean"
+        },
+        "onUpdate": {
+          "description": "Columns whose change starts it. An empty list removes the update trigger.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "runAs": {
+      "description": "Real-time workflows: run as the workflow owner or the user who made the change. Default owner.",
+      "enum": [
+        "owner",
+        "user"
+      ]
+    },
+    "uniqueName": {
+      "description": "Actions: the message name with the publisher prefix, for example contoso_NotifyPayment. Default: prefix plus the name without spaces.",
+      "type": "string"
+    },
+    "arguments": {
+      "description": "Actions: input arguments. Target is added for the primary table.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "string",
+              "integer",
+              "float",
+              "decimal",
+              "boolean",
+              "datetime",
+              "entityReference"
+            ]
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "table": {
+            "description": "entityReference arguments: the table.",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "type"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "steps": {
+      "description": "The steps, in order. Needed for a new process.",
+      "type": "array",
+      "items": {
+        "description": "One step: exactly one of update, create, sendEmail, assign, setState, if, childWorkflow, action, customActivity, stop, keep.",
+        "type": "object",
+        "properties": {
+          "label": {
+            "description": "Text shown after the step in the designer.",
+            "type": "string"
+          },
+          "update": {
+            "description": "Update the primary record or a record a lookup on it points to.",
+            "type": "object",
+            "properties": {
+              "record": {
+                "description": "primary, or the lookup column on the primary record. Default primary.",
+                "type": "string"
+              },
+              "values": {
+                "description": "Column logical name to value. See the guide for values.",
+                "type": "object"
+              }
+            },
+            "required": [
+              "values"
+            ],
+            "additionalProperties": false
+          },
+          "create": {
+            "type": "object",
+            "properties": {
+              "table": {
+                "type": "string"
+              },
+              "values": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "table",
+              "values"
+            ],
+            "additionalProperties": false
+          },
+          "sendEmail": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "description": "A value that gives one user, team, contact, account or queue."
+              },
+              "to": {
+                "type": "array"
+              },
+              "cc": {
+                "type": "array"
+              },
+              "subject": true,
+              "body": true,
+              "regarding": {
+                "description": "Default: the primary record."
+              },
+              "values": {
+                "description": "Other email columns to set, column logical name to value.",
+                "type": "object"
+              }
+            },
+            "required": [
+              "subject"
+            ],
+            "additionalProperties": false
+          },
+          "assign": {
+            "description": "Assign the primary record (or one a lookup points to) to a user or team.",
+            "type": "object",
+            "properties": {
+              "record": {
+                "description": "primary, or a lookup column on the primary record. Default primary.",
+                "type": "string"
+              },
+              "owner": {
+                "description": "A value that gives a user or team."
+              }
+            },
+            "required": [
+              "owner"
+            ],
+            "additionalProperties": false
+          },
+          "setState": {
+            "type": "object",
+            "properties": {
+              "record": {
+                "description": "primary, or a lookup column on the primary record. Default primary.",
+                "type": "string"
+              },
+              "state": {
+                "type": "integer"
+              },
+              "status": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "state",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "if": {
+            "type": "object",
+            "properties": {
+              "condition": {
+                "description": "A column test, or all (and) or any (or) of other conditions.",
+                "type": "object",
+                "properties": {
+                  "column": {
+                    "type": "string"
+                  },
+                  "argument": {
+                    "description": "Actions: test an input argument instead of a column.",
+                    "type": "string"
+                  },
+                  "from": {
+                    "description": "The lookup column on the primary record whose record holds column. Default the primary record.",
+                    "type": "string"
+                  },
+                  "operator": {
+                    "enum": [
+                      "equals",
+                      "notEquals",
+                      "null",
+                      "notNull",
+                      "in"
+                    ]
+                  },
+                  "value": true,
+                  "values": {
+                    "description": "For in.",
+                    "type": "array"
+                  },
+                  "all": {
+                    "type": "array",
+                    "items": {
+                      "description": "A column test, or all (and) or any (or) of other conditions.",
+                      "type": "object",
+                      "properties": {
+                        "column": {
+                          "type": "string"
+                        },
+                        "argument": {
+                          "description": "Actions: test an input argument instead of a column.",
+                          "type": "string"
+                        },
+                        "from": {
+                          "description": "The lookup column on the primary record whose record holds column. Default the primary record.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "enum": [
+                            "equals",
+                            "notEquals",
+                            "null",
+                            "notNull",
+                            "in"
+                          ]
+                        },
+                        "value": true,
+                        "values": {
+                          "description": "For in.",
+                          "$ref": "#/properties/steps/items/properties/if/properties/condition/properties/values"
+                        },
+                        "all": {
+                          "$ref": "#/properties/steps/items/properties/if/properties/condition/properties/all"
+                        },
+                        "any": {
+                          "type": "array",
+                          "items": {
+                            "description": "A column test, or all (and) or any (or) of other conditions.",
+                            "$ref": "#/properties/steps/items/properties/if/properties/condition/properties/all/items"
+                          }
+                        }
+                      },
+                      "additionalProperties": false
+                    }
+                  },
+                  "any": {
+                    "$ref": "#/properties/steps/items/properties/if/properties/condition/properties/all/items/properties/any"
+                  }
+                },
+                "additionalProperties": false
+              },
+              "then": {
+                "type": "array",
+                "items": {
+                  "description": "One step: exactly one of update, create, sendEmail, assign, setState, if, childWorkflow, action, customActivity, stop, keep.",
+                  "$ref": "#/properties/steps/items"
+                }
+              },
+              "elseIf": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "condition": {
+                      "description": "A column test, or all (and) or any (or) of other conditions.",
+                      "type": "object",
+                      "properties": {
+                        "column": {
+                          "type": "string"
+                        },
+                        "argument": {
+                          "description": "Actions: test an input argument instead of a column.",
+                          "type": "string"
+                        },
+                        "from": {
+                          "description": "The lookup column on the primary record whose record holds column. Default the primary record.",
+                          "type": "string"
+                        },
+                        "operator": {
+                          "enum": [
+                            "equals",
+                            "notEquals",
+                            "null",
+                            "notNull",
+                            "in"
+                          ]
+                        },
+                        "value": true,
+                        "values": {
+                          "description": "For in.",
+                          "$ref": "#/properties/steps/items/properties/if/properties/condition/properties/values"
+                        },
+                        "all": {
+                          "$ref": "#/properties/steps/items/properties/if/properties/condition/properties/all"
+                        },
+                        "any": {
+                          "$ref": "#/properties/steps/items/properties/if/properties/condition/properties/all/items/properties/any"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "then": {
+                      "type": "array",
+                      "items": {
+                        "description": "One step: exactly one of update, create, sendEmail, assign, setState, if, childWorkflow, action, customActivity, stop, keep.",
+                        "$ref": "#/properties/steps/items"
+                      }
+                    }
+                  },
+                  "required": [
+                    "condition",
+                    "then"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "else": {
+                "type": "array",
+                "items": {
+                  "description": "One step: exactly one of update, create, sendEmail, assign, setState, if, childWorkflow, action, customActivity, stop, keep.",
+                  "$ref": "#/properties/steps/items"
+                }
+              }
+            },
+            "required": [
+              "condition",
+              "then"
+            ],
+            "additionalProperties": false
+          },
+          "childWorkflow": {
+            "description": "Name of the workflow to start as a child of the primary record; it must allow running as a child.",
+            "type": "string"
+          },
+          "action": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "description": "The message name of an activated custom process action, for example contoso_NotifyPayment.",
+                "type": "string"
+              },
+              "record": {
+                "description": "The record passed as Target: primary or a lookup column. Default primary.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          },
+          "customActivity": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "description": "The type name of a registered custom workflow activity, for example Contoso.Steps.CloseTasks.",
+                "type": "string"
+              },
+              "inputs": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "type": {
+                      "description": "string, boolean, entityReference or datetime.",
+                      "enum": [
+                        "string",
+                        "integer",
+                        "float",
+                        "decimal",
+                        "boolean",
+                        "datetime",
+                        "entityReference"
+                      ]
+                    },
+                    "value": {
+                      "description": "A value; null leaves the input empty."
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "type",
+                    "value"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "type"
+            ],
+            "additionalProperties": false
+          },
+          "stop": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "succeeded or canceled.",
+                "enum": [
+                  "succeeded",
+                  "canceled"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "keep": {
+            "description": "A step Power Tools reads but cannot write (for example a custom step with outputs): its id from inspect_solution, kept exactly as it is.",
+            "type": "string"
+          },
+          "summary": {
+            "description": "Read back only, with keep: what the kept step does. Ignored when written.",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "state": {
+      "description": "activated or draft. Default activated.",
+      "enum": [
+        "activated",
+        "draft"
+      ]
+    }
+  },
+  "required": [
+    "solution",
+    "name",
+    "kind",
+    "table"
+  ],
+  "additionalProperties": false
+}

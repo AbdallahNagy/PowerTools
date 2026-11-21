@@ -86,6 +86,7 @@ describe("MCP server", () => {
     expect(client.getServerCapabilities()?.resources).toBeDefined();
     const { resources } = await client.listResources();
     expect(resources.map((r) => r.uri)).toContain("powertools://guides/cloud-flows");
+    expect(resources.map((r) => r.uri)).toContain("powertools://guides/classic-workflows");
     const { contents } = await client.readResource({ uri: "powertools://guides/cloud-flows" });
     expect(contents[0]).toMatchObject({ mimeType: "text/markdown", text: expect.stringContaining("connectionReferences") });
     await expect(client.readResource({ uri: "powertools://guides/nope" })).rejects.toMatchObject({ code: -32602 });

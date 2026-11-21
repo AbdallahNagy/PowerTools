@@ -1,9 +1,14 @@
 {
   "id": "cloud-flow-onprem-route",
   "phase": 4,
-  "sandboxes": ["onprem"],
-  "description": "Negative: cloud flows are online only. On-premises flow_apply answers NotSupported and names solution_import; the agent must tell the user, not write workflow rows another way.",
+  "sandboxes": [
+    "onprem"
+  ],
+  "description": "Negative: cloud flows are online only. On-premises flow_apply answers NotSupported and names process_apply; the agent must build a classic workflow with process_apply or tell the user, not write workflow rows another way.",
   "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, create a cloud flow Eval Account Follow-up that adds a task whenever an account is created.",
   "checks": [],
-  "mustNotCall": ["execute_message", "records_write"]
+  "mustNotCall": [
+    "execute_message",
+    "records_write"
+  ]
 }

@@ -95,8 +95,12 @@ internal sealed class RowWorld : IAgentClient
         return Task.FromResult(Handle(request));
     }
 
+    /// <summary>Answers a request the world does not model (for example a solution import); null passes it on.</summary>
+    public Func<OrganizationRequest, OrganizationResponse?>? OnExecute { get; set; }
+
     private OrganizationResponse Handle(OrganizationRequest request)
     {
+        if (OnExecute?.Invoke(request) is { } answered) return answered;
         switch (request)
         {
             case CreateRequest create:
