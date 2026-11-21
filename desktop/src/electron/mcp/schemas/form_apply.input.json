@@ -1,0 +1,96 @@
+{
+  "description": "Changes to one existing form, as operations run in order. Each one is skipped when the form already has it, so the same spec can be sent again.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the form goes into.",
+      "type": "string"
+    },
+    "table": {
+      "description": "Table logical name.",
+      "type": "string"
+    },
+    "form": {
+      "description": "The form\u0027s name, for example Information.",
+      "type": "string"
+    },
+    "formType": {
+      "description": "Default main.",
+      "enum": [
+        "main",
+        "quickCreate",
+        "quickView",
+        "card"
+      ]
+    },
+    "operations": {
+      "type": "array",
+      "items": {
+        "description": "addField/moveField: column into section (after a column). removeField: column. addSection: section into tab. addTab: tab. setLabel/setVisible: on column, else section, else tab. addSubgrid: name, subgridTable into section. Tabs and sections match by name or label.",
+        "type": "object",
+        "properties": {
+          "op": {
+            "enum": [
+              "addField",
+              "moveField",
+              "removeField",
+              "addSection",
+              "addTab",
+              "setLabel",
+              "setVisible",
+              "addSubgrid"
+            ]
+          },
+          "column": {
+            "description": "Column logical name.",
+            "type": "string"
+          },
+          "tab": {
+            "type": "string"
+          },
+          "section": {
+            "type": "string"
+          },
+          "name": {
+            "description": "addSubgrid: the subgrid\u0027s name.",
+            "type": "string"
+          },
+          "label": {
+            "description": "Label in the base language. For a new tab or section, its label.",
+            "type": "string"
+          },
+          "after": {
+            "description": "Place it after this column (fields), section (addSection) or tab (addTab). Default: at the end.",
+            "type": "string"
+          },
+          "visible": {
+            "type": "boolean"
+          },
+          "subgridTable": {
+            "description": "addSubgrid: the table the subgrid lists.",
+            "type": "string"
+          },
+          "relationship": {
+            "description": "addSubgrid: schema name of the relationship; without it the subgrid lists all records.",
+            "type": "string"
+          },
+          "view": {
+            "description": "addSubgrid: name of a public view of subgridTable. Default: its default view.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "solution",
+    "table",
+    "form",
+    "operations"
+  ],
+  "additionalProperties": false
+}

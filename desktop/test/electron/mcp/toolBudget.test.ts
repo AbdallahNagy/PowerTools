@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createAgentToolRegistry } from "../../../src/electron/mcp/registry";
 import { measureToolBudget, TOOL_BUDGET } from "../../../src/electron/mcp/toolBudget";
-import { PLAN_APPLY_TOOLS } from "../../../src/electron/mcp/tools/index";
+import { AGENT_TOOLS } from "../../../src/electron/mcp/tools/index";
 import type { AgentTool } from "../../../src/electron/mcp/types";
 
 const tool = (name: string, description = "Read-only. Lists things."): AgentTool => ({
   name,
-  group: "metadata",
+  group: "read",
   title: name,
   description,
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -15,8 +15,9 @@ const tool = (name: string, description = "Read-only. Lists things."): AgentTool
 });
 
 describe("tool budget", () => {
-  it("the plan/apply tool set fits the agreed budget", () => {
-    const use = measureToolBudget(PLAN_APPLY_TOOLS);
+  it("the first release tool set of 19 tools fits the agreed budget", () => {
+    const use = measureToolBudget(AGENT_TOOLS);
+    expect(AGENT_TOOLS).toHaveLength(19);
     expect(use.problems).toEqual([]);
   });
 

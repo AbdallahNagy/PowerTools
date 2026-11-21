@@ -18,6 +18,16 @@ public static class KernelSchemas
         ["plan-preview"] = typeof(PlanPreview),
         ["table_apply.input"] = typeof(Components.Tables.TableApplySpec),
         ["solution_import.input"] = typeof(Components.Solutions.SolutionImportSpec),
+        ["records_write.input"] = typeof(Components.Records.RecordsWriteSpec),
+        ["records_delete.input"] = typeof(Components.Records.RecordsDeleteSpec),
+        ["choice_apply.input"] = typeof(Components.Choices.ChoiceApplySpec),
+        ["view_apply.input"] = typeof(Components.Views.ViewApplySpec),
+        ["form_apply.input"] = typeof(Components.Forms.FormApplySpec),
+        ["solution_apply.input"] = typeof(Components.Solutions.SolutionApplySpec),
+        ["config_apply.input"] = typeof(Components.Config.ConfigApplySpec),
+        ["plugin_deploy.input"] = typeof(Components.Plugins.PluginDeploySpec),
+        ["plugin_step_apply.input"] = typeof(Components.Plugins.PluginStepApplySpec),
+        ["remove.input"] = typeof(Components.Remove.RemoveSpec),
     };
 
     /// <summary>Input schemas end in ".input"; they leave out null, since an agent leaves a property out instead.</summary>

@@ -1,0 +1,134 @@
+{
+  "description": "The desired state of one system view. Power Tools writes the FetchXML and layout so they match. Parts left out stay as they are.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the changes go into.",
+      "type": "string"
+    },
+    "table": {
+      "description": "Table logical name.",
+      "type": "string"
+    },
+    "type": {
+      "description": "Default public. Only public views can be created; the others exist once per table and are updated.",
+      "enum": [
+        "public",
+        "advancedFind",
+        "associated",
+        "quickFind",
+        "lookup"
+      ]
+    },
+    "name": {
+      "description": "The view\u0027s name. Finds a public view; for the other types it renames.",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "columns": {
+      "description": "The grid\u0027s columns in order. Replaces the current columns.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "Column logical name of the table.",
+            "type": "string"
+          },
+          "width": {
+            "description": "Width in pixels. Default 150.",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "filter": {
+      "description": "The view\u0027s filter. Replaces the current filter; link-entity filters stay.",
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "Default and.",
+          "enum": [
+            "and",
+            "or"
+          ]
+        },
+        "conditions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "column": {
+                "type": "string"
+              },
+              "operator": {
+                "description": "FetchXML operator, for example eq, ne, like, null, not-null, in, gt, on-or-after, last-x-days, eq-userid.",
+                "type": "string"
+              },
+              "value": {
+                "type": "string"
+              },
+              "values": {
+                "description": "For in, not-in and between.",
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "column",
+              "operator"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "conditions"
+      ],
+      "additionalProperties": false
+    },
+    "sort": {
+      "description": "Sort order. Replaces the current one.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "column": {
+            "type": "string"
+          },
+          "descending": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "column"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "findColumns": {
+      "description": "quickFind: the columns searched.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "isDefault": {
+      "description": "Make this the table\u0027s default public view.",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "solution",
+    "table"
+  ],
+  "additionalProperties": false
+}

@@ -13,7 +13,7 @@
     { "description": "Budget is kept", "tool": "inspect_schema", "arguments": { "kind": "column", "table": "pte_evalproject", "name": "pte_budget" }, "path": "result.type", "equals": "money" }
   ],
   "cleanup": [
-    { "tool": "schema_delete_table", "arguments": { "table": "pte_evalproject" } }
+    { "tool": "remove", "arguments": { "kind": "table", "name": "pte_evalproject" } }
   ],
-  "mustNotCall": ["execute_message", "schema_update_column", "schema_create_column"]
+  "mustNotCall": ["execute_message"]
 }

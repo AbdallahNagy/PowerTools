@@ -2,7 +2,7 @@ import tableSpec from "../schemas/table_apply.input.json" with { type: "json" };
 import { dataverseResult } from "../results.js";
 import type { AgentTool } from "../types.js";
 import { applyTool } from "./applyTool.js";
-import { AGENT_API, bodyOf, connectionProp } from "./schema.js";
+import { AGENT_API, bodyOf, connectionProp } from "./common.js";
 
 const str = (value: unknown) => String(value);
 const tableOf = (args: Record<string, unknown>) => str((args.table as { schemaName?: unknown } | undefined)?.schemaName ?? "").toLowerCase();
@@ -25,7 +25,7 @@ const KINDS = ["table", "column", "relationship", "key", "choice", "role"];
 /** inspect_schema: reads tables, columns, relationships, keys, global choices and roles. Tables come back as specs. */
 export const inspectSchema: AgentTool = {
   name: "inspect_schema",
-  group: "metadata",
+  group: "read",
   title: "Inspect the schema",
   description:
     "Read-only. Describes one table, column, relationship, key, global choice or role by name, or lists them with a filter. A table or column comes back in the shape table_apply takes, so you can change it and apply it. column, relationship and key need table.",

@@ -1,98 +1,89 @@
-import { clampPageSize, dataverseResult } from "../results.js";
-import type { AgentTool } from "../types.js";
+import { messageEffect } from "../../communityTools/messageEffects.js";
+import deleteSpec from "../schemas/records_delete.input.json" with { type: "json" };
+import writeSpec from "../schemas/records_write.input.json" with { type: "json" };
+import { dataverseResult } from "../results.js";
+import { AgentToolError, type AgentTool } from "../types.js";
+import { applyTool } from "./applyTool.js";
+import { connectionProp, DATA_API, steps, str } from "./common.js";
 
-const connection = {
-  type: "string",
-  description: "Display name of a saved connection (see connections_list). Defaults to the active connection.",
-};
+const TYPED_VALUES =
+  'Plain strings, numbers, booleans and null are plain. Other types are objects with a "$type": ' +
+  '{"$type":"EntityReference","logicalName":"account","id":"<guid>"}, {"$type":"OptionSetValue","value":1}, ' +
+  '{"$type":"Money","value":9.5}, {"$type":"DateTime","value":"2026-01-31T10:00:00Z"}, also Decimal, Double, Guid.';
 
-const API = "/api/community-tools/data";
+const tablesOf = (items: unknown) => [...new Set((Array.isArray(items) ? items : []).map((i) => str((i as { table?: unknown }).table)))].join(", ");
 
-export const recordsQuery: AgentTool = {
-  name: "records_query",
+/** records_write: up to 100 creates, updates, upserts and associates. */
+export const recordsWrite: AgentTool = applyTool({
+  name: "records_write",
+  family: "records_write",
   group: "records",
-  title: "Query records",
+  title: "Write records",
   description:
-    "Runs a FetchXML query and returns one page of records. Use metadata_list_columns first for exact logical names. pageSize defaults to 50, max 500; pass pagingCookie and page+1 for the next page. Read-only.",
+    "Changes the environment. Creates, updates, upserts (by id or alternate key) and associates up to 100 records, in order; stops at the first failure, or with allOrNothing runs them in one transaction. The result gives the ids of created records. Values use $type objects for lookups, choices, money and dates. Not for schema: use table_apply.",
+  spec: writeSpec,
+  describe: (args, plan) => `write records of ${tablesOf(args.operations)} (${steps(plan.steps.length)})`,
+  summarize: (args) => `records_write ${tablesOf(args.operations)}`,
+});
+
+/** records_delete: always destructive, in its own Settings group so allowing record writes never allows deletes. */
+export const recordsDelete: AgentTool = applyTool({
+  name: "records_delete",
+  family: "records_delete",
+  group: "records-delete",
+  title: "Delete records",
+  description:
+    "Destructive: deletes records by id or alternate key, or what a FetchXML query matches up to a required maxCount (1 to 1000), and removes many-to-many links (disassociate). Always asks; the dialog lists each record by its primary name. A record already gone is skipped. Never deletes components: use remove.",
+  spec: deleteSpec,
+  describe: (_args, plan) => {
+    const deletes = plan.steps.filter((s) => s.op === "delete").length;
+    const links = plan.steps.filter((s) => s.op === "disassociate").length;
+    return [deletes ? `delete ${deletes} record${deletes === 1 ? "" : "s"}` : "", links ? `remove ${links} link${links === 1 ? "" : "s"}` : ""]
+      .filter(Boolean)
+      .join(" and ") || "delete records";
+  },
+  summarize: (args) => `records_delete ${tablesOf(args.records) || (args.query ? "query" : "links")}`,
+});
+
+/** execute_message: any Dataverse message by name. The effect comes from the message. */
+export const executeMessage: AgentTool = {
+  name: "execute_message",
+  group: "records",
+  title: "Run a Dataverse message",
+  description:
+    "Changes the environment. Runs a Dataverse message (SDK request or Custom API) by name, for what no other tool covers. Power Tools decides the effect from the message: known reads run, known writes ask, unknown messages ask as destructive. Wrappers like ExecuteMultiple are refused.",
   inputSchema: {
     type: "object",
     properties: {
-      connection,
-      fetchXml: { type: "string", minLength: 1, description: "The FetchXML query text." },
-      page: { type: "integer", minimum: 1, description: "Page number, starting at 1. Default 1." },
-      pageSize: { type: "integer", description: "Rows per page, 1 to 500. Default 50." },
-      pagingCookie: { type: "string", description: "The pagingCookie from the previous page, when asking for the next." },
+      message: { type: "string", minLength: 1, maxLength: 128, description: "The message name, for example WhoAmI." },
+      parameters: { type: "object", description: `Request parameters by name. ${TYPED_VALUES}` },
+      connection: connectionProp,
     },
-    required: ["fetchXml"],
+    required: ["message"],
     additionalProperties: false,
   },
-  effect: "read",
-  async run(args, ctx) {
-    const conn = await ctx.resolveConnection(args.connection as string | undefined);
-    const body = {
-      fetchXml: args.fetchXml,
-      page: typeof args.page === "number" ? args.page : 1,
-      pageSize: clampPageSize(args.pageSize),
-      pagingCookie: args.pagingCookie,
+  effect: (args) => {
+    const effect = messageEffect(String(args.message));
+    if (effect === "forbidden") {
+      throw new AgentToolError(
+        "InvalidRequest",
+        `Message "${String(args.message)}" cannot be run`,
+        "Wrapper messages such as ExecuteMultiple are not allowed; call the operations one by one.",
+      );
+    }
+    return effect;
+  },
+  describe: (args) => {
+    const effect = messageEffect(String(args.message));
+    return {
+      summary: `run the ${String(args.message)} message`,
+      ...(effect === "destructive" ? { removes: `whatever ${String(args.message)} removes or replaces` } : {}),
     };
-    const result = (await ctx.callSidecar(conn, "POST", `${API}/fetch`, body)) as Record<string, unknown> | null;
-    const page = result ?? {};
-    const count = Array.isArray(page.records) ? page.records.length : 0;
-    return dataverseResult(`Returned ${count} record(s).`, page, conn.displayName);
   },
-};
-
-/**
- * Keeps the columns that were asked for. Dataverse adds some on its own (the primary id, the currency of money
- * columns) and leaves out empty ones; an asked-for column without a value comes back as null.
- */
-export function onlyColumns(record: unknown, columns: unknown): unknown {
-  if (!record || typeof record !== "object" || !Array.isArray(columns)) return record;
-  const row = record as { values?: Record<string, unknown>; formatted?: Record<string, unknown> };
-  const wanted = columns.map((c) => String(c).toLowerCase());
-  const values = Object.fromEntries(wanted.map((c) => [c, row.values?.[c] ?? null]));
-  const formatted = Object.fromEntries(
-    Object.entries(row.formatted ?? {}).filter(([key]) => wanted.includes(key.toLowerCase())),
-  );
-  return { ...row, values, formatted };
-}
-
-export const recordsGet: AgentTool = {
-  name: "records_get",
-  group: "records",
-  title: "Get record",
-  description:
-    "Gets one Dataverse record by table and id, returning the listed columns. List the columns you need; use metadata_list_columns for exact logical names. Read-only.",
-  inputSchema: {
-    type: "object",
-    properties: {
-      connection,
-      table: { type: "string", pattern: "^[a-z_][a-z0-9_]*$", description: "Table logical name, for example account." },
-      id: {
-        type: "string",
-        pattern: "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
-        description: "The record's GUID.",
-      },
-      columns: {
-        type: "array",
-        minItems: 1,
-        maxItems: 100,
-        items: { type: "string" },
-        description: "Column logical names to return (1 to 100).",
-      },
-    },
-    required: ["table", "id", "columns"],
-    additionalProperties: false,
-  },
-  effect: "read",
-  summarize: (args) => `records_get ${String(args.table)}`,
+  summarize: (args) => `execute_message ${String(args.message)}`,
   async run(args, ctx) {
     const conn = await ctx.resolveConnection(args.connection as string | undefined);
-    const record = await ctx.callSidecar(conn, "POST", `${API}/retrieve`, {
-      table: args.table,
-      id: args.id,
-      columns: args.columns,
-    });
-    return dataverseResult(`Record of ${String(args.table)}.`, { record: onlyColumns(record, args.columns) }, conn.displayName);
+    const data = await ctx.callSidecar(conn, "POST", `${DATA_API}/execute`, { message: args.message, parameters: args.parameters ?? {} }, ctx.signal);
+    return dataverseResult(`Ran ${String(args.message)}.`, { result: data }, conn.displayName);
   },
 };

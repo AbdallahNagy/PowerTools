@@ -44,6 +44,17 @@
               "null"
             ],
             "default": null
+          },
+          "ids": {
+            "description": "Ids of the records or components a done step created, such as a new record\u0027s id.",
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "default": null
           }
         },
         "required": [

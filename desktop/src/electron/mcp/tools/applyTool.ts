@@ -13,7 +13,7 @@ import {
 /** The result every apply tool returns. Mirrors schemas/apply-result.json, which is generated from ApplyResult.cs. */
 export interface ApplyResult {
   outcome: "applied" | "unchanged" | "partlyApplied" | "failed" | "refused" | "planned";
-  steps: Array<{ op: string; target: string; status: string; error?: string | null; dataverseCode?: number | null }>;
+  steps: Array<{ op: string; target: string; status: string; error?: string | null; dataverseCode?: number | null; ids?: string[] | null }>;
   published: string[];
   remaining: { steps: PlanStep[] };
   warnings: string[];
@@ -32,7 +32,7 @@ const OUTCOME_TEXT: Record<ApplyResult["outcome"], string> = {
   unchanged: "Unchanged. The environment already matches the spec.",
   planned: "Dry run. Nothing was changed; these are the steps an apply would run.",
   partlyApplied:
-    "Partly applied. Some steps ran; the rest are in remaining. Fix the cause and send the same spec again: only what is left runs.",
+    "Partly applied. Some steps ran; the rest are in remaining. Fix the cause and send the same spec again: only what is left runs. records_write is the exception: send only the operations in remaining.",
   failed: "Failed. Nothing was changed. Fix the cause and send the spec again.",
   refused: "Refused. Nothing was changed, because the environment changed since the plan or another change held it. Run the call again.",
 };

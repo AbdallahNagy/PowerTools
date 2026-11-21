@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using PowerTools.API.Filters;
 using PowerTools.API.Services;
 using PowerTools.API.Tools.Agent;
+using PowerTools.API.Tools.Agent.Components;
 using Xunit;
 
 namespace PowerTools.API.Tests.Tools.Agent;
@@ -29,6 +30,14 @@ public sealed class AgentEndpointTests : IAsyncLifetime
         builder.Services.AddSingleton<PowerTools.API.Tools.PluginRegistration.Inspection.IPluginAssemblyInspector>(new FakeInspector());
         builder.Services.AddSingleton<IAgentClientSource>(new FixedClientSource(fake));
         builder.Services.AddSingleton<PowerTools.API.Tools.SolutionLayers.ISolutionLayersCache>(_ => new PowerTools.API.Tools.SolutionLayers.SolutionLayersCache());
+        builder.Services.AddAgentApplyFamilies();
+        // The capabilities probe: a version, and no feature tables.
+        fake.OnExecute = request => request switch
+        {
+            Microsoft.Crm.Sdk.Messages.RetrieveVersionRequest => new Microsoft.Crm.Sdk.Messages.RetrieveVersionResponse { Results = new() { ["Version"] = "9.2.0.0" } },
+            Microsoft.Xrm.Sdk.Messages.RetrieveEntityRequest r => throw FakeAgentClient.Fault(unchecked((int)0x80040217), $"{r.LogicalName} does not exist."),
+            _ => new Microsoft.Xrm.Sdk.OrganizationResponse(),
+        };
         app = builder.Build();
         app.MapAgentEndpoints();
         await app.StartAsync();
@@ -57,47 +66,41 @@ public sealed class AgentEndpointTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Publishers_route_lists_unique_name_friendly_name_and_prefix()
+    public async Task The_inspect_routes_answer_lists_from_the_environment()
     {
-        var (status, body) = await Get("/api/agent/metadata/publishers");
+        fake.ByEntity["appmodule"] = [new Microsoft.Xrm.Sdk.Entity("appmodule", Guid.NewGuid()) { ["name"] = "Sales Hub", ["uniquename"] = "msdyn_SalesHub" }];
+
+        var (status, body) = await Post("/api/agent/inspect/ui", """{"kind":"app"}""");
 
         Assert.Equal(HttpStatusCode.OK, status);
-        Assert.Equal(2, body.GetArrayLength());
-        Assert.Equal("contoso", body[0].GetProperty("uniqueName").GetString());
-        Assert.Equal("Contoso", body[0].GetProperty("friendlyName").GetString());
-        Assert.Equal("new", body[0].GetProperty("prefix").GetString());
+        Assert.Equal(1, body.GetProperty("total").GetInt32());
+        Assert.Equal("Sales Hub", body.GetProperty("items")[0].GetProperty("name").GetString());
     }
 
     [Fact]
-    public async Task Schema_route_without_a_publisher_answers_400_with_the_choices_and_writes_nothing()
+    public async Task The_new_families_plan_through_the_apply_routes()
     {
-        var (status, body) = await Post("/api/agent/schema/tables",
-            """{"schemaName":"new_Project","displayName":"Project","pluralName":"Projects","ownership":"user"}""");
+        var (status, body) = await Post(
+            "/api/agent/records_write/plan",
+            """{"operations":[{"op":"create","table":"account","values":{"name":"Contoso"}}]}""");
 
-        Assert.Equal(HttpStatusCode.BadRequest, status);
-        Assert.Equal("PublisherRequired", body.GetProperty("code").GetString());
-        Assert.Contains("contoso (new)", body.GetProperty("message").GetString());
-        Assert.Empty(fake.Executed);
+        Assert.Equal(HttpStatusCode.OK, status);
+        Assert.Equal("create", body.GetProperty("steps")[0].GetProperty("op").GetString());
+        Assert.Equal("change", body.GetProperty("effect").GetString());
     }
 
     [Fact]
-    public async Task Schema_route_creates_a_choice_and_answers_its_name_and_id()
+    public async Task The_old_routes_are_gone()
     {
-        var id = Guid.NewGuid();
-        fake.OnExecute = _ => Responses.Of<Microsoft.Xrm.Sdk.Messages.CreateOptionSetResponse>(("OptionSetId", id));
+        var response = await http.PostAsync("/api/agent/schema/tables", new StringContent("{}", Encoding.UTF8, "application/json"));
 
-        var (status, body) = await Post("/api/agent/schema/choices",
-            """{"schemaName":"new_colors","displayName":"Colors","solution":"Core","options":[{"label":"Red"}]}""");
-
-        Assert.Equal(HttpStatusCode.OK, status);
-        Assert.Equal("new_colors", body.GetProperty("name").GetString());
-        Assert.Equal(id, body.GetProperty("metadataId").GetGuid());
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task A_malformed_body_answers_the_shared_error_shape()
     {
-        var (status, body) = await Post("/api/agent/schema/tables", "{nope");
+        var (status, body) = await Post("/api/agent/inspect/ui", "{nope");
 
         Assert.Equal(HttpStatusCode.BadRequest, status);
         Assert.Equal("InvalidRequest", body.GetProperty("code").GetString());
@@ -107,7 +110,7 @@ public sealed class AgentEndpointTests : IAsyncLifetime
     public async Task Without_a_connection_the_filter_refuses()
     {
         using var bare = new HttpClient { BaseAddress = new Uri(app.Urls.First()) };
-        var response = await bare.GetAsync("/api/agent/metadata/publishers");
+        var response = await bare.PostAsync("/api/agent/inspect/ui", new StringContent("""{"kind":"app"}""", Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 }

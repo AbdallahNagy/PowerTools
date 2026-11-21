@@ -47,8 +47,8 @@ public sealed class PlanExecutor(IAgentClient client, RetryPolicy retry, string 
 
             try
             {
-                await RunStepAsync(step, solution, ct);
-                results.Add(new StepResult(step.Op, step.Target, StepStatus.Done));
+                var ids = await RunStepAsync(step, solution, ct);
+                results.Add(new StepResult(step.Op, step.Target, StepStatus.Done, Ids: ids.Count > 0 ? ids : null));
                 touched.AddRange(step.Publishes);
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !ct.IsCancellationRequested)
@@ -80,16 +80,32 @@ public sealed class PlanExecutor(IAgentClient client, RetryPolicy retry, string 
         return new Execution(results, published, warnings, stopCode, stopMessage);
     }
 
-    private Task RunStepAsync(PlanStep step, string? solution, CancellationToken ct)
+    /// <summary>Runs one step and answers the ids it created.</summary>
+    private async Task<IReadOnlyList<string>> RunStepAsync(PlanStep step, string? solution, CancellationToken ct)
     {
         if (step.Action is not null)
-            return retry.RunAsync(token => step.Action(new StepContext(client, step.SolutionAware ? solution : null), token), ct);
+        {
+            var context = new StepContext(client, step.SolutionAware ? solution : null);
+            await retry.RunAsync(token => step.Action(context, token), ct);
+            return context.Ids;
+        }
+
         if (step.Request is null)
             throw new InvalidOperationException($"Step {step.Op} {step.Target} has nothing to run.");
 
         var request = step.Request;
         if (step.SolutionAware && !string.IsNullOrWhiteSpace(solution))
             request.Parameters["SolutionUniqueName"] = solution;
-        return retry.RunAsync(token => client.ExecuteAsync(request, token), ct);
+        var response = await retry.RunAsync(token => client.ExecuteAsync(request, token), ct);
+        return CreatedIds(response);
     }
+
+    /// <summary>The ids a create, an upsert or a transaction of them made.</summary>
+    internal static IReadOnlyList<string> CreatedIds(OrganizationResponse? response) => response switch
+    {
+        Microsoft.Xrm.Sdk.Messages.CreateResponse created => [created.id.ToString("D")],
+        Microsoft.Xrm.Sdk.Messages.UpsertResponse upserted when upserted.Target is not null => [upserted.Target.Id.ToString("D")],
+        Microsoft.Xrm.Sdk.Messages.ExecuteTransactionResponse batch => batch.Responses.SelectMany(CreatedIds).ToList(),
+        _ => [],
+    };
 }

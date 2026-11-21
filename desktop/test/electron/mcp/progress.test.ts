@@ -6,10 +6,7 @@ import { startHttpHost, type HttpHost } from "../../../src/electron/mcp/httpHost
 import { createMcpRequestHandler, type McpRequestHandler } from "../../../src/electron/mcp/mcpServer";
 import { createAgentToolRegistry } from "../../../src/electron/mcp/registry";
 import { createSidecarCaller } from "../../../src/electron/mcp/sidecarCaller";
-import { READ_TOOLS } from "../../../src/electron/mcp/tools/index";
-import { PLUGIN_TOOLS } from "../../../src/electron/mcp/tools/plugins";
-import { SCHEMA_TOOLS } from "../../../src/electron/mcp/tools/schema";
-import { SOLUTION_TOOLS } from "../../../src/electron/mcp/tools/solutions";
+import { AGENT_TOOLS } from "../../../src/electron/mcp/tools/index";
 import { bypassMsw } from "../../support/loopback";
 
 const TOKEN = "e".repeat(64);
@@ -35,7 +32,7 @@ async function setup(fetchFake: (url: string, init: RequestInit) => Promise<Resp
     resolveAuth: async (id) => ({ id, envUrl: "https://dev", crmType: "online", token: "tok" }),
   });
   handler = createMcpRequestHandler({
-    registry: createAgentToolRegistry([...READ_TOOLS, ...SCHEMA_TOOLS, ...SOLUTION_TOOLS, ...PLUGIN_TOOLS]),
+    registry: createAgentToolRegistry(AGENT_TOOLS),
     context: () => ({
       resolveConnection: resolver.resolve,
       callSidecar: createSidecarCaller({ baseUrl: "http://sidecar", secret: "s", fetch: fetchFake as never, refresh: resolver.refresh }),
@@ -55,25 +52,20 @@ async function setup(fetchFake: (url: string, init: RequestInit) => Promise<Resp
   return client;
 }
 
-const ok = async () => new Response(JSON.stringify({ published: "all" }), { status: 200 });
+const ok = async () => new Response(JSON.stringify({ path: "C:\\out\\Core.zip" }), { status: 200 });
 
 describe("progress notifications", () => {
-  it.each([
-    ["schema_publish", {}],
-    ["solutions_create_patch", { solution: "Core" }],
-    ["solutions_clone", { solution: "Core", version: "2.0.0.0" }],
-  ])("%s reports progress 0 then 1 to a client that sent a progress token", async (name, args) => {
+  it("solution_export reports progress 0 then 1 to a client that sent a progress token", async () => {
     const c = await setup(ok);
     const seen: number[] = [];
-    // Destructive calls ask first, and the gate here refuses them; progress still brackets the call.
-    await c.callTool({ name, arguments: args }, undefined, { onprogress: (p) => void seen.push(p.progress) });
+    await c.callTool({ name: "solution_export", arguments: { solution: "Core" } }, undefined, { onprogress: (p) => void seen.push(p.progress) });
     expect(seen).toEqual([0, 1]);
   });
 
   it("sends the total with the final progress", async () => {
     const c = await setup(ok);
     const events: Array<{ progress: number; total?: number }> = [];
-    await c.callTool({ name: "schema_publish", arguments: {} }, undefined, { onprogress: (p) => void events.push(p) });
+    await c.callTool({ name: "solution_export", arguments: { solution: "Core" } }, undefined, { onprogress: (p) => void events.push(p) });
     expect(events).toEqual([
       { progress: 0, total: 1 },
       { progress: 1, total: 1 },
@@ -82,20 +74,20 @@ describe("progress notifications", () => {
 
   it("sends nothing without a progress token", async () => {
     const c = await setup(ok);
-    const result = await c.callTool({ name: "schema_publish", arguments: {} });
+    const result = await c.callTool({ name: "solution_export", arguments: { solution: "Core" } });
     expect(result.isError).toBeFalsy();
   });
 
   it("sends nothing for a tool that does not report progress", async () => {
     const c = await setup(async () => new Response(JSON.stringify({ logicalName: "account" }), { status: 200 }));
     const seen: number[] = [];
-    await c.callTool({ name: "metadata_get_table", arguments: { table: "account" } }, undefined, { onprogress: (p) => void seen.push(p.progress) });
+    await c.callTool({ name: "inspect_schema", arguments: { kind: "table", name: "account" } }, undefined, { onprogress: (p) => void seen.push(p.progress) });
     expect(seen).toEqual([]);
   });
 
-  it("marks exactly the five long operations", () => {
-    const names = [...SCHEMA_TOOLS, ...SOLUTION_TOOLS, ...PLUGIN_TOOLS, ...READ_TOOLS].filter((t) => t.reportsProgress).map((t) => t.name).sort();
-    expect(names).toEqual(["plugins_register_assembly", "plugins_update_assembly", "schema_publish", "solutions_clone", "solutions_create_patch"]);
+  it("marks exactly the four long operations", () => {
+    const names = AGENT_TOOLS.filter((t) => t.reportsProgress).map((t) => t.name).sort();
+    expect(names).toEqual(["plugin_deploy", "solution_apply", "solution_export", "solution_import"]);
   });
 });
 
@@ -114,7 +106,7 @@ describe("cancellation", () => {
     });
 
     const controller = new AbortController();
-    const call = c.callTool({ name: "metadata_get_table", arguments: { table: "account" } }, undefined, { signal: controller.signal });
+    const call = c.callTool({ name: "inspect_schema", arguments: { kind: "table", name: "account" } }, undefined, { signal: controller.signal });
     const outcome = call.then(() => "done", () => "rejected");
     await hasStarted;
     expect(sidecarSignal?.aborted).toBe(false);

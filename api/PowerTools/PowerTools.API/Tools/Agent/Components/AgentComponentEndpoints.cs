@@ -1,10 +1,19 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using PowerTools.API.Services;
+using PowerTools.API.Tools.Agent.Components.Choices;
+using PowerTools.API.Tools.Agent.Components.Config;
+using PowerTools.API.Tools.Agent.Components.Forms;
 using PowerTools.API.Tools.Agent.Components.Inspect;
+using PowerTools.API.Tools.Agent.Components.Plugins;
+using PowerTools.API.Tools.Agent.Components.Records;
+using PowerTools.API.Tools.Agent.Components.Remove;
 using PowerTools.API.Tools.Agent.Components.Solutions;
 using PowerTools.API.Tools.Agent.Components.Tables;
+using PowerTools.API.Tools.Agent.Components.Views;
 using PowerTools.API.Tools.Agent.Kernel;
+using PowerTools.API.Tools.PluginRegistration.Inspection;
+using PowerTools.API.Tools.SolutionLayers;
 
 namespace PowerTools.API.Tools.Agent.Components;
 
@@ -27,6 +36,20 @@ public static class AgentComponentEndpoints
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<TableApplySpec>(TablePlanner.Family, new TablePlanner()));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<SolutionImportSpec>(
             SolutionImportPlanner.Family, new SolutionImportPlanner(), SolutionImportPlanner.ForVerification));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<RecordsWriteSpec>(
+            RecordsWritePlanner.Family, new RecordsWritePlanner(), RecordsWritePlanner.ForVerification, idempotent: false));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<RecordsDeleteSpec>(
+            RecordsDeletePlanner.Family, new RecordsDeletePlanner(), RecordsDeletePlanner.ForVerification));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<ChoiceApplySpec>(ChoicePlanner.Family, new ChoicePlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<ViewApplySpec>(ViewPlanner.Family, new ViewPlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<FormApplySpec>(FormPlanner.Family, new FormPlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<SolutionApplySpec>(SolutionPlanner.Family, new SolutionPlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<ConfigApplySpec>(ConfigPlanner.Family, new ConfigPlanner()));
+        services.AddSingleton<IApplyFamily>(sp => new ApplyFamily<PluginDeploySpec>(
+            PluginDeployPlanner.Family, new PluginDeployPlanner(sp.GetRequiredService<IPluginAssemblyInspector>())));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<PluginStepApplySpec>(PluginStepPlanner.Family, new PluginStepPlanner()));
+        services.AddSingleton<IApplyFamily>(sp => new ApplyFamily<RemoveSpec>(
+            RemovePlanner.Family, new RemovePlanner(sp.GetRequiredService<ISolutionLayersCache>())));
         return services;
     }
 
@@ -41,6 +64,21 @@ public static class AgentComponentEndpoints
                 : AgentResult<JsonElement>.Fail(result.Problem);
         });
 
+        AgentEndpoints.PostWith<InspectBody, JsonElement>(group, "/inspect/ui", async (ctx, factory, body, ct) =>
+        {
+            var client = AgentEndpoints.Client(ctx, factory);
+            var capabilities = await Capabilities(ctx, client, ct);
+            return Serialize(await new UiInspector(client, capabilities).InspectAsync(body, ct));
+        });
+
+        AgentEndpoints.PostWith<InspectBody, JsonElement>(group, "/inspect/solution", async (ctx, factory, body, ct) =>
+        {
+            var client = AgentEndpoints.Client(ctx, factory);
+            var capabilities = await Capabilities(ctx, client, ct);
+            var layers = ctx.RequestServices.GetRequiredService<ISolutionLayersCache>();
+            return Serialize(await new SolutionInspector(client, capabilities, layers, AgentConnectionKey.For(ctx)).InspectAsync(body, ct));
+        });
+
         AgentEndpoints.PostWith<SolutionExportBody, SolutionExportedDto>(group, "/solution/export", async (ctx, factory, body, ct) =>
         {
             var client = AgentEndpoints.Client(ctx, factory);
@@ -49,4 +87,13 @@ public static class AgentComponentEndpoints
             return await new SolutionExport(client, capabilities).ExportAsync(body, ct);
         });
     }
+
+    private static Task<Capabilities> Capabilities(HttpContext ctx, IAgentClient client, CancellationToken ct) =>
+        (ctx.RequestServices.GetService<ICapabilitiesCache>() ?? FallbackCache).GetAsync(AgentConnectionKey.For(ctx), client, ct);
+
+    /// <summary>Leaves out empty properties, so a described component reads like a spec.</summary>
+    private static AgentResult<JsonElement> Serialize(AgentResult<object> result) =>
+        result.Problem is null
+            ? AgentResult<JsonElement>.Ok(JsonSerializer.SerializeToElement(result.Value, Output))
+            : AgentResult<JsonElement>.Fail(result.Problem);
 }

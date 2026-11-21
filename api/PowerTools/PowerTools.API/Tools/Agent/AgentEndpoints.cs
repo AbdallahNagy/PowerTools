@@ -16,13 +16,6 @@ public static class AgentEndpoints
         var group = app.MapGroup("/api/agent")
             .AddEndpointFilter<DataverseContextFilter>();
 
-        group.MapGet("/metadata/publishers", async (HttpContext ctx, DataverseClientFactory factory, CancellationToken ct) =>
-            await Run(async () => AgentPublishers.ToDtos(await AgentPublishers.ListAsync(Client(ctx, factory), ct))));
-
-        AgentSchemaEndpoints.Map(group);
-        AgentSolutionsEndpoints.Map(group);
-        AgentPluginsEndpoints.Map(group);
-        AgentEnvVarsEndpoints.Map(group);
         Kernel.AgentApplyEndpoints.Map(group);
         Components.AgentComponentEndpoints.Map(group);
         return app;

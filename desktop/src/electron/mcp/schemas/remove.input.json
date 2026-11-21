@@ -1,0 +1,86 @@
+{
+  "description": "One component to delete or detach. Never records. A component that is already gone plans nothing.",
+  "type": "object",
+  "properties": {
+    "kind": {
+      "enum": [
+        "table",
+        "column",
+        "relationship",
+        "key",
+        "choice",
+        "choiceoption",
+        "form",
+        "view",
+        "app",
+        "sitemap",
+        "webresource",
+        "command",
+        "process",
+        "flow",
+        "customapi",
+        "pluginassembly",
+        "plugintype",
+        "pluginstep",
+        "pluginimage",
+        "role",
+        "envvar",
+        "connectionreference",
+        "solution",
+        "solutioncomponent",
+        "activelayer"
+      ]
+    },
+    "name": {
+      "description": "Logical, unique or schema name (by kind), or the id. choiceoption: the global choice (or give table and column). solutioncomponent and activelayer: the component\u0027s name.",
+      "type": "string"
+    },
+    "table": {
+      "description": "Table logical name, for column, key, form, view, and a local choiceoption.",
+      "type": "string"
+    },
+    "column": {
+      "description": "choiceoption on a column: the column.",
+      "type": "string"
+    },
+    "value": {
+      "description": "choiceoption: the option value.",
+      "type": "integer"
+    },
+    "componentKind": {
+      "description": "solutioncomponent and activelayer: the kind of the component.",
+      "enum": [
+        "table",
+        "column",
+        "relationship",
+        "key",
+        "choice",
+        "form",
+        "view",
+        "app",
+        "sitemap",
+        "webresource",
+        "command",
+        "process",
+        "flow",
+        "customapi",
+        "pluginassembly",
+        "plugintype",
+        "pluginstep",
+        "pluginimage",
+        "role",
+        "envvar",
+        "connectionreference"
+      ]
+    },
+    "solution": {
+      "description": "solutioncomponent: the solution to take it out of.",
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "name"
+  ],
+  "additionalProperties": false
+}

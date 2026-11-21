@@ -53,12 +53,21 @@ public interface IApplyFamily
     /// a step even when nothing differs (a forced re-import) answers the spec without that request.
     /// </summary>
     IApplySpec ForVerification(IApplySpec spec) => spec;
+
+    /// <summary>
+    /// False for a family whose steps are not safe to run twice (record creates and updates). Its plan cannot be made
+    /// again to find what is left, so after a partial run the remaining steps are the ones that did not run.
+    /// </summary>
+    bool Idempotent => true;
 }
 
-public sealed class ApplyFamily<TSpec>(string name, IComponentPlanner<TSpec> planner, Func<TSpec, TSpec>? forVerification = null) : IApplyFamily
+public sealed class ApplyFamily<TSpec>(
+    string name, IComponentPlanner<TSpec> planner, Func<TSpec, TSpec>? forVerification = null, bool idempotent = true) : IApplyFamily
     where TSpec : class, IApplySpec
 {
     public string Name => name;
+
+    public bool Idempotent => idempotent;
 
     public IApplySpec ForVerification(IApplySpec spec) => forVerification is null ? spec : forVerification((TSpec)spec);
 
@@ -119,8 +128,25 @@ public sealed class ApplyKernel(IApplyFamily family, Func<PlanContext> newContex
         if (plan.IsEmpty) return ApplyResult.Unchanged(plan.Warnings);
 
         var execution = await new PlanExecutor(context.Client, options.Retry, context.ConnectionKey).RunAsync(plan, spec.Solution, ct);
+        if (!family.Idempotent) return CombineNotIdempotent(plan, execution);
         var verification = await family.PlanAsync(family.ForVerification(spec), newContext(), ct);
         return Combine(plan, execution, verification);
+    }
+
+    /// <summary>
+    /// For a family whose steps must not run twice: what remains is exactly the steps that did not finish, so sending
+    /// the whole spec again would repeat the done ones. The result says so.
+    /// </summary>
+    public static ApplyResult CombineNotIdempotent(Plan plan, Execution execution)
+    {
+        var left = plan.Steps.Where((_, i) => i >= execution.Steps.Count || execution.Steps[i].Status != StepStatus.Done).ToList();
+        var result = Combine(plan, execution, new Plan(left));
+        if (result.Outcome != ApplyOutcome.PartlyApplied) return result;
+        return result with
+        {
+            Warnings = [.. result.Warnings,
+                "The done steps already ran and are not safe to run again. Send only the operations listed in remaining, not the whole spec."],
+        };
     }
 
     public static ApplyResult Combine(Plan plan, Execution execution, Plan verification)

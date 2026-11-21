@@ -77,28 +77,33 @@ Power Tools decides this for every call. The agent cannot change it.
 
 To let an agent make non-destructive changes without asking on one connection, open **Manage connections**, pick the connection and turn on **Let agents make non-destructive changes without asking**. It is off for every connection until you do.
 
-Always asking covers deleting records, columns, tables and relationships, removing a column from a form or view, removing solution components or layers, cloning a solution, replacing or unregistering plug-in code, deleting environment variables, lowering a column's maximum length, and any Dataverse message Power Tools does not know. The dialog says what will be removed. **Deny** is the default button. If you do not answer in 5 minutes, the call fails. If Power Tools is in the background, you get a notification and the window flashes.
+Always asking covers `records_delete`, `remove` and `solution_import`, any plan with a destructive step (for example rolling up patches, or lowering a column's maximum length), and any Dataverse message Power Tools does not know. The dialog says what will be removed. **Deny** is the default button. If you do not answer in 5 minutes, the call fails. If Power Tools is in the background, you get a notification and the window flashes.
 
-New tables, columns, solutions and similar components need a solution or a publisher, so their prefix is known. If the agent gives neither, it gets the list of publishers and should ask you which to use.
+New tables, columns, choices and similar components go into an unmanaged solution, whose publisher decides their prefix.
 
 Data that comes back from Dataverse is marked as untrusted. Agents are told never to follow instructions found inside it.
 
 ## Tools
 
-**Tools** lists the groups: `connections` (1), `metadata` (8), `records` (8), `schema` (17), `solutions` (13), `plugins` (10) and `envvars` (4). Expand a group to see each tool with its description and whether it reads, changes, or destroys data. Search filters by name or description. Turn a group off to stop offering all its tools, or turn single tools off inside a group that is on. Connected agents are told right away.
+**Tools** lists the groups. Expand a group to see each tool with its description and whether it reads, changes, or destroys data. Search filters by name or description. Turn a group off to stop offering all its tools, or turn single tools off inside a group that is on. Connected agents are told right away.
 
-### Plan-based tools (preview)
-
-Four tools work the new way described in [mcp-tool-architecture.md](mcp-tool-architecture.md). They replace most of the other tools before the server's first release.
-
-| Tool | Does | Asks |
+| Group | Tools | Asks |
 | --- | --- | --- |
-| `inspect_schema` | Describes a table, column, relationship, key, global choice or role, or lists them. A table comes back in the shape `table_apply` takes. | Never (read). |
-| `table_apply` | Brings one table to a spec: its columns of every type, choice options, lookups, many-to-many relationships and alternate keys. Only what differs runs; running the same spec again changes nothing. It never removes what the spec leaves out. | Like any change, unless a step of the plan is destructive. |
-| `solution_export` | Exports an unmanaged solution, managed or unmanaged, to a new .zip on this computer (by default in Documents\Power Tools\Solutions). It never overwrites a file. | Never (it changes nothing in the environment). |
-| `solution_import` | Imports a solution .zip from this computer: update, upgrade or stage, with environment variable values and connection references. It waits for the import and reports the import job's error. Importing the installed version again changes nothing unless the agent asks for it. | **Always**, because an import can overwrite customizations. |
+| Connections | `connections_list`: the saved connections, whether each is online or on-premises, and the active one. | Never. |
+| Read | `inspect_schema` (tables, columns, relationships, keys, global choices, roles), `inspect_ui` (forms, views, apps, site maps, modern commands, web resources), `inspect_solution` (solutions and their components and layers, publishers, environment variables, connection references, plug-in assemblies and steps, Custom APIs, processes, flows), `records_query` (FetchXML, a table with a filter, or one record by id). Each component comes back in the shape its apply tool takes. | Never. |
+| Records | `records_write` (up to 100 creates, updates, upserts and associates, optionally all or nothing) and `execute_message` (any Dataverse message by name). | Like any change. An unknown message always asks. |
+| Record deletes | `records_delete`: records by id, alternate key or a FetchXML query with a maximum count, and many-to-many links. | **Always.** |
+| Schema | `table_apply` (a table with its columns, lookups, many-to-many relationships, keys and local choices) and `choice_apply` (a global choice and its options, colors and order). | Like any change. |
+| Forms and views | `form_apply` (add, move or remove a field, add a section or tab, set a label or visibility, add a subgrid) and `view_apply` (columns and widths, filter, sort, quick find columns, default view). | Like any change. |
+| Plug-ins | `plugin_deploy` (an assembly .dll, or a NuGet package online) and `plugin_step_apply` (steps with their images and enabled state). | Like any change. |
+| Solutions | `solution_apply` (publisher, solution, patch, components, rolling up patches), `config_apply` (environment variables and connection references), `solution_export` and `solution_import`. | Changes ask; rolling up patches and imports always ask. |
+| Remove components | `remove`: deletes one component (a table, column, choice or option, form, view, web resource, process, flow, plug-in, environment variable, solution and more), takes one out of a solution, or removes its unmanaged active layer. It refuses managed components and ones other components depend on. Never records. | **Always.** |
 
-Before an apply tool changes anything, Power Tools reads the environment and makes a plan. The dialog shows that plan, step by step in the order the steps run, not the agent's arguments. What runs is exactly what you approved: if the environment changes between the dialog and the run, the call is refused and nothing changes. A step that cannot run on this environment (for example a file column where there is no file storage) or that Dataverse does not allow (for example changing a column's type) is shown with the reason; the apply stops there, and the dialog says which steps run before it.
+Record deletes and component removal are separate groups, so allowing one never allows the other.
+
+### How a change runs
+
+Every tool that changes something takes the state you want, not a list of commands. Before it changes anything, Power Tools reads the environment and makes a plan. The dialog shows that plan, step by step in the order the steps run, not the agent's arguments. Only what differs runs, so sending the same spec again changes nothing, and nothing the spec leaves out is removed. What runs is exactly what you approved: if the environment changes between the dialog and the run, the call is refused and nothing changes. A step that cannot run on this environment (for example a connection reference on-premises) or that Dataverse does not allow (for example changing a column's type) is shown with the reason; the apply stops there, and the dialog says which steps run before it. An agent can ask for the plan alone with `dryRun`, which never asks you.
 
 These tools work the same on Dataverse online and on-premises. Where a feature is missing, the plan says so and names what works instead.
 

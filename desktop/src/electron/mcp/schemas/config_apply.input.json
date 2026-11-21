@@ -1,0 +1,86 @@
+{
+  "description": "Environment variables (definitions and values) and connection references.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution new definitions go into. Its publisher decides the prefix.",
+      "type": "string"
+    },
+    "environmentVariables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "schemaName": {
+            "description": "Schema name with the publisher prefix, for example con_ApiUrl.",
+            "type": "string"
+          },
+          "displayName": {
+            "description": "Needed for a new definition.",
+            "type": "string"
+          },
+          "type": {
+            "description": "Fixed when created. Default string. Secret variables need Azure Key Vault and are set in the maker portal.",
+            "enum": [
+              "string",
+              "number",
+              "boolean",
+              "json",
+              "datasource"
+            ]
+          },
+          "defaultValue": {
+            "type": "string"
+          },
+          "value": {
+            "description": "The current value in this environment.",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "schemaName"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "connectionReferences": {
+      "description": "Connection references. Online only.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "logicalName": {
+            "description": "Logical name with the publisher prefix, for example con_sharedoffice365.",
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "connector": {
+            "description": "The connector, for example shared_office365. Fixed when created.",
+            "type": "string"
+          },
+          "connectionId": {
+            "description": "The connection to use (its name in the maker portal). An agent cannot create connections.",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "logicalName",
+          "connector"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "solution"
+  ],
+  "additionalProperties": false
+}

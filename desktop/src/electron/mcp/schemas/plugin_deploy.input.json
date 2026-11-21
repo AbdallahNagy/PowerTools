@@ -1,0 +1,26 @@
+{
+  "description": "Deploys a plug-in assembly (.dll) or, online, a NuGet plug-in package (.nupkg) from this computer.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the assembly or package goes into.",
+      "type": "string"
+    },
+    "path": {
+      "description": "Absolute path of the .dll or .nupkg.",
+      "type": "string"
+    },
+    "isolationMode": {
+      "description": "Default sandbox. none is allowed on-premises only.",
+      "enum": [
+        "sandbox",
+        "none"
+      ]
+    }
+  },
+  "required": [
+    "solution",
+    "path"
+  ],
+  "additionalProperties": false
+}

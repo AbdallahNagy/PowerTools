@@ -62,13 +62,13 @@ const offlineMcpStatus: Awaited<ReturnType<DesktopBridge["getMcpStatus"]>> = {
   legacySetups: [],
   groups: [
     { group: "connections", enabled: true, tools: 1 },
-    { group: "metadata", enabled: true, tools: 7 },
-    { group: "records", enabled: true, tools: 8 },
+    { group: "read", enabled: true, tools: 1 },
+    { group: "records-delete", enabled: true, tools: 1 },
   ],
   tools: [
     { name: "connections_list", title: "List connections", description: "Lists saved connections. Read-only.", group: "connections", effect: "read", enabled: true },
-    { name: "metadata_tables", title: "List tables", description: "Lists tables. Read-only.", group: "metadata", effect: "read", enabled: true },
-    { name: "records_delete", title: "Delete a record", description: "Destructive: deletes a record.", group: "records", effect: "destructive", enabled: true },
+    { name: "inspect_schema", title: "Inspect the schema", description: "Read-only. Describes tables.", group: "read", effect: "read", enabled: true },
+    { name: "records_delete", title: "Delete records", description: "Destructive: deletes records.", group: "records-delete", effect: "varies", enabled: true },
   ],
 };
 
