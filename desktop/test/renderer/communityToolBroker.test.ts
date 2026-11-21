@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { ConnectionSnapshot, ThemeSnapshot, ToolResponse } from "@powertools/sdk/protocol";
 import { createBroker, type BrokerServices } from "../../src/ui/shell/community-tools/broker";
 
+// vi.waitFor gives up after 1s by default; a busy Windows machine can take longer to deliver a message.
+const WAIT = { timeout: 5000 };
+
 const CONNECTION: ConnectionSnapshot = { displayName: "Contoso", kind: "online" };
 
 function makeServices(overrides: Partial<BrokerServices> = {}): BrokerServices {
@@ -201,8 +204,8 @@ describe("community tool broker", () => {
     const callSidecar = vi.fn(() => new Promise<unknown>((resolve) => (release = resolve)));
     const ctx = track(setup({ services: { callSidecar } }));
     ctx.channel.port2.postMessage({ id: 1, method: "data.delete", args: { table: "a", id: "1" } });
-    await ctx.settle();
-    expect(callSidecar).toHaveBeenCalled();
+    // A fixed pause can end before the message arrives when the machine is busy.
+    await vi.waitFor(() => expect(callSidecar).toHaveBeenCalled(), WAIT);
     expect(() => ctx.broker.dispose()).not.toThrow();
     release({});
     await ctx.settle();
@@ -331,6 +334,7 @@ describe("community tool broker", () => {
     it("cancels queued calls when the connection changes and lets started calls finish", async () => {
       const { ctx, send, callSidecar, seen, releases, setKey } = controlled();
       [1, 2, 3, 4].forEach(send);
+      await vi.waitFor(() => expect(seen).toHaveLength(2), WAIT);
       await ctx.settle();
       expect(seen.map((s) => s.n)).toEqual([1, 2]);
       setKey("conn-B");
@@ -349,21 +353,21 @@ describe("community tool broker", () => {
     it("rejects queued calls as soon as notifyConnection runs", async () => {
       const { ctx, send, callSidecar, setKey } = controlled();
       [1, 2, 3].forEach(send);
+      await vi.waitFor(() => expect(callSidecar).toHaveBeenCalledTimes(2), WAIT);
       await ctx.settle();
       setKey("conn-B");
       ctx.broker.notifyConnection({ displayName: "Other", kind: "online" });
-      await ctx.settle();
-      expect(ctx.received).toContainEqual({ id: 3, ok: false, error: { code: "Cancelled", message: "The connection changed before this call ran." } });
+      await vi.waitFor(() => expect(ctx.received).toContainEqual({ id: 3, ok: false, error: { code: "Cancelled", message: "The connection changed before this call ran." } }), WAIT);
       expect(callSidecar).toHaveBeenCalledTimes(2);
     });
 
     it("runs a call made after the change against the new key", async () => {
-      const { ctx, send, seen, releases, setKey } = controlled();
+      const { send, seen, releases, setKey } = controlled();
       send(1);
-      await ctx.settle();
+      await vi.waitFor(() => expect(seen).toHaveLength(1), WAIT);
       setKey("conn-B");
       send(2);
-      await ctx.settle();
+      await vi.waitFor(() => expect(seen).toHaveLength(2), WAIT);
       expect(seen).toEqual([{ n: 1, key: "conn-A" }, { n: 2, key: "conn-B" }]);
       releases.splice(0).forEach((release) => release());
     });

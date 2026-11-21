@@ -87,7 +87,7 @@ describe("the first release tool set", () => {
     ["customapi_apply", "customapi_apply.input.json", "customapi"],
     ["role_apply", "role_apply.input.json", "role"],
   ])("%s takes the spec generated from C# and plans with the %s family", async (name, file, family) => {
-    const schema = (await import(`../../../src/electron/mcp/schemas/${file}`)).default as { properties: object; required?: string[] };
+    const schema = (await import(`../../../src/electron/mcp/schemas/${file.replace(/\.json$/, "")}.json`)).default as { properties: object; required?: string[] };
     const apply = tool(name);
     expect(apply.inputSchema.properties).toEqual({ ...schema.properties, connection: expect.any(Object), dryRun: expect.any(Object) });
     expect(apply.inputSchema.required ?? []).toEqual(schema.required ?? []);

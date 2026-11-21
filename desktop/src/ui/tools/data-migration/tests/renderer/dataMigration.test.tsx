@@ -249,6 +249,8 @@ describe("Data Migration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Migrate again" }));
     await waitFor(() => expect(requests).toHaveLength(3));
     expect(requests[2].target).toBe(uatConnection.envUrl);
+    // Let the third job finish so its status poll does not outlive this test's handlers.
+    expect(await screen.findByRole("button", { name: "Migration UAT, Migrated" })).toBeVisible();
   });
 
   it("starts again from the first target when the settings change", async () => {
