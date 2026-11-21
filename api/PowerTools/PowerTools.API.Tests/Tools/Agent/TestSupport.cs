@@ -1,3 +1,5 @@
+using PowerTools.API.Tools.PluginRegistration.Dtos;
+using PowerTools.API.Tools.PluginRegistration.Inspection;
 using System.ServiceModel;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Xrm.Sdk;
@@ -158,4 +160,20 @@ internal static class Data
 internal sealed class FixedClientSource(IAgentClient client) : IAgentClientSource
 {
     public IAgentClient Create(HttpContext context) => client;
+}
+
+internal sealed class FakeInspector : IPluginAssemblyInspector
+{
+    public List<byte[]> Seen { get; } = [];
+    public string Name { get; set; } = "Contoso.Plugins";
+
+    public Task<AssemblyInspectionDto> InspectAsync(Stream assembly, string fileName, long length, CancellationToken cancellationToken)
+    {
+        using var copy = new MemoryStream();
+        assembly.CopyTo(copy);
+        Seen.Add(copy.ToArray());
+        return Task.FromResult(new AssemblyInspectionDto(
+            fileName, length, "sha", new AssemblyIdentityInspectionDto(Name, "1.2.3.4", "neutral", "d2997b4d969e30c1"),
+            "net462", "v4.0", [], [new PluginTypeInspectionDto("Contoso.Plugins.AccountPlugin")], []));
+    }
 }

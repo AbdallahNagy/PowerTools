@@ -75,7 +75,7 @@ public sealed class PluginDeployPlanner(IPluginAssemblyInspector inspector) : IC
         if (!System.IO.Path.IsPathFullyQualified(path)) throw Invalid("path must be an absolute path.");
         if (!File.Exists(path)) throw Invalid($"The file {path} does not exist.");
         var info = new FileInfo(path);
-        if (info.Length is 0 or > AgentPluginsService.MaxAssemblyBytes) throw Invalid("The file must be from 1 byte to 16 MB.");
+        if (info.Length is 0 or > PowerTools.API.Tools.PluginRegistration.Inspection.PluginAssemblyInspector.MaxAssemblyBytes) throw Invalid("The file must be from 1 byte to 16 MB.");
         await context.SolutionAsync(spec.Solution, ct);
         var bytes = await File.ReadAllBytesAsync(path, ct);
         var hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
