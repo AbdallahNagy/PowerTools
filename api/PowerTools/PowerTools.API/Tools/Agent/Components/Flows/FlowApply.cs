@@ -74,7 +74,7 @@ public sealed class FlowPlanner : IComponentPlanner<FlowApplySpec>
         {
             return new Plan([PlanStep.Unsupported("createFlow", name,
                 "This environment has no cloud flows (Power Automate is online only).",
-                "Build the logic as a classic workflow (process_apply), or import a solution that has it with solution_import.")]);
+                "Build the logic as a classic workflow in the classic designer of a development environment, add it to a solution, and import that solution here with solution_import.")]);
         }
 
         var solution = await context.SolutionAsync(spec.Solution, ct);
@@ -366,8 +366,11 @@ public sealed class FlowPlanner : IComponentPlanner<FlowApplySpec>
         var triggers = (definition["triggers"] as JsonObject ?? []).Select(t => t.Key);
         var actions = (definition["actions"] as JsonObject ?? []).Count;
         var hash = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(definition.ToJsonString())))[..12];
-        var connectors = references.Values.Select(r => ShortName(ConfigPlanner.ConnectorId(r.Connector))).Distinct().Order();
-        return $"trigger {string.Join(", ", triggers)}; {actions} top-level action(s); connectors {(connectors.Any() ? string.Join(", ", connectors) : "none")}; definition sha256 {hash}";
+        // Every reference by key, so the approved hash covers which connection reference each action uses.
+        var refs = references.OrderBy(r => r.Key, StringComparer.Ordinal)
+            .Select(r => $"{r.Key} → {r.Value.LogicalName.Trim().ToLowerInvariant()} ({ShortName(ConfigPlanner.ConnectorId(r.Value.Connector))})")
+            .ToList();
+        return $"trigger {string.Join(", ", triggers)}; {actions} top-level action(s); connection references {(refs.Count > 0 ? string.Join(", ", refs) : "none")}; definition sha256 {hash}";
     }
 
     private static string ShortName(string connectorId) =>

@@ -179,7 +179,7 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
     }
   });
 
-  // Phase 4: cloud flows are online only. Online the lifecycle runs; on-premises the plan is unsupported and names process_apply.
+  // Phase 4: cloud flows are online only. Online the lifecycle runs; on-premises the plan is unsupported and names solution_import.
   const liveFlow = {
     solution: "PowerToolsEvals",
     name: "PTE Live Flow",
@@ -199,12 +199,12 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
     },
   };
 
-  it("flow_apply: lifecycle online, NotSupported naming process_apply on-premises", async () => {
+  it("flow_apply: lifecycle online, NotSupported naming solution_import on-premises", async () => {
     for (const sandbox of sandboxes) {
       const on = { connection: sandbox.connection };
       if (sandbox.kind !== "online") {
         const refused = await call("flow_apply", { ...liveFlow, ...on });
-        expect(JSON.stringify(refused.structuredContent), `flow_apply on ${sandbox.name}`).toContain("process_apply");
+        expect(JSON.stringify(refused.structuredContent), `flow_apply on ${sandbox.name}`).toContain("solution_import");
         continue;
       }
       try {

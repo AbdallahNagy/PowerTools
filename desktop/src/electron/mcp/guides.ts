@@ -13,7 +13,7 @@ export interface McpGuide {
 const CLOUD_FLOWS = `# Cloud flows with flow_apply
 
 Cloud flows exist only online (Power Automate). On-premises flow_apply answers NotSupported: build the logic as a
-classic workflow (process_apply) or import a solution that has it (solution_import).
+classic workflow in a development environment and import its solution with solution_import.
 
 ## The spec
 

@@ -39,7 +39,7 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
                 "pluginstep" => await StepAsync(body, ct),
                 "customapi" => Feature("customapi")
                     ? await CustomApiAsync(body, ct)
-                    : throw NotSupported("This environment has no Custom APIs. Use a classic action (process_apply) instead."),
+                    : throw NotSupported("This environment has no Custom APIs. Use a classic custom process action instead, imported in a solution with solution_import."),
                 "process" => await RowsWhere(body, "process", "workflow", "name", ["name", "category", "mode", "primaryentity", "statecode", "ismanaged", "description"],
                     q => { q.Criteria.AddCondition("type", ConditionOperator.Equal, 1); q.Criteria.AddCondition("category", ConditionOperator.NotEqual, ComponentKinds.FlowCategory); }, ct),
                 "flow" => await FlowAsync(body, ct),

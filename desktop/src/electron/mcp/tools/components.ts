@@ -171,7 +171,7 @@ export const flowApply: AgentTool = applyTool({
   group: "logic",
   title: "Apply a cloud flow",
   description:
-    "Changes the environment. Creates or updates a cloud flow from its definition, creates missing connection references, and turns it on or off. A flow whose references have no connection stays off; the result names the connectors the user must sign in to. Online only; on-premises use process_apply. Read the guide powertools://guides/cloud-flows first.",
+    "Changes the environment. Creates or updates a cloud flow from its definition, creates missing connection references, and turns it on or off. A flow whose references have no connection stays off; the result names the connectors the user must sign in to. Online only; on-premises, import a solution with a classic workflow through solution_import. Read the guide powertools://guides/cloud-flows first.",
   spec: flowSpec,
   describe: (args, plan) => `apply cloud flow ${str(args.name)} (${steps(plan.steps.length)})`,
   summarize: (args) => `flow_apply ${str(args.name)}`,

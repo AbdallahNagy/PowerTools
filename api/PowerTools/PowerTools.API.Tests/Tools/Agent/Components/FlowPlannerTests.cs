@@ -116,6 +116,26 @@ public sealed class FlowPlannerTests
     }
 
     [Fact]
+    public async Task The_approval_hash_covers_which_connection_reference_the_flow_uses()
+    {
+        world.Add(new Entity("connectionreference") { ["connectionreferencelogicalname"] = "new_other", ["connectorid"] = "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps" });
+        var spec = Spec();
+        var other = new FlowApplySpec
+        {
+            Solution = spec.Solution,
+            Name = spec.Name,
+            Definition = spec.Definition,
+            ConnectionReferences = new() { ["shared_commondataserviceforapps"] = new FlowConnectionReference { LogicalName = "new_other", Connector = "shared_commondataserviceforapps" } },
+        };
+
+        var first = await PlanAsync(spec);
+        var second = await PlanAsync(other);
+
+        Assert.Contains("shared_commondataserviceforapps → new_dataverse", first.Steps.Single(s => s.Op == "createFlow").Detail);
+        Assert.NotEqual(first.Steps.Single(s => s.Op == "createFlow").Detail, second.Steps.Single(s => s.Op == "createFlow").Detail);
+    }
+
+    [Fact]
     public async Task State_off_turns_a_running_flow_off()
     {
         await world.ApplyAsync(Family, Spec(FlowState.On));
@@ -163,14 +183,15 @@ public sealed class FlowPlannerTests
     }
 
     [Fact]
-    public async Task Without_cloud_flows_the_plan_is_unsupported_and_names_process_apply()
+    public async Task Without_cloud_flows_the_plan_is_unsupported_and_names_solution_import()
     {
         world.Features.Remove("connectionreference");
 
         var step = Assert.Single((await PlanAsync(Spec(FlowState.On))).Steps);
 
         Assert.Equal(PlanStepKind.Unsupported, step.Kind);
-        Assert.Contains("process_apply", step.Route);
+        Assert.Contains("solution_import", step.Route);
+        Assert.DoesNotContain("process_apply", step.Route);
     }
 
     [Fact]
