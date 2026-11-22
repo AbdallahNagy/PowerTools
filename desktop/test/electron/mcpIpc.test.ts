@@ -20,6 +20,7 @@ function setup() {
     setEnabled: vi.fn(async (enabled: boolean) => ({ ...status, enabled, running: enabled, port: enabled ? 5000 : null })),
     recentActivity: vi.fn(async () => []),
     respondApproval: vi.fn(),
+    pendingApproval: vi.fn(() => ({ id: "req-1", tool: "table_apply" }) as never),
     setTool: vi.fn((name: string, enabled: boolean) => ({
       ...status,
       tools: [{ name, title: "T", description: "Read-only.", group: "records" as never, effect: "read" as const, perCall: false, enabled }],
@@ -123,6 +124,12 @@ describe("mcp approval IPC", () => {
     await expect(call("mcp-approval-respond", mainContents, 5, true)).rejects.toThrow(/id/);
     await expect(call("mcp-approval-respond", mainContents, "req-1", "yes")).rejects.toThrow(/true or false/);
     expect(service.respondApproval).not.toHaveBeenCalled();
+  });
+
+  it("hands the main window the request on screen, and nobody else", async () => {
+    const { call, mainContents } = setup();
+    await expect(call("mcp-approval-pending", mainContents)).resolves.toMatchObject({ id: "req-1" });
+    await expect(call("mcp-approval-pending", { id: 2 })).rejects.toThrow(/main window/);
   });
 });
 

@@ -5,7 +5,7 @@ type Draft = Omit<ApprovalRequest, "id">;
 
 function draft(over: Partial<Draft> = {}): Draft {
   return {
-    tool: "records_update",
+    tool: "records_write",
     title: "Update record",
     connection: "A · Dev",
     effect: "change",
@@ -171,5 +171,40 @@ describe("approval gate", () => {
     await expect(b).resolves.toBe("unavailable");
     expect(dismissed).toEqual([presented[0].id]);
     expect(presented).toHaveLength(1);
+  });
+});
+
+describe("approval for a window that was not listening", () => {
+  it("hands out the request on screen, and none once it is answered", async () => {
+    const { gate, presented } = setup();
+    expect(gate.current()).toBeNull();
+    const first = gate.decide(draft({ summary: "first" }), false);
+    void gate.decide(draft({ summary: "second" }), false);
+
+    // Only the request on screen, never the one queued behind it.
+    expect(gate.current()).toEqual(presented[0]);
+    gate.respond(presented[0].id, true);
+    await expect(first).resolves.toBe("allowed");
+    expect(gate.current()?.summary).toBe("second");
+  });
+
+  it("refuses a request it cannot show at once, so the queue behind it moves on", async () => {
+    let fail = true;
+    const presented: ApprovalRequest[] = [];
+    const gate = createApprovalGate({
+      present: (r) => {
+        if (fail) throw new ReferenceError("window not created yet");
+        presented.push(r);
+      },
+      dismiss: () => undefined,
+      attention: () => undefined,
+    });
+
+    await expect(gate.decide(draft({ summary: "first" }), false)).resolves.toBe("unavailable");
+    fail = false;
+    const second = gate.decide(draft({ summary: "second" }), false);
+    expect(presented.map((r) => r.summary)).toEqual(["second"]);
+    gate.respond(presented[0].id, true);
+    await expect(second).resolves.toBe("allowed");
   });
 });

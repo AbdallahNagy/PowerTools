@@ -133,7 +133,7 @@ describe("write tools and approval", () => {
   });
 
   it("returns ApprovalTimedOut when the gate times out", async () => {
-    const gate: ApprovalGate = { decide: async () => "timed-out", respond: () => undefined, failAll: () => undefined };
+    const gate: ApprovalGate = { decide: async () => "timed-out", respond: () => undefined, failAll: () => undefined, current: () => null };
     const { call, fetchFake, entries } = await setup({ gate });
     const result = await call("execute_message", { ...assign, connection: "A · Dev" });
     expect(result.structuredContent).toMatchObject({ code: "ApprovalTimedOut" });

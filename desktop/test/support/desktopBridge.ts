@@ -196,6 +196,7 @@ export function createFakeDesktopBridge(overrides: DesktopBridgeOverrides = {}):
     onMcpApprovalPresent: () => () => undefined,
     onMcpApprovalDismiss: () => () => undefined,
     respondMcpApproval: async () => undefined,
+    getPendingMcpApproval: async () => null,
     onOpenAgents: (callback) => {
       openAgentsListeners.add(callback);
       return () => openAgentsListeners.delete(callback);

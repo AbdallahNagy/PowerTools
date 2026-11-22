@@ -8,7 +8,7 @@ import { renderWithProviders } from "../support/render";
 function request(over: Partial<McpApprovalRequest> = {}): McpApprovalRequest {
   return {
     id: "req-1",
-    tool: "records_update",
+    tool: "records_write",
     title: "Update record",
     connection: "Contoso · Dev",
     effect: "change",
@@ -142,8 +142,36 @@ describe("approval dialog", () => {
       "Cannot run: createColumn con_file · Online only.",
       "and 22 more",
     ]);
+    // An all-or-nothing records_write puts one operation per line in its single step's detail.
+    expect(within(plan).getByText(/· money/)).toHaveClass("whitespace-pre-line");
     expect(plan).toHaveTextContent("The apply stops at step 3, which cannot run.");
     expect(plan).toHaveTextContent("Labels compared in English only.");
     expect(screen.getByText("Spec")).toBeInTheDocument();
+  });
+});
+
+describe("approval dialog after the window loads", () => {
+  it("shows a request that was presented before the window listened", async () => {
+    renderWithProviders(<ApprovalDialog />, {
+      bridgeOverrides: { getPendingMcpApproval: async () => request({ summary: "update a contact record" }) },
+    });
+    expect(await screen.findByText("An agent wants to update a contact record")).toBeInTheDocument();
+  });
+
+  it("does not bring back a request taken down while it was being fetched", async () => {
+    let dismiss: (id: string) => void = () => undefined;
+    let answer: (r: McpApprovalRequest) => void = () => undefined;
+    renderWithProviders(<ApprovalDialog />, {
+      bridgeOverrides: {
+        onMcpApprovalDismiss: (cb) => {
+          dismiss = cb;
+          return () => undefined;
+        },
+        getPendingMcpApproval: () => new Promise((resolve) => (answer = resolve)),
+      },
+    });
+    act(() => dismiss("req-1"));
+    await act(async () => answer(request()));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });

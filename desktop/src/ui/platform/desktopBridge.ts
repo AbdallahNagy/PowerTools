@@ -305,6 +305,8 @@ export interface DesktopBridge {
   /** An approval request was answered elsewhere or gave up; take its dialog down. */
   onMcpApprovalDismiss(callback: (id: string) => void): () => void;
   respondMcpApproval(id: string, allow: boolean): Promise<void>;
+  /** The approval request already on screen, for a window that loaded or reloaded after it was presented. */
+  getPendingMcpApproval(): Promise<McpApprovalRequest | null>;
 }
 
 declare global {
@@ -389,4 +391,5 @@ export const desktopBridge: DesktopBridge = {
   onMcpApprovalPresent: (callback) => bridge().onMcpApprovalPresent(callback),
   onMcpApprovalDismiss: (callback) => bridge().onMcpApprovalDismiss(callback),
   respondMcpApproval: (id, allow) => bridge().respondMcpApproval(id, allow),
+  getPendingMcpApproval: () => bridge().getPendingMcpApproval(),
 };

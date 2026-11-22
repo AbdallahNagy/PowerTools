@@ -44,6 +44,8 @@ export interface ApprovalGate {
   decide(req: Omit<ApprovalRequest, "id">, connectionAllowsChanges: boolean, signal?: AbortSignal): Promise<ApprovalOutcome>;
   respond(id: string, allow: boolean): void;
   failAll(outcome: "unavailable"): void;
+  /** The request on screen, if any, so a window that loaded after it was presented can show it. */
+  current(): ApprovalRequest | null;
 }
 
 interface Pending {
@@ -65,8 +67,13 @@ export function createApprovalGate(deps: ApprovalGateDeps): ApprovalGate {
     const head = queue[0];
     if (!head || head.timer) return;
     head.timer = setTimeout(() => finish(head, "timed-out"), timeoutMs);
-    deps.present(head.request);
-    deps.attention();
+    try {
+      deps.present(head.request);
+      deps.attention();
+    } catch {
+      // A request that cannot be shown must not hold the queue until it times out.
+      finish(head, "unavailable");
+    }
   }
 
   function finish(entry: Pending, outcome: ApprovalOutcome) {
@@ -104,6 +111,11 @@ export function createApprovalGate(deps: ApprovalGateDeps): ApprovalGate {
       // Only the request on screen can be answered; an old or made-up id changes nothing.
       if (!head || head.request.id !== id || !head.timer) return;
       finish(head, allow ? "allowed" : "denied");
+    },
+
+    current() {
+      const head = queue[0];
+      return head?.timer ? head.request : null;
     },
 
     failAll(outcome) {

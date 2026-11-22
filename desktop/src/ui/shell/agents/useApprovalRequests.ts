@@ -8,13 +8,26 @@ export function useApprovalRequests() {
 
   useEffect(() => {
     try {
-      const offPresent = desktopBridge.onMcpApprovalPresent((request) =>
-        setQueue((current) => (current.some((r) => r.id === request.id) ? current : [...current, request])),
-      );
-      const offDismiss = desktopBridge.onMcpApprovalDismiss((id) =>
-        setQueue((current) => current.filter((r) => r.id !== id)),
-      );
+      let live = true;
+      // Ids taken down while the pending request was being fetched, so a late answer cannot bring one back.
+      const dismissed = new Set<string>();
+      const add = (request: McpApprovalRequest) =>
+        setQueue((current) => (current.some((r) => r.id === request.id) ? current : [...current, request]));
+      const offPresent = desktopBridge.onMcpApprovalPresent(add);
+      const offDismiss = desktopBridge.onMcpApprovalDismiss((id) => {
+        dismissed.add(id);
+        setQueue((current) => current.filter((r) => r.id !== id));
+      });
+      // A request presented before this window listened (while it loaded or reloaded) would otherwise wait unseen
+      // until it timed out, holding every request behind it.
+      void desktopBridge
+        .getPendingMcpApproval()
+        .then((request) => {
+          if (live && request && !dismissed.has(request.id)) add(request);
+        })
+        .catch(() => undefined);
       return () => {
+        live = false;
         offPresent();
         offDismiss();
       };
