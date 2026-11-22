@@ -1,5 +1,5 @@
 ---
-seoTitle: "FetchXML Builder for Dataverse and Dynamics 365 | PowerTools"
+seoTitle: "FetchXML Builder for Dataverse and Dynamics 365 | Dyno"
 seoDescription: "Build FetchXML queries visually: pick a table and columns, add filters and related tables, run the query, and copy the generated FetchXML. Free download."
 xrmToolBoxEquivalent: "FetchXML Builder"
 features:
@@ -14,7 +14,7 @@ features:
 
 ## Build FetchXML without writing XML
 
-FetchXML Builder is a visual query builder for Microsoft Dataverse and Dynamics 365. Pick a table, choose columns, and add conditions from the table's real metadata. PowerTools writes the FetchXML for you.
+FetchXML Builder is a visual query builder for Microsoft Dataverse and Dynamics 365. Pick a table, choose columns, and add conditions from the table's real metadata. Dyno writes the FetchXML for you.
 
 Filters offer the operators that fit each column type, so you do not have to remember operator names. Add related tables to filter across lookups. The builder generates the `link-entity` joins.
 

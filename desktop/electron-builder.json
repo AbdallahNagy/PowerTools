@@ -6,7 +6,7 @@
         {
             "provider": "github",
             "owner": "AbdallahNagy",
-            "repo": "PowerTools",
+            "repo": "Dyno",
             "releaseType": "release"
         }
     ],
@@ -40,7 +40,7 @@
     },
     "win": {
         "target": ["nsis"],
-        "artifactName": "PowerTools-Setup.${ext}",
+        "artifactName": "Dyno-Setup.${ext}",
         "extraResources": [
             {
                 "from": "../api/Dyno/Dyno.Api/bin/Release/net9.0/win-x64/publish",

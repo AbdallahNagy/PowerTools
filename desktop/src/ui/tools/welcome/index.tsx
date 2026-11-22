@@ -106,7 +106,7 @@ export default function WelcomeTab() {
               Explore toolkit
             </button>
             <a
-              href="https://github.com/AbdallahNagy/PowerTools"
+              href="https://github.com/AbdallahNagy/Dyno"
               target="_blank"
               rel="noopener noreferrer"
               className="px-5 py-2.5 rounded-md text-sm font-medium transition-colors"
@@ -118,7 +118,7 @@ export default function WelcomeTab() {
               onClick={(event) => {
                 event.preventDefault();
                 void desktopBridge.openExternalUrl(
-                  "https://github.com/AbdallahNagy/PowerTools"
+                  "https://github.com/AbdallahNagy/Dyno"
                 );
               }}
             >

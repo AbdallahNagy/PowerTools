@@ -7,6 +7,12 @@ interface AnalyticsEngineDataset {
   writeDataPoint(point: { indexes?: string[]; blobs?: string[]; doubles?: number[] }): void;
 }
 
+// The site moved here from powertools.abdallahnagy.com when Power Tools became Dyno. Pages on the old host
+// redirect. The heartbeat is answered on both, because older app versions keep sending it to the old host and a
+// redirect would turn their POST into a GET.
+export const CANONICAL_HOST = "dyno.abdallahnagy.com";
+export const LEGACY_HOSTS = new Set(["powertools.abdallahnagy.com"]);
+
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
   USAGE: AnalyticsEngineDataset;
@@ -65,9 +71,15 @@ async function handleHeartbeat(request: Request, env: Env): Promise<Response> {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const { pathname } = new URL(request.url);
-    if (pathname === "/api/heartbeat") {
+    const url = new URL(request.url);
+    if (url.pathname === "/api/heartbeat") {
       return handleHeartbeat(request, env);
+    }
+    if (LEGACY_HOSTS.has(url.hostname)) {
+      url.protocol = "https:";
+      url.hostname = CANONICAL_HOST;
+      url.port = "";
+      return Response.redirect(url.toString(), 301);
     }
     return env.ASSETS.fetch(request);
   },

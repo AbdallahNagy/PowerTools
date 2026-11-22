@@ -1,5 +1,5 @@
 ---
-seoTitle: "Workflow Activities Viewer for Dataverse | PowerTools"
+seoTitle: "Workflow Activities Viewer for Dataverse | Dyno"
 seoDescription: "Find every activated Dataverse process that uses a custom workflow activity. See its inputs, outputs, and each process's table and start conditions."
 xrmToolBoxEquivalent: "Workflow Activities Viewer"
 features:

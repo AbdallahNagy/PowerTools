@@ -1,10 +1,10 @@
-# Releasing Power Tools
+# Releasing Dyno
 
 [`CHANGELOG.md`](../CHANGELOG.md) is the only place release notes are written. It follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/). The same notes appear in three places:
 
 - the GitHub release body, set by the [Release Desktop](../.github/workflows/release-desktop.yml) workflow,
 - the in-app update dialog, which reads the GitHub release body,
-- the website's [changelog page](https://powertools.abdallahnagy.com/changelog), built from `CHANGELOG.md`.
+- the website's [changelog page](https://dyno.abdallahnagy.com/changelog), built from `CHANGELOG.md`.
 
 ## While you work
 

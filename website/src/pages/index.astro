@@ -6,7 +6,7 @@ import appLight from "../assets/images/app-data-migration-light.png";
 import { RELEASED_TOOLS } from "../../../desktop/src/ui/tools/publicCatalog";
 import { toolPath } from "../lib/tools";
 
-const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+const githubUrl = "https://github.com/AbdallahNagy/Dyno";
 const baseUrl = import.meta.env.BASE_URL;
 const basePath = baseUrl.replace(/\/$/, "");
 const features = [
@@ -34,29 +34,34 @@ const features = [
 
 const faqs = [
   {
-    question: "What is PowerTools?",
+    question: "What is Dyno?",
     answer:
-      "PowerTools is a free, open-source Windows desktop app with built-in tools for Microsoft Dataverse, Dynamics 365 Customer Engagement, and Power Platform developers. It covers FetchXML, plug-in registration, data migration, metadata, translations, and solution work in one workspace."
+      "Dyno is a free, open-source Windows desktop app with built-in tools for Microsoft Dataverse, Dynamics 365 Customer Engagement, and Power Platform developers. It covers FetchXML, plug-in registration, data migration, metadata, translations, and solution work in one workspace."
   },
   {
-    question: "Is PowerTools an alternative to XrmToolBox?",
+    question: "Is Dyno the same app as Power Tools?",
     answer:
-      "Yes. PowerTools rebuilds popular XrmToolBox plugin workflows, such as FetchXML Builder, Plugin Registration, Translator, and Solution Components Mover, as built-in tools with a modern interface. XrmToolBox has a much larger plugin catalog, and many developers use both."
+      "Yes. Power Tools was renamed to Dyno. Updating keeps your saved connections and settings, and connection exports from Power Tools still import."
   },
   {
-    question: "Is PowerTools free?",
+    question: "Is Dyno an alternative to XrmToolBox?",
     answer:
-      "Yes. PowerTools is free and open source under the MIT license. The source code is on GitHub."
+      "Yes. Dyno rebuilds popular XrmToolBox plugin workflows, such as FetchXML Builder, Plugin Registration, Translator, and Solution Components Mover, as built-in tools with a modern interface. XrmToolBox has a much larger plugin catalog, and many developers use both."
   },
   {
-    question: "Does PowerTools work with Dynamics 365 on-premises?",
+    question: "Is Dyno free?",
     answer:
-      "Yes. PowerTools connects to Dataverse and Dynamics 365 online with Microsoft sign-in, and to on-premises deployments with Active Directory or IFD."
+      "Yes. Dyno is free and open source under the MIT license. The source code is on GitHub."
+  },
+  {
+    question: "Does Dyno work with Dynamics 365 on-premises?",
+    answer:
+      "Yes. Dyno connects to Dataverse and Dynamics 365 online with Microsoft sign-in, and to on-premises deployments with Active Directory or IFD."
   },
   {
     question: "Is my Dataverse data sent anywhere?",
     answer:
-      "No. PowerTools runs on your machine and connects directly to your environments. The website does not host or process your Dataverse data."
+      "No. Dyno runs on your machine and connects directly to your environments. The website does not host or process your Dataverse data."
   }
 ];
 
@@ -75,14 +80,14 @@ const localPath = (path: string) =>
 ---
 
 <BaseLayout
-  title="PowerTools: Free Dynamics 365 and Dataverse Developer Tools"
-  description="PowerTools is a free, open-source Windows toolkit for Dynamics 365, Dataverse, and Power Platform developers. FetchXML Builder, Plugin Registration, data migration, and more. A modern XrmToolBox alternative."
+  title="Dyno: Free Dynamics 365 and Dataverse Developer Tools"
+  description="Dyno is a free, open-source Windows toolkit for Dynamics 365, Dataverse, and Power Platform developers. FetchXML Builder, Plugin Registration, data migration, and more. A modern XrmToolBox alternative."
   structuredData={[faqStructuredData]}
 >
   <section class="hero">
     <div class="hero-copy">
       <p class="eyebrow">Open-source desktop toolkit</p>
-      <h1><span class="gradient-text">PowerTools</span> for Dataverse and Dynamics 365 Developers</h1>
+      <h1><span class="gradient-text">Dyno</span> for Dataverse and Dynamics 365 Developers</h1>
       <p class="lead">
         A modern open-source desktop toolkit for everyday Dataverse, Dynamics
         365, and Power Platform work, with a friendly UI, secure local
@@ -100,7 +105,7 @@ const localPath = (path: string) =>
         src={appLight.src}
         width={appLight.width}
         height={appLight.height}
-        alt="PowerTools Data Migration tool comparing fields between a dev and a test environment"
+        alt="Dyno Data Migration tool comparing fields between a dev and a test environment"
       />
       <img
         class="theme-dark-only"
@@ -108,7 +113,7 @@ const localPath = (path: string) =>
         width={appDark.width}
         height={appDark.height}
         loading="lazy"
-        alt="PowerTools Data Migration tool comparing fields between a dev and a test environment"
+        alt="Dyno Data Migration tool comparing fields between a dev and a test environment"
       />
     </figure>
   </section>
@@ -116,11 +121,11 @@ const localPath = (path: string) =>
   <section class="section">
     <div class="section-header">
       <div>
-        <p class="eyebrow">Why PowerTools</p>
+        <p class="eyebrow">Why Dyno</p>
         <h2>Dataverse tooling that feels easier to use.</h2>
       </div>
       <p>
-        PowerTools focuses on developer flow: clear screens, discoverable
+        Dyno focuses on developer flow: clear screens, discoverable
         actions, and less friction around the tasks you repeat every day.
       </p>
     </div>
@@ -147,7 +152,7 @@ const localPath = (path: string) =>
         <h2>Dynamics 365 and Dataverse tools developers need often.</h2>
       </div>
       <p>
-        PowerTools is a desktop workspace for Dataverse developer tools. Each
+        Dyno is a desktop workspace for Dataverse developer tools. Each
         tool below is in the app today.
       </p>
     </div>
@@ -172,7 +177,7 @@ const localPath = (path: string) =>
       <p class="eyebrow">Secure by design</p>
       <h2>Your data never leaves your machine.</h2>
       <p class="lead">
-        PowerTools runs locally and connects directly from the desktop app to
+        Dyno runs locally and connects directly from the desktop app to
         your Dataverse environments. The website introduces the tool; it does
         not host or process your Dataverse data.
       </p>
@@ -204,7 +209,7 @@ const localPath = (path: string) =>
       <p class="eyebrow">Open source</p>
       <h2>Built in the open for developers.</h2>
       <p class="lead">
-        PowerTools is open source, so developers can inspect how it works,
+        Dyno is open source, so developers can inspect how it works,
         report issues, suggest improvements, and contribute.
       </p>
       <div class="action-row">

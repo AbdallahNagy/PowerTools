@@ -29,10 +29,10 @@ const { tool, entry } = Astro.props;
 const { Content } = await entry.render();
 const { seoTitle, seoDescription, xrmToolBoxEquivalent, features } = entry.data;
 
-const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+const githubUrl = "https://github.com/AbdallahNagy/Dyno";
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const localPath = (path: string) => `${basePath}${path}`;
-const site = Astro.site ?? new URL("https://powertools.abdallahnagy.com");
+const site = Astro.site ?? new URL("https://dyno.abdallahnagy.com");
 const absoluteUrl = (path: string) => new URL(path, site).href;
 
 const otherTools = RELEASED_TOOLS.filter((other) => other.id !== tool.id);
@@ -55,13 +55,13 @@ const structuredData = [
     url: absoluteUrl(toolPath(tool.id)),
     about: {
       "@type": "SoftwareApplication",
-      name: `PowerTools ${tool.title}`,
+      name: `Dyno ${tool.title}`,
       description: tool.description,
       applicationCategory: "DeveloperApplication",
       operatingSystem: "Windows",
       isAccessibleForFree: true,
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-      isPartOf: { "@type": "SoftwareApplication", name: "PowerTools", url: absoluteUrl("/") }
+      isPartOf: { "@type": "SoftwareApplication", name: "Dyno", url: absoluteUrl("/") }
     }
   }
 ];
@@ -87,7 +87,7 @@ const structuredData = [
     {
       xrmToolBoxEquivalent && (
         <p class="tool-equivalent">
-          A modern take on the XrmToolBox <strong>{xrmToolBoxEquivalent}</strong> workflow, built into PowerTools.
+          A modern take on the XrmToolBox <strong>{xrmToolBoxEquivalent}</strong> workflow, built into Dyno.
         </p>
       )
     }
@@ -115,7 +115,7 @@ const structuredData = [
     <div class="section-header">
       <div>
         <p class="eyebrow">More tools</p>
-        <h2>Also in PowerTools</h2>
+        <h2>Also in Dyno</h2>
       </div>
     </div>
     <div class="tool-grid">

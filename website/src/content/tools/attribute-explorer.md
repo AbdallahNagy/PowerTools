@@ -1,5 +1,5 @@
 ---
-seoTitle: "Attribute Explorer: Browse Dataverse Table Columns | PowerTools"
+seoTitle: "Attribute Explorer: Browse Dataverse Table Columns | Dyno"
 seoDescription: "Search every Dataverse table, list its columns with types, lookup targets, and required level, and open full field details. Free and open source."
 xrmToolBoxEquivalent: "Metadata Browser"
 features:

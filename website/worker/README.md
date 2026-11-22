@@ -2,6 +2,14 @@
 
 `index.ts` serves the static Astro build from `dist/` and handles one API route.
 
+## Hosts
+
+The site lives at `dyno.abdallahnagy.com`. It moved from `powertools.abdallahnagy.com` when Power Tools
+became Dyno, and both custom domains stay attached to this Worker. On the old host every page answers
+`301` to the same path on the new one. `/api/heartbeat` is answered on both hosts, because older app
+versions keep sending heartbeats to the old host and a redirect would turn their `POST` into a `GET`.
+`run_worker_first` in `wrangler.jsonc` makes the Worker see page requests before the static assets do.
+
 ## `POST /api/heartbeat`
 
 The desktop app sends at most one heartbeat per UTC day, unless the user turns off

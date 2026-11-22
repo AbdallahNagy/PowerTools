@@ -5,7 +5,7 @@ import { readSettings, writeSettings } from "./settings.js";
 // worker can count active installs. The heartbeat carries a random install ID,
 // the app version, the OS, and the CPU architecture. It never carries user
 // names, connection details, or Dataverse data.
-export const HEARTBEAT_URL = "https://powertools.abdallahnagy.com/api/heartbeat";
+export const HEARTBEAT_URL = "https://dyno.abdallahnagy.com/api/heartbeat";
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 10_000;
 

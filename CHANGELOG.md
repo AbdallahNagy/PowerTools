@@ -17,7 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - **Data Migration: select all fields from the table header.** A checkbox in the field table's header replaces the Select all and Select none links. It checks or clears every field shown (only the matching ones while searching) and shows a partial state when some are checked. The primary id stays selected.
-- **Power Tools is now Dyno.** The app's name, title bar, shortcuts and messages say Dyno. Your connections, sign-ins and settings stay where they are: an install from before the rename keeps its `Power Tools` folders. Connection exports are now `dyno-connections` files, and exports from Power Tools still import. Community tools use a `dyno-tool.json` manifest, and a folder with `powertools-tool.json` still loads. The MCP server is named `dyno` and its guides are `dyno://guides/…`. The local API and the MCP connector run as `Dyno.Api.exe` and `Dyno.McpConnector.exe`, and solutions that agents export go to `Documents\Dyno\Solutions`.
+- **Power Tools is now Dyno.** The app's name, title bar, shortcuts and messages say Dyno. Your connections, sign-ins and settings stay where they are: an install from before the rename keeps its `Power Tools` folders. Connection exports are now `dyno-connections` files, and exports from Power Tools still import. Community tools use a `dyno-tool.json` manifest, and a folder with `powertools-tool.json` still loads. The MCP server is named `dyno` and its guides are `dyno://guides/…`. The local API and the MCP connector run as `Dyno.Api.exe` and `Dyno.McpConnector.exe`, and solutions that agents export go to `Documents\Dyno\Solutions`. The installer is now `Dyno-Setup.exe`, the website moved to [dyno.abdallahnagy.com](https://dyno.abdallahnagy.com/), and the GitHub repository is [AbdallahNagy/Dyno](https://github.com/AbdallahNagy/Dyno).
 - **The sidebar collapses to icons.** Hiding the sidebar (Ctrl+B or the title bar button) now leaves a narrow strip with every tool's icon, the connection dot, and Settings. Point at an icon to see its name at once. The tool of the active tab is marked in the sidebar.
 
 ### Fixed
@@ -153,15 +153,15 @@ The first public beta, built for Windows.
 - **Data Migration.** Move data between Dataverse environments with a guided workflow.
 - **FetchXML Builder.** Build, run, and refine FetchXML queries.
 
-[Unreleased]: https://github.com/AbdallahNagy/PowerTools/compare/v1.3.0...HEAD
-[1.3.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.2.0...v1.3.0
-[1.2.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.1.0...v1.2.0
-[1.1.0]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.1...v1.1.0
-[1.0.1]: https://github.com/AbdallahNagy/PowerTools/compare/v1.0.0...v1.0.1
-[1.0.0]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.5...v1.0.0
-[0.1.0-beta.5]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.4...v0.1.0-beta.5
-[0.1.0-beta.4]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.3...v0.1.0-beta.4
-[0.1.0-beta.3]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.2...v0.1.0-beta.3
-[0.1.0-beta.2]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.1...v0.1.0-beta.2
-[0.1.0-beta.1]: https://github.com/AbdallahNagy/PowerTools/compare/v0.1.0-beta.0...v0.1.0-beta.1
-[0.1.0-beta.0]: https://github.com/AbdallahNagy/PowerTools/releases/tag/v0.1.0-beta.0
+[Unreleased]: https://github.com/AbdallahNagy/Dyno/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/AbdallahNagy/Dyno/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/AbdallahNagy/Dyno/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/AbdallahNagy/Dyno/compare/v1.0.1...v1.1.0
+[1.0.1]: https://github.com/AbdallahNagy/Dyno/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/AbdallahNagy/Dyno/compare/v0.1.0-beta.5...v1.0.0
+[0.1.0-beta.5]: https://github.com/AbdallahNagy/Dyno/compare/v0.1.0-beta.4...v0.1.0-beta.5
+[0.1.0-beta.4]: https://github.com/AbdallahNagy/Dyno/compare/v0.1.0-beta.3...v0.1.0-beta.4
+[0.1.0-beta.3]: https://github.com/AbdallahNagy/Dyno/compare/v0.1.0-beta.2...v0.1.0-beta.3
+[0.1.0-beta.2]: https://github.com/AbdallahNagy/Dyno/compare/v0.1.0-beta.1...v0.1.0-beta.2
+[0.1.0-beta.1]: https://github.com/AbdallahNagy/Dyno/compare/v0.1.0-beta.0...v0.1.0-beta.1
+[0.1.0-beta.0]: https://github.com/AbdallahNagy/Dyno/releases/tag/v0.1.0-beta.0

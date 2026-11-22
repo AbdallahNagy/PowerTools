@@ -12,7 +12,7 @@ test("electron builder publishes update metadata to GitHub releases", () => {
     {
       provider: "github",
       owner: "AbdallahNagy",
-      repo: "PowerTools",
+      repo: "Dyno",
       releaseType: "release",
     },
   ]);
@@ -20,7 +20,7 @@ test("electron builder publishes update metadata to GitHub releases", () => {
 
 test("windows releases use the auto-updatable NSIS installer target", () => {
   expect(builderConfig.win.target).toEqual(["nsis"]);
-  expect(builderConfig.win.artifactName).toBe("PowerTools-Setup.${ext}");
+  expect(builderConfig.win.artifactName).toBe("Dyno-Setup.${ext}");
 });
 
 test("the app id stays the same so the installer upgrades existing installs in place", () => {

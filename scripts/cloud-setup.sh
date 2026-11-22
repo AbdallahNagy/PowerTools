@@ -3,7 +3,7 @@
 # the desktop client and the API sidecar.
 #
 # Environment setup script (cloud environment settings -> Setup script):
-#   bash PowerTools/scripts/cloud-setup.sh
+#   bash Dyno/scripts/cloud-setup.sh
 #
 # Safe to re-run. Needs root, npm registry, nuget.org, and the Ubuntu archive.
 set -euo pipefail

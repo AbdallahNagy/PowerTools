@@ -1,5 +1,5 @@
 ---
-seoTitle: "Translator: Edit Dataverse Labels in Every Language | PowerTools"
+seoTitle: "Translator: Edit Dataverse Labels in Every Language | Dyno"
 seoDescription: "Edit Dataverse table, column, choice, view, chart, and form labels side by side in every installed language, then apply all changes at once. Free and open source."
 xrmToolBoxEquivalent: "Easy Translator"
 features:

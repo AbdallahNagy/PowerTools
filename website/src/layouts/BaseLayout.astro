@@ -25,12 +25,12 @@ const {
   structuredData = []
 } = Astro.props;
 
-const site = Astro.site ?? new URL("https://powertools.abdallahnagy.com");
+const site = Astro.site ?? new URL("https://dyno.abdallahnagy.com");
 const absoluteUrl = (path: string) => new URL(path, site).href;
 const canonicalUrl = absoluteUrl(Astro.url.pathname);
 const socialImageUrl = absoluteUrl(socialImage.src);
-const siteName = "PowerTools";
-const githubUrl = "https://github.com/AbdallahNagy/PowerTools";
+const siteName = "Dyno";
+const githubUrl = "https://github.com/AbdallahNagy/Dyno";
 
 // Site-wide schema.org data. Search engines use it for rich results and to
 // tie the website, the GitHub repository, and the app together.
@@ -39,18 +39,18 @@ const siteStructuredData = [
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: siteName,
-    alternateName: ["Power Tools", "PowerTools for Dataverse"],
+    alternateName: ["Power Tools", "PowerTools", "Dyno for Dataverse"],
     url: absoluteUrl("/")
   },
   {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
     name: siteName,
-    alternateName: "Power Tools for Dataverse and Dynamics 365",
+    alternateName: ["Power Tools", "PowerTools", "Dyno for Dataverse and Dynamics 365"],
     description:
       "Free, open-source Windows desktop toolkit for Dataverse, Dynamics 365, and Power Platform developers. A modern alternative to XrmToolBox.",
     url: absoluteUrl("/"),
-    downloadUrl: `${githubUrl}/releases/latest/download/PowerTools-Setup.exe`,
+    downloadUrl: `${githubUrl}/releases/latest/download/Dyno-Setup.exe`,
     applicationCategory: "DeveloperApplication",
     operatingSystem: "Windows",
     license: `${githubUrl}/blob/main/LICENSE`,
@@ -104,7 +104,7 @@ const isActive = (href: string) => {
     <script is:inline>
       // Light is the default. Apply a saved dark choice before first paint.
       try {
-        if (localStorage.getItem("powertools-theme") === "dark") {
+        if (localStorage.getItem("dyno-theme") === "dark") {
           document.documentElement.dataset.theme = "dark";
           document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#14171c");
         }
@@ -123,7 +123,7 @@ const isActive = (href: string) => {
     <meta property="og:image" content={socialImageUrl} />
     <meta property="og:image:width" content={String(socialImage.width)} />
     <meta property="og:image:height" content={String(socialImage.height)} />
-    <meta property="og:image:alt" content="PowerTools Data Migration tool comparing two Dataverse environments" />
+    <meta property="og:image:alt" content="Dyno Data Migration tool comparing two Dataverse environments" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
@@ -140,9 +140,9 @@ const isActive = (href: string) => {
   </head>
   <body>
     <header class="site-header">
-      <a class="brand" href={localPath("/")} aria-label="PowerTools home">
+      <a class="brand" href={localPath("/")} aria-label="Dyno home">
         <img class="brand-mark" src={appMark.src} alt="" width="34" height="34" />
-        <span>PowerTools</span>
+        <span>Dyno</span>
       </a>
       <button
         class="theme-toggle"
@@ -182,7 +182,7 @@ const isActive = (href: string) => {
     </main>
     <footer class="site-footer">
       <div>
-        <strong>PowerTools</strong>
+        <strong>Dyno</strong>
         <span>Free, open-source desktop tools for Dataverse and Dynamics 365 developers.</span>
       </div>
       <div class="footer-links">
@@ -214,7 +214,7 @@ const isActive = (href: string) => {
           delete root.dataset.theme;
         }
         try {
-          localStorage.setItem("powertools-theme", isDark ? "dark" : "light");
+          localStorage.setItem("dyno-theme", isDark ? "dark" : "light");
         } catch {}
         syncThemeButton();
       });

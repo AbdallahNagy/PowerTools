@@ -1,5 +1,5 @@
 ---
-seoTitle: "FetchXML Tester: Run FetchXML Queries in Dataverse | PowerTools"
+seoTitle: "FetchXML Tester: Run FetchXML Queries in Dataverse | Dyno"
 seoDescription: "Paste a FetchXML query, format it, run it against Dataverse exactly as written, and keep a local library of saved queries. Free, open-source tool."
 xrmToolBoxEquivalent: "FetchXml Tester"
 features:
