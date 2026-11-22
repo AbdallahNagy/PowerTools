@@ -65,6 +65,11 @@ export interface AgentToolContext {
     signal?: AbortSignal,
   ): Promise<unknown>;
   listConnections(): ConnectionListing[];
+  /**
+   * Fresh auth for a connection already resolved. The server calls it after the user answers an approval, since
+   * the wait can outlast a token that was close to expiring when the plan was built.
+   */
+  refreshConnection?(conn: ResolvedConnection): Promise<ResolvedConnection>;
   signal: AbortSignal;
   /** For a tool with plan(): the plan the user approved (or that ran without asking). run() sends its hash to apply. */
   approvedPlan?: PlanPreview;

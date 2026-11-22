@@ -98,6 +98,19 @@ async function buildPlanWith(
   }
 }
 
+/**
+ * A tool with an output schema must answer structured content in that shape, error or not: SDK clients check it
+ * on every result that has some and turn a mismatch into a protocol error, which hides the real error (such as
+ * ApprovalDenied) from the agent. An error that is not an apply result keeps its text and drops the structured copy.
+ */
+function conformingResult(tool: AgentTool, result: CallToolResult): CallToolResult {
+  if (!tool.outputSchema || result.isError !== true || !result.structuredContent) return result;
+  if (typeof (result.structuredContent as { outcome?: unknown }).outcome === "string") return result;
+  const textOnly = { ...result };
+  delete textOnly.structuredContent;
+  return textOnly;
+}
+
 function jsonRpcError(res: ServerResponse, status: number, code: number, message: string) {
   if (res.headersSent) return;
   res.writeHead(status, { "Content-Type": "application/json" });
@@ -241,6 +254,11 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
             );
             approval = outcome;
             if (outcome !== "auto" && outcome !== "allowed") throw approvalError(outcome);
+            if (outcome === "allowed" && base.refreshConnection) {
+              // The same connection, with a token that outlasts the time the user took to answer.
+              const fresh = await base.refreshConnection(connection);
+              runCtx = { ...runCtx, resolveConnection: async () => fresh };
+            }
           }
         }
         result = await tool.run(checked.args, runCtx);
@@ -273,7 +291,7 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
         } catch {
           // A log failure must not fail the call.
         }
-        return final;
+        return conformingResult(called, final);
       }
     });
 
