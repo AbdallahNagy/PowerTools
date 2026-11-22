@@ -12,7 +12,7 @@ const anchor = resolve(packageRoot, "src/index.ts");
  */
 export function resolveFromPackage(): Plugin {
   return {
-    name: "powertools-resolve-from-package",
+    name: "dyno-resolve-from-package",
     enforce: "pre",
     async resolveId(source, importer, options) {
       if (!importer || !importer.replaceAll("/", sep).startsWith(desktopSrc)) return null;

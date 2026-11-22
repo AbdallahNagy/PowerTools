@@ -24,7 +24,7 @@
     "noUncheckedSideEffectImports": true,
 
     /* Community tool protocol, shared with packages/sdk by source path */
-    "paths": { "@powertools/sdk/protocol": ["../packages/sdk/src/protocol.ts"] }
+    "paths": { "@dynoapp/sdk/protocol": ["../packages/sdk/src/protocol.ts"] }
   },
   "include": ["src"],
   "exclude": ["src/electron", "src/**/*.test.ts", "src/**/*.test.tsx"]

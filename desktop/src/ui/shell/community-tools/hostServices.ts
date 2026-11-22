@@ -1,5 +1,5 @@
 import { isAxiosError } from "axios";
-import type { ConnectionSnapshot, ErrorCode, ToolError } from "@powertools/sdk/protocol";
+import type { ConnectionSnapshot, ErrorCode, ToolError } from "@dynoapp/sdk/protocol";
 
 import { desktopBridge } from "../../platform/desktopBridge";
 import { api } from "../../shared/api/client";

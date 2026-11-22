@@ -2,7 +2,7 @@
   "id": "table-create",
   "phase": 1,
   "description": "Pilot: the agent builds a table with three columns in a solution through table_apply, and a second apply is unchanged.",
-  "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, create a table Eval Project (plural Eval Projects) with a money column Budget, a choice column Stage with options Planned, Active and Closed, and a lookup to account called Customer. Use the publisher's prefix.",
+  "prompt": "On the Dyno connection \"{connection}\", in the solution PowerToolsEvals, create a table Eval Project (plural Eval Projects) with a money column Budget, a choice column Stage with options Planned, Active and Closed, and a lookup to account called Customer. Use the publisher's prefix.",
   "checks": [
     {
       "description": "the table exists",

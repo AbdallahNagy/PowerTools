@@ -8,7 +8,7 @@ import {
   type ThemeSnapshot,
   type ToolError,
   type ToolResponse,
-} from "@powertools/sdk/protocol";
+} from "@dynoapp/sdk/protocol";
 import { authorize, isRecord } from "./permissions";
 
 export interface BrokerServices {

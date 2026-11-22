@@ -2,7 +2,7 @@
   "id": "inspect-then-change",
   "phase": 1,
   "description": "Pilot: the agent reads an existing table with inspect_schema and changes it through table_apply, keeping the columns it did not mention.",
-  "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, make the Code column of the Eval Project table 80 characters long and required, and add a whole number column Head Count.",
+  "prompt": "On the Dyno connection \"{connection}\", in the solution PowerToolsEvals, make the Code column of the Eval Project table 80 characters long and required, and add a whole number column Head Count.",
   "setup": [
     { "tool": "table_apply", "arguments": { "solution": "PowerToolsEvals", "table": { "schemaName": "pte_EvalProject", "displayName": "Eval Project", "pluralName": "Eval Projects" }, "columns": [{ "schemaName": "pte_Code", "type": "text", "displayName": "Code", "maxLength": 20 }, { "schemaName": "pte_Budget", "type": "money", "displayName": "Budget" }] } }
   ],

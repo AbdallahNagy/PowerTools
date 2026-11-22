@@ -22,20 +22,20 @@ export interface Sandbox {
 
 export interface LiveConfig {
   sandboxes: Sandbox[];
-  /** Dyno's discovery file. Default: %APPDATA%\Dyno\mcp-endpoint.json, or the Power Tools folder of an older install. */
+  /** Dyno's discovery file. Default: %APPDATA%\Dyno\mcp-endpoint.json, or the Dyno folder of an older install. */
   endpointFile?: string;
   /** Dyno's activity log folder, read to count approvals. Default: next to the endpoint file. */
   activityDir?: string;
   /** The Claude Code command for evals. Default "claude". */
   claudeCommand?: string;
-  /** An MCP config file for Claude Code that adds the Dyno connector as "powertools". */
+  /** An MCP config file for Claude Code that adds the Dyno connector as "dyno". */
   claudeMcpConfig?: string;
 }
 
 export function defaultEndpointFile(env: NodeJS.ProcessEnv = process.env): string {
   const appData = env.APPDATA ?? join(homedir(), "AppData", "Roaming");
-  // The app keeps an older install's "Power Tools" folder; see src/electron/userDataFolder.ts.
-  const folder = !existsSync(join(appData, "Dyno")) && existsSync(join(appData, "Power Tools")) ? "Power Tools" : "Dyno";
+  // The app keeps an older install's "Dyno" folder; see src/electron/userDataFolder.ts.
+  const folder = !existsSync(join(appData, "Dyno")) && existsSync(join(appData, "Dyno")) ? "Dyno" : "Dyno";
   return join(appData, folder, "mcp-endpoint.json");
 }
 
@@ -57,11 +57,11 @@ export function parseLiveConfig(raw: unknown): { config?: LiveConfig; problem?: 
 }
 
 /**
- * The config from POWERTOOLS_LIVE_CONFIG or evals/mcp/sandboxes.json. Null when there is none, so the suites skip
+ * The config from DYNO_LIVE_CONFIG or evals/mcp/sandboxes.json. Null when there is none, so the suites skip
  * with a message instead of failing on machines without sandboxes.
  */
 export function loadLiveConfig(env: NodeJS.ProcessEnv = process.env): { config?: LiveConfig; problem?: string } {
-  const path = env.POWERTOOLS_LIVE_CONFIG ?? join(EVALS_DIR, "sandboxes.json");
+  const path = env.DYNO_LIVE_CONFIG ?? join(EVALS_DIR, "sandboxes.json");
   if (!existsSync(path)) return { problem: `no sandbox config at ${path}; copy evals/mcp/sandboxes.example.json` };
   return parseLiveConfig(JSON.parse(readFileSync(path, "utf-8")));
 }
@@ -71,7 +71,7 @@ export async function connect(config: LiveConfig): Promise<Client> {
   const file = config.endpointFile ?? defaultEndpointFile();
   if (!existsSync(file)) throw new Error(`Dyno is not serving MCP: ${file} is missing. Start the app and turn on the MCP server.`);
   const { port, token } = JSON.parse(readFileSync(file, "utf-8")) as { port: number; token: string };
-  const client = new Client({ name: "powertools-live-tests", version: "1" });
+  const client = new Client({ name: "dyno-live-tests", version: "1" });
   await client.connect(
     new StreamableHTTPClientTransport(new URL(`http://127.0.0.1:${port}/mcp`), {
       requestInit: { headers: { Authorization: `Bearer ${token}` } },
@@ -235,7 +235,7 @@ export function readTranscript(lines: string): TranscriptMetrics {
     const content = Array.isArray(event.message?.content) ? (event.message!.content as Array<Record<string, unknown>>) : [];
     for (const part of content) {
       if (event.type === "assistant" && part.type === "tool_use" && typeof part.name === "string") {
-        metrics.toolCalls.push(part.name.replace(/^mcp__powertools__/, ""));
+        metrics.toolCalls.push(part.name.replace(/^mcp__dyno__/, ""));
       }
       if (event.type === "user" && part.type === "tool_result" && part.is_error === true) metrics.toolErrors += 1;
     }

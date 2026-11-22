@@ -3,7 +3,7 @@
   "phase": 1,
   "sandboxes": ["onprem"],
   "description": "Negative: a file column is online only. On-premises the agent must read the NotSupported route and tell the user, not retry or invent a workaround.",
-  "prompt": "On the Power Tools connection \"{connection}\", add a file column Contract to the Eval Project table in the solution PowerToolsEvals.",
+  "prompt": "On the Dyno connection \"{connection}\", add a file column Contract to the Eval Project table in the solution PowerToolsEvals.",
   "checks": [],
   "mustNotCall": ["execute_message"]
 }

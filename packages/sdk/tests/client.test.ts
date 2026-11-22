@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createClient, ToolClientError, type PowerToolsClient } from "../src/client";
+import { createClient, ToolClientError, type DynoClient } from "../src/client";
 import type { HostEvent, ReadyMessage, ThemeSnapshot, ToolRequest, ToolResponse } from "../src/protocol";
 
 const GUID = "00000000-0000-0000-0000-000000000001";
@@ -14,7 +14,7 @@ const ready: ReadyMessage = {
 
 const channels: MessageChannel[] = [];
 
-function setup(): { client: PowerToolsClient; host: MessagePort; requests: ToolRequest[] } {
+function setup(): { client: DynoClient; host: MessagePort; requests: ToolRequest[] } {
   const channel = new MessageChannel();
   channels.push(channel);
   const requests: ToolRequest[] = [];

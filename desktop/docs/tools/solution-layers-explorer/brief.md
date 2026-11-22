@@ -12,7 +12,7 @@
   - the `msdyn_componentid` + `msdyn_solutioncomponentname` filter
   - the `msdyn_order`, `msdyn_changes`, `msdyn_componentjson` and `msdyn_children` columns
   - the `RemoveActiveCustomizations` message
-- **Existing Power Tools coverage: none.**
+- **Existing Dyno coverage: none.**
   - The registered tools are attribute-explorer, bulk-workflow-execution, data-migration, fetchxml-builder, fetchxml-tester, plugin-registration, polymorphic-lookup-creator, solution-components-mover, translator, workflow-activities-viewer and welcome.
   - A grep for `componentlayer` or "solution layer" in `desktop/src` and `api` finds nothing.
   - Solution Components Mover is the nearest tool. It copies components between solutions and does not read layers, so a new tool fits better than extending it. Its `/solutions` and `/component-types` queries are useful patterns to copy.
@@ -141,7 +141,7 @@ All citations are relative to `MscrmTools.SolutionLayersExplorer/` in the upstre
 - unchecked ExecuteMultiple faults
 - the fragile second-layer preselection
 
-### Power Tools mapping
+### Dyno mapping
 
 **Reuse**
 - `useTabConnection` with `meta.connectionName`, `useToolStatus`, and `apiGet` / `apiPost` from `desktop/src/ui/shared/api/client.ts`.
@@ -255,7 +255,7 @@ Sources:
 - https://github.com/MscrmTools/MscrmTools.SolutionLayersExplorer (read locally from a scratch clone at `/tmp/claude-0/-home-user-PowerTools/be77b69c-d7be-55a4-baaf-1f99df485cd3/scratchpad/sle/src`)
 - https://www-1.nuget.org/packages/XrmSolutionsUK.XrmToolBoxPlugins.ManagedSolutionLayerRaiser
 
-Power Tools files to read before building:
+Dyno files to read before building:
 - `/home/user/PowerTools/desktop/src/ui/tools/registry.tsx`
 - `/home/user/PowerTools/desktop/src/ui/tools/publicCatalog.ts`
 - `/home/user/PowerTools/desktop/src/ui/tools/solution-components-mover/`

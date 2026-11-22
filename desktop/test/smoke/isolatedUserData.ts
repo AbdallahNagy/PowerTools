@@ -9,7 +9,7 @@ export interface IsolatedUserDataDir {
 
 export async function createIsolatedUserDataDir(): Promise<IsolatedUserDataDir> {
   const tempRoot = resolve(tmpdir());
-  const createdPath = await mkdtemp(join(tempRoot, "power-tools-smoke-"));
+  const createdPath = await mkdtemp(join(tempRoot, "dyno-smoke-"));
 
   return {
     path: createdPath,

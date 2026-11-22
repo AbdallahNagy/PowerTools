@@ -26,9 +26,9 @@ In Claude Code, `/build-tool <tool name>` runs every stage below in order and st
 | --- | --- | --- |
 | 1 | `.cursor/agents/xrmtoolbox-plugin-researcher.md` | Match and backend findings, in the sections that file already specifies |
 | 2, in parallel | `.cursor/agents/dataverse-expert.md` | Dataverse review |
-| 2, in parallel | `.cursor/agents/power-tools-ux.md` | UX |
-| 3, after both sections exist | `.cursor/agents/power-tools-developer.md` | Implementation notes, test evidence, and a draft pull request |
-| 4 | `.cursor/agents/power-tools-reviewer.md` | Short pass or fail on the pull request |
+| 2, in parallel | `.cursor/agents/dyno-ux.md` | UX |
+| 3, after both sections exist | `.cursor/agents/dyno-developer.md` | Implementation notes, test evidence, and a draft pull request |
+| 4 | `.cursor/agents/dyno-reviewer.md` | Short pass or fail on the pull request |
 
 Save the researcher's brief unchanged as the start of the handoff file before Dataverse review or UX begins. Do not edit `.cursor/agents/xrmtoolbox-plugin-researcher.md` to change that output.
 
@@ -40,7 +40,7 @@ One file per tool:
 
 `desktop/docs/tools/<tool-id>/brief.md`
 
-`<tool-id>` is the kebab-case id from the researcher's Power Tools mapping.
+`<tool-id>` is the kebab-case id from the researcher's Dyno mapping.
 
 Each role appends its own section and does not rewrite earlier sections. Parallel roles append only their own heading. If that heading is already present, stop.
 
@@ -49,7 +49,7 @@ The file starts with the researcher's sections, copied as written:
 - `### Match`
 - `### What it does`
 - `### Backend findings`
-- `### Power Tools mapping`
+- `### Dyno mapping`
 - `### Recommended implementation`
 
 Later roles append, in this order when both parallel sections are present:
@@ -64,7 +64,7 @@ Screens, empty and error states, and what not to build. This section is written 
 
 ### Agent tools
 
-Which agent tools the tool adds to the Power Tools MCP server, so AI agents can do the same work without a screen. List each as `<group>_<verb>_<noun>` in one of the groups `connections`, `metadata`, `records`, `schema`, `solutions`, `plugins` or `envvars`, with its effect class (read, change or destructive) and the `/api/agent` route that backs it. Write `None.` when the tool adds none, such as a tool that only shows data agents can already read. Power Tools decides the effect class, never the tool, and a destructive tool always asks the user. The developer implements what this section lists; see `desktop/docs/mcp-server.md`.
+Which agent tools the tool adds to the Dyno MCP server, so AI agents can do the same work without a screen. List each as `<group>_<verb>_<noun>` in one of the groups `connections`, `metadata`, `records`, `schema`, `solutions`, `plugins` or `envvars`, with its effect class (read, change or destructive) and the `/api/agent` route that backs it. Write `None.` when the tool adds none, such as a tool that only shows data agents can already read. Dyno decides the effect class, never the tool, and a destructive tool always asks the user. The developer implements what this section lists; see `desktop/docs/mcp-server.md`.
 
 ### Implementation notes and test evidence
 
@@ -109,10 +109,10 @@ Every released tool also has its own page at `/tools/<tool-id>/`, so people and 
 
 The file name is the catalog id. The catalog owns the title and the one-sentence description, so the file does not repeat them. The frontmatter schema is in `website/src/content/config.ts`:
 
-- `seoTitle`: the page `<title>`, under about 65 characters, ending with `| PowerTools`. Lead with the words people search for, such as `Dataverse` or `Dynamics 365` and the job.
+- `seoTitle`: the page `<title>`, under about 65 characters, ending with `| Dyno`. Lead with the words people search for, such as `Dataverse` or `Dynamics 365` and the job.
 - `seoDescription`: 140 to 160 characters. Say what the tool does in plain words.
 - `xrmToolBoxEquivalent`: the XrmToolBox plugin name from `### Match`, when there is one. Omit it otherwise.
-- `features`: three to six short capability bullets, taken from `### What it does` and limited to what Power Tools ships per `### UX` and the Dataverse review.
+- `features`: three to six short capability bullets, taken from `### What it does` and limited to what Dyno ships per `### UX` and the Dataverse review.
 
 The body is three or four `##` sections: what the tool is for, how it works, and `## When to use it` with real developer scenarios. Write for a Dataverse developer who has never opened the app. Describe only shipped behavior; leave out anything in "what not to build". Do not copy wording from the XrmToolBox plugin. Use other tool pages in that folder as the model.
 
@@ -120,4 +120,4 @@ The website build fails when a released tool has no page, and `desktop/test/publ
 
 ## Developer gate
 
-`power-tools-developer` does not implement, branch, or open a pull request until `desktop/docs/tools/<tool-id>/brief.md` contains both `### Dataverse review` and `### UX`, and each of those sections has at least one sentence or list item. Missing either section means the brief is not ready.
+`dyno-developer` does not implement, branch, or open a pull request until `desktop/docs/tools/<tool-id>/brief.md` contains both `### Dataverse review` and `### UX`, and each of those sections has at least one sentence or list item. Missing either section means the brief is not ready.

@@ -1,7 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { connect } from "@powertools/sdk";
-import "@powertools/ui/styles.css";
+import { connect } from "@dynoapp/sdk";
+import "@dynoapp/ui/styles.css";
 import "./app.css";
 import { App } from "./App";
 import { ErrorBoundary } from "./ErrorBoundary";
@@ -17,5 +17,5 @@ connect().then(
         </ErrorBoundary>
       </StrictMode>,
     ),
-  () => root.render(<p className="p-4 text-fg-muted">Open this tool inside Power Tools.</p>),
+  () => root.render(<p className="p-4 text-fg-muted">Open this tool inside Dyno.</p>),
 );

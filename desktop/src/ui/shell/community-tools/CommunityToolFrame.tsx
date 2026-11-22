@@ -1,5 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { CONNECT_MESSAGE, PROTOCOL_VERSION, type ReadyMessage } from "@powertools/sdk/protocol";
+import { CONNECT_MESSAGE, PROTOCOL_VERSION, type ReadyMessage } from "@dynoapp/sdk/protocol";
 
 import { desktopBridge, type LoadedCommunityTool } from "../../platform/desktopBridge";
 import { useConnection, useOpenInBrowser, useTabConnection } from "../../shared/connections";

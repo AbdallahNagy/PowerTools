@@ -1,4 +1,4 @@
-import { createClient, type PowerToolsClient } from "./client";
+import { createClient, type DynoClient } from "./client";
 import {
   CONNECT_MESSAGE,
   PROTOCOL_VERSION,
@@ -31,7 +31,7 @@ function matchesShortcut(event: KeyboardEvent, spec: ShortcutSpec): boolean {
   return event.key.toLowerCase() === spec.key.toLowerCase();
 }
 
-function installShortcuts(client: PowerToolsClient, shortcuts: ShortcutSpec[]): void {
+function installShortcuts(client: DynoClient, shortcuts: ShortcutSpec[]): void {
   if (shortcuts.length === 0) return;
   window.addEventListener("keydown", (event) => {
     if (!shortcuts.some((spec) => matchesShortcut(event, spec))) return;
@@ -68,14 +68,14 @@ function isWellFormed(ready: ReadyMessage): boolean {
  * Waits for the host to hand this frame its port, performs the handshake, applies the
  * host theme, and resolves with a connected client.
  */
-export function connect(options: { timeoutMs?: number } = {}): Promise<PowerToolsClient> {
+export function connect(options: { timeoutMs?: number } = {}): Promise<DynoClient> {
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  return new Promise<PowerToolsClient>((resolve, reject) => {
+  return new Promise<DynoClient>((resolve, reject) => {
     let port: MessagePort | null = null;
 
     const timer = setTimeout(() => {
-      fail(new Error(`Timed out waiting for the Power Tools host after ${timeoutMs} ms`));
+      fail(new Error(`Timed out waiting for the Dyno host after ${timeoutMs} ms`));
     }, timeoutMs);
 
     function cleanup(): void {
@@ -101,7 +101,7 @@ export function connect(options: { timeoutMs?: number } = {}): Promise<PowerTool
       }
       // Reject a malformed message instead of throwing halfway through setup and leaving this promise unsettled.
       if (!isWellFormed(data)) {
-        fail(new Error("The Power Tools host sent a malformed ready message"));
+        fail(new Error("The Dyno host sent a malformed ready message"));
         return;
       }
       cleanup();

@@ -157,11 +157,11 @@ describe("connectorLaunch", () => {
       platform: "win32",
       resourcesPath: "",
       appPath: resolve("/repo/desktop"),
-      discoveryPath: "C:\\Users\\me\\AppData\\Roaming\\Power Tools Dev\\mcp-endpoint.json",
-      connectorDir: connectorInstallFolder("C:\\Users\\me\\AppData\\Local", "Power Tools Dev"),
+      discoveryPath: "C:\\Users\\me\\AppData\\Roaming\\Dyno Dev\\mcp-endpoint.json",
+      connectorDir: connectorInstallFolder("C:\\Users\\me\\AppData\\Local", "Dyno Dev"),
     });
-    expect(launch.command).toContain("Power Tools Dev");
-    expect(launch.args).toEqual(["--discovery", "C:\\Users\\me\\AppData\\Roaming\\Power Tools Dev\\mcp-endpoint.json"]);
+    expect(launch.command).toContain("Dyno Dev");
+    expect(launch.args).toEqual(["--discovery", "C:\\Users\\me\\AppData\\Roaming\\Dyno Dev\\mcp-endpoint.json"]);
     expect(connectorCommandLine(launch)).toContain('--discovery "C:\\Users');
   });
 

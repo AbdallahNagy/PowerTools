@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ExternalLink, FolderOpen, RefreshCw } from "lucide-react";
 
-import AppIcon from "../../../assets/icons/power-tools-icon.svg";
+import AppIcon from "../../../assets/icons/dyno-icon.svg";
 import { desktopBridge, type UpdateStatus } from "../../../platform/desktopBridge";
 import { Alert, Button, ProgressBar, Spinner } from "../../../shared/ui";
 import { bridgeErrorMessage } from "../../community-tools/bridgeErrorMessage";

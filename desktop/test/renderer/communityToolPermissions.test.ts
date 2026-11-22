@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { METHODS, type MethodName, type Permission } from "@powertools/sdk/protocol";
+import { METHODS, type MethodName, type Permission } from "@dynoapp/sdk/protocol";
 import { authorize, METHOD_PERMISSION } from "../../src/ui/shell/community-tools/permissions";
 
 const ALL: Permission[] = ["data:read", "data:write", "data:delete", "metadata:read", "metadata:write", "files"];

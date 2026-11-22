@@ -1,4 +1,4 @@
-# Power Tools guidance
+# Dyno guidance
 
 @AGENTS.md
 

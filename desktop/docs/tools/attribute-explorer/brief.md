@@ -2,7 +2,7 @@
 
 - No XrmToolBox research was run for this tool. The user asked for a lean brief written from their own specification, so the researcher stage was skipped on purpose.
 - Closest XrmToolBox equivalent: **Metadata Browser** (MscrmTools). That plugin was not used as a source, and no source, UI, icons, or copy were taken from it.
-- Power Tools tool id: `attribute-explorer`. Title: **Attribute Explorer**.
+- Dyno tool id: `attribute-explorer`. Title: **Attribute Explorer**.
 
 ### What it does
 
@@ -30,7 +30,7 @@ The existing `/api/metadata/*` endpoints (`api/Dyno/Dyno.Api/Tools/Metadata/Meta
 
 The sidecar has no metadata cache. Each request goes to Dataverse, so a refresh only has to refetch.
 
-### Power Tools mapping
+### Dyno mapping
 
 - Renderer: `desktop/src/ui/tools/attribute-explorer/`.
 - Sidecar: `api/Dyno/Dyno.Api/Tools/AttributeExplorer/`, mapped as `/api/attribute-explorer`.
@@ -119,7 +119,7 @@ tests/
 - **Online versus on-premises.** Both messages behave the same on Dataverse online and Dynamics 365 on-premises 9.x. Some newer properties, such as `IsRetrievable` and `SourceType` value 3, may be absent on older on-premises builds. Treat every boolean or optional property as nullable and render "—" when it is absent.
 - **Labels.** `UserLocalizedLabel` follows the calling user's UI language and can be null on tables or fields that lack a label in that language. Fall back to `LocalizedLabels[0]`, then to the logical name on the client. The table search must therefore also match the logical name, which it does.
 - **Private and intersect tables.** Private tables (`IsPrivate`) are not usable through the SDK. Exclude them. Intersect tables are real and queryable. Keep them.
-- **AttributeOf companions.** Fields such as `primarycontactidname` or `owneridyominame` have `AttributeOf` set. They are read-only shadows of a lookup. Excluding them matches the other Power Tools metadata endpoints and keeps the grid clean.
+- **AttributeOf companions.** Fields such as `primarycontactidname` or `owneridyominame` have `AttributeOf` set. They are read-only shadows of a lookup. Excluding them matches the other Dyno metadata endpoints and keeps the grid clean.
 - **Type names.** `AttributeType` reports `Virtual` for multi-select choice, image, and file fields. Use `AttributeTypeName.Value` (`MultiSelectPicklistType`, `ImageType`, `FileType`) to tell them apart. `Customer` and `Owner` are lookups with several targets. `PartyList` has targets too.
 - **SourceType.** `0` Simple, `1` Calculated, `2` Rollup. Newer Dataverse uses `3` for formula (Power Fx) columns; this was not verified against the referenced SDK version, so show "Formula" for `3` and the raw number for anything else.
 - **Managed state.** `IsManaged` is per component. Show it in the modal only, as "Managed" or "Unmanaged".

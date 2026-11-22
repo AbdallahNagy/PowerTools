@@ -5,5 +5,5 @@
  */
 @layer theme, base, components, utilities;
 @import "tailwindcss/theme.css" layer(theme);
-@import "@powertools/ui/theme.css";
+@import "@dynoapp/ui/theme.css";
 @import "tailwindcss/utilities.css" layer(utilities) source("./");

@@ -1,4 +1,4 @@
-// Wire protocol between a community tool frame and the Power Tools host.
+// Wire protocol between a community tool frame and the Dyno host.
 // Pure types and constants with no imports: the desktop app imports this file by source path.
 
 export const PROTOCOL_VERSION = 1;

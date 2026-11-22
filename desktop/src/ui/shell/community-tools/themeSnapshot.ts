@@ -1,4 +1,4 @@
-import type { ShortcutSpec, ThemeSnapshot } from "@powertools/sdk/protocol";
+import type { ShortcutSpec, ThemeSnapshot } from "@dynoapp/sdk/protocol";
 
 const TOKEN_PREFIX = "--color-";
 

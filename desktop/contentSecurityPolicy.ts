@@ -33,7 +33,7 @@ export function buildContentSecurityPolicy({ dev }: { dev: boolean }): string {
 export function contentSecurityPolicyPlugin(): Plugin {
   let dev = false;
   return {
-    name: "power-tools-content-security-policy",
+    name: "dyno-content-security-policy",
     configResolved(config) {
       dev = config.command === "serve";
     },

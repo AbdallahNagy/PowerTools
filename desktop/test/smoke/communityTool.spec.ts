@@ -62,7 +62,7 @@ test("loads the reference community tool in a sandboxed frame that follows the s
       const iframe = window.locator("iframe");
       await expect(iframe).toHaveAttribute("sandbox", "allow-scripts");
       const src = await iframe.getAttribute("src");
-      expect(src?.startsWith("pt-tool://powertools.attribute-explorer-reference/")).toBe(true);
+      expect(src?.startsWith("pt-tool://dyno.attribute-explorer-reference/")).toBe(true);
 
       await expect(window.frameLocator("iframe").getByText("No environment selected")).toBeVisible({
         timeout: 30_000,
@@ -166,7 +166,7 @@ test("a community tool stuck in an infinite loop leaves the shell responsive", a
 });
 
 test("starts with a missing tool folder and lists it as not found", async () => {
-  const missingFolder = "C:\\power-tools-smoke-does-not-exist\\tool";
+  const missingFolder = "C:\\dyno-smoke-does-not-exist\\tool";
   await withApp(
     (userData) => seedCommunityTools(userData, [missingFolder], []),
     async (app, window) => {

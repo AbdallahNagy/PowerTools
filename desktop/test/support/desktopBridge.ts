@@ -54,10 +54,10 @@ const offlineMcpStatus: Awaited<ReturnType<DesktopBridge["getMcpStatus"]>> = {
   enabled: false,
   running: false,
   port: null,
-  discoveryPath: "/users/test/power-tools/mcp-endpoint.json",
+  discoveryPath: "/users/test/dyno/mcp-endpoint.json",
   error: null,
-  connectorCommand: '"/users/test/appdata/local/power tools/mcp/Dyno.McpConnector.exe"',
-  connector: { command: "/users/me/appdata/local/power tools/mcp/Dyno.McpConnector.exe", args: [] },
+  connectorCommand: '"/users/test/appdata/local/dyno/mcp/Dyno.McpConnector.exe"',
+  connector: { command: "/users/me/appdata/local/dyno/mcp/Dyno.McpConnector.exe", args: [] },
   recent: [],
   legacySetups: [],
   groups: [

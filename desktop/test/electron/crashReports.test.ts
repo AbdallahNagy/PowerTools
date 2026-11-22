@@ -22,7 +22,7 @@ function fakeTransport() {
 
 describe("crash reports", () => {
   beforeEach(() => {
-    state.userData = mkdtempSync(join(tmpdir(), "power-tools-crash-reports-"));
+    state.userData = mkdtempSync(join(tmpdir(), "dyno-crash-reports-"));
   });
 
   afterEach(() => {
