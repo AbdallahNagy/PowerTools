@@ -31,7 +31,7 @@ export function getUpdateActionLabel(status: UpdateStatus) {
 /** One sentence that tells the user what clicking the update button does. */
 export function getUpdateActionHint(status: UpdateStatus) {
   const version = updateVersion(status);
-  const named = version ? `Power Tools v${version}` : "A new version of Power Tools";
+  const named = version ? `Dyno v${version}` : "A new version of Dyno";
   switch (status.state) {
     case "available":
       return `${named} is available. Click to see what's new and update.`;

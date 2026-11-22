@@ -5,12 +5,12 @@ function deps(overrides: Partial<ConnectorSetupDeps> = {}): ConnectorSetupDeps {
   return {
     packaged: true,
     platform: "win32",
-    resourcesPath: "C:\\Program Files\\Power Tools\\resources",
-    appPath: () => "C:\\Program Files\\Power Tools\\resources\\app.asar",
+    resourcesPath: "C:\\Program Files\\Dyno\\resources",
+    appPath: () => "C:\\Program Files\\Dyno\\resources\\app.asar",
     homePath: () => "C:\\Users\\me",
     appDataPath: () => "C:\\Users\\me\\AppData\\Roaming",
     localAppData: "C:\\Users\\me\\AppData\\Local",
-    appFolderName: () => "Power Tools",
+    appFolderName: () => "Dyno",
     log: { info: vi.fn(), error: vi.fn() },
     ...overrides,
   };
@@ -20,7 +20,7 @@ describe("connector setup", () => {
   it("launches the per-user copy", () => {
     const launch = createConnectorSetup(deps()).launch("unused");
     expect(launch).toEqual({ command: expect.stringContaining("AppData") as string, args: [] });
-    expect(launch.command).toMatch(/Power Tools[\\/]mcp[\\/]Dyno\.McpConnector\.exe$/);
+    expect(launch.command).toMatch(/Dyno[\\/]mcp[\\/]Dyno\.McpConnector\.exe$/);
   });
 
   it("never rejects, even when the app paths throw", async () => {

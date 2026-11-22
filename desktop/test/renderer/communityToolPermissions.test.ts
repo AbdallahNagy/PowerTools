@@ -57,7 +57,7 @@ describe("community tool permissions", () => {
 
     it("is denied when the message is not declared", () => {
       const result = authorize(manifest(["metadata:write"]), "data.execute", args);
-      expect(result).toEqual({ ok: false, message: 'Message "PublishXml" is not declared in powertools-tool.json' });
+      expect(result).toEqual({ ok: false, message: 'Message "PublishXml" is not declared in dyno-tool.json' });
     });
 
     it("is denied when declared without the implied permission", () => {

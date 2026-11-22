@@ -6,6 +6,6 @@ test("authentication error template does not show the placeholder token", () => 
   const html = renderAuthenticationErrorTemplate();
 
   expect(html).toMatch(/Authentication failed/);
-  expect(html).toMatch(/return to PowerTools/);
+  expect(html).toMatch(/return to Dyno/);
   expect(html).not.toMatch(/\{errorMessage\}/);
 });

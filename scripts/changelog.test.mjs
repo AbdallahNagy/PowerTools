@@ -51,7 +51,7 @@ test("parses releases and link definitions", () => {
 });
 
 test("extracts release notes with a title", () => {
-  assert.equal(releaseNotes(valid, "1.1.0"), "# Power Tools 1.1.0\n\n### Fixed\n\n- A bug.\n");
+  assert.equal(releaseNotes(valid, "1.1.0"), "# Dyno 1.1.0\n\n### Fixed\n\n- A bug.\n");
   assert.equal(releaseNotes(valid, "9.9.9"), undefined);
 });
 

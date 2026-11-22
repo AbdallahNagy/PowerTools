@@ -23,7 +23,7 @@ export default defineConfig({
         project: 'powertools-desktop',
         authToken: process.env.SENTRY_AUTH_TOKEN,
         // Must match the release set in src/electron/sentry.ts.
-        release: { name: `power-tools@${version}` },
+        release: { name: `dyno@${version}` },
         sourcemaps: { filesToDeleteAfterUpload: ['./dist-react/**/*.map'] },
         telemetry: false,
       }),

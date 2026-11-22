@@ -88,7 +88,7 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
         {tools.length === 0 ? (
           <EmptyState
             title="No community tools are loaded"
-            description="Choose Load from folder… and pick a folder that contains powertools-tool.json."
+            description="Choose Load from folder… and pick a folder that contains dyno-tool.json."
           />
         ) : (
           <ul className="flex flex-col divide-y divide-line border border-line">
@@ -179,7 +179,7 @@ export function CommunityToolsDialog({ open, tools, loadError, refresh, onClose 
               {reviewTool.manifest.network}
             </ReviewSection>
             <p className="text-xs text-fg-muted">
-              Power Tools limits which hosts a tool can call, but cannot fully block network access.
+              Dyno limits which hosts a tool can call, but cannot fully block network access.
             </p>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" disabled={granting} onClick={() => setReviewId(null)}>

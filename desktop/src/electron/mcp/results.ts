@@ -29,7 +29,7 @@ export function dataverseResult(summary: string, data: Record<string, unknown>, 
   return {
     content: [{ type: "text", text: truncateText(text) }],
     ...(tooLarge ? {} : { structuredContent: { connection, ...data } }),
-    _meta: { "powertools/untrusted": true },
+    _meta: { "dyno/untrusted": true },
   };
 }
 

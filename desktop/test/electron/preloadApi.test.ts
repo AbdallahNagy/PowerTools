@@ -129,7 +129,7 @@ describe("createPreloadApi", () => {
     const fake = ipcRenderer as Pick<IpcRenderer, "invoke" | "on" | "removeListener">;
 
     expect(createPreloadApi(fake).getInitialThemePreference()).toBe("system");
-    const api = createPreloadApi(fake, ["electron", "--power-tools-theme=dark-orange"]);
+    const api = createPreloadApi(fake, ["electron", "--dyno-theme=dark-orange"]);
     expect(api.getInitialThemePreference()).toBe("dark-orange");
 
     const received: unknown[] = [];

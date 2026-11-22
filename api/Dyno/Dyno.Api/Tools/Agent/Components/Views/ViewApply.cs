@@ -30,7 +30,7 @@ public enum FilterType
     [JsonStringEnumMemberName("or")] Or,
 }
 
-[Description("The desired state of one system view. Power Tools writes the FetchXML and layout so they match. Parts left out stay as they are.")]
+[Description("The desired state of one system view. Dyno writes the FetchXML and layout so they match. Parts left out stay as they are.")]
 public sealed class ViewApplySpec : IApplySpec
 {
     [Description("Unique name of the unmanaged solution the changes go into.")]

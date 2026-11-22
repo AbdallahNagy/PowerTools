@@ -179,12 +179,12 @@ describe("the first release tool set", () => {
 
     expect(call).toHaveBeenCalledWith(conn, "POST", "/api/agent/inspect/schema", { kind: "table", name: "con_project" }, expect.anything());
     expect(result.structuredContent).toMatchObject({ result: { logicalName: "con_project" } });
-    expect(result._meta).toEqual({ "powertools/untrusted": true });
+    expect(result._meta).toEqual({ "dyno/untrusted": true });
     expect(registry.validate(tool("inspect_schema"), { kind: "form" })).toMatchObject({ ok: false });
   });
 
   it("solution_export posts to the export route and reports progress", async () => {
-    const call = vi.fn(async () => ({ path: "C:\\Users\\a\\Documents\\Power Tools\\Solutions\\Core_1_0_0_0_managed.zip" }));
+    const call = vi.fn(async () => ({ path: "C:\\Users\\a\\Documents\\Dyno\\Solutions\\Core_1_0_0_0_managed.zip" }));
 
     const result = await tool("solution_export").run({ solution: "Core", managed: true }, ctx(call));
 
@@ -219,7 +219,7 @@ describe("read tools", () => {
 
     expect(call).toHaveBeenCalledWith(conn, "POST", route, args, expect.anything());
     expect(structured(result)).toMatchObject({ result: { tabs: [] } });
-    expect(result._meta).toEqual({ "powertools/untrusted": true });
+    expect(result._meta).toEqual({ "dyno/untrusted": true });
   });
 
   it("inspect_ui and inspect_solution refuse kinds of the other tool", () => {

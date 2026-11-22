@@ -28,7 +28,7 @@ public sealed class ProcessPlanner(
     public const int ActionCategory = 3;
 
     /// <summary>The temporary solution's name starts with this; a leftover one is safe to delete.</summary>
-    public const string PackagePrefix = "PowerToolsProcess";
+    public const string PackagePrefix = "DynoProcess";
 
     public async Task<Plan> PlanAsync(ProcessApplySpec spec, PlanContext context, CancellationToken ct)
     {

@@ -12,7 +12,7 @@ public sealed class ProcessReading
     /// <summary>The primary table, when the XAML names it (an action's Target, or a read of the primary record).</summary>
     public string? Table { get; set; }
 
-    /// <summary>The steps in spec shape. A step Power Tools cannot write back is <c>{keep: id}</c>.</summary>
+    /// <summary>The steps in spec shape. A step Dyno cannot write back is <c>{keep: id}</c>.</summary>
     public JsonArray Steps { get; } = [];
 
     public List<ProcessArgument> Arguments { get; } = [];
@@ -192,7 +192,7 @@ public static partial class ProcessXamlReader
                     ("InvokeSdkMessage", "ActivityReference", "Composite") => Action(element),
                     ("CustomActivity", "ActivityReference", "Composite") => CustomActivity(element),
                     ("StopWorkflow", "Sequence", _) => Stop(element),
-                    _ => throw new Unreadable("Power Tools does not write this kind of step."),
+                    _ => throw new Unreadable("Dyno does not write this kind of step."),
                 };
             }
             catch (Unreadable e)
@@ -233,7 +233,7 @@ public static partial class ProcessXamlReader
                         record = Record(TempKey(activity.Attribute("Entity")?.Value));
                         continue;
                     default:
-                        throw new Unreadable($"The update has a {activity.Name.LocalName} activity Power Tools does not write.");
+                        throw new Unreadable($"The update has a {activity.Name.LocalName} activity Dyno does not write.");
                 }
             }
 
@@ -262,7 +262,7 @@ public static partial class ProcessXamlReader
                         table = activity.Attribute("EntityName")?.Value;
                         continue;
                     default:
-                        throw new Unreadable($"The create has a {activity.Name.LocalName} activity Power Tools does not write.");
+                        throw new Unreadable($"The create has a {activity.Name.LocalName} activity Dyno does not write.");
                 }
             }
 
@@ -320,7 +320,7 @@ public static partial class ProcessXamlReader
                         sent = true;
                         continue;
                     default:
-                        throw new Unreadable($"The email step has a {activity.Name.LocalName} activity Power Tools does not write.");
+                        throw new Unreadable($"The email step has a {activity.Name.LocalName} activity Dyno does not write.");
                 }
             }
 
@@ -337,7 +337,7 @@ public static partial class ProcessXamlReader
             {
                 if (Value(activity, env)) continue;
                 if (activity.Name.LocalName != "AssignEntity")
-                    throw new Unreadable($"The assign step has a {activity.Name.LocalName} activity Power Tools does not write.");
+                    throw new Unreadable($"The assign step has a {activity.Name.LocalName} activity Dyno does not write.");
                 var owner = DirectCastVariable(activity.Attribute("Owner")?.Value);
                 assign = new JsonObject();
                 if (Record(EntityKey(activity.Attribute("Entity")?.Value)) is { } record) assign["record"] = record;
@@ -380,7 +380,7 @@ public static partial class ProcessXamlReader
             {
                 if (Value(activity, env)) continue;
                 if (activity.Name != Xns.Mcwa + "InvokeSdkMessageActivity")
-                    throw new Unreadable($"The action step has a {activity.Name.LocalName} activity Power Tools does not write.");
+                    throw new Unreadable($"The action step has a {activity.Name.LocalName} activity Dyno does not write.");
                 var arguments = activity.Element(Xns.Mcwa + "InvokeSdkMessageActivity.Arguments")?.Elements().ToList() ?? [];
                 if (arguments is not [var target] || target.Attribute(Xns.X + "Key")?.Value != "Target")
                     throw new Unreadable("The action step passes arguments other than Target.");
@@ -404,11 +404,11 @@ public static partial class ProcessXamlReader
             JsonObject? custom = null;
             foreach (var activity in Activities(composite))
             {
-                if (custom is not null) throw new Unreadable("The custom step reads its outputs back; Power Tools keeps such steps as they are.");
+                if (custom is not null) throw new Unreadable("The custom step reads its outputs back; Dyno keeps such steps as they are.");
                 if (Value(activity, env)) continue;
                 var aqn = activity.Attribute("AssemblyQualifiedName")?.Value;
                 if (activity.Name != Xns.Mxswa + "ActivityReference" || aqn is null || Xns.CrmActivity(aqn) is not null)
-                    throw new Unreadable($"The custom step has a {activity.Name.LocalName} activity Power Tools does not write.");
+                    throw new Unreadable($"The custom step has a {activity.Name.LocalName} activity Dyno does not write.");
                 var type = aqn[..aqn.IndexOf(',')].Trim();
                 reading.CustomTypes[type] = aqn;
                 var inputs = new JsonArray();
@@ -445,7 +445,7 @@ public static partial class ProcessXamlReader
                 var exception = activity.Attribute("Exception")?.Value ?? "";
                 var status = exception.Contains("OperationStatus.Succeeded", StringComparison.Ordinal) ? "succeeded"
                     : exception.Contains("OperationStatus.Canceled", StringComparison.Ordinal) ? "canceled"
-                    : throw new Unreadable("The stop step ends with a status Power Tools does not write.");
+                    : throw new Unreadable("The stop step ends with a status Dyno does not write.");
                 stop = new JsonObject { ["status"] = status };
                 if (Get(env, DirectCastVariable(activity.Attribute("Reason")?.Value)) is not PLiteral message)
                     throw new Unreadable("The stop message is not plain text.");
@@ -486,13 +486,13 @@ public static partial class ProcessXamlReader
                             continue;
                         }
 
-                        var condition = conditions.GetValueOrDefault(VbText.Brackets(test)) ?? throw new Unreadable("The branch tests a condition Power Tools cannot read.");
+                        var condition = conditions.GetValueOrDefault(VbText.Brackets(test)) ?? throw new Unreadable("The branch tests a condition Dyno cannot read.");
                         branches.Add((condition, then));
                         continue;
                     }
 
                     default:
-                        throw new Unreadable($"The condition has a {activity.Name.LocalName} activity Power Tools does not write.");
+                        throw new Unreadable($"The condition has a {activity.Name.LocalName} activity Dyno does not write.");
                 }
             }
 
@@ -521,7 +521,7 @@ public static partial class ProcessXamlReader
                 "Null" => "null",
                 "NotNull" => "notNull",
                 "In" => "in",
-                var other => throw new Unreadable($"The condition uses operator {other}, which Power Tools does not write yet."),
+                var other => throw new Unreadable($"The condition uses operator {other}, which Dyno does not write yet."),
             };
             var operand = VbText.Brackets(Keyed(arguments, "Operand")?.Value.Trim());
             var parameters = Keyed(arguments, "Parameters") is { } p && p.Name != Xns.X + "Null"
@@ -575,7 +575,7 @@ public static partial class ProcessXamlReader
             foreach (var side in new[] { "LeftOperand", "RightOperand" })
             {
                 var part = conditions.GetValueOrDefault(VbText.Brackets(Keyed(arguments, side)?.Value.Trim()))
-                    ?? throw new Unreadable("The condition combines a test Power Tools cannot read.");
+                    ?? throw new Unreadable("The condition combines a test Dyno cannot read.");
                 // and(and(a, b), c) is all [a, b, c], as the writer builds it.
                 if (part.Count == 1 && part[group] is JsonArray same)
                     foreach (var inner in same) parts.Add(inner?.DeepClone());
@@ -603,7 +603,7 @@ public static partial class ProcessXamlReader
             if (activity.Name == Xns.Mxswa + "GetEntityProperty")
             {
                 var column = activity.Attribute("Attribute")?.Value ?? "";
-                if (column.StartsWith('!')) throw new Unreadable($"The step reads {column}, which Power Tools does not write.");
+                if (column.StartsWith('!')) throw new Unreadable($"The step reads {column}, which Dyno does not write.");
                 var table = activity.Attribute("EntityName")?.Value ?? "";
                 var key = EntityKey(activity.Attribute("Entity")?.Value);
                 var from = Record(key);
@@ -647,11 +647,11 @@ public static partial class ProcessXamlReader
                 case "CreateCrmType":
                     return CreateCrmType(items, env);
                 case "SelectFirstNonNull" when items.Count == 1:
-                    return env.TryGetValue(items[0], out var only) ? only : throw new Unreadable($"The step uses {items[0]}, which Power Tools does not write.");
+                    return env.TryGetValue(items[0], out var only) ? only : throw new Unreadable($"The step uses {items[0]}, which Dyno does not write.");
                 case "SelectFirstNonNull" when items.Count == 2:
                     if (env.GetValueOrDefault(items[0]) is ColumnRead { Value.Default: null } read && Get(env, items[1]) is PLiteral or PLookup)
                         return read with { Value = read.Value with { Default = Get(env, items[1]) } };
-                    throw new Unreadable("The step picks between values in a way Power Tools does not write.");
+                    throw new Unreadable("The step picks between values in a way Dyno does not write.");
                 case "RetrieveCurrentTime":
                     return new PNow();
                 case "CustomOperationArguments" when items.Count == 1:
@@ -659,13 +659,13 @@ public static partial class ProcessXamlReader
                 case "Add" when target == "x:String":
                     return new PConcat(items.Select(i => Get(env, i)).ToList());
                 default:
-                    throw new Unreadable($"The step uses the {op} operation{(target is null ? "" : $" on {target}")}, which Power Tools does not write yet.");
+                    throw new Unreadable($"The step uses the {op} operation{(target is null ? "" : $" on {target}")}, which Dyno does not write yet.");
             }
         }
 
         private static object CreateCrmType(List<string> items, Dictionary<string, object> env)
         {
-            if (items.Count < 2 || !items[0].StartsWith(PropertyType, StringComparison.Ordinal)) throw new Unreadable("The step builds a value Power Tools cannot read.");
+            if (items.Count < 2 || !items[0].StartsWith(PropertyType, StringComparison.Ordinal)) throw new Unreadable("The step builds a value Dyno cannot read.");
             var type = items[0][PropertyType.Length..];
             switch (type)
             {
@@ -681,11 +681,11 @@ public static partial class ProcessXamlReader
                     var name = VbText.Unquote(items[2]);
                     return new PLookup(VbText.Unquote(items[1]), id, name.Length == 0 ? null : name);
                 case "EntityReference" when items.Count == 3 && items[2] == "\"Owner\"":
-                    return env.TryGetValue(items[1], out var owner) ? owner : throw new Unreadable("The owner is a value Power Tools cannot read.");
+                    return env.TryGetValue(items[1], out var owner) ? owner : throw new Unreadable("The owner is a value Dyno cannot read.");
                 case "PartyList":
                     return items.Skip(1).Select(i => Get(env, i)).ToList();
                 default:
-                    throw new Unreadable($"The step has a literal {type} value, which Power Tools does not write yet.");
+                    throw new Unreadable($"The step has a literal {type} value, which Dyno does not write yet.");
             }
         }
 
@@ -699,17 +699,17 @@ public static partial class ProcessXamlReader
         }
 
         private static PValue Get(Dictionary<string, object> env, string variable) =>
-            env.TryGetValue(variable, out var value) ? AsValue(value) : throw new Unreadable($"The step uses {variable}, which Power Tools does not write.");
+            env.TryGetValue(variable, out var value) ? AsValue(value) : throw new Unreadable($"The step uses {variable}, which Dyno does not write.");
 
         private static PValue AsValue(object value) => value switch
         {
             PValue v => v,
             ColumnRead read => read.Value,
-            _ => throw new Unreadable("The step uses a value Power Tools cannot express."),
+            _ => throw new Unreadable("The step uses a value Dyno cannot express."),
         };
 
         private static List<PValue> Party(Dictionary<string, object> env, string variable) =>
-            env.GetValueOrDefault(variable) is List<PValue> party ? party : throw new Unreadable("The email recipients are not a list Power Tools can read.");
+            env.GetValueOrDefault(variable) is List<PValue> party ? party : throw new Unreadable("The email recipients are not a list Dyno can read.");
 
         // ── XAML helpers ─────────────────────────────────────────────────────
 
@@ -734,7 +734,7 @@ public static partial class ProcessXamlReader
             const string prefix = "InputEntities(\"";
             return text.StartsWith(prefix, StringComparison.Ordinal) && text.EndsWith("\")", StringComparison.Ordinal)
                 ? text[prefix.Length..^2]
-                : throw new Unreadable("The step works on a record Power Tools cannot name.");
+                : throw new Unreadable("The step works on a record Dyno cannot name.");
         }
 
         /// <summary>The key of <c>[CreatedEntities("key#Temp")]</c>, without #Temp.</summary>
@@ -744,7 +744,7 @@ public static partial class ProcessXamlReader
             const string prefix = "CreatedEntities(\"";
             return text.StartsWith(prefix, StringComparison.Ordinal) && text.EndsWith("#Temp\")", StringComparison.Ordinal)
                 ? text[prefix.Length..^"#Temp\")".Length]
-                : throw new Unreadable("The step writes a record Power Tools cannot name.");
+                : throw new Unreadable("The step writes a record Dyno cannot name.");
         }
 
         /// <summary>null for the primary record, or the lookup on it that a related key goes through.</summary>
@@ -765,9 +765,9 @@ public static partial class ProcessXamlReader
         {
             var text = VbText.Brackets(expression?.Trim());
             const string prefix = "DirectCast(";
-            if (!text.StartsWith(prefix, StringComparison.Ordinal)) throw new Unreadable("The step passes a value Power Tools cannot read.");
+            if (!text.StartsWith(prefix, StringComparison.Ordinal)) throw new Unreadable("The step passes a value Dyno cannot read.");
             var comma = text.IndexOf(',');
-            return comma < 0 ? throw new Unreadable("The step passes a value Power Tools cannot read.") : text[prefix.Length..comma].Trim();
+            return comma < 0 ? throw new Unreadable("The step passes a value Dyno cannot read.") : text[prefix.Length..comma].Trim();
         }
 
         private static JsonObject Ordered(JsonObject node, params string[] order)

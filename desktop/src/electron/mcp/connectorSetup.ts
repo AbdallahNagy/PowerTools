@@ -16,7 +16,7 @@ export interface ConnectorSetupDeps {
   homePath: () => string;
   appDataPath: () => string;
   localAppData: string | undefined;
-  /** "Power Tools", or the dev userData folder name in development. */
+  /** The app data folder name; see appFolderName in ../userDataFolder.ts. */
   appFolderName: () => string;
   log?: Pick<Console, "info" | "error">;
   fs?: ConnectorInstallFs;

@@ -6,7 +6,7 @@ using Dyno.Api.Utils;
 namespace Dyno.Api.Tools.Agent;
 
 /// <summary>
-/// Dataverse operations for the desktop MCP server's agent tools. Power Tools decides approval before it calls these;
+/// Dataverse operations for the desktop MCP server's agent tools. Dyno decides approval before it calls these;
 /// the routes do not know the caller. Errors use the same { code, message, dataverseCode? } body as /api/community-tools.
 /// </summary>
 public static class AgentEndpoints

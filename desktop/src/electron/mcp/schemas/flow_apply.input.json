@@ -1,5 +1,5 @@
 {
-  "description": "A solution-aware cloud flow (online only). Leave a property out to keep it. See the guide powertools://guides/cloud-flows.",
+  "description": "A solution-aware cloud flow (online only). Leave a property out to keep it. See the guide dyno://guides/cloud-flows.",
   "type": "object",
   "properties": {
     "solution": {

@@ -156,7 +156,7 @@ describe("community tools dialog", () => {
     expect(within(review).getByText("No hosts declared")).toBeInTheDocument();
     expect(within(review).queryByText("No network hosts")).not.toBeInTheDocument();
     expect(
-      within(review).getByText("Power Tools limits which hosts a tool can call, but cannot fully block network access."),
+      within(review).getByText("Dyno limits which hosts a tool can call, but cannot fully block network access."),
     ).toBeInTheDocument();
   });
 

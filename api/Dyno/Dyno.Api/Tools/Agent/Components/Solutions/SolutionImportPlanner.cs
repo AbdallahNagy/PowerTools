@@ -11,7 +11,7 @@ namespace Dyno.Api.Tools.Agent.Components.Solutions;
 /// customizations. The step detail names the file's SHA-256 and every option, so the approved hash covers exactly
 /// that file and those values. One path for online and on-premises: ExecuteAsync with ImportSolutionRequest, polled
 /// through asyncoperation and importjob. The publish lock is held from the second plan until verification, so an
-/// import never starts while Power Tools publishes on the same environment.
+/// import never starts while Dyno publishes on the same environment.
 /// </summary>
 public sealed class SolutionImportPlanner(
     Func<string, byte[]>? readFile = null,

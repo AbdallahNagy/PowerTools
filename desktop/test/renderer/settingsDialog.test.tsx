@@ -68,13 +68,13 @@ describe("Settings: MCP server", () => {
   it("shows Off by default with the switch unchecked", async () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
     expect(await screen.findByText("Off")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: /Let AI agents use Power Tools/ })).not.toBeChecked();
+    expect(screen.getByRole("switch", { name: /Let AI agents use Dyno/ })).not.toBeChecked();
   });
 
   it("switching on calls setMcpEnabled(true) and shows Running", async () => {
     const setMcpEnabled = vi.fn(async (): Promise<McpStatusInfo> => ({ ...OFF, enabled: true, running: true, port: 5000 }));
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF, setMcpEnabled } });
-    const toggle = await screen.findByRole("switch", { name: /Let AI agents use Power Tools/ });
+    const toggle = await screen.findByRole("switch", { name: /Let AI agents use Dyno/ });
     await waitFor(() => expect(toggle).not.toBeDisabled());
     fireEvent.click(toggle);
     expect(await screen.findByText("Running")).toBeInTheDocument();
@@ -88,13 +88,13 @@ describe("Settings: MCP server", () => {
 
   it("offers a Claude Code command and a JSON config that start the connector", async () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
-    const code = await screen.findByText(/^claude mcp add --scope user powertools -- /);
+    const code = await screen.findByText(/^claude mcp add --scope user dyno -- /);
     expect(code.textContent).toContain("Dyno.McpConnector.exe");
     expect(screen.getByRole("button", { name: "Claude Code" })).toHaveAttribute("aria-pressed", "true");
 
     // One client's setup shows at a time.
     fireEvent.click(screen.getByRole("button", { name: "Claude Desktop" }));
-    expect(screen.queryByText(/^claude mcp add --scope user powertools -- /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^claude mcp add --scope user dyno -- /)).not.toBeInTheDocument();
     const json = screen.getByText(/"mcpServers"/);
     expect(json.textContent).toContain("Dyno.McpConnector.exe");
     expect(screen.getByRole("button", { name: "Copy Claude Desktop" })).toBeInTheDocument();
@@ -117,9 +117,9 @@ describe("Settings: MCP server", () => {
         }),
       },
     });
-    expect(await screen.findByText("Update your agent setup so Power Tools can update")).toBeInTheDocument();
+    expect(await screen.findByText("Update your agent setup so Dyno can update")).toBeInTheDocument();
     const fix = screen.getByText(/^claude mcp remove --scope user powertools/);
-    expect(fix.textContent).toContain("claude mcp add --scope user powertools -- ");
+    expect(fix.textContent).toContain("claude mcp add --scope user dyno -- ");
     expect(fix.textContent).toContain("Dyno.McpConnector.exe");
     expect(screen.getByText(/Replace the "pt" entry in .*claude_desktop_config\.json/)).toBeInTheDocument();
   });
@@ -127,7 +127,7 @@ describe("Settings: MCP server", () => {
   it("shows no update warning when every setup uses the new connector", async () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
     await screen.findByText("Off");
-    expect(screen.queryByText("Update your agent setup so Power Tools can update")).not.toBeInTheDocument();
+    expect(screen.queryByText("Update your agent setup so Dyno can update")).not.toBeInTheDocument();
   });
 
   it("lists recent activity on its own tab without ids or tokens", async () => {
@@ -195,7 +195,7 @@ describe("Settings: MCP server", () => {
     // Only the first read answers; later ones hang, as a slow main process would.
     const getMcpStatus = vi.fn(() => (++calls === 1 ? Promise.resolve(running) : new Promise<McpStatusInfo>(() => undefined)));
     renderAgents({ bridgeOverrides: { getMcpStatus } });
-    const name = /Let AI agents use Power Tools/;
+    const name = /Let AI agents use Dyno/;
     expect(await screen.findByRole("switch", { name })).toBeChecked();
 
     fireEvent.click(screen.getByRole("button", { name: "Privacy" }));
@@ -215,8 +215,8 @@ describe("Settings: MCP server", () => {
 
   it("shows that the server state is loading instead of an off switch", async () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: () => new Promise<McpStatusInfo>(() => undefined) } });
-    expect(await screen.findByRole("status", { name: /Loading Let AI agents use Power Tools/ })).toBeInTheDocument();
-    expect(screen.queryByRole("switch", { name: /Let AI agents use Power Tools/ })).not.toBeInTheDocument();
+    expect(await screen.findByRole("status", { name: /Loading Let AI agents use Dyno/ })).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: /Let AI agents use Dyno/ })).not.toBeInTheDocument();
     expect(screen.queryByText("Off")).not.toBeInTheDocument();
   });
 
@@ -469,7 +469,7 @@ describe("Settings dialog", () => {
     const openSettingsFolder = vi.spyOn(view.bridge, "openSettingsFolder");
     fireEvent.click(screen.getByText("open settings"));
     fireEvent.click(await screen.findByRole("button", { name: "Updates & About" }));
-    expect(await screen.findByText("Power Tools v1.2.3")).toBeInTheDocument();
+    expect(await screen.findByText("Dyno v1.2.3")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Open data folder" }));
     await waitFor(() => expect(openSettingsFolder).toHaveBeenCalledWith("data"));
   });
@@ -490,7 +490,7 @@ describe("Settings dialog", () => {
     fireEvent.click(screen.getByText("open settings"));
     fireEvent.click(await screen.findByRole("button", { name: "Updates & About" }));
     const button = await screen.findByRole("button", { name: "Check for updates" });
-    await waitFor(() => expect(screen.getByText("Power Tools is up to date.")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Dyno is up to date.")).toBeInTheDocument());
     fireEvent.click(button);
     expect(await screen.findByText("Checking for updates…")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Check for updates" })).toBeDisabled();

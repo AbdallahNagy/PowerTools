@@ -62,7 +62,7 @@ public enum ProcessOperator
     [JsonStringEnumMemberName("in")] In,
 }
 
-[Description("A classic workflow or custom process action, saved through a solution import so it behaves the same online and on-premises. The steps replace the process's steps. See the guide powertools://guides/classic-workflows.")]
+[Description("A classic workflow or custom process action, saved through a solution import so it behaves the same online and on-premises. The steps replace the process's steps. See the guide dyno://guides/classic-workflows.")]
 public sealed class ProcessApplySpec : IApplySpec
 {
     [Description("Unique name of the unmanaged solution the process goes into.")]
@@ -158,7 +158,7 @@ public sealed class ProcessStep
 
     public ProcessStop? Stop { get; init; }
 
-    [Description("A step Power Tools reads but cannot write (for example a custom step with outputs): its id from inspect_solution, kept exactly as it is.")]
+    [Description("A step Dyno reads but cannot write (for example a custom step with outputs): its id from inspect_solution, kept exactly as it is.")]
     public string? Keep { get; init; }
 
     [Description("Read back only, with keep: what the kept step does. Ignored when written.")]

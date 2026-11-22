@@ -4,7 +4,9 @@ import { createHash } from "node:crypto";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { ID_PATTERN, parseManifest, type CommunityToolManifest } from "./manifest.js";
 
-export const MANIFEST_FILE = "powertools-tool.json";
+export const MANIFEST_FILE = "dyno-tool.json";
+/** The manifest name from before the rename to Dyno. A folder without dyno-tool.json is read from this one. */
+export const LEGACY_MANIFEST_FILE = "powertools-tool.json";
 const STATE_FILE = "community-tools.json";
 const STORAGE_DIR = "community-tool-data";
 const MAX_ICON_BYTES = 256 * 1024;
@@ -188,14 +190,18 @@ export function createToolStore({ userDataPath, hostVersion, builtInToolIds, fs 
   async function loadFolder(folder: string, state: StoreState): Promise<LoadedCommunityTool> {
     if (!(await fs.exists(folder))) return failed(folder, "missing", ["Folder not found"]);
 
-    const manifestPath = join(folder, MANIFEST_FILE);
-    if (!(await fs.exists(manifestPath))) return failed(folder, "invalid", [`${MANIFEST_FILE} not found`]);
+    let manifestName = MANIFEST_FILE;
+    if (!(await fs.exists(join(folder, manifestName)))) {
+      manifestName = LEGACY_MANIFEST_FILE;
+      if (!(await fs.exists(join(folder, manifestName)))) return failed(folder, "invalid", [`${MANIFEST_FILE} not found`]);
+    }
+    const manifestPath = join(folder, manifestName);
 
     let json: unknown;
     try {
       json = JSON.parse(await fs.readText(manifestPath));
     } catch {
-      return failed(folder, "invalid", [`${MANIFEST_FILE} is not valid JSON`]);
+      return failed(folder, "invalid", [`${manifestName} is not valid JSON`]);
     }
 
     const parsed = parseManifest(json, hostVersion);

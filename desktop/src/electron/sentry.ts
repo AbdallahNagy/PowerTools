@@ -12,7 +12,7 @@ const dsn = resolveDsn(process.env);
 if (dsn) {
   Sentry.init({
     dsn,
-    release: `power-tools@${app.getVersion()}`,
+    release: `dyno@${app.getVersion()}`,
     environment: app.isPackaged ? "production" : "development",
     // Only the main-process transport sends. Keep renderer traffic on the
     // preload IPC bridge so the renderer CSP stays closed.

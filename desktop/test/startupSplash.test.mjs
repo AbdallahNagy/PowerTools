@@ -5,7 +5,7 @@ import { buildStartupSplashHtml } from "../dist-electron/startupSplashHtml.js";
 test("startup splash html presents the loading state without external assets", () => {
   const html = buildStartupSplashHtml();
 
-  expect(html).toMatch(/Power Tools/);
+  expect(html).toMatch(/Dyno/);
   expect(html).toMatch(/Starting local services/);
   expect(html).toMatch(/class="spinner"/);
   expect(html).toMatch(/http-equiv="Content-Security-Policy" content="default-src 'none'/);

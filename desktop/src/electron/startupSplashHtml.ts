@@ -134,7 +134,7 @@ export function buildStartupSplashHtml(iconDataUrl?: string, scheme: "default" |
     <main class="shell" aria-live="polite">
       ${markHtml}
       <div>
-        <h1>Power Tools</h1>
+        <h1>Dyno</h1>
         <p>Starting local services...</p>
       </div>
       <div class="status">

@@ -16,12 +16,12 @@ function statusOf(status: McpStatusInfo | null): { label: string; tone: "neutral
 
 /** Both snippets use the same launch, so a client config and the Claude Code command cannot disagree. */
 function claudeCodeCommand(status: McpStatusInfo): string {
-  return `claude mcp add --scope user powertools -- ${status.connectorCommand}`;
+  return `claude mcp add --scope user dyno -- ${status.connectorCommand}`;
 }
 
 function clientConfigJson(status: McpStatusInfo): string {
   return JSON.stringify(
-    { mcpServers: { powertools: { command: status.connector.command, args: status.connector.args } } },
+    { mcpServers: { dyno: { command: status.connector.command, args: status.connector.args } } },
     null,
     2,
   );
@@ -29,7 +29,7 @@ function clientConfigJson(status: McpStatusInfo): string {
 
 function vsCodeConfigJson(status: McpStatusInfo): string {
   return JSON.stringify(
-    { servers: { powertools: { type: "stdio", command: status.connector.command, args: status.connector.args } } },
+    { servers: { dyno: { type: "stdio", command: status.connector.command, args: status.connector.args } } },
     null,
     2,
   );
@@ -111,15 +111,15 @@ function legacyFix(setup: McpLegacySetup, status: McpStatusInfo): { text: string
 
 /**
  * Setups made before the separate connector start PowerTools.API.exe from the install folder. The client keeps it
- * running, so Power Tools cannot install updates. The app never edits these files; it shows what to change.
+ * running, so Dyno cannot install updates. The app never edits these files; it shows what to change.
  */
 function LegacySetupWarning({ status }: { status: McpStatusInfo }) {
   const setups = status.legacySetups ?? [];
   if (setups.length === 0) return null;
   return (
-    <Alert tone="warn" title="Update your agent setup so Power Tools can update">
+    <Alert tone="warn" title="Update your agent setup so Dyno can update">
       <p>
-        These setups start the old connector inside the Power Tools install folder. While the agent runs, it keeps
+        These setups start the old connector inside the Dyno install folder. While the agent runs, it keeps
         that file locked and updates cannot install. Switch them to the new connector:
       </p>
       <ul className="mt-3 flex flex-col gap-4">
@@ -212,7 +212,7 @@ export function AgentsSection({ agents }: { agents: AgentsState }) {
 
       <SettingsGroup title="MCP server" hideTitle>
         <SettingSwitchRow
-          label="Let AI agents use Power Tools (MCP server)"
+          label="Let AI agents use Dyno (MCP server)"
           description="Off by default. Agents work through your own sign-in. Changes need your approval unless a connection allows them under Agent permissions; destructive actions always ask."
           checked={enabled}
           disabled={busy || status === null}

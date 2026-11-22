@@ -34,7 +34,7 @@ function setup() {
     ipcMain: { handle: (channel: string, handler: Handler) => void handlers.set(channel, handler) } as never,
     service,
     getMainWindow: () => ({ webContents: mainContents }) as never,
-    connector: () => ({ command: "C:\\Program Files\\Power Tools\\resources\\api\\PowerTools.API.exe", args: ["--mcp-connector"] }),
+    connector: () => ({ command: "C:\\Program Files\\Dyno\\resources\\api\\PowerTools.API.exe", args: ["--mcp-connector"] }),
   });
   const call = (channel: string, sender: unknown, ...args: unknown[]) => handlers.get(channel)!({ sender }, ...args);
   return { call, handlers, mainContents, service };
@@ -45,7 +45,7 @@ describe("mcp IPC", () => {
     const { call, mainContents } = setup();
     const info = (await call("mcp-get-status", mainContents)) as Record<string, unknown>;
     expect(info).toMatchObject({ enabled: false, running: false, recent: [] });
-    expect(info.connectorCommand).toBe('"C:\\Program Files\\Power Tools\\resources\\api\\PowerTools.API.exe" --mcp-connector');
+    expect(info.connectorCommand).toBe('"C:\\Program Files\\Dyno\\resources\\api\\PowerTools.API.exe" --mcp-connector');
   });
 
   it("rejects a foreign sender on every channel", async () => {
@@ -134,7 +134,7 @@ describe("mcp approval IPC", () => {
 });
 
 describe("connectorLaunch", () => {
-  const localMcp = "C:\\Users\\me\\AppData\\Local\\Power Tools\\mcp";
+  const localMcp = "C:\\Users\\me\\AppData\\Local\\Dyno\\mcp";
 
   it("points at the per-user copy of the connector, not the install folder", () => {
     const launch = connectorLaunch({

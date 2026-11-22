@@ -66,9 +66,9 @@ function approvalError(outcome: "denied" | "timed-out" | "unavailable" | "cancel
     return new AgentToolError("ApprovalDenied", "The user denied this action", "Do not retry; ask the user what to do instead.");
   }
   if (outcome === "timed-out") {
-    return new AgentToolError("ApprovalTimedOut", "The user did not answer in time", "Ask the user to look at Power Tools.");
+    return new AgentToolError("ApprovalTimedOut", "The user did not answer in time", "Ask the user to look at Dyno.");
   }
-  return new AgentToolError("ApprovalUnavailable", "Power Tools could not ask the user", "Ask the user to look at Power Tools.");
+  return new AgentToolError("ApprovalUnavailable", "Dyno could not ask the user", "Ask the user to look at Dyno.");
 }
 
 /**
@@ -143,7 +143,7 @@ export function createMcpRequestHandler(opts: McpRequestHandlerOptions): McpRequ
 
   function createSession(): Session {
     const server = new Server(
-      { name: "powertools", version: opts.appVersion ?? "0.0.0" },
+      { name: "dyno", version: opts.appVersion ?? "0.0.0" },
       { capabilities: { tools: { listChanged: true }, resources: {} }, instructions: opts.instructions },
     );
     const transport = new StreamableHTTPServerTransport({

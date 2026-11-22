@@ -1,5 +1,5 @@
 {
-  "description": "The desired state of one system view. Power Tools writes the FetchXML and layout so they match. Parts left out stay as they are.",
+  "description": "The desired state of one system view. Dyno writes the FetchXML and layout so they match. Parts left out stay as they are.",
   "type": "object",
   "properties": {
     "solution": {

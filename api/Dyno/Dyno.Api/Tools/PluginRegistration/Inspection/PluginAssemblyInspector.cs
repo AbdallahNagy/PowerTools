@@ -506,7 +506,7 @@ public sealed class PluginAssemblyInspector : IPluginAssemblyInspector
         {
             diagnostics.Add(new AssemblyInspectionDiagnosticDto(
                 "target_framework_unsupported",
-                $"The assembly targets {targetFramework}; PowerTools supports {SupportedTargetFramework}.",
+                $"The assembly targets {targetFramework}; Dyno supports {SupportedTargetFramework}.",
                 AssemblyInspectionDiagnosticSeverity.Error));
         }
 
@@ -517,7 +517,7 @@ public sealed class PluginAssemblyInspector : IPluginAssemblyInspector
         {
             diagnostics.Add(new AssemblyInspectionDiagnosticDto(
                 "runtime_version_unsupported",
-                $"The assembly metadata runtime is {runtimeVersion}; PowerTools supports {SupportedRuntimeVersion}.",
+                $"The assembly metadata runtime is {runtimeVersion}; Dyno supports {SupportedRuntimeVersion}.",
                 AssemblyInspectionDiagnosticSeverity.Error));
         }
 

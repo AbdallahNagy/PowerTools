@@ -48,7 +48,7 @@ export function UpdateDialog() {
       status.state === "downloaded" ||
       status.state === "error");
   const version = details?.version;
-  const newVersion = version ? `Power Tools v${version}` : "A new version of Power Tools";
+  const newVersion = version ? `Dyno v${version}` : "A new version of Dyno";
   const title =
     status.state === "downloaded"
       ? `${newVersion} is ready to install`
@@ -66,7 +66,7 @@ export function UpdateDialog() {
       {subtitle ? <p className="-mt-1 text-xs text-fg-muted">{subtitle}</p> : null}
 
       {status.state === "error" ? (
-        <Alert tone="danger" title="Power Tools could not update">
+        <Alert tone="danger" title="Dyno could not update">
           {status.message}
         </Alert>
       ) : (
@@ -105,7 +105,7 @@ export function UpdateDialog() {
 
       {status.state === "downloaded" ? (
         <p className="text-xs text-fg-muted">
-          Power Tools will close, install the update, and open again. Save your work first.
+          Dyno will close, install the update, and open again. Save your work first.
         </p>
       ) : null}
 

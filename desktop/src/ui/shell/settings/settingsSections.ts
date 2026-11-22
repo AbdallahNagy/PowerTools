@@ -23,14 +23,14 @@ export const SETTINGS_SECTION_LABELS: Record<SettingsSection, string> = {
 
 /** One line under the section title. */
 export const SETTINGS_SECTION_DESCRIPTIONS: Record<SettingsSection, string> = {
-  appearance: "How Power Tools looks.",
+  appearance: "How Dyno looks.",
   shortcuts: "Keys that work anywhere in the app.",
-  agents: "Let AI agents such as Claude Code use your Power Tools connections.",
+  agents: "Let AI agents such as Claude Code use your Dyno connections.",
   agentTools: "Choose what agents can do. Connected agents see a change right away.",
   agentActivity: "What agents did on your connections, newest first.",
   permissions: "What agents may change on each connection without asking you.",
-  privacy: "What Power Tools sends, and when.",
-  updates: "Your version, updates, and where Power Tools keeps its files.",
+  privacy: "What Dyno sends, and when.",
+  updates: "Your version, updates, and where Dyno keeps its files.",
 };
 
 /** The sections as the sidebar of the Settings dialog lists them. */

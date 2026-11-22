@@ -17,6 +17,6 @@ export function toToolResult(error: unknown): CallToolResult {
     isError: true,
     content: [{ type: "text", text }],
     structuredContent: structured,
-    ...(e.untrusted ? { _meta: { "powertools/untrusted": true } } : {}),
+    ...(e.untrusted ? { _meta: { "dyno/untrusted": true } } : {}),
   };
 }

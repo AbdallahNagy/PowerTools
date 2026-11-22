@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Minus, PanelLeft, Square, X } from "lucide-react";
 
-import PowerToolsIcon from "../../assets/icons/power-tools-icon.svg";
+import AppIcon from "../../assets/icons/power-tools-icon.svg";
 import { desktopBridge } from "../../platform/desktopBridge";
 import { UpdateButton } from "./UpdateButton";
 import { TITLE_BAR_MENU_LABELS, TITLE_BAR_MENUS, type TitleBarMenuId } from "./titleBarMenus";
@@ -43,7 +43,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
     >
       <div className="app-no-drag flex items-stretch">
         <span className="flex items-center pl-2 pr-1">
-          <img src={PowerToolsIcon} alt="Power Tools" className="h-5 w-5" />
+          <img src={AppIcon} alt="Dyno" className="h-5 w-5" />
         </span>
         {TITLE_BAR_MENUS.map((menuId) => (
           <button
@@ -77,7 +77,7 @@ const TitleBar = ({ sidebarVisible, onToggleSidebar }: TitleBarProps) => {
           void desktopBridge.toggleMaximizeWindow();
         }}
       >
-        Power Tools
+        Dyno
       </div>
 
       <div className="app-no-drag ml-auto flex items-stretch">

@@ -44,7 +44,7 @@ public sealed class BulkWorkflowJobRunner(
         }
         catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
         {
-            job.Fail("The run stopped because Power Tools is closing.");
+            job.Fail("The run stopped because Dyno is closing.");
         }
         catch (Exception ex)
         {

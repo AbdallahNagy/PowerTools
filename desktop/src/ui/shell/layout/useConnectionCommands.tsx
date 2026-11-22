@@ -76,7 +76,7 @@ export function useConnectionCommands(): PaletteSection[] {
       {
         id: "import",
         title: "Import connections",
-        tooltip: "From Power Tools or XrmToolBox",
+        tooltip: "From Dyno or XrmToolBox",
         icon: <Download {...ICON} />,
         onRun: () => void openConnectionManager(null, "import"),
       },

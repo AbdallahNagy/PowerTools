@@ -104,7 +104,7 @@ try {
   }
   if (!window) throw new Error("Main window did not open.");
 
-  await window.getByRole("heading", { level: 1, name: "PowerTools" }).waitFor({ timeout: 60_000 });
+  await window.getByRole("heading", { level: 1, name: "Dyno" }).waitFor({ timeout: 60_000 });
   await Promise.race([
     sidecarReady,
     new Promise((_, fail) => setTimeout(() => fail(new Error("Sidecar did not report LISTENING within 120s.")), 120_000)),

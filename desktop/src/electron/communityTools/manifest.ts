@@ -1,4 +1,4 @@
-// Validation of a community tool's powertools-tool.json manifest.
+// Validation of a community tool's dyno-tool.json manifest.
 // Pure module with no Electron imports, so it stays unit-testable.
 
 export interface CommunityToolManifest {
@@ -156,7 +156,7 @@ export function parseManifest(json: unknown, hostVersion: string): ManifestResul
     const host = parseVersion(hostVersion, HOST_VERSION_PATTERN);
     if (!required) errors.push(`minHostVersion: "${minHostVersion}" must be x.y.z`);
     else if (!host || compareVersions(required, host) > 0) {
-      errors.push(`minHostVersion: needs Power Tools ${minHostVersion} or later; this is ${hostVersion}`);
+      errors.push(`minHostVersion: needs Dyno ${minHostVersion} or later; this is ${hostVersion}`);
     }
   }
 

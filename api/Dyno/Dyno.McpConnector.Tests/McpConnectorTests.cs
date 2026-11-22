@@ -99,7 +99,7 @@ public class McpConnectorTests
         var init = await h.ReadAsync();
         Assert.Equal(7, init["id"]!.GetValue<int>());
         Assert.Equal("2025-03-26", init["result"]!["protocolVersion"]!.GetValue<string>());
-        Assert.Equal("powertools", init["result"]!["serverInfo"]!["name"]!.GetValue<string>());
+        Assert.Equal("dyno", init["result"]!["serverInfo"]!["name"]!.GetValue<string>());
         Assert.True(init["result"]!["capabilities"]!["tools"]!["listChanged"]!.GetValue<bool>());
         Assert.NotNull(init["result"]!["capabilities"]!["resources"]);
         Assert.Equal(Connector.OfflineMessage, init["result"]!["instructions"]!.GetValue<string>());
@@ -189,7 +189,7 @@ public class McpConnectorTests
         await using var h = new ConnectorHarness();
 
         h.Send(ConnectorHarness.Initialize(1));
-        Assert.Equal("powertools", (await h.ReadAsync())["result"]!["serverInfo"]!["name"]!.GetValue<string>());
+        Assert.Equal("dyno", (await h.ReadAsync())["result"]!["serverInfo"]!["name"]!.GetValue<string>());
         h.Send(ConnectorHarness.Initialized());
 
         h.WriteDiscovery(app.Port);

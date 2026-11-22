@@ -16,7 +16,7 @@ let targetDir: string;
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "pt-connector-"));
   sourceDir = join(dir, "resources", "mcp-connector");
-  targetDir = join(dir, "LocalAppData", "Power Tools", "mcp");
+  targetDir = join(dir, "LocalAppData", "Dyno", "mcp");
   await mkdir(sourceDir, { recursive: true });
   await writeFile(join(sourceDir, "Dyno.McpConnector.exe"), "connector v2");
 });

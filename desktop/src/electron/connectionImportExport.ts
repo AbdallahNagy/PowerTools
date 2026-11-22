@@ -2,10 +2,12 @@ import { randomUUID } from "crypto";
 import { cleanBrowser, cleanText, type ConnectionStore } from "./connectionStore.js";
 import type { BrowserChoice, StoredConnection } from "./connectionTypes.js";
 
-export const EXPORT_FORMAT = "powertools-connections";
+export const EXPORT_FORMAT = "dyno-connections";
+/** The format of files exported before the rename to Dyno. They import the same way. */
+export const LEGACY_EXPORT_FORMAT = "powertools-connections";
 export const EXPORT_VERSION = 1;
 
-/** One connection in a Power Tools export file. Never holds passwords or tokens. */
+/** One connection in a Dyno export file. Never holds passwords or tokens. */
 export interface ExportedConnection {
   id: string;
   organization: string | null;
@@ -24,7 +26,7 @@ export type ImportStatus = "new" | "duplicate" | "ungrouped" | "unsupported";
 /** A connection read from a file, before the user picks what to import. */
 export interface ImportEntry {
   key: string;
-  /** Id from a Power Tools export, kept when it is free so re-imports do not duplicate. */
+  /** Id from a Dyno export, kept when it is free so re-imports do not duplicate. */
   id?: string;
   organization: string | null;
   environment: string | null;
@@ -40,7 +42,7 @@ export interface ImportEntry {
 }
 
 export interface ParsedImport {
-  source: "powertools" | "xrmtoolbox";
+  source: "dyno" | "xrmtoolbox";
   entries: ImportEntry[];
 }
 
@@ -83,7 +85,7 @@ function normalizeUrl(value: string): string {
   }
 }
 
-function parsePowerTools(json: unknown): ImportEntry[] {
+function parseDyno(json: unknown): ImportEntry[] {
   const connections = (json as { connections?: unknown }).connections;
   if (!Array.isArray(connections)) throw new Error("The file has no connections list.");
   return connections.map((raw, index): ImportEntry => {
@@ -200,7 +202,7 @@ export function parseXrmToolBox(xml: string): ImportEntry[] {
   });
 }
 
-/** Reads an import file by its content: Power Tools JSON or XrmToolBox XML. */
+/** Reads an import file by its content: Dyno JSON (including exports from Power Tools) or XrmToolBox XML. */
 export function parseImportFile(content: string): ParsedImport {
   const trimmed = content.replace(/^\uFEFF/, "").trim();
   if (trimmed.startsWith("{")) {
@@ -210,15 +212,16 @@ export function parseImportFile(content: string): ParsedImport {
     } catch {
       throw new Error("The file is not valid JSON.");
     }
-    if ((json as { format?: unknown }).format !== EXPORT_FORMAT) {
-      throw new Error("The file is not a Power Tools connections export.");
+    const format = (json as { format?: unknown }).format;
+    if (format !== EXPORT_FORMAT && format !== LEGACY_EXPORT_FORMAT) {
+      throw new Error("The file is not a Dyno connections export.");
     }
-    return { source: "powertools", entries: parsePowerTools(json) };
+    return { source: "dyno", entries: parseDyno(json) };
   }
   if (trimmed.startsWith("<")) {
     return { source: "xrmtoolbox", entries: parseXrmToolBox(trimmed) };
   }
-  throw new Error("Choose a Power Tools export (.json) or an XrmToolBox connections file (.xml).");
+  throw new Error("Choose a Dyno export (.json) or an XrmToolBox connections file (.xml).");
 }
 
 function sameConnection(entry: ImportEntry, conn: StoredConnection) {

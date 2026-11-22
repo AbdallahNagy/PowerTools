@@ -96,7 +96,7 @@ jobs:
           git push -u origin "$branch"
 
           {
-            echo "Merging this pull request publishes Power Tools $VERSION. These notes become the GitHub release and the in-app update notes."
+            echo "Merging this pull request publishes Dyno $VERSION. These notes become the GitHub release and the in-app update notes."
             echo
             cat "$RUNNER_TEMP/notes.md"
           } > "$RUNNER_TEMP/body.md"

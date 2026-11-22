@@ -13,7 +13,7 @@ export interface McpGuide {
 const CLOUD_FLOWS = `# Cloud flows with flow_apply
 
 Cloud flows exist only online (Power Automate). On-premises flow_apply answers NotSupported: build the logic as a
-classic workflow with process_apply (see powertools://guides/classic-workflows).
+classic workflow with process_apply (see dyno://guides/classic-workflows).
 
 ## The spec
 
@@ -27,7 +27,7 @@ classic workflow with process_apply (see powertools://guides/classic-workflows).
   "state": "on"
 }
 
-- definition is the Logic Apps workflow definition: triggers and actions. Power Tools adds $schema, contentVersion
+- definition is the Logic Apps workflow definition: triggers and actions. Dyno adds $schema, contentVersion
   and the $connections and $authentication parameters when they are missing.
 - Every action or trigger that calls a connector names it in inputs.host.connectionName. Each connectionName needs
   a key in connectionReferences with the same name. A missing key is refused before anything is written.
@@ -127,7 +127,7 @@ Each step has an optional label (the text after the step in the designer) and ex
 { "action": { "name": "new_NotifyApplicant", "record": "primary" } }   an activated action bound to that record's table
 { "customActivity": { "type": "Contoso.Steps.CloseTasks", "inputs": [{ "name": "Reason", "type": "string", "value": "Done" }] } }
 { "stop": { "status": "succeeded", "message": "Nothing to do" } }
-{ "keep": "CustomActivityStep3" }         a step read back that Power Tools cannot write, kept as it is
+{ "keep": "CustomActivityStep3" }         a step read back that Dyno cannot write, kept as it is
 
 ## Values
 
@@ -149,7 +149,7 @@ Combine with { "all": [conditions] } (and) or { "any": [conditions] } (or), nest
 ## Reading a process
 
 inspect_solution kind process with a name returns the process in this shape (child workflows by name). Change it and
-send it back with solution added. Steps Power Tools cannot express come back as { "keep": id, "summary": ... }: leave
+send it back with solution added. Steps Dyno cannot express come back as { "keep": id, "summary": ... }: leave
 them where they are (or remove them) and they are saved exactly as they were. A process with output arguments cannot
 be written back.
 
@@ -163,14 +163,14 @@ classic designer.
 
 export const MCP_GUIDES: readonly McpGuide[] = [
   {
-    uri: "powertools://guides/cloud-flows",
+    uri: "dyno://guides/cloud-flows",
     name: "cloud-flows",
     title: "Cloud flows",
     description: "How to write a flow_apply spec: definition, connection references, connections and turning a flow on.",
     text: CLOUD_FLOWS,
   },
   {
-    uri: "powertools://guides/classic-workflows",
+    uri: "dyno://guides/classic-workflows",
     name: "classic-workflows",
     title: "Classic workflows and actions",
     description: "How to write a process_apply spec: kinds, triggers, steps, values, conditions and reading a process back.",

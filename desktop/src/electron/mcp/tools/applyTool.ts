@@ -45,7 +45,7 @@ export function applyToolResult(result: ApplyResult): CallToolResult {
     ...(ERROR_OUTCOMES.has(result.outcome) ? { isError: true } : {}),
     content: [{ type: "text", text: truncateText(text) }],
     structuredContent: result as unknown as Record<string, unknown>,
-    _meta: { "powertools/untrusted": true },
+    _meta: { "dyno/untrusted": true },
   };
 }
 
@@ -145,7 +145,7 @@ export function applyTool(options: ApplyToolOptions): AgentTool {
     async plan(args, ctx) {
       const conn = await ctx.resolveConnection(args.connection as string | undefined);
       const plan = await ctx.callSidecar(conn, "POST", `${base}/plan`, specOf(args), ctx.signal);
-      if (!isPlanPreview(plan)) throw new AgentToolError("Internal", "The Power Tools sidecar answered an invalid plan");
+      if (!isPlanPreview(plan)) throw new AgentToolError("Internal", "The Dyno sidecar answered an invalid plan");
       return plan;
     },
     describePlan: (args, plan) =>
@@ -156,7 +156,7 @@ export function applyTool(options: ApplyToolOptions): AgentTool {
       if (!ctx.approvedPlan) throw new AgentToolError("Internal", "An apply ran without an approved plan");
       const conn = await ctx.resolveConnection(args.connection as string | undefined);
       const result = await ctx.callSidecar(conn, "POST", `${base}/apply`, { spec: specOf(args), planHash: ctx.approvedPlan.hash }, ctx.signal);
-      if (!isApplyResult(result)) throw new AgentToolError("Internal", "The Power Tools sidecar answered an invalid result");
+      if (!isApplyResult(result)) throw new AgentToolError("Internal", "The Dyno sidecar answered an invalid result");
       return applyToolResult(result);
     },
   };

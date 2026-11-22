@@ -249,7 +249,7 @@ internal abstract record PValue
                 break;
         }
 
-        throw Invalid($"{where}: a value is a literal, or an object with column, argument, now, concat or lookup. See powertools://guides/classic-workflows.");
+        throw Invalid($"{where}: a value is a literal, or an object with column, argument, now, concat or lookup. See dyno://guides/classic-workflows.");
     }
 
     private static string Text(JsonElement json, string where, string what) =>

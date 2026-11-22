@@ -36,7 +36,7 @@ describe("update prompt", () => {
       },
     });
 
-    const dialog = await screen.findByRole("dialog", { name: "Power Tools v0.2.0 is available" });
+    const dialog = await screen.findByRole("dialog", { name: "Dyno v0.2.0 is available" });
     const notes = within(dialog).getByTestId("update-release-notes");
     expect(within(notes).getByText("Highlights")).toBeInTheDocument();
     expect(within(notes).getAllByRole("listitem").map((item) => item.textContent)).toEqual([
@@ -48,14 +48,14 @@ describe("update prompt", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     const titleBarButton = within(screen.getByTestId("title-bar")).getByRole("button", {
-      name: "Power Tools v0.2.0 is available. Click to see what's new and update.",
+      name: "Dyno v0.2.0 is available. Click to see what's new and update.",
     });
     expect(titleBarButton).toHaveTextContent("Update to v0.2.0");
     // The title bar is the only place with an update button.
     expect(screen.getAllByRole("button", { name: /update/i })).toEqual([titleBarButton]);
 
     fireEvent.click(titleBarButton);
-    const reopened = await screen.findByRole("dialog", { name: "Power Tools v0.2.0 is available" });
+    const reopened = await screen.findByRole("dialog", { name: "Dyno v0.2.0 is available" });
     fireEvent.click(within(reopened).getByRole("button", { name: "Update now" }));
     expect(downloadUpdate).toHaveBeenCalledTimes(1);
   });
@@ -69,7 +69,7 @@ describe("update prompt", () => {
       bridge.emitUpdateStatusChanged({ state: "downloaded", version: "0.2.0" });
     });
 
-    const dialog = await screen.findByRole("dialog", { name: "Power Tools v0.2.0 is ready to install" });
+    const dialog = await screen.findByRole("dialog", { name: "Dyno v0.2.0 is ready to install" });
     expect(within(dialog).getByText("No release notes were provided for this version.")).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole("button", { name: "Restart and update" }));
     expect(installUpdate).toHaveBeenCalledTimes(1);

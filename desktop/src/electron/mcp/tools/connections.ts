@@ -6,7 +6,7 @@ export const connectionsList: AgentTool = {
   group: "connections",
   title: "List connections",
   description:
-    "Lists the Dataverse connections saved in Power Tools by display name, with kind, environment URL and which one is active. Pass a display name as \"connection\" to any other tool to target it. Read-only.",
+    "Lists the Dataverse connections saved in Dyno by display name, with kind, environment URL and which one is active. Pass a display name as \"connection\" to any other tool to target it. Read-only.",
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
   effect: "read",
   async run(_args, ctx) {

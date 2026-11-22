@@ -417,7 +417,7 @@ export function registerConnectionIpc({
     if (chosen.length === 0) return { success: false, error: "There are no connections to export." };
     const path = await files.chooseSaveFile(
       window,
-      `powertools-connections-${new Date().toISOString().slice(0, 10)}.json`,
+      `dyno-connections-${new Date().toISOString().slice(0, 10)}.json`,
     );
     if (!path) return { success: false, cancelled: true };
     try {

@@ -20,7 +20,7 @@ public enum FlowState
     [JsonStringEnumMemberName("off")] Off,
 }
 
-[Description("A solution-aware cloud flow (online only). Leave a property out to keep it. See the guide powertools://guides/cloud-flows.")]
+[Description("A solution-aware cloud flow (online only). Leave a property out to keep it. See the guide dyno://guides/cloud-flows.")]
 public sealed class FlowApplySpec : IApplySpec
 {
     [Description("Unique name of the unmanaged solution the flow and its connection references go into.")]

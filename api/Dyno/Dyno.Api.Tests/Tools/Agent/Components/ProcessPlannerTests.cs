@@ -227,7 +227,7 @@ public sealed class ProcessPlannerTests
     [Fact]
     public async Task A_kept_step_survives_a_change_to_the_steps_around_it()
     {
-        // An exported action whose custom step reads its outputs back, which Power Tools keeps as it is.
+        // An exported action whose custom step reads its outputs back, which Dyno keeps as it is.
         var xaml = ProcessXamlTests.Fixture("ActionLocalPermitWarning1Applicant");
         world.Schema.AddTable("contoso_LocalPermitRequest", "Request", "Requests");
         world.Add(new Entity("workflow", Guid.NewGuid())

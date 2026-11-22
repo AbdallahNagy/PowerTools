@@ -70,7 +70,7 @@ export interface ImportPreviewItem {
 }
 
 export interface ImportPreview {
-  source: "powertools" | "xrmtoolbox";
+  source: "dyno" | "xrmtoolbox";
   fileName: string;
   items: ImportPreviewItem[];
 }

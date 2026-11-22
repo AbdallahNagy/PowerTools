@@ -6,7 +6,7 @@ namespace Dyno.Api.Tools.Agent.Kernel;
 /// In-process locks for agent edits. A component lock serializes edits of one component (keys such as
 /// "record:{id}" or "entity:account"); the publish lock serializes publishes and imports on one connection,
 /// because Dataverse refuses a second one while one runs. The sidecar is one process, so this is enough inside
-/// Power Tools; changes from outside are caught by the plan hash check.
+/// Dyno; changes from outside are caught by the plan hash check.
 /// </summary>
 public static class Locks
 {
