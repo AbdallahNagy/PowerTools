@@ -69,10 +69,18 @@ export function createApprovalGate(deps: ApprovalGateDeps): ApprovalGate {
     head.timer = setTimeout(() => finish(head, "timed-out"), timeoutMs);
     try {
       deps.present(head.request);
+    } catch {
+      // A request that cannot be shown must not hold the queue until it times out. It was never on screen, so
+      // there is nothing to take down.
+      clearTimeout(head.timer);
+      head.timer = undefined;
+      finish(head, "unavailable");
+      return;
+    }
+    try {
       deps.attention();
     } catch {
-      // A request that cannot be shown must not hold the queue until it times out.
-      finish(head, "unavailable");
+      // Drawing attention is a courtesy; the request is on screen either way.
     }
   }
 
@@ -84,7 +92,13 @@ export function createApprovalGate(deps: ApprovalGateDeps): ApprovalGate {
     if (entry.timer) {
       clearTimeout(entry.timer);
       // It was on screen; take it down (a no-op if the user answered it).
-      if (outcome === "timed-out" || outcome === "unavailable" || outcome === "cancelled") deps.dismiss(entry.request.id);
+      if (outcome === "timed-out" || outcome === "unavailable" || outcome === "cancelled") {
+        try {
+          deps.dismiss(entry.request.id);
+        } catch {
+          // A window that is gone cannot show it anyway; the call must still settle and the queue move on.
+        }
+      }
     }
     entry.resolve(outcome);
     presentHead();

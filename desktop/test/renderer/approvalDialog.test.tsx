@@ -175,3 +175,23 @@ describe("approval dialog after the window loads", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
+
+describe("approval dialog answered before the pending fetch returns", () => {
+  it("does not bring back a request the user already answered", async () => {
+    let present: (r: McpApprovalRequest) => void = () => undefined;
+    let answer: (r: McpApprovalRequest) => void = () => undefined;
+    renderWithProviders(<ApprovalDialog />, {
+      bridgeOverrides: {
+        onMcpApprovalPresent: (cb) => {
+          present = cb;
+          return () => undefined;
+        },
+        getPendingMcpApproval: () => new Promise((resolve) => (answer = resolve)),
+      },
+    });
+    act(() => present(request()));
+    fireEvent.click(screen.getByRole("button", { name: "Allow" }));
+    await act(async () => answer(request()));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});

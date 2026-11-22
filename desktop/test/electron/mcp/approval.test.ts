@@ -208,3 +208,44 @@ describe("approval for a window that was not listening", () => {
     await expect(second).resolves.toBe("allowed");
   });
 });
+
+describe("approval when the window itself fails", () => {
+  it("settles every call and moves the queue on when both showing and taking down throw", async () => {
+    let failFrom = 2;
+    let shown = 0;
+    const presented: ApprovalRequest[] = [];
+    const gate = createApprovalGate({
+      present: (r) => {
+        if (++shown >= failFrom) throw new Error("window gone");
+        presented.push(r);
+      },
+      dismiss: () => {
+        throw new Error("window gone");
+      },
+      attention: () => undefined,
+    });
+    const first = gate.decide(draft({ summary: "first" }), false);
+    const second = gate.decide(draft({ summary: "second" }), false);
+    const third = gate.decide(draft({ summary: "third" }), false);
+
+    gate.respond(presented[0].id, true);
+    await expect(first).resolves.toBe("allowed");
+    await expect(second).resolves.toBe("unavailable");
+    await expect(third).resolves.toBe("unavailable");
+    failFrom = Infinity;
+  });
+
+  it("keeps a request on screen when drawing attention fails", async () => {
+    const presented: ApprovalRequest[] = [];
+    const gate = createApprovalGate({
+      present: (r) => void presented.push(r),
+      dismiss: () => undefined,
+      attention: () => {
+        throw new Error("no notifications");
+      },
+    });
+    const first = gate.decide(draft(), false);
+    gate.respond(presented[0].id, true);
+    await expect(first).resolves.toBe("allowed");
+  });
+});
