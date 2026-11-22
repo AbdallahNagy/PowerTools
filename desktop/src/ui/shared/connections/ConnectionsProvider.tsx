@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -21,7 +22,8 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
   const [isActiveConnectionLoaded, setIsActiveConnectionLoaded] = useState(false);
   const activeConnectionVersion = useRef(0);
 
-  useEffect(() => {
+  // A layout effect, so a tool opened right after the active connection renders already sees it.
+  useLayoutEffect(() => {
     setActiveConnectionSnapshot(activeConnectionId, isActiveConnectionLoaded);
   }, [activeConnectionId, isActiveConnectionLoaded]);
 
@@ -32,13 +34,14 @@ export function ConnectionsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initialActiveConnectionVersion = activeConnectionVersion.current;
     desktopBridge.listConnections().then(setSummaries);
+    // The id and the loaded flag change in one render, so nothing sees the id before it counts as loaded.
     desktopBridge.getActiveConnectionId().then((id) => {
       if (activeConnectionVersion.current === initialActiveConnectionVersion) {
         setActiveConnectionId(id);
       }
-    }).catch(() => {
+      setIsActiveConnectionLoaded(true);
+    }, () => {
       // Connection selection remains empty if startup hydration fails.
-    }).finally(() => {
       setIsActiveConnectionLoaded(true);
     });
 
