@@ -66,9 +66,9 @@ const offlineMcpStatus: Awaited<ReturnType<DesktopBridge["getMcpStatus"]>> = {
     { group: "records-delete", enabled: true, tools: 1 },
   ],
   tools: [
-    { name: "connections_list", title: "List connections", description: "Lists saved connections. Read-only.", group: "connections", effect: "read", enabled: true },
-    { name: "inspect_schema", title: "Inspect the schema", description: "Read-only. Describes tables.", group: "read", effect: "read", enabled: true },
-    { name: "records_delete", title: "Delete records", description: "Destructive: deletes records.", group: "records-delete", effect: "varies", enabled: true },
+    { name: "connections_list", title: "List connections", description: "Lists saved connections. Read-only.", group: "connections", effect: "read", perCall: false, enabled: true },
+    { name: "inspect_schema", title: "Inspect the schema", description: "Read-only. Describes tables.", group: "read", effect: "read", perCall: false, enabled: true },
+    { name: "records_delete", title: "Delete records", description: "Destructive: deletes records.", group: "records-delete", effect: "destructive", perCall: true, enabled: true },
   ],
 };
 

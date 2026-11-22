@@ -50,26 +50,32 @@ describe("the first release tool set", () => {
       ["inspect_solution", "read", "read"],
       ["records_query", "read", "read"],
       ["solution_export", "solutions", "read"],
-      ["records_write", "records", "varies"],
-      ["table_apply", "schema", "varies"],
-      ["choice_apply", "schema", "varies"],
-      ["form_apply", "ui", "varies"],
-      ["view_apply", "ui", "varies"],
-      ["webresource_apply", "ui", "varies"],
-      ["app_apply", "ui", "varies"],
-      ["plugin_deploy", "logic", "varies"],
-      ["plugin_step_apply", "logic", "varies"],
-      ["customapi_apply", "logic", "varies"],
-      ["flow_apply", "logic", "varies"],
-      ["process_apply", "logic", "varies"],
-      ["role_apply", "security", "varies"],
-      ["solution_apply", "solutions", "varies"],
-      ["config_apply", "solutions", "varies"],
-      ["execute_message", "records", "varies"],
-      ["records_delete", "records-delete", "varies"],
-      ["remove", "remove", "varies"],
-      ["solution_import", "solutions", "varies"],
+      ["records_write", "records", "change"],
+      ["table_apply", "schema", "change"],
+      ["choice_apply", "schema", "change"],
+      ["form_apply", "ui", "change"],
+      ["view_apply", "ui", "change"],
+      ["webresource_apply", "ui", "change"],
+      ["app_apply", "ui", "change"],
+      ["plugin_deploy", "logic", "change"],
+      ["plugin_step_apply", "logic", "change"],
+      ["customapi_apply", "logic", "change"],
+      ["flow_apply", "logic", "change"],
+      ["process_apply", "logic", "change"],
+      ["role_apply", "security", "change"],
+      ["solution_apply", "solutions", "change"],
+      ["config_apply", "solutions", "change"],
+      ["execute_message", "records", "change"],
+      ["records_delete", "records-delete", "destructive"],
+      ["remove", "remove", "destructive"],
+      ["solution_import", "solutions", "destructive"],
     ]);
+  });
+
+  it("counts every tool under Read, Change or Destructive in Settings, by the effect its description states", () => {
+    const count = (effect: string) => registry.tools().filter((t) => t.effect === effect).length;
+    expect([count("read"), count("change"), count("destructive")]).toEqual([6, 16, 3]);
+    expect(registry.tools().filter((t) => t.perCall).map((t) => t.name)).toHaveLength(19);
   });
 
   it.each([

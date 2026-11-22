@@ -83,11 +83,11 @@ describe("createAgentToolRegistry", () => {
     );
     expect(registry.list().map((t) => t.name)).toEqual(["a", "c", "d"]);
     expect(registry.get("b")).toBeUndefined();
-    expect(registry.tools().map((t) => [t.name, t.effect])).toEqual([
-      ["a", "read"],
-      ["b", "change"],
-      ["c", "destructive"],
-      ["d", "varies"],
+    expect(registry.tools().map((t) => [t.name, t.effect, t.perCall])).toEqual([
+      ["a", "read", false],
+      ["b", "change", false],
+      ["c", "destructive", false],
+      ["d", "change", true],
     ]);
     off.delete("b");
     expect(registry.get("b")).toBeDefined();

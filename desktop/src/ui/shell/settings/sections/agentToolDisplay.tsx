@@ -5,7 +5,6 @@ import { cn } from "../../../shared/ui";
 
 const EFFECT_TILE: Record<McpToolInfo["effect"], string> = {
   read: "bg-raised text-fg-muted",
-  varies: "bg-raised text-fg-muted",
   change: "bg-warn-soft text-warn",
   destructive: "bg-danger-soft text-danger",
 };

@@ -26,8 +26,8 @@ const OFF: McpStatusInfo = {
     { group: "schema", enabled: false, tools: 13 },
   ],
   tools: [
-    { name: "connections_list", title: "List connections", description: "Lists saved connections. Read-only.", group: "connections", effect: "read", enabled: true },
-    { name: "schema_create_column", title: "Create a column", description: "Adds a column. Changes the environment.", group: "schema", effect: "change", enabled: true },
+    { name: "connections_list", title: "List connections", description: "Lists saved connections. Read-only.", group: "connections", effect: "read", perCall: false, enabled: true },
+    { name: "schema_create_column", title: "Create a column", description: "Adds a column. Changes the environment.", group: "schema", effect: "change", perCall: false, enabled: true },
   ],
 };
 
@@ -295,6 +295,28 @@ describe("Settings: MCP server", () => {
     expect(screen.queryByText("List connections")).not.toBeInTheDocument();
     fireEvent.click(within(filter).getByRole("button", { name: /^Destructive/ }));
     expect(screen.getByText("No matching tools")).toBeInTheDocument();
+  });
+
+  it("counts apply tools under Change or Destructive, by the effect their descriptions state", async () => {
+    const status: McpStatusInfo = {
+      ...OFF,
+      groups: [...OFF.groups, { group: "records-delete", enabled: true, tools: 1 }],
+      tools: [
+        ...OFF.tools,
+        { name: "table_apply", title: "Apply a table", description: "Creates or updates a table. Changes the environment.", group: "schema", effect: "change", perCall: true, enabled: true },
+        { name: "records_delete", title: "Delete records", description: "Destructive: deletes records.", group: "records-delete", effect: "destructive", perCall: true, enabled: true },
+      ],
+    };
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => status } });
+    await screen.findByText("Off");
+    await openTab("Agent tools");
+    const filter = await screen.findByRole("group", { name: "Show tools that" });
+    expect(within(filter).getByRole("button", { name: /^All/ })).toHaveTextContent("4");
+    expect(within(filter).getByRole("button", { name: /^Read/ })).toHaveTextContent("1");
+    expect(within(filter).getByRole("button", { name: /^Change/ })).toHaveTextContent("2");
+    expect(within(filter).getByRole("button", { name: /^Destructive/ })).toHaveTextContent("1");
+    fireEvent.click(within(filter).getByRole("button", { name: /^Change/ }));
+    expect(screen.getByText(/Creates or updates a table\. Asks you first unless the connection allows changes\. A call that removes or replaces something always asks/)).toBeInTheDocument();
   });
 
   it("shows declined calls and errors in the activity and filters to errors", async () => {

@@ -1,13 +1,14 @@
 import { Ajv, type ErrorObject, type ValidateFunction } from "ajv";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { EffectClass } from "../communityTools/messageEffects.js";
 import { AGENT_TOOL_GROUPS, type AgentTool, type AgentToolGroup } from "./types.js";
 
 const NAME_PATTERN = /^[a-z0-9_]{1,64}$/;
 const EFFECT_MARKERS = ["Read-only.", "Changes the environment.", "Destructive:"];
 const MAX_DESCRIPTION = 400;
 
-/** How a tool's effect reads in settings: "varies" when it depends on the arguments. */
-export type AgentToolEffectLabel = "read" | "change" | "destructive" | "varies";
+/** How Settings groups a tool: the effect class its description states. Per-call tools can ask for more on a given call. */
+export type AgentToolEffectLabel = EffectClass;
 
 export interface AgentToolInfo {
   name: string;
@@ -15,6 +16,8 @@ export interface AgentToolInfo {
   description: string;
   group: AgentToolGroup;
   effect: AgentToolEffectLabel;
+  /** The effect of each call is decided from its arguments or its plan, so a call may ask less than the most. */
+  perCall: boolean;
 }
 
 export type Validation = { ok: true; args: Record<string, unknown> } | { ok: false; message: string };
@@ -29,6 +32,13 @@ export interface AgentToolRegistry {
   /** Every tool, whether or not it is enabled. */
   tools(): AgentToolInfo[];
   validate(tool: AgentTool, args: unknown): Validation;
+}
+
+/** The effect class a description states; the registry refuses a description that states none. */
+function statedEffect(description: string): EffectClass {
+  if (description.includes("Destructive:")) return "destructive";
+  if (description.includes("Changes the environment.")) return "change";
+  return "read";
 }
 
 function describeError(error: ErrorObject): string {
@@ -104,7 +114,8 @@ export function createAgentToolRegistry(tools: AgentTool[], options: RegistryOpt
         title: tool.title,
         description: tool.description,
         group: tool.group,
-        effect: typeof tool.effect === "string" ? tool.effect : "varies",
+        effect: typeof tool.effect === "string" ? tool.effect : statedEffect(tool.description),
+        perCall: typeof tool.effect !== "string",
       })),
     validate(tool, args) {
       let validator = validators.get(tool.name);

@@ -124,13 +124,15 @@ export interface McpApprovalPlan {
   warnings: string[];
 }
 
-/** One agent tool as Settings lists it. "varies" means the effect depends on the arguments. */
+/** One agent tool as Settings lists it. effect is the class its description states. */
 export interface McpToolInfo {
   name: string;
   title: string;
   description: string;
   group: string;
-  effect: "read" | "change" | "destructive" | "varies";
+  effect: "read" | "change" | "destructive";
+  /** Each call's effect is decided from its arguments or plan, so a call can ask less than effect says. */
+  perCall: boolean;
   enabled: boolean;
 }
 

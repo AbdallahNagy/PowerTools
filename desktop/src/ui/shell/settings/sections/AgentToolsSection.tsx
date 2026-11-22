@@ -17,10 +17,14 @@ const FILTERS: ReadonlyArray<{ id: EffectFilter; label: string }> = [
 ];
 
 /** What the row says about asking first, from what main decides for each effect. */
-const ASKS: Partial<Record<McpToolInfo["effect"], string>> = {
-  change: "Asks you first unless the connection allows changes.",
-  destructive: "Always asks you first.",
-};
+function asksFirst(tool: McpToolInfo): string | undefined {
+  if (tool.effect === "destructive") return "Always asks you first.";
+  if (tool.effect !== "change") return undefined;
+  // A per-call tool's plan or message can be destructive, and then it asks whatever the connection allows.
+  return tool.perCall
+    ? "Asks you first unless the connection allows changes. A call that removes or replaces something always asks."
+    : "Asks you first unless the connection allows changes.";
+}
 
 function matchesQuery(tool: McpToolInfo, query: string): boolean {
   if (!query) return true;
@@ -181,7 +185,7 @@ export function AgentToolsSection({ agents }: { agents: AgentsState }) {
                           <p className="flex flex-wrap gap-x-2.5 text-xs text-fg-muted">
                             <span title={tool.description}>
                               {firstSentence(tool.description)}
-                              {ASKS[tool.effect] ? ` ${ASKS[tool.effect]}` : ""}
+                              {asksFirst(tool) ? ` ${asksFirst(tool)}` : ""}
                             </span>
                             {used ? <span className="text-accent-text">{lastUsedLabel(used, now)}</span> : null}
                           </p>
