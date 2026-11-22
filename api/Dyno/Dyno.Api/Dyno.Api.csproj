@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>Dyno.Api</RootNamespace>
+        <AssemblyName>Dyno.Api</AssemblyName>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+
+    <!-- Self-contained, single-file publish for sidecar distribution.
+         Activate with: dotnet publish -c Release -r <rid> -p:PublishingForSidecar=true -->
+    <PropertyGroup Condition="'$(PublishingForSidecar)' == 'true'">
+        <PublishSingleFile>true</PublishSingleFile>
+        <SelfContained>true</SelfContained>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <DebugType>embedded</DebugType>
+        <!-- Dataverse SDK is not trim-safe. Do not enable PublishTrimmed. -->
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.PowerPlatform.Dataverse.Client" Version="1.2.10" />
+    </ItemGroup>
+
+    <!-- Deprecated: Dyno.Api.exe with the mcp-connector switch runs the same relay as Dyno.McpConnector.exe, so MCP
+         client setups made before the separate connector keep working. Clients holding this executable open block
+         app updates; remove this once users have moved to the connector the app copies to %LOCALAPPDATA%. -->
+    <ItemGroup>
+        <Compile Include="..\Dyno.McpConnector\McpConnector.cs" Link="Mcp\McpConnector.cs" />
+        <Compile Include="..\Dyno.McpConnector\McpDiscovery.cs" Link="Mcp\McpDiscovery.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\ThirdParty\Data8.PowerPlatform.Dataverse.Client\Data8.PowerPlatform.Dataverse.Client.csproj" />
+    </ItemGroup>
+
+</Project>

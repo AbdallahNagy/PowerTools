@@ -10,8 +10,7 @@ const legacy = {
   command: "C:\\Users\\me\\AppData\\Local\\Programs\\power-tools\\resources\\api\\PowerTools.API.exe",
   args: ["--mcp-connector"],
 };
-const current = { command: "C:\\Users\\me\\AppData\\Local\\Power Tools\\mcp\\PowerTools.McpConnector.exe", args: [] };
-
+const current = { command: "C:\\Users\\me\\AppData\\Local\\Power Tools\\mcp\\Dyno.McpConnector.exe", args: [] };
 const claudeCode = { client: "Claude Code" as const, path: "C:\\Users\\me\\.claude.json" };
 const claudeDesktop = { client: "Claude Desktop" as const, path: "C:\\Users\\me\\AppData\\Roaming\\Claude\\claude_desktop_config.json" };
 const vsCode = { client: "VS Code" as const, path: "C:\\Users\\me\\AppData\\Roaming\\Code\\User\\mcp.json" };

@@ -83,7 +83,7 @@ Current registry (`desktop/src/ui/tools/registry.tsx`): `welcome`, `data-migrati
 - `allowMultipleInstances`: true
 - One environment, through `useConnectionSelection` and `meta.connectionName`. No `meta.targetConnectionName`. `ConnectionInfo` already has `envUrl` and `crmType`. It does not have organization version. The sidecar reads that with `RetrieveVersionRequest`.
 - Folder: `desktop/src/ui/tools/solution-components-mover/` with `tool.ts`, `api/`, `model/`, `components/`, and `tests/`. Register once in `desktop/src/ui/tools/registry.tsx`.
-- Sidecar folder: `api/PowerTools/PowerTools.API/Tools/SolutionComponentsMover/`. Map it from `Program.cs` with `DataverseContextFilter` and `DataverseClientFactory`. Do not add `DataverseTargetContextFilter`.
+- Sidecar folder: `api/Dyno/Dyno.Api/Tools/SolutionComponentsMover/`. Map it from `Program.cs` with `DataverseContextFilter` and `DataverseClientFactory`. Do not add `DataverseTargetContextFilter`.
 - Status text through `useToolStatus`. Solution, component-type, and copy-job contracts stay private to the tool.
 - Renderer calls `apiGet` and `apiPost` only. Opening a solution uses the existing platform `openExternalUrl` with `envUrl` and the classic `/tools/solution/edit.aspx?id={id}` path. Log export can be a browser download of the in-memory log. No new Electron IPC.
 - Do not call `GET /api/metadata/entities` for this tool. That endpoint uses `RetrieveAllEntitiesRequest`, drops intersect and private tables, and does not return metadata id, schema name, or `IsManaged`.
@@ -288,9 +288,9 @@ All unmanaged solutions in one environment share the active layer. Copying into 
 ### Implementation notes and test evidence
 
 - Files and endpoints added:
-  - `api/PowerTools/PowerTools.API/Tools/SolutionComponentsMover/` with `MapSolutionComponentsMoverEndpoints()` registered in `Program.cs` under `DataverseContextFilter` and `DataverseClientFactory`. No `DataverseTargetContextFilter`.
+  - `api/Dyno/Dyno.Api/Tools/SolutionComponentsMover/` with `MapSolutionComponentsMoverEndpoints()` registered in `Program.cs` under `DataverseContextFilter` and `DataverseClientFactory`. No `DataverseTargetContextFilter`.
   - In-memory copy jobs and `SolutionCopyJobRunner`, owned by this tool, following the Data Migration job shape.
-  - `api/PowerTools/PowerTools.API.SolutionComponentsMover.Tests/` added to `PowerTools.sln`.
+  - `api/Dyno/Dyno.Api.SolutionComponentsMover.Tests/` added to `Dyno.sln`.
   - `desktop/src/ui/tools/solution-components-mover/` (`tool.ts`, `api/`, `model/`, `components/`, `tests/`) and one `BUILT_IN_TOOLS` entry in `desktop/src/ui/tools/registry.tsx`.
   - Endpoints:
     - `GET /api/solution-components-mover/solutions`
@@ -309,7 +309,7 @@ All unmanaged solutions in one environment share the active layer. Copying into 
   - Job labels use the same version gate as the component-type list. Unknown job ids return 404.
   - The tab is one environment, a vertical split, the solution table, the component-type modal, and the copy log described in the UX section. The renderer calls `apiGet` and `apiPost` with `meta.connectionName`. Double-clicking a solution uses `openExternalUrl`. Refresh reloads the solution list. Log export is a browser download.
 - Commands run and their results:
-  - `dotnet test api/PowerTools/PowerTools.API.SolutionComponentsMover.Tests/PowerTools.API.SolutionComponentsMover.Tests.csproj -p:UseAppHost=false` — Passed, 24 tests.
+  - `dotnet test api/Dyno/Dyno.Api.SolutionComponentsMover.Tests/Dyno.Api.SolutionComponentsMover.Tests.csproj -p:UseAppHost=false` — Passed, 24 tests.
   - From `desktop/`: `npm test` — Passed, 58 files, 286 tests.
   - From `desktop/`: `npm run lint` — Passed.
   - From `desktop/`: `npm run build` — Passed.

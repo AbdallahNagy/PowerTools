@@ -329,7 +329,7 @@ Elastic tables (500-row pages), `datasource="retained"`, and virtual-table query
 
 Commands and results:
 
-- `dotnet run --project api/PowerTools/PowerTools.API.Tests/PowerTools.API.Tests.csproj` passed. It covers builder paging, verbatim XML, XXE, a missing `<entity>`, formatted and raw cells, aliased values, and multi-select values.
+- `dotnet run --project api/Dyno/Dyno.Api.Tests/Dyno.Api.Tests.csproj` passed. It covers builder paging, verbatim XML, XXE, a missing `<entity>`, formatted and raw cells, aliased values, and multi-select values.
 - From `desktop/`, `npm run check` passed: typecheck, lint with zero warnings, 247 tests, renderer build, and the Electron smoke test.
 
 ### Open questions

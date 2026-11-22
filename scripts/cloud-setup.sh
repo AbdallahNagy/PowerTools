@@ -49,7 +49,7 @@ install_runtime_pack microsoft.aspnetcore.app.runtime.linux-x64 Microsoft.AspNet
 
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1
 log "Restoring API solution"
-dotnet restore "$REPO_DIR/api/PowerTools/PowerTools.sln" --verbosity quiet
+dotnet restore "$REPO_DIR/api/Dyno/Dyno.sln" --verbosity quiet
 
 # ─── Desktop ─────────────────────────────────────────────────────────────
 log "Installing desktop npm dependencies"

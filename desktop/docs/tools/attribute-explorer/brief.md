@@ -26,15 +26,15 @@
 
 ### Backend findings
 
-The existing `/api/metadata/*` endpoints (`api/PowerTools/PowerTools.API/Tools/Metadata/MetadataEndpoints.cs`) are shared by FetchXML Builder, Data Migration, and Plugin Registration. They return too little for the details modal: no schema name, description, max length, precision, min/max, auditing, security, or managed state. Changing them would change behavior for three other tools. **Do not modify them.** Add a dedicated, tool-owned endpoint group instead.
+The existing `/api/metadata/*` endpoints (`api/Dyno/Dyno.Api/Tools/Metadata/MetadataEndpoints.cs`) are shared by FetchXML Builder, Data Migration, and Plugin Registration. They return too little for the details modal: no schema name, description, max length, precision, min/max, auditing, security, or managed state. Changing them would change behavior for three other tools. **Do not modify them.** Add a dedicated, tool-owned endpoint group instead.
 
 The sidecar has no metadata cache. Each request goes to Dataverse, so a refresh only has to refetch.
 
 ### Power Tools mapping
 
 - Renderer: `desktop/src/ui/tools/attribute-explorer/`.
-- Sidecar: `api/PowerTools/PowerTools.API/Tools/AttributeExplorer/`, mapped as `/api/attribute-explorer`.
-- Sidecar tests: new xUnit project `api/PowerTools/PowerTools.API.AttributeExplorer.Tests/`, added to `PowerTools.sln`.
+- Sidecar: `api/Dyno/Dyno.Api/Tools/AttributeExplorer/`, mapped as `/api/attribute-explorer`.
+- Sidecar tests: new xUnit project `api/Dyno/Dyno.Api.AttributeExplorer.Tests/`, added to `Dyno.sln`.
 
 ### Recommended implementation
 
@@ -190,9 +190,9 @@ tests/
 
 **Files and endpoints added**
 
-- Sidecar, `api/PowerTools/PowerTools.API/Tools/AttributeExplorer/`: `AttributeExplorerEndpoints.cs`, `AttributeExplorerClient.cs`, `AttributeExplorerService.cs`, `AttributeExplorerMapper.cs`, `AttributeExplorerDtos.cs`, `AttributeExplorerFaults.cs`. Registered in `Program.cs` with `MapAttributeExplorerEndpoints()` after the metadata endpoints. The shared `/api/metadata/*` endpoints are unchanged.
+- Sidecar, `api/Dyno/Dyno.Api/Tools/AttributeExplorer/`: `AttributeExplorerEndpoints.cs`, `AttributeExplorerClient.cs`, `AttributeExplorerService.cs`, `AttributeExplorerMapper.cs`, `AttributeExplorerDtos.cs`, `AttributeExplorerFaults.cs`. Registered in `Program.cs` with `MapAttributeExplorerEndpoints()` after the metadata endpoints. The shared `/api/metadata/*` endpoints are unchanged.
 - Endpoints, both behind `DataverseContextFilter`: `GET /api/attribute-explorer/tables` and `GET /api/attribute-explorer/tables/{logicalName}/attributes`. Problem JSON is `{ code, message }` with `table_not_found` (404), `service_protection` (429), and `dataverse_error` (400).
-- Sidecar tests: `api/PowerTools/PowerTools.API.AttributeExplorer.Tests/` (xUnit, fake `IAttributeExplorerClient`), added to `PowerTools.sln`. 26 tests cover private-table exclusion, intersect tables kept, `AttributeOf` exclusion, label fallback, type details for string, memo, number types, date and time, lookup (targets and own relationships only), choice, multi-select, status, and boolean, request filters (`Entity` only, then `Attributes | Relationships`, both as-if-published), `table_not_found` by error code, by message, and inside a wrapping exception, blank table name, other faults, service protection with Retry-After, and cancellation.
+- Sidecar tests: `api/Dyno/Dyno.Api.AttributeExplorer.Tests/` (xUnit, fake `IAttributeExplorerClient`), added to `Dyno.sln`. 26 tests cover private-table exclusion, intersect tables kept, `AttributeOf` exclusion, label fallback, type details for string, memo, number types, date and time, lookup (targets and own relationships only), choice, multi-select, status, and boolean, request filters (`Entity` only, then `Attributes | Relationships`, both as-if-published), `table_not_found` by error code, by message, and inside a wrapping exception, blank table name, other faults, service protection with Retry-After, and cancellation.
 - Renderer, `desktop/src/ui/tools/attribute-explorer/`: `tool.ts`, `attribute-explorer-icon.svg`, `AttributeExplorer.tsx`, `useAttributeExplorer.ts`, `api/`, `model/` (`types`, `apiError`, `search`, `attributeType`, `requiredLevel`, `sort`, `details`), `components/` (`TablesPane`, `FieldsPane`, `FieldDetailsModal`, `CopyButton`), and `tests/` (`fixtures.ts`, `node/*.test.ts`, `renderer/attributeExplorer.test.tsx`).
 - Registered first after Welcome in `desktop/src/ui/tools/registry.tsx` and in the same position in `desktop/src/ui/tools/publicCatalog.ts`. `desktop/test/toolRegistry.test.ts` was updated for the new tool. `README.md` got one row in its tool table.
 
@@ -225,8 +225,8 @@ From `desktop/` (after `npm ci`, which succeeded):
 
 API, using the Ubuntu .NET 10 SDK because the official .NET 9 installer host (`builds.dotnet.microsoft.com`) is blocked by the egress policy, with `DOTNET_ROLL_FORWARD=Major` so the net9.0 test projects run on the 10.0 runtime:
 
-- `dotnet build PowerTools.API.AttributeExplorer.Tests`: pass, 0 warnings. This compiles `PowerTools.API` against its net9.0 target.
-- `dotnet test PowerTools.sln`: pass for all test projects, including 26 of 26 in `PowerTools.API.AttributeExplorer.Tests`.
+- `dotnet build Dyno.Api.AttributeExplorer.Tests`: pass, 0 warnings. This compiles `Dyno.Api` against its net9.0 target.
+- `dotnet test Dyno.sln`: pass for all test projects, including 26 of 26 in `Dyno.Api.AttributeExplorer.Tests`.
 - Not verified: the live Dataverse calls, because the tests use a fake client and no organization credentials. The SDK property assumptions (`IsFilterable`, `IsRetrievable`, `SourceType`, `IsValidForAdvancedFind`) compile, but their runtime values on older on-premises builds were not checked.
 
 Review follow-up:
@@ -235,7 +235,7 @@ Review follow-up:
 - The connection reset runs during render, so a new connection never queries with the old selection.
 - Owner lookups pair each target with their single `owner` relationship.
 - Fault mapping walks the whole exception chain for service protection.
-- Re-ran `npm run typecheck`, `npm run lint -- --max-warnings 0`, and `npm test` (379 tests): all pass. `dotnet test PowerTools.API.AttributeExplorer.Tests`: 27 of 27 pass.
+- Re-ran `npm run typecheck`, `npm run lint -- --max-warnings 0`, and `npm test` (379 tests): all pass. `dotnet test Dyno.Api.AttributeExplorer.Tests`: 27 of 27 pass.
 
 ### Open questions
 

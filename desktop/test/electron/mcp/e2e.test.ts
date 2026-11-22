@@ -10,14 +10,14 @@ import { createMcpService, type McpService } from "../../../src/electron/mcp/mcp
 import { bypassMsw } from "../../support/loopback";
 
 // Build the connector first with
-//   dotnet build ../api/PowerTools/PowerTools.McpConnector   (or npm run publish:connector:win and point CONNECTOR_EXE at it)
+//   dotnet build ../api/Dyno/Dyno.McpConnector   (or npm run publish:connector:win and point CONNECTOR_EXE at it)
 const desktopDir = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const connectorExe =
   process.env.CONNECTOR_EXE ??
-  resolve(desktopDir, "..", "api", "PowerTools", "PowerTools.McpConnector", "bin", "Debug", "net9.0", "PowerTools.McpConnector.exe");
+  resolve(desktopDir, "..", "api", "PowerTools", "Dyno.McpConnector", "bin", "Debug", "net9.0", "Dyno.McpConnector.exe");
 const built = existsSync(connectorExe);
 if (!built) {
-  console.warn(`Skipping the connector end-to-end test: ${connectorExe} is missing. Run "dotnet build ../api/PowerTools/PowerTools.McpConnector" first.`);
+  console.warn(`Skipping the connector end-to-end test: ${connectorExe} is missing. Run "dotnet build ../api/Dyno/Dyno.McpConnector" first.`);
 }
 
 let service: McpService | null = null;

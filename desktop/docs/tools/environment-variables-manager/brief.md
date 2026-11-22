@@ -14,7 +14,7 @@
   - `XrmToolSuite.EnvironmentInventory`: read-only. It lists definitions but no values.
   - `Emmetienne.TOMLConfigManager.XrmToolbox`: not about environment variables.
 - **Confidence: high.** This is the plugin dedicated to the job, it is widely used and maintained by the most prolific XrmToolBox author, and its whole backend is about 600 lines of readable code. I checked the type and secret-store values against Microsoft Learn's `environmentvariabledefinition` table reference.
-- **Existing Power Tools coverage:** none. The registered tools are attribute-explorer, bulk-workflow-execution, data-migration, fetchxml-builder, fetchxml-tester, plugin-registration, polymorphic-lookup-creator, solution-components-mover, solution-layers-explorer, translator and workflow-activities-viewer. The only mention of environment variables is in Solution Components Mover. It treats component type 380 (the definition) as having no subcomponents when copying (`api/PowerTools/PowerTools.API/Tools/SolutionComponentsMover/SolutionComponentsMoverService.cs:264-268`). None of them lists, edits or deletes environment variables.
+- **Existing Power Tools coverage:** none. The registered tools are attribute-explorer, bulk-workflow-execution, data-migration, fetchxml-builder, fetchxml-tester, plugin-registration, polymorphic-lookup-creator, solution-components-mover, solution-layers-explorer, translator and workflow-activities-viewer. The only mention of environment variables is in Solution Components Mover. It treats component type 380 (the definition) as having no subcomponents when copying (`api/Dyno/Dyno.Api/Tools/SolutionComponentsMover/SolutionComponentsMoverService.cs:264-268`). None of them lists, edits or deletes environment variables.
 
 ### What it does
 
@@ -87,7 +87,7 @@ All paths are relative to `MscrmTools.EnvironmentVariableManager/MscrmTools.Envi
   - The add-to-solution step checks the wrong error variable (`evt.Error` instead of `evt2.Error`).
   - The list only refreshes when a solution was picked.
 - Better approach: create with `CreateRequest` and set the `SolutionUniqueName` parameter, so the record is created inside the solution in one call. Use `AddSolutionComponent` only for existing definitions.
-- The schema name needs the selected solution's publisher prefix. Our polymorphic-lookup tool already queries solutions together with `publisher.customizationprefix` (`api/PowerTools/PowerTools.API/Tools/PolymorphicLookup/PolymorphicLookupRequests.cs:82-106`).
+- The schema name needs the selected solution's publisher prefix. Our polymorphic-lookup tool already queries solutions together with `publisher.customizationprefix` (`api/Dyno/Dyno.Api/Tools/PolymorphicLookup/PolymorphicLookupRequests.cs:82-106`).
 
 **Delete (`EvmControl.cs:323-359`)**
 - `Delete("environmentvariabledefinition", defId)`, which also removes the value.
@@ -130,7 +130,7 @@ All paths are relative to `MscrmTools.EnvironmentVariableManager/MscrmTools.Envi
   - Desktop: `apiGet/apiPost/apiPut/apiDelete` with `meta.connectionId`, `useTabConnection`, `useToolStatus`, `useOpenInBrowser` (to open the solution or the maker portal), and shared UI (`DataTable`, `SearchInput`, `Modal`, `Field`, `Input`, `Combobox`, `CodeEditor` for JSON, `Badge`, `Alert`, `Toast`).
   - Sidecar: `DataverseContextFilter` and `DataverseClientFactory`.
   - None of the existing metadata or fetch endpoints fit, because this is record CRUD on system tables.
-- **New sidecar group:** `/api/environment-variables` in `api/PowerTools/PowerTools.API/Tools/EnvironmentVariables/`. Files: `EnvironmentVariablesEndpoints.cs`, `EnvironmentVariablesQueries.cs`, `EnvironmentVariablesService.cs`, `EnvironmentVariablesDtos.cs`, `EnvironmentVariablesFaults.cs`. Register it with `app.MapEnvironmentVariablesEndpoints()` in `Program.cs`. Endpoints, in the order to build them:
+- **New sidecar group:** `/api/environment-variables` in `api/Dyno/Dyno.Api/Tools/EnvironmentVariables/`. Files: `EnvironmentVariablesEndpoints.cs`, `EnvironmentVariablesQueries.cs`, `EnvironmentVariablesService.cs`, `EnvironmentVariablesDtos.cs`, `EnvironmentVariablesFaults.cs`. Register it with `app.MapEnvironmentVariablesEndpoints()` in `Program.cs`. Endpoints, in the order to build them:
 
 | Method and path | What it does | Dataverse call |
 | --- | --- | --- |
@@ -430,10 +430,10 @@ Status comes from `useToolStatus`. The split uses `react-resizable-panels`. Icon
 ### Implementation notes and test evidence
 
 **Files and endpoints added**
-- Sidecar group `/api/environment-variables` in `api/PowerTools/PowerTools.API/Tools/EnvironmentVariables/`, registered with `app.MapEnvironmentVariablesEndpoints()` in `Program.cs` behind `DataverseContextFilter`, using `DataverseClientFactory` through `ctx.CreateDataverseClient`:
+- Sidecar group `/api/environment-variables` in `api/Dyno/Dyno.Api/Tools/EnvironmentVariables/`, registered with `app.MapEnvironmentVariablesEndpoints()` in `Program.cs` behind `DataverseContextFilter`, using `DataverseClientFactory` through `ctx.CreateDataverseClient`:
   - `EnvironmentVariablesEndpoints.cs`, `EnvironmentVariablesService.cs`, `EnvironmentVariablesQueries.cs`, `EnvironmentVariablesDtos.cs`, `EnvironmentVariablesFaults.cs`, plus `EnvironmentVariablesClient.cs` (a two-method seam over the organization service so tests can fake it) and `EnvironmentVariablesRules.cs` (validation).
   - `GET /`, `GET /solutions`, `POST /definitions`, `PUT /definitions/{id}`, `DELETE /definitions/{id}`, `POST /values`, `DELETE /values/{valueId}`, as in the mapping table.
-- Sidecar tests: new project `api/PowerTools/PowerTools.API.EnvironmentVariables.Tests/`, added to `PowerTools.sln`.
+- Sidecar tests: new project `api/Dyno/Dyno.Api.EnvironmentVariables.Tests/`, added to `Dyno.sln`.
 - Desktop tool `desktop/src/ui/tools/environment-variables-manager/`: `tool.ts`, `EnvironmentVariablesManager.tsx`, icon, `api/` (`environmentVariablesApi.ts`, `queryKeys.ts`), `model/` (`types.ts`, `valueValidation.ts`, `secretPath.ts`, `apiError.ts`, `view.ts`, `definitionForm.ts`), `components/` (`VariableTable.tsx`, `ValueEditor.tsx`, `SecretPathEditor.tsx`, `DetailsPanel.tsx`, `NewVariableDialog.tsx`, `DeleteDialog.tsx`), and `tests/` (`fixtures.ts`, `node/`, `renderer/` with MSW handlers).
 - Registered in `registry.tsx` and `publicCatalog.ts` after Data Migration, README table regenerated with `node scripts/sync-readme-tools.mjs`, `desktop/test/toolRegistry.test.ts` updated, website page `website/src/content/tools/environment-variables-manager.md` (no `xrmToolBoxEquivalent` and no plugin mention, per the user's answer), and a `CHANGELOG.md` entry under `## [Unreleased]`.
 
@@ -452,8 +452,8 @@ Status comes from `useToolStatus`. The split uses `react-resizable-panels`. Icon
 - The JSON editor is the shared `CodeEditor`, which highlights XML only; JSON is edited there without JSON highlighting, as no shared JSON mode exists. No link to a Dataverse page is in the UX, so `useOpenInBrowser` is not used.
 
 **Commands run and results**
-- `dotnet build api/PowerTools/PowerTools.API/PowerTools.API.csproj`: succeeded, 0 warnings.
-- `dotnet test api/PowerTools/PowerTools.sln`: all 9 test projects with tests passed; `PowerTools.API.EnvironmentVariables.Tests` 32 passed.
+- `dotnet build api/Dyno/Dyno.Api/Dyno.Api.csproj`: succeeded, 0 warnings.
+- `dotnet test api/Dyno/Dyno.sln`: all 9 test projects with tests passed; `Dyno.Api.EnvironmentVariables.Tests` 32 passed.
 - From `desktop/`: `npm test` 109 files, 693 tests passed (the new tool adds 24 node and 14 renderer tests); `npm run lint` clean; `npm run build` succeeded.
 - `npm run check`: typecheck, lint with `--max-warnings 0`, tests and renderer build passed; the Playwright smoke step failed only because the container has no X display. Rerun as `xvfb-run -a npm run test:smoke:run`: passed.
 - From `website/`: `pnpm install --frozen-lockfile` then `pnpm build`: 18 pages built, including `/tools/environment-variables-manager/`.

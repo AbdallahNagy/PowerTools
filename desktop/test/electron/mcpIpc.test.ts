@@ -146,7 +146,7 @@ describe("connectorLaunch", () => {
       connectorDir: localMcp,
     });
     expect(launch.command.startsWith(localMcp)).toBe(true);
-    expect(launch.command.endsWith("PowerTools.McpConnector.exe")).toBe(true);
+    expect(launch.command.endsWith("Dyno.McpConnector.exe")).toBe(true);
     expect(launch.command).not.toContain("resources");
     expect(launch.args).toEqual([]);
   });
@@ -170,7 +170,7 @@ describe("connectorLaunch", () => {
       resolve("/app/resources/mcp-connector"),
     );
     expect(bundledConnectorFolder({ packaged: false, resourcesPath: "", appPath: resolve("/repo/desktop") })).toBe(
-      resolve("/repo/api/PowerTools/PowerTools.McpConnector/bin/Debug/net9.0"),
+      resolve("/repo/api/Dyno/Dyno.McpConnector/bin/Debug/net9.0"),
     );
   });
 

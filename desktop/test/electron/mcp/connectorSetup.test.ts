@@ -20,7 +20,7 @@ describe("connector setup", () => {
   it("launches the per-user copy", () => {
     const launch = createConnectorSetup(deps()).launch("unused");
     expect(launch).toEqual({ command: expect.stringContaining("AppData") as string, args: [] });
-    expect(launch.command).toMatch(/Power Tools[\\/]mcp[\\/]PowerTools\.McpConnector\.exe$/);
+    expect(launch.command).toMatch(/Power Tools[\\/]mcp[\\/]Dyno\.McpConnector\.exe$/);
   });
 
   it("never rejects, even when the app paths throw", async () => {

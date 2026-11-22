@@ -17,8 +17,8 @@ const OFF: McpStatusInfo = {
   port: null,
   discoveryPath: "/users/me/power-tools/mcp-endpoint.json",
   error: null,
-  connectorCommand: '"/users/test/appdata/local/power tools/mcp/PowerTools.McpConnector.exe"',
-  connector: { command: "/users/me/appdata/local/power tools/mcp/PowerTools.McpConnector.exe", args: [] },
+  connectorCommand: '"/users/test/appdata/local/power tools/mcp/Dyno.McpConnector.exe"',
+  connector: { command: "/users/me/appdata/local/power tools/mcp/Dyno.McpConnector.exe", args: [] },
   recent: [],
   legacySetups: [],
   groups: [
@@ -89,20 +89,20 @@ describe("Settings: MCP server", () => {
   it("offers a Claude Code command and a JSON config that start the connector", async () => {
     renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
     const code = await screen.findByText(/^claude mcp add --scope user powertools -- /);
-    expect(code.textContent).toContain("PowerTools.McpConnector.exe");
+    expect(code.textContent).toContain("Dyno.McpConnector.exe");
     expect(screen.getByRole("button", { name: "Claude Code" })).toHaveAttribute("aria-pressed", "true");
 
     // One client's setup shows at a time.
     fireEvent.click(screen.getByRole("button", { name: "Claude Desktop" }));
     expect(screen.queryByText(/^claude mcp add --scope user powertools -- /)).not.toBeInTheDocument();
     const json = screen.getByText(/"mcpServers"/);
-    expect(json.textContent).toContain("PowerTools.McpConnector.exe");
+    expect(json.textContent).toContain("Dyno.McpConnector.exe");
     expect(screen.getByRole("button", { name: "Copy Claude Desktop" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "VS Code" }));
     const vscode = screen.getByText(/"servers"/);
     expect(vscode.textContent).toContain('"type": "stdio"');
-    expect(vscode.textContent).toContain("PowerTools.McpConnector.exe");
+    expect(vscode.textContent).toContain("Dyno.McpConnector.exe");
   });
 
   it("warns about client setups that still start PowerTools.API.exe and shows the new command", async () => {
@@ -120,7 +120,7 @@ describe("Settings: MCP server", () => {
     expect(await screen.findByText("Update your agent setup so Power Tools can update")).toBeInTheDocument();
     const fix = screen.getByText(/^claude mcp remove --scope user powertools/);
     expect(fix.textContent).toContain("claude mcp add --scope user powertools -- ");
-    expect(fix.textContent).toContain("PowerTools.McpConnector.exe");
+    expect(fix.textContent).toContain("Dyno.McpConnector.exe");
     expect(screen.getByText(/Replace the "pt" entry in .*claude_desktop_config\.json/)).toBeInTheDocument();
   });
 

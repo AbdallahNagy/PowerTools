@@ -23,6 +23,20 @@ test("windows releases use the auto-updatable NSIS installer target", () => {
   expect(builderConfig.win.artifactName).toBe("PowerTools-Setup.${ext}");
 });
 
+test("the app id stays the same so the installer upgrades existing installs in place", () => {
+  expect(builderConfig.appId).toBe("com.abdalla-nagy.power-tools");
+});
+
+test("windows installs bundle the sidecar and the MCP connector", () => {
+  expect(builderConfig.win.extraResources).toEqual([
+    { from: "../api/Dyno/Dyno.Api/bin/Release/net9.0/win-x64/publish", to: "api" },
+    {
+      from: "../api/Dyno/Dyno.McpConnector/bin/Release/net9.0/win-x64/publish/Dyno.McpConnector.exe",
+      to: "mcp-connector/Dyno.McpConnector.exe",
+    },
+  ]);
+});
+
 test("windows update installs use one-click NSIS flow", () => {
   expect(builderConfig.nsis.oneClick).toBe(true);
   expect(builderConfig.nsis.perMachine).toBe(false);

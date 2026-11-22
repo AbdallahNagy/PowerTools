@@ -153,7 +153,7 @@ All citations are relative to `MscrmTools.SolutionLayersExplorer/` in the upstre
 - `@codemirror/merge` is not installed. Either add it (MIT, same CodeMirror family), or render a two-column property diff in a table with a small MIT line-diff library such as `diff`. I recommend `@codemirror/merge` because `CodeMirrorEditor` already exists. Treat it as a new dependency to confirm.
 
 **New sidecar group**
-- Location: `api/PowerTools/PowerTools.API/Tools/SolutionLayers/`
+- Location: `api/Dyno/Dyno.Api/Tools/SolutionLayers/`
 - Files: `SolutionLayersEndpoints.cs`, `SolutionLayersService.cs`, `SolutionLayersQueries.cs`, `SolutionLayersDtos.cs`, `ComponentLayerNames.cs` (our own type-number to name map)
 - Wiring: `MapGroup("/api/solution-layers").AddEndpointFilter<DataverseContextFilter>()`, registered in `Program.cs` as `app.MapSolutionLayersEndpoints();`
 
@@ -259,9 +259,9 @@ Power Tools files to read before building:
 - `/home/user/PowerTools/desktop/src/ui/tools/registry.tsx`
 - `/home/user/PowerTools/desktop/src/ui/tools/publicCatalog.ts`
 - `/home/user/PowerTools/desktop/src/ui/tools/solution-components-mover/`
-- `/home/user/PowerTools/api/PowerTools/PowerTools.API/Tools/SolutionComponentsMover/SolutionComponentsMoverEndpoints.cs`
-- `/home/user/PowerTools/api/PowerTools/PowerTools.API/Tools/SolutionComponentsMover/SolutionComponentsMoverQueries.cs`
-- `/home/user/PowerTools/api/PowerTools/PowerTools.API/Program.cs`
+- `/home/user/PowerTools/api/Dyno/Dyno.Api/Tools/SolutionComponentsMover/SolutionComponentsMoverEndpoints.cs`
+- `/home/user/PowerTools/api/Dyno/Dyno.Api/Tools/SolutionComponentsMover/SolutionComponentsMoverQueries.cs`
+- `/home/user/PowerTools/api/Dyno/Dyno.Api/Program.cs`
 - `/home/user/PowerTools/desktop/src/ui/shared/contracts/dataverse.ts`
 
 ### Dataverse review
@@ -557,11 +557,11 @@ Tokens only: `bg-canvas` for the tab, `bg-surface` for panels, `bg-raised` for d
 
 **Files added**
 
-- Sidecar, `api/PowerTools/PowerTools.API/Tools/SolutionLayers/`:
+- Sidecar, `api/Dyno/Dyno.Api/Tools/SolutionLayers/`:
   - `ComponentLayerNames.cs`: our own map from the documented `componenttype` numbers (1, 2, 9, 10, 20, 26, 29, 59, 60, 61, 91, 92, 300) to the `msdyn_solutioncomponentname` filter value. Model-driven apps are not hardcoded as 80; their number is read from the `solutioncomponentdefinition` row whose `primaryentityname` is `appmodule`, and the type is left out of the picker when that row is missing. Any other number falls back to `solutioncomponentdefinition.name`. Type 418 (dataflow) is not mapped, because the UX picker does not list it.
   - `SolutionLayersQueries.cs`, `SolutionLayersService.cs`, `SolutionLayersClient.cs` (client interface plus a per-connection five-minute cache), `SolutionLayersFaults.cs`, `SolutionLayersDtos.cs`, `SolutionLayersEndpoints.cs`.
   - `Program.cs`: `app.MapSolutionLayersEndpoints();` and the cache singleton.
-  - Tests: new project `api/PowerTools/PowerTools.API.SolutionLayers.Tests/` (added to `PowerTools.sln`) with a fake client. No Dataverse connection is used.
+  - Tests: new project `api/Dyno/Dyno.Api.SolutionLayers.Tests/` (added to `Dyno.sln`) with a fake client. No Dataverse connection is used.
 - Desktop, `desktop/src/ui/tools/solution-layers-explorer/`: `tool.ts`, a new stacked-layers icon, `SolutionLayersExplorer.tsx`, `api/` (query keys, react-query hooks with `meta.connectionName`), `model/` (`componentJson.ts`, `view.ts`, `apiError.ts`, `types.ts`), `components/` (`ComponentPicker`, `LayerList`, `LayerDetails`, `LayerCompare`, `LayerDiff` with its lazy loader, `MergeDiffView`, `RemoveActiveDialog`, `BulkRemoveDialog`), and `tests/` (fixtures, node tests, MSW renderer tests).
 - One entry each in `registry.tsx` and `publicCatalog.ts`, after Solution Components Mover. `test/toolRegistry.test.ts` now expects the new id in that order.
 - Dependency: `@codemirror/merge@^6.12.2` (MIT, approved in Open questions).
@@ -613,8 +613,8 @@ Tokens only: `bg-canvas` for the tab, `bg-surface` for panels, `bg-raised` for d
 
 **Commands and results**
 
-- `dotnet build api/PowerTools/PowerTools.sln`: succeeded, 0 warnings, 0 errors. The sandbox has only the .NET 10 SDK (Ubuntu package; dot.net is blocked by the egress proxy). It builds the `net9.0` projects.
-- `dotnet test api/PowerTools/PowerTools.sln` with `DOTNET_ROLL_FORWARD=Major`, because only the .NET 10 runtime is installed: all 8 test projects pass, 287 tests in total. The new `PowerTools.API.SolutionLayers.Tests` has 29 tests: mapping, query shape, sorting, guard, faults, timeout, type list and search.
+- `dotnet build api/Dyno/Dyno.sln`: succeeded, 0 warnings, 0 errors. The sandbox has only the .NET 10 SDK (Ubuntu package; dot.net is blocked by the egress proxy). It builds the `net9.0` projects.
+- `dotnet test api/Dyno/Dyno.sln` with `DOTNET_ROLL_FORWARD=Major`, because only the .NET 10 runtime is installed: all 8 test projects pass, 287 tests in total. The new `Dyno.Api.SolutionLayers.Tests` has 29 tests: mapping, query shape, sorting, guard, faults, timeout, type list and search.
 - `npm test` (desktop): 86 files, 491 tests pass. The new tool adds 13 node tests and 14 renderer tests.
 - `npm run lint`: clean.
 - `npm run build`: succeeds. Vite's warning that a chunk is larger than 500 kB was already there before this change. The main chunk grows by about 26 kB.

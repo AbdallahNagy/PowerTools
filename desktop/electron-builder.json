@@ -22,7 +22,7 @@
         "icon": "./power-tools.icns",
         "extraResources": [
             {
-                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/osx-arm64/publish",
+                "from": "../api/Dyno/Dyno.Api/bin/Release/net9.0/osx-arm64/publish",
                 "to": "api"
             }
         ]
@@ -33,7 +33,7 @@
         "icon": "./power-tools.png",
         "extraResources": [
             {
-                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/linux-x64/publish",
+                "from": "../api/Dyno/Dyno.Api/bin/Release/net9.0/linux-x64/publish",
                 "to": "api"
             }
         ]
@@ -43,12 +43,12 @@
         "artifactName": "PowerTools-Setup.${ext}",
         "extraResources": [
             {
-                "from": "../api/PowerTools/PowerTools.API/bin/Release/net9.0/win-x64/publish",
+                "from": "../api/Dyno/Dyno.Api/bin/Release/net9.0/win-x64/publish",
                 "to": "api"
             },
             {
-                "from": "../api/PowerTools/PowerTools.McpConnector/bin/Release/net9.0/win-x64/publish/PowerTools.McpConnector.exe",
-                "to": "mcp-connector/PowerTools.McpConnector.exe"
+                "from": "../api/Dyno/Dyno.McpConnector/bin/Release/net9.0/win-x64/publish/Dyno.McpConnector.exe",
+                "to": "mcp-connector/Dyno.McpConnector.exe"
             }
         ]
     },

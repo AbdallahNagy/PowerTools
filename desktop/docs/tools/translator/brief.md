@@ -152,7 +152,7 @@
 - Solution filtering, phase 2 only: reuse the logic behind `GET /api/solution-components-mover/solutions`, but expose it under this tool's own group or promote it to a shared metadata endpoint. Do not call another tool's route from the renderer.
 
 **New sidecar group `/api/translator`**
-Location: `api/PowerTools/PowerTools.API/Tools/Translator/`, attached to `DataverseContextFilter`, using `DataverseClientFactory`. Files follow the Attribute Explorer pattern: `TranslatorEndpoints.cs`, `TranslatorService.cs`, `TranslatorClient.cs`, `TranslatorDtos.cs`, `TranslatorFaults.cs`, `TranslatorJob.cs`. Register `app.MapTranslatorEndpoints()` in `Program.cs`.
+Location: `api/Dyno/Dyno.Api/Tools/Translator/`, attached to `DataverseContextFilter`, using `DataverseClientFactory`. Files follow the Attribute Explorer pattern: `TranslatorEndpoints.cs`, `TranslatorService.cs`, `TranslatorClient.cs`, `TranslatorDtos.cs`, `TranslatorFaults.cs`, `TranslatorJob.cs`. Register `app.MapTranslatorEndpoints()` in `Program.cs`.
 
 1. **`GET /api/translator/languages`**
    - Returns `{ baseLcid: int, languages: [{ lcid, name }] }`.
@@ -220,7 +220,7 @@ Location: `api/PowerTools/PowerTools.API/Tools/Translator/`, attached to `Datave
 
 ### Dataverse review
 
-Evidence used: Microsoft's SDK message contracts for the requests named below (`Microsoft.Xrm.Sdk.Messages` and `Microsoft.Crm.Sdk.Messages`), the Dataverse metadata and service-protection documentation as I know it, and this repo's sidecar code (`Services/DataverseClientFactory.cs`, `PowerTools.API.csproj`, and the `Retry-After` handling in `Tools/SolutionComponentsMover` and `Tools/WorkflowActivities`). I did not run anything against a live environment. Items marked **unverified** need a check on a dev environment before the developer depends on them. Scope follows the user's answer: tables, columns, local and global choices, Yes/No, relationships, views and charts in an in-app grid. Forms, dashboards and SiteMap are out of scope, so this review does not confirm or reject the plugin's `usersettings` approach.
+Evidence used: Microsoft's SDK message contracts for the requests named below (`Microsoft.Xrm.Sdk.Messages` and `Microsoft.Crm.Sdk.Messages`), the Dataverse metadata and service-protection documentation as I know it, and this repo's sidecar code (`Services/DataverseClientFactory.cs`, `Dyno.Api.csproj`, and the `Retry-After` handling in `Tools/SolutionComponentsMover` and `Tools/WorkflowActivities`). I did not run anything against a live environment. Items marked **unverified** need a check on a dev environment before the developer depends on them. Scope follows the user's answer: tables, columns, local and global choices, Yes/No, relationships, views and charts in an in-app grid. Forms, dashboards and SiteMap are out of scope, so this review does not confirm or reject the plugin's `usersettings` approach.
 
 **Corrections to messages**
 - **State (`statecode`) labels use `UpdateStateValueRequest`, not `UpdateOptionValueRequest`.** The contract is `UpdateStateValueRequest { EntityLogicalName, AttributeLogicalName, Value, Label, Description, MergeLabels }`. Microsoft documents `UpdateOptionValue` for Picklist, Status, multi-select and Boolean, and a separate message for state options. The plugin sends `UpdateOptionValue` for State. Treat that as wrong per the contract.
@@ -251,7 +251,7 @@ Evidence used: Microsoft's SDK message contracts for the requests named below (`
 
 **Languages endpoint**
 - `organization.languagecode` plus `RetrieveProvisionedLanguagesRequest` is correct. The response normally includes the base language. Union and de-duplicate anyway.
-- **Correction to the mapping:** `PowerTools.API.csproj` sets `<InvariantGlobalization>true</InvariantGlobalization>`. Under that setting `new CultureInfo(lcid)` throws `CultureNotFoundException`, so `CultureInfo(lcid).EnglishName` will not work.
+- **Correction to the mapping:** `Dyno.Api.csproj` sets `<InvariantGlobalization>true</InvariantGlobalization>`. Under that setting `new CultureInfo(lcid)` throws `CultureNotFoundException`, so `CultureInfo(lcid).EnglishName` will not work.
   - Instead, read the `languagelocale` table (`localeid`, `name`, `language`, `code`) filtered to the provisioned LCIDs.
   - Fall back to `LCID <n>` when no name is found.
   - Do not turn off invariant globalization for this.
@@ -435,7 +435,7 @@ A `Toolbar` runs across the top of the whole tab, above the split:
 
 Scope follows the user's first-PR decision: an in-app grid for tables, columns, local choices, Yes/No columns, relationships with a custom menu label, system views, charts, and global choices (including global Yes/No sets), applied with a targeted publish. There is no Excel export or import, no solution filter, no forms, dashboards, or SiteMap, no batch-size setting, and no Publish All. Easy Translator was used only as a behavioral reference. No code, layout, wording, or icons were copied, and no new dependency was added.
 
-**Sidecar: `api/PowerTools/PowerTools.API/Tools/Translator/`**
+**Sidecar: `api/Dyno/Dyno.Api/Tools/Translator/`**
 - `TranslatorEndpoints.cs` maps the `/api/translator` group behind `DataverseContextFilter`. It is registered with `app.MapTranslatorEndpoints()` in `Program.cs`, together with `ITranslatorJobStore`, `ITranslatorDelay`, and the `TranslatorJobRunner` hosted service.
   - `GET /languages` returns `{ baseLcid, languages: [{ lcid, name }] }`. It reads `organization.languagecode` and `RetrieveProvisionedLanguagesRequest`, unions and de-duplicates them, and gets names from `languagelocale`. If that read fails, the name falls back to `LCID <n>`. `CultureInfo` is not used, because the project sets `InvariantGlobalization`.
   - `POST /labels/query` returns `{ rows: LabelRow[] }`. Body: `{ tables, kinds, lcids, properties }`.
@@ -518,7 +518,7 @@ Scope follows the user's first-PR decision: an in-app grid for tables, columns, 
 - One shared change: `desktop/src/ui/shared/ui/Tooltip.tsx` gained an optional `disabled` prop. It keeps the element tree the same, so a cell's input keeps focus when the cell becomes invalid while the user types.
 
 **Tests (fake Dataverse surfaces only; no credentials or live environment)**
-- Sidecar: `api/PowerTools/PowerTools.API.Translator.Tests/` (added to `PowerTools.sln`) has 25 xUnit tests over a recording `FakeTranslatorClient`. They cover:
+- Sidecar: `api/Dyno/Dyno.Api.Translator.Tests/` (added to `Dyno.sln`) has 25 xUnit tests over a recording `FakeTranslatorClient`. They cover:
   - languages: union, ordering, and the fallback name
   - query validation, chunks of 100 with a `LogicalName In` condition, and `FilterLanguages`
   - the read-only reasons and every column exclusion rule, including the rollup `_state`/`_date` rule
@@ -546,9 +546,9 @@ Scope follows the user's first-PR decision: an in-app grid for tables, columns, 
   - `npm run lint`: clean.
   - `npm run build`: succeeded.
   - `xvfb-run -a npm run check`: typecheck, lint with `--max-warnings 0`, 442 tests, the renderer build, and the Playwright smoke test (1 passed).
-- From `api/PowerTools/`:
-  - `dotnet build PowerTools.sln`: 0 warnings, 0 errors.
-  - `dotnet test PowerTools.sln`: all projects passed, including Translator (25).
+- From `api/Dyno/`:
+  - `dotnet build Dyno.sln`: 0 warnings, 0 errors.
+  - `dotnet test Dyno.sln`: all projects passed, including Translator (25).
 
 **Limits of this verification**
 - The container has no .NET 9 runtime. It could not be downloaded here, because `builds.dotnet.microsoft.com` was blocked by the egress policy. The sidecar was built with the .NET 10 SDK from the Microsoft apt feed, and the `net9.0` tests ran with `DOTNET_ROLL_FORWARD=Major`. CI runs on .NET 9.
@@ -562,7 +562,7 @@ Scope follows the user's first-PR decision: an in-app grid for tables, columns, 
 
 This covers the two items the user added under `### Open questions` after the first draft pull request. Everything else behaves as before.
 
-*Sidecar (`api/PowerTools/PowerTools.API/Tools/Translator/`)*
+*Sidecar (`api/Dyno/Dyno.Api/Tools/Translator/`)*
 - New file `TranslatorSolutions.cs` holds the component-type constants, the `SolutionScope` model, the solution, publisher and `solutioncomponent` queries, and the new-solution field rules. `TranslatorService.Solutions.cs` holds the new service methods. The service is now a `partial` class. No other tool's code or route is used.
 - New routes in the `/api/translator` group, behind `DataverseContextFilter`:
   - `GET /tables?solutionId=` returns `{ tables: [{ logicalName, displayName }] }`. It replaces the renderer's use of `/api/metadata/entities` (see the loading findings below).
@@ -637,9 +637,9 @@ This covers the two items the user added under `### Open questions` after the fi
   - `npm run lint`: clean.
   - `npm run build`: succeeded.
   - `xvfb-run -a npm run check`: typecheck, lint with `--max-warnings 0`, all tests, and the renderer build passed. The last step, the Playwright smoke test, timed out after 120 seconds while waiting for the Electron main window. It fails the same way on the unmodified previous commit, also with `DOTNET_ROLL_FORWARD=Major`. Started on its own, the sidecar prints `LISTENING`. So this is a container limit, not this change. The smoke test does not open the Translator.
-- Run from `api/PowerTools/`:
-  - `dotnet build PowerTools.sln`: 0 warnings, 0 errors.
-  - `dotnet test PowerTools.sln` with `DOTNET_ROLL_FORWARD=Major` (.NET 10 SDK; no .NET 9 runtime in this container): every project passed, including Translator (46).
+- Run from `api/Dyno/`:
+  - `dotnet build Dyno.sln`: 0 warnings, 0 errors.
+  - `dotnet test Dyno.sln` with `DOTNET_ROLL_FORWARD=Major` (.NET 10 SDK; no .NET 9 runtime in this container): every project passed, including Translator (46).
 
 ### Open questions
 
