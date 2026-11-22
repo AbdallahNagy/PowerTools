@@ -130,6 +130,7 @@ export function createPreloadApi(ipcRenderer: PreloadIpcRenderer, argv: readonly
       return () => ipcRenderer.removeListener("mcp-approval-dismiss", listener);
     },
     respondMcpApproval: (id: string, allow: boolean) => ipcRenderer.invoke("mcp-approval-respond", id, allow),
+    getPendingMcpApproval: () => ipcRenderer.invoke("mcp-approval-pending"),
     onOpenSettings: (callback: () => void) => {
       const listener = () => callback();
       ipcRenderer.on("open-settings", listener);

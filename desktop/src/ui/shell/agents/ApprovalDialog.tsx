@@ -86,7 +86,8 @@ function PlanSteps({ plan }: { plan: McpApprovalPlan }) {
           <li key={`${step.op}-${step.target}-${index}`} className={`break-all ${STEP_CLASS[step.effect]}`}>
             {step.effect === "destructive" ? "Removes or replaces: " : step.effect === "unsupported" ? "Cannot run: " : ""}
             {step.op} {step.target}
-            {step.detail ? <span className="text-fg-muted"> · {step.detail}</span> : null}
+            {/* A detail can span lines, such as each operation of an all-or-nothing records_write. */}
+            {step.detail ? <span className="whitespace-pre-line text-fg-muted"> · {step.detail}</span> : null}
           </li>
         ))}
         {plan.hidden > 0 ? <li className="list-none text-fg-muted">and {plan.hidden} more</li> : null}

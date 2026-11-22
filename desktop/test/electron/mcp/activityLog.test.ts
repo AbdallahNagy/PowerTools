@@ -16,12 +16,12 @@ function entry(time: string, over: Partial<ActivityEntry> = {}): ActivityEntry {
   return {
     time,
     client: "claude-code",
-    tool: "metadata_list_tables",
+    tool: "inspect_schema",
     connection: "A · Dev",
     effect: "read",
     approval: "not-needed",
     outcome: "ok",
-    summary: "metadata_list_tables",
+    summary: "inspect_schema",
     ...over,
   };
 }

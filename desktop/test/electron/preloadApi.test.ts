@@ -98,6 +98,7 @@ describe("createPreloadApi", () => {
     ["setCrashReportsEnabled", [false], "app-settings-set-crash-reports", [false]],
     ["openSettingsFolder", ["data"], "app-settings-open-folder", ["data"]],
     ["respondMcpApproval", ["req-1", true], "mcp-approval-respond", ["req-1", true]],
+    ["getPendingMcpApproval", [], "mcp-approval-pending", []],
   ] as const)(
     "%s invokes %s with the existing arguments",
     async (methodName, methodArgs, expectedChannel, expectedArgs) => {
@@ -300,6 +301,7 @@ describe("createPreloadApi", () => {
       "onMcpApprovalPresent",
       "onMcpApprovalDismiss",
       "respondMcpApproval",
+      "getPendingMcpApproval",
       "onOpenSettings",
       "onAppSettingsChanged",
       "getAppSettings",

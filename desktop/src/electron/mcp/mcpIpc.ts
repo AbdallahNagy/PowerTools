@@ -17,7 +17,7 @@ export type McpStatusInfo = McpStatus & {
 
 export interface McpIpcDeps {
   ipcMain: Pick<IpcMain, "handle">;
-  service: Pick<McpService, "status" | "setEnabled" | "setGroup" | "setTool" | "recentActivity" | "respondApproval">;
+  service: Pick<McpService, "status" | "setEnabled" | "setGroup" | "setTool" | "recentActivity" | "respondApproval" | "pendingApproval">;
   getMainWindow: () => BrowserWindow | null;
   connector: () => ConnectorLaunch;
   /** Defaults to none. */
@@ -77,6 +77,12 @@ export function registerMcpIpc({ ipcMain, service, getMainWindow, connector, leg
     if (typeof id !== "string" || id.length === 0 || id.length > 100) throw new Error("A request id is required");
     if (typeof allow !== "boolean") throw new Error("The answer must be true or false");
     service.respondApproval(id, allow);
+  });
+
+  // The window asks once it listens: a request presented while it was loading or reloading was never seen.
+  ipcMain.handle("mcp-approval-pending", async (event) => {
+    assertMainWindow(event);
+    return service.pendingApproval();
   });
 
   ipcMain.handle("mcp-get-activity", async (event, limit: unknown) => {

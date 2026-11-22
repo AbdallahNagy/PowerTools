@@ -297,7 +297,6 @@ app.whenReady().then(async () => {
   app.on("before-quit", () => void mcpService.stop());
   // The quit may not wait for the async stop, so remove the discovery file here as well.
   process.on("exit", () => rmSync(mcpService.status().discoveryPath, { force: true }));
-  if (mcpSettings().enabled === true) void mcpService.start();
 
   function broadcastUpdateStatus(status: UpdateStatus) {
     updateStatus = status;
@@ -372,6 +371,9 @@ app.whenReady().then(async () => {
   }));
   configureMainWindowChrome(mainWindow);
   mainWindow.on("closed", () => mcpService.failApprovals());
+  // Start only now: an approval asks in this window, and on-premises connections are registered with the sidecar.
+  // Started earlier, a call that needs approval met the window before it existed and held the queue for 5 minutes.
+  if (mcpSettings().enabled === true) void mcpService.start();
   mainWindow.maximize();
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();

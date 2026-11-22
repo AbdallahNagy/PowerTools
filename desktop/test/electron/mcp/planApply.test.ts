@@ -57,15 +57,17 @@ const tableApply = applyTool({
 interface Sidecar {
   plans: PlanPreview[];
   apply?: unknown;
-  calls: Array<{ path: string; body: unknown }>;
+  calls: Array<{ path: string; body: unknown; auth?: string }>;
 }
+
+let signIns = 0;
 
 async function setup(sidecar: Sidecar, decide: (req: ApprovalRequest) => Promise<string> = async () => "allowed", planTimeoutMs?: number) {
   bypassMsw();
   const fetchFake = vi.fn(async (url: string, init: RequestInit) => {
     const path = new URL(url).pathname;
     const body = init.body ? JSON.parse(String(init.body)) : undefined;
-    sidecar.calls.push({ path, body });
+    sidecar.calls.push({ path, body, auth: (init.headers as Record<string, string>).Authorization });
     if (path.endsWith("/plan")) {
       if (planTimeoutMs) {
         await new Promise((resolve, reject) => {
@@ -85,7 +87,8 @@ async function setup(sidecar: Sidecar, decide: (req: ApprovalRequest) => Promise
       { id: "id-dev", organization: "A", environment: "Dev", legacyName: null, envUrl: "https://a.crm.dynamics.com", crmType: "online" },
     ],
     activeId: () => "id-dev",
-    resolveAuth: async (id) => ({ id, envUrl: "https://a.crm.dynamics.com", crmType: "online", token: "tok" }),
+    // Each sign-in gives a new token, so a test can tell the token the plan used from the one apply used.
+    resolveAuth: async (id) => ({ id, envUrl: "https://a.crm.dynamics.com", crmType: "online", token: `tok-${++signIns}` }),
   });
   const entries: ActivityEntry[] = [];
   const log: ActivityLog = { append: async (e) => void entries.push(e), recent: async () => entries, prune: async () => undefined };
@@ -96,6 +99,7 @@ async function setup(sidecar: Sidecar, decide: (req: ApprovalRequest) => Promise
       resolveConnection: resolver.resolve,
       callSidecar: createSidecarCaller({ baseUrl: "http://sidecar", secret: "sec", fetch: fetchFake as never }),
       listConnections: resolver.list,
+      refreshConnection: resolver.refresh,
     }),
     log,
     gate: {
@@ -114,6 +118,8 @@ async function setup(sidecar: Sidecar, decide: (req: ApprovalRequest) => Promise
       requestInit: { headers: { Authorization: `Bearer ${TOKEN}` } },
     }),
   );
+  // Real clients list the tools first, and from then on check each result against the tool's output schema.
+  await client.listTools();
   return { client, entries, requests };
 }
 
@@ -199,6 +205,17 @@ describe("apply tools", () => {
     expect(sidecar.calls.map((c) => c.path)).toEqual(["/api/agent/table/plan"]);
   });
 
+  it("applies with a token fetched after the user answered, not the one the plan was built with", async () => {
+    const sidecar: Sidecar = { plans: [plan([step("con_budget")])], apply: applied, calls: [] };
+    const { client } = await setup(sidecar);
+
+    await client.callTool({ name: "table_apply", arguments: { solution: "Core", table: "con_project" } });
+
+    const [planCall, applyCall] = sidecar.calls;
+    expect(applyCall.path).toBe("/api/agent/table/apply");
+    expect(applyCall.auth).not.toBe(planCall.auth);
+  });
+
   it("denied approval never applies", async () => {
     const sidecar: Sidecar = { plans: [plan([step("con_budget")])], apply: applied, calls: [] };
     const { client } = await setup(sidecar, async () => "denied");
@@ -206,7 +223,9 @@ describe("apply tools", () => {
     const result = await client.callTool({ name: "table_apply", arguments: { solution: "Core", table: "con_project" } });
 
     expect(result.isError).toBe(true);
-    expect(result.structuredContent).toMatchObject({ code: "ApprovalDenied" });
+    // The error is not an apply result, so it comes as text only and the client's output schema check passes.
+    expect(result.structuredContent).toBeUndefined();
+    expect((result.content as Array<{ text: string }>)[0].text).toContain("[ApprovalDenied]");
     expect(sidecar.calls.map((c) => c.path)).toEqual(["/api/agent/table/plan"]);
   });
 
@@ -229,12 +248,14 @@ describe("apply tools", () => {
 
   it("gives up building a plan after its own timeout", async () => {
     const sidecar: Sidecar = { plans: [plan([step("a")])], calls: [] };
-    const { client, requests } = await setup(sidecar, async () => "allowed", 50);
+    const { client, requests, entries } = await setup(sidecar, async () => "allowed", 50);
 
     const result = await client.callTool({ name: "table_apply", arguments: { solution: "Core", table: "con_project" } });
 
     expect(result.isError).toBe(true);
-    expect(result.structuredContent).toMatchObject({ code: "Timeout" });
+    expect((result.content as Array<{ text: string }>)[0].text).toContain("[Timeout]");
+    // The log still records the code, though the agent gets it as text.
+    expect(entries[entries.length - 1]).toMatchObject({ outcome: "error", code: "Timeout" });
     expect(requests).toHaveLength(0);
   });
 
@@ -244,7 +265,8 @@ describe("apply tools", () => {
 
     const result = await client.callTool({ name: "table_apply", arguments: { solution: "Core", table: "con_project" } });
 
-    expect(result.structuredContent).toMatchObject({ code: "Internal" });
+    expect(result.isError).toBe(true);
+    expect((result.content as Array<{ text: string }>)[0].text).toContain("[Internal]");
   });
 });
 

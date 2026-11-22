@@ -62,6 +62,8 @@ export interface McpServiceDeps {
 export interface McpService {
   /** The most recent activity entries, newest first. */
   recentActivity(limit: number): Promise<ActivityEntry[]>;
+  /** The approval request on screen, for a window that loaded after it was presented. */
+  pendingApproval(): ApprovalRequest | null;
   /** The user's answer to the approval request on screen. */
   respondApproval(id: string, allow: boolean): void;
   /** The approval window went away: every waiting request is refused as unavailable. */
@@ -128,6 +130,7 @@ export function createMcpService(deps: McpServiceDeps): McpService {
         registry,
         context: () => ({
           resolveConnection: resolver.resolve,
+          refreshConnection: resolver.refresh,
           callSidecar,
           listConnections: resolver.list,
         }),
@@ -180,6 +183,7 @@ export function createMcpService(deps: McpServiceDeps): McpService {
 
   return {
     recentActivity: (limit) => log.recent(limit),
+    pendingApproval: () => gate.current(),
     respondApproval: (id, allow) => gate.respond(id, allow),
     failApprovals: () => gate.failAll("unavailable"),
     start: () => enqueue(doStart),

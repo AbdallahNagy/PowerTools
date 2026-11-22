@@ -27,7 +27,7 @@ const OFF: McpStatusInfo = {
   ],
   tools: [
     { name: "connections_list", title: "List connections", description: "Lists saved connections. Read-only.", group: "connections", effect: "read", perCall: false, enabled: true },
-    { name: "schema_create_column", title: "Create a column", description: "Adds a column. Changes the environment.", group: "schema", effect: "change", perCall: false, enabled: true },
+    { name: "choice_apply", title: "Apply a global choice", description: "Creates or updates a global choice. Changes the environment.", group: "schema", effect: "change", perCall: false, enabled: true },
   ],
 };
 
@@ -138,7 +138,7 @@ describe("Settings: MCP server", () => {
           running: true,
           enabled: true,
           recent: [
-            { time: "2026-11-12T10:00:00.000Z", client: "claude-code", tool: "metadata_get_table", connection: "A · Dev", effect: "read", approval: "not-needed", outcome: "ok", summary: "metadata_get_table account" },
+            { time: "2026-11-12T10:00:00.000Z", client: "claude-code", tool: "inspect_schema", connection: "A · Dev", effect: "read", approval: "not-needed", outcome: "ok", summary: "inspect_schema account" },
           ],
         }),
       },
@@ -146,7 +146,7 @@ describe("Settings: MCP server", () => {
     await screen.findByText("Running");
     await openTab("Agent activity");
     expect(await screen.findByRole("heading", { name: "Agent activity" })).toBeInTheDocument();
-    expect(screen.getAllByText("metadata_get_table").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("inspect_schema").length).toBeGreaterThan(0);
     expect(screen.getByText("account")).toBeInTheDocument();
     expect(screen.getByText("A · Dev")).toBeInTheDocument();
     expect(document.body.textContent ?? "").not.toMatch(/[0-9a-f]{64}/);
@@ -244,8 +244,8 @@ describe("Settings: MCP server", () => {
       expect(screen.getByRole("switch", { name: "List connections (connections_list)" })).not.toBeChecked(),
     );
 
-    fireEvent.change(screen.getByLabelText("Search agent tools"), { target: { value: "column" } });
-    const column = screen.getByRole("switch", { name: "Create a column (schema_create_column)" });
+    fireEvent.change(screen.getByLabelText("Search agent tools"), { target: { value: "choice" } });
+    const column = screen.getByRole("switch", { name: "Apply a global choice (choice_apply)" });
     expect(screen.queryByText("List connections")).not.toBeInTheDocument();
     // A tool of a switched-off group cannot be switched on its own.
     expect(column).toBeDisabled();
@@ -291,7 +291,7 @@ describe("Settings: MCP server", () => {
     await openTab("Agent tools");
     const filter = await screen.findByRole("group", { name: "Show tools that" });
     fireEvent.click(within(filter).getByRole("button", { name: /^Change/ }));
-    expect(screen.getByText("Create a column")).toBeInTheDocument();
+    expect(screen.getByText("Apply a global choice")).toBeInTheDocument();
     expect(screen.queryByText("List connections")).not.toBeInTheDocument();
     fireEvent.click(within(filter).getByRole("button", { name: /^Destructive/ }));
     expect(screen.getByText("No matching tools")).toBeInTheDocument();
@@ -326,8 +326,8 @@ describe("Settings: MCP server", () => {
           ...OFF,
           recent: [
             { time: "2026-11-12T10:00:00.000Z", client: "claude-code", tool: "connections_list", connection: null, effect: "read", approval: "not-needed", outcome: "ok", summary: "connections_list" },
-            { time: "2026-11-12T10:01:00.000Z", client: "claude-code", tool: "schema_create_column", connection: "A · Dev", effect: "change", approval: "denied", outcome: "error", code: "Denied", summary: "schema_create_column account.new_x" },
-            { time: "2026-11-12T10:02:00.000Z", client: "claude-code", tool: "schema_create_column", connection: "A · Dev", effect: "change", approval: "allowed", outcome: "error", code: "InvalidRequest", summary: "schema_create_column account.new_y" },
+            { time: "2026-11-12T10:01:00.000Z", client: "claude-code", tool: "choice_apply", connection: "A · Dev", effect: "change", approval: "denied", outcome: "error", code: "Denied", summary: "choice_apply account.new_x" },
+            { time: "2026-11-12T10:02:00.000Z", client: "claude-code", tool: "choice_apply", connection: "A · Dev", effect: "change", approval: "allowed", outcome: "error", code: "InvalidRequest", summary: "choice_apply account.new_y" },
           ],
         }),
       },
@@ -341,7 +341,7 @@ describe("Settings: MCP server", () => {
 
     fireEvent.click(within(screen.getByRole("group", { name: "Show calls" })).getByRole("button", { name: /^Errors/ }));
     expect(screen.queryByText("List connections")).not.toBeInTheDocument();
-    expect(screen.getAllByText("Create a column")).toHaveLength(2);
+    expect(screen.getAllByText("Apply a global choice")).toHaveLength(2);
   });
 
   it("links from MCP server to the tools and activity tabs", async () => {
