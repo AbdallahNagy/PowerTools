@@ -281,7 +281,6 @@ app.whenReady().then(async () => {
     resourcesPath: process.resourcesPath,
     appPath: () => app.getAppPath(),
     homePath: () => app.getPath("home"),
-    appDataPath: () => app.getPath("appData"),
     localAppData: process.env.LOCALAPPDATA,
     appFolderName: () => appFolderName(),
   });
@@ -292,7 +291,6 @@ app.whenReady().then(async () => {
     service: mcpService,
     getMainWindow: () => mainWindow,
     connector: () => connectorSetup.launch(mcpService.status().discoveryPath),
-    legacySetups: () => connectorSetup.legacySetups(),
   });
   app.on("before-quit", () => void mcpService.stop());
   // The quit may not wait for the async stop, so remove the discovery file here as well.

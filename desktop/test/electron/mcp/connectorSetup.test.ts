@@ -8,7 +8,6 @@ function deps(overrides: Partial<ConnectorSetupDeps> = {}): ConnectorSetupDeps {
     resourcesPath: "C:\\Program Files\\Dyno\\resources",
     appPath: () => "C:\\Program Files\\Dyno\\resources\\app.asar",
     homePath: () => "C:\\Users\\me",
-    appDataPath: () => "C:\\Users\\me\\AppData\\Roaming",
     localAppData: "C:\\Users\\me\\AppData\\Local",
     appFolderName: () => "Dyno",
     log: { info: vi.fn(), error: vi.fn() },
@@ -42,6 +41,5 @@ describe("connector setup", () => {
     const setup = createConnectorSetup(deps({ platform: "linux", fs: { listFiles } as never }));
     await setup.install();
     expect(listFiles).not.toHaveBeenCalled();
-    expect(await setup.legacySetups()).toEqual([]);
   });
 });

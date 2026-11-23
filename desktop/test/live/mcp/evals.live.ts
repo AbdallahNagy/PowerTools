@@ -23,7 +23,7 @@ import {
 } from "./harness";
 
 /** Scenarios of later phases are listed but skipped. Raise this as each phase lands. */
-const CURRENT_PHASE = Number(process.env.POWERTOOLS_EVAL_PHASE ?? 0);
+const CURRENT_PHASE = Number(process.env.DYNO_EVAL_PHASE ?? 0);
 
 const { config, problem } = loadLiveConfig();
 if (problem) console.warn(`[mcp evals] skipped: ${problem}`);
@@ -73,7 +73,7 @@ describe.skipIf(!config)("MCP agent evals", () => {
 
     const started = new Date();
     const prompt = withConnection(scenario.prompt, sandbox.connection);
-    const args = ["-p", prompt, "--output-format", "stream-json", "--verbose", "--allowedTools", "mcp__powertools__*"];
+    const args = ["-p", prompt, "--output-format", "stream-json", "--verbose", "--allowedTools", "mcp__dyno__*"];
     if (config!.claudeMcpConfig) args.push("--mcp-config", config!.claudeMcpConfig, "--strict-mcp-config");
     const run = spawnSync(config!.claudeCommand ?? "claude", args, { encoding: "utf-8", timeout: 15 * 60_000, shell: process.platform === "win32" });
     const ended = new Date();

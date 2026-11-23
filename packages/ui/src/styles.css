@@ -1,5 +1,5 @@
 /*
- * @powertools/ui stylesheet. Built into dist/styles.css: Tailwind 4 output with the
+ * @dynoapp/ui stylesheet. Built into dist/styles.css: Tailwind 4 output with the
  * theme tokens (dark default, light under [data-theme="light"]), the utilities the
  * kit's components use, the IBM Plex fonts, and the base element styles.
  * Base styles mirror the relevant parts of desktop/src/ui/index.css; the app-shell

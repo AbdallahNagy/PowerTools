@@ -1,4 +1,4 @@
-# Power Tools repository rules
+# Dyno repository rules
 
 - `desktop/`: production Windows Electron client.
 - `api/`: local ASP.NET Core sidecar API.

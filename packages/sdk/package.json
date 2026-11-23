@@ -1,7 +1,7 @@
 {
-  "name": "@powertools/sdk",
+  "name": "@dynoapp/sdk",
   "version": "0.1.0",
-  "description": "SDK for Power Tools community tools: talks to the host over a MessagePort.",
+  "description": "SDK for Dyno community tools: talks to the host over a MessagePort.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",

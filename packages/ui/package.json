@@ -1,7 +1,7 @@
 {
-  "name": "@powertools/ui",
+  "name": "@dynoapp/ui",
   "version": "0.1.0",
-  "description": "Power Tools UI kit and theme for community tools. Built from the desktop app's shared UI source.",
+  "description": "Dyno UI kit and theme for community tools. Built from the desktop app's shared UI source.",
   "type": "module",
   "sideEffects": [
     "*.css"

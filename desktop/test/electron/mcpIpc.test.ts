@@ -34,7 +34,7 @@ function setup() {
     ipcMain: { handle: (channel: string, handler: Handler) => void handlers.set(channel, handler) } as never,
     service,
     getMainWindow: () => ({ webContents: mainContents }) as never,
-    connector: () => ({ command: "C:\\Program Files\\Dyno\\resources\\api\\PowerTools.API.exe", args: ["--mcp-connector"] }),
+    connector: () => ({ command: "C:\\Users\\me\\AppData\\Local\\Dyno\\mcp\\Dyno.McpConnector.exe", args: [] }),
   });
   const call = (channel: string, sender: unknown, ...args: unknown[]) => handlers.get(channel)!({ sender }, ...args);
   return { call, handlers, mainContents, service };
@@ -45,7 +45,7 @@ describe("mcp IPC", () => {
     const { call, mainContents } = setup();
     const info = (await call("mcp-get-status", mainContents)) as Record<string, unknown>;
     expect(info).toMatchObject({ enabled: false, running: false, recent: [] });
-    expect(info.connectorCommand).toBe('"C:\\Program Files\\Dyno\\resources\\api\\PowerTools.API.exe" --mcp-connector');
+    expect(info.connectorCommand).toBe("C:\\Users\\me\\AppData\\Local\\Dyno\\mcp\\Dyno.McpConnector.exe");
   });
 
   it("rejects a foreign sender on every channel", async () => {
@@ -157,11 +157,11 @@ describe("connectorLaunch", () => {
       platform: "win32",
       resourcesPath: "",
       appPath: resolve("/repo/desktop"),
-      discoveryPath: "C:\\Users\\me\\AppData\\Roaming\\Power Tools Dev\\mcp-endpoint.json",
-      connectorDir: connectorInstallFolder("C:\\Users\\me\\AppData\\Local", "Power Tools Dev"),
+      discoveryPath: "C:\\Users\\me\\AppData\\Roaming\\Dyno Dev\\mcp-endpoint.json",
+      connectorDir: connectorInstallFolder("C:\\Users\\me\\AppData\\Local", "Dyno Dev"),
     });
-    expect(launch.command).toContain("Power Tools Dev");
-    expect(launch.args).toEqual(["--discovery", "C:\\Users\\me\\AppData\\Roaming\\Power Tools Dev\\mcp-endpoint.json"]);
+    expect(launch.command).toContain("Dyno Dev");
+    expect(launch.args).toEqual(["--discovery", "C:\\Users\\me\\AppData\\Roaming\\Dyno Dev\\mcp-endpoint.json"]);
     expect(connectorCommandLine(launch)).toContain('--discovery "C:\\Users');
   });
 
@@ -172,21 +172,6 @@ describe("connectorLaunch", () => {
     expect(bundledConnectorFolder({ packaged: false, resourcesPath: "", appPath: resolve("/repo/desktop") })).toBe(
       resolve("/repo/api/Dyno/Dyno.McpConnector/bin/Debug/net9.0"),
     );
-  });
-
-  it("returns the client setups that still use the deprecated connector", async () => {
-    const handlers = new Map<string, Handler>();
-    const contents = { id: 1 };
-    const setups = [{ client: "Claude Code" as const, configPath: "C:\\u\\.claude.json", server: "powertools", scope: "user" }];
-    registerMcpIpc({
-      ipcMain: { handle: (channel: string, handler: Handler) => void handlers.set(channel, handler) } as never,
-      service: setup().service,
-      getMainWindow: () => ({ webContents: contents }) as never,
-      connector: () => ({ command: "C:\\x.exe", args: [] }),
-      legacySetups: async () => setups,
-    });
-    const info = (await handlers.get("mcp-get-status")!({ sender: contents })) as { legacySetups: unknown };
-    expect(info.legacySetups).toEqual(setups);
   });
 
   it("switches one tool and validates its input", async () => {

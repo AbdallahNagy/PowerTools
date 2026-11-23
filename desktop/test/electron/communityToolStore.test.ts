@@ -248,28 +248,6 @@ describe("community tool store", () => {
     expect(a).not.toBe(c);
   });
 
-  it("reads a tool whose manifest still has the name from before the rename", async () => {
-    const { store, files, writeTool } = setup();
-    const folder = writeTool("older");
-    files.set(join(folder, "powertools-tool.json"), files.get(join(folder, "dyno-tool.json"))!);
-    files.delete(join(folder, "dyno-tool.json"));
-
-    const tool = await store.addFolder(folder);
-
-    expect(tool).toMatchObject({ folder, status: "ready", errors: [] });
-    expect(tool.manifest?.id).toBe("contoso.record-counter");
-  });
-
-  it("prefers dyno-tool.json when a folder has both manifests", async () => {
-    const { store, files, writeTool } = setup();
-    const folder = writeTool("both");
-    files.set(join(folder, "powertools-tool.json"), "not json");
-
-    const tool = await store.addFolder(folder);
-
-    expect(tool).toMatchObject({ status: "ready", errors: [] });
-  });
-
   it("lists a folder without a manifest as invalid", async () => {
     const { store, dirs } = setup();
     const folder = join(ROOT, "empty");

@@ -4,5 +4,5 @@
     { "name": "onprem", "kind": "onpremise", "connection": "Contoso · Sandbox (on-premises)" }
   ],
   "claudeCommand": "claude",
-  "claudeMcpConfig": "C:\\path\\to\\powertools-mcp.json"
+  "claudeMcpConfig": "C:\\path\\to\\dyno-mcp.json"
 }

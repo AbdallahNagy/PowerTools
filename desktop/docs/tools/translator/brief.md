@@ -8,11 +8,11 @@
 - **Version:** the latest on NuGet is **1.2025.8.27**, published 2025-08-27. The `.nuspec` in the repo still says 1.2021.4.15. The last commit is 2025-08-27, so it is maintained.
 - **Source:** https://github.com/MscrmTools/MsCrmTools.Translator. I cloned it into the scratchpad. All code cited below is under `MsCrmTools.Translator/`.
 - **License: GPL-3.0** (`LICENSE` in the repo root). The NuGet package has no license URL. The plugin also uses EPPlus 4.x for Excel files.
-  - Power Tools is MIT, so we treat the plugin as **inspiration-only**.
+  - Dyno is MIT, so we treat the plugin as **inspiration-only**.
   - We can reuse what it teaches about Dataverse messages, metadata rules and edge cases. We copy no code, no WinForms UI, no icons and none of its wording.
 - **Other plugins:** none would add backend knowledge. Easy Translator is the standard XrmToolBox tool for this job.
 - **Confidence: high.** The name and NuGet id match exactly, the source is public, and I read the backend code directly.
-- **Existing Power Tools coverage: none.**
+- **Existing Dyno coverage: none.**
   - Attribute Explorer only reads display names in one language.
   - Polymorphic Lookup Creator writes labels in the base language only.
   - No sidecar endpoint reads or writes labels for more than one language. This is a new tool, not an extension of FetchXML Builder or Data Migration.
@@ -79,7 +79,7 @@
 - Export covers Picklist, State, Status and multi-select choices, and skips any column that uses a global choice (`AppCode/OptionSetTranslation.cs:39-75`).
 - Import sends `UpdateOptionValueRequest { EntityLogicalName, AttributeLogicalName, Value, Label, Description, MergeLabels = true }` (`OptionSetTranslation.cs:202-220`).
 - Plugin bug: its de-duplication check compares `OptionSetName` with the entity name. `OptionSetName` is always null for local choices, so the label row and the description row for the same option become two separate requests.
-- Also, multi-select choices are exported but not matched on import: only Picklist, State and Status are matched, and the rest log "Unable to determine type". Power Tools should handle multi-select choices too.
+- Also, multi-select choices are exported but not matched on import: only Picklist, State and Status are matched, and the rest log "Unable to determine type". Dyno should handle multi-select choices too.
 
 **Global choices**
 - Export uses `RetrieveAllOptionSetsRequest`, filtered by solution with `componenttype = 9` (`AppCode/GlobalOptionSetTranslation.cs:36-43`).
@@ -124,7 +124,7 @@
 - There is no retry and no throttling handling.
 
 **Publish**
-- Import ends with `PublishAllXmlRequest` (`Engine.cs:570-571`). This is expensive, and Power Tools should replace it with a targeted publish.
+- Import ends with `PublishAllXmlRequest` (`Engine.cs:570-571`). This is expensive, and Dyno should replace it with a targeted publish.
 
 **Privileges**
 - Updating metadata needs System Customizer or System Administrator.
@@ -142,7 +142,7 @@
 | `RetrieveMetadataChanges` in chunks of 100 | The WinForms progress UI |
 | `ExecuteMultiple` with `ContinueOnError` and per-item fault messages | |
 
-### Power Tools mapping
+### Dyno mapping
 
 **Reuse what already exists**
 - `GET /api/metadata/entities` for the table picker (the `EntityInfo` contract in `desktop/src/ui/shared/contracts/dataverse.ts`).
@@ -333,7 +333,7 @@ Scope is the user's first-PR cut: an in-app grid for tables, columns, local and 
 
 #### Opening the tool
 
-- **Sidebar entry.** Title `Translator`. Tooltip: "Edit table, column, choice, view, and chart labels in every installed language". It uses its own single-color SVG through `ToolIcon` (a `Languages`-style glyph drawn for Power Tools, not the plugin icon).
+- **Sidebar entry.** Title `Translator`. Tooltip: "Edit table, column, choice, view, and chart labels in every installed language". It uses its own single-color SVG through `ToolIcon` (a `Languages`-style glyph drawn for Dyno, not the plugin icon).
 - **Public listing** (`publicCatalog.ts`): title `Translator`. Description: "Edit the display names and descriptions of tables, columns, choices, views, and charts side by side in every language installed in an environment."
 - **Title-bar menu.** None. The tool is opened only from the sidebar and the command palette.
 - **Multiple tabs.** `allowMultipleInstances: true`. Each tab keeps its own scope selection, component tab, language choice, filter, sort, and unsaved edits, and follows the selected environment. Two tabs can edit different tables of the same environment.

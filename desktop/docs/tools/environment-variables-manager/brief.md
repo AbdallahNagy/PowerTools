@@ -8,13 +8,13 @@
   - Tag "Configuration", marked open source, about 81.5k downloads across all versions.
   - Description: "This tool helps you to manage your environment variables easily".
 - **Source:** https://github.com/MscrmTools/MscrmTools.EnvironmentVariableManager. I read a shallow clone at commit `cd152a0`, dated 2026-09-02.
-- **License:** GNU GPL v3 (the `LICENSE` file at the repo root). This is copyleft and Power Tools is MIT. We may learn the Dataverse operations and rules from it. We must not copy its code, its UI layout or its text.
+- **License:** GNU GPL v3 (the `LICENSE` file at the repo root). This is copyleft and Dyno is MIT. We may learn the Dataverse operations and rules from it. We must not copy its code, its UI layout or its text.
 - **Related plugins I considered:**
   - `err403.SolutionManagment` (Solution Management): browses environment variables, compares values between a source and a target environment, and bulk-transfers them. It is a good reference for a later "compare and push to target" feature. I did not read its source.
   - `XrmToolSuite.EnvironmentInventory`: read-only. It lists definitions but no values.
   - `Emmetienne.TOMLConfigManager.XrmToolbox`: not about environment variables.
 - **Confidence: high.** This is the plugin dedicated to the job, it is widely used and maintained by the most prolific XrmToolBox author, and its whole backend is about 600 lines of readable code. I checked the type and secret-store values against Microsoft Learn's `environmentvariabledefinition` table reference.
-- **Existing Power Tools coverage:** none. The registered tools are attribute-explorer, bulk-workflow-execution, data-migration, fetchxml-builder, fetchxml-tester, plugin-registration, polymorphic-lookup-creator, solution-components-mover, solution-layers-explorer, translator and workflow-activities-viewer. The only mention of environment variables is in Solution Components Mover. It treats component type 380 (the definition) as having no subcomponents when copying (`api/Dyno/Dyno.Api/Tools/SolutionComponentsMover/SolutionComponentsMoverService.cs:264-268`). None of them lists, edits or deletes environment variables.
+- **Existing Dyno coverage:** none. The registered tools are attribute-explorer, bulk-workflow-execution, data-migration, fetchxml-builder, fetchxml-tester, plugin-registration, polymorphic-lookup-creator, solution-components-mover, solution-layers-explorer, translator and workflow-activities-viewer. The only mention of environment variables is in Solution Components Mover. It treats component type 380 (the definition) as having no subcomponents when copying (`api/Dyno/Dyno.Api/Tools/SolutionComponentsMover/SolutionComponentsMoverService.cs:264-268`). None of them lists, edits or deletes environment variables.
 
 ### What it does
 
@@ -124,7 +124,7 @@ All paths are relative to `MscrmTools.EnvironmentVariableManager/MscrmTools.Envi
   - silently capping the list at 5000 rows;
   - the PayPal and GitHub plugin interfaces.
 
-### Power Tools mapping
+### Dyno mapping
 
 - **Reuse:**
   - Desktop: `apiGet/apiPost/apiPut/apiDelete` with `meta.connectionId`, `useTabConnection`, `useToolStatus`, `useOpenInBrowser` (to open the solution or the maker portal), and shared UI (`DataTable`, `SearchInput`, `Modal`, `Field`, `Input`, `Combobox`, `CodeEditor` for JSON, `Badge`, `Alert`, `Toast`).

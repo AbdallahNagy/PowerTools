@@ -57,7 +57,7 @@ const vite = spawn("npm", ["run", "dev:react", "--", "--host", "127.0.0.1", "--p
   stdio: "ignore",
   detached: true,
 });
-const userData = await mkdtemp(join(tmpdir(), "power-tools-cloud-"));
+const userData = await mkdtemp(join(tmpdir(), "dyno-cloud-"));
 let app;
 
 async function shutdown(code) {

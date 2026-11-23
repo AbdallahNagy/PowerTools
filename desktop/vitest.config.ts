@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@powertools/sdk/protocol": fileURLToPath(new URL("../packages/sdk/src/protocol.ts", import.meta.url)),
+      "@dynoapp/sdk/protocol": fileURLToPath(new URL("../packages/sdk/src/protocol.ts", import.meta.url)),
     },
   },
   test: {

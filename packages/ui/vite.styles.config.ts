@@ -7,7 +7,7 @@ import { packageRoot, resolveFromPackage } from "./vite.shared";
 /** Drops the JS stub and copies theme.css from the desktop source. */
 function finishStyles(): Plugin {
   return {
-    name: "powertools-finish-styles",
+    name: "dyno-finish-styles",
     closeBundle() {
       rmSync(resolve(packageRoot, "dist/styles-entry.js"), { force: true });
       copyFileSync(resolve(packageRoot, "../../desktop/src/ui/styles/theme.css"), resolve(packageRoot, "dist/theme.css"));

@@ -5,7 +5,7 @@ namespace Dyno.Api.Tests.Tools.Agent.Kernel;
 
 /// <summary>
 /// The desktop's checked-in schemas must match the C# types. To regenerate after changing a type, run the tests with
-/// POWERTOOLS_UPDATE_SCHEMAS=1 and commit the files it writes.
+/// DYNO_UPDATE_SCHEMAS=1 and commit the files it writes.
 /// </summary>
 public sealed class KernelSchemaTests
 {
@@ -26,10 +26,10 @@ public sealed class KernelSchemaTests
     {
         var expected = KernelSchemas.Export(name);
         var path = Path.Combine(SchemaFolder(), $"{name}.json");
-        if (Environment.GetEnvironmentVariable("POWERTOOLS_UPDATE_SCHEMAS") == "1")
+        if (Environment.GetEnvironmentVariable("DYNO_UPDATE_SCHEMAS") == "1")
             File.WriteAllText(path, expected);
 
-        Assert.True(File.Exists(path), $"{path} is missing. Run the tests with POWERTOOLS_UPDATE_SCHEMAS=1.");
+        Assert.True(File.Exists(path), $"{path} is missing. Run the tests with DYNO_UPDATE_SCHEMAS=1.");
         Assert.Equal(expected, File.ReadAllText(path).ReplaceLineEndings("\n"));
     }
 

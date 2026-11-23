@@ -1,4 +1,4 @@
-import type { MethodName, Permission } from "@powertools/sdk/protocol";
+import type { MethodName, Permission } from "@dynoapp/sdk/protocol";
 import { FORBIDDEN_MESSAGES, MESSAGE_PERMISSION } from "../../../electron/communityTools/messageEffects";
 
 export { FORBIDDEN_MESSAGES, MESSAGE_PERMISSION };

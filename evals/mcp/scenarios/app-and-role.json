@@ -2,7 +2,7 @@
   "id": "app-and-role",
   "phase": 3,
   "description": "The agent builds a model-driven app with a site map and a security role that can open it, with app_apply and role_apply, without execute_message or records_write.",
-  "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, create a model-driven app Eval Projects (unique name pte_EvalProjects) that shows the Eval Project table in its navigation. Create a security role Eval Project User that can create, read and write Eval Projects in its own business unit, give it access to the app, and assign it to the team Eval Team.",
+  "prompt": "On the Dyno connection \"{connection}\", in the solution PowerToolsEvals, create a model-driven app Eval Projects (unique name pte_EvalProjects) that shows the Eval Project table in its navigation. Create a security role Eval Project User that can create, read and write Eval Projects in its own business unit, give it access to the app, and assign it to the team Eval Team.",
   "setup": [
     { "tool": "table_apply", "arguments": { "solution": "PowerToolsEvals", "table": { "schemaName": "pte_EvalProject", "displayName": "Eval Project", "pluralName": "Eval Projects" } } }
   ],

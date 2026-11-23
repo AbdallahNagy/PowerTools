@@ -21,8 +21,8 @@ export function buildContentSecurityPolicy({ dev }: { dev: boolean }): string {
     "object-src": ["'none'"],
     "base-uri": ["'none'"],
     "form-action": ["'none'"],
-    // Community tools run in sandboxed frames served from their own pt-tool:// origin.
-    "frame-src": ["pt-tool:"],
+    // Community tools run in sandboxed frames served from their own dyno-tool:// origin.
+    "frame-src": ["dyno-tool:"],
   };
 
   return Object.entries(directives)
@@ -33,7 +33,7 @@ export function buildContentSecurityPolicy({ dev }: { dev: boolean }): string {
 export function contentSecurityPolicyPlugin(): Plugin {
   let dev = false;
   return {
-    name: "power-tools-content-security-policy",
+    name: "dyno-content-security-policy",
     configResolved(config) {
       dev = config.command === "serve";
     },

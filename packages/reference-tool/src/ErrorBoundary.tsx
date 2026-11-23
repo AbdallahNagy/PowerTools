@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
-import { Alert } from "@powertools/ui";
+import { Alert } from "@dynoapp/ui";
 
 interface ErrorBoundaryState {
   error: Error | null;

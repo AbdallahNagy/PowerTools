@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Copy, Minus, PanelLeft, Square, X } from "lucide-react";
 
-import AppIcon from "../../assets/icons/power-tools-icon.svg";
+import AppIcon from "../../assets/icons/dyno-icon.svg";
 import { desktopBridge } from "../../platform/desktopBridge";
 import { UpdateButton } from "./UpdateButton";
 import { TITLE_BAR_MENU_LABELS, TITLE_BAR_MENUS, type TitleBarMenuId } from "./titleBarMenus";

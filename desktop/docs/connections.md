@@ -32,11 +32,11 @@ Tools open environment pages with `useOpenInBrowser()` from `src/ui/shared/conne
 
 ## Import and export
 
-Export writes a `powertools-connections` JSON file without passwords, tokens, or account ids.
+Export writes a `dyno-connections` JSON file without passwords, tokens, or account ids. Files exported from Power Tools (`powertools-connections`) import the same way.
 
 Import accepts that JSON or an XrmToolBox connections file (`<CrmConnections><Connections><ConnectionDetail>`, or one exported `<ConnectionDetail>`). From XrmToolBox it reads:
 
-| XrmToolBox | Power Tools |
+| XrmToolBox | Dyno |
 |---|---|
 | `OrganizationFriendlyName` | Organization |
 | `EnvironmentHighlightingInfo/Text` | Environment |

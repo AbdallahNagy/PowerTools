@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import type { ConnectionSnapshot, PowerToolsClient } from "@powertools/sdk";
-import { Alert, Button, DataTable, EmptyState, Modal, SearchInput, Spinner } from "@powertools/ui";
+import type { ConnectionSnapshot, DynoClient } from "@dynoapp/sdk";
+import { Alert, Button, DataTable, EmptyState, Modal, SearchInput, Spinner } from "@dynoapp/ui";
 import { label, matches, requiredLabel, type ColumnInfo, type TableInfo } from "./types";
 
 function errorMessage(error: unknown): string {
@@ -8,7 +8,7 @@ function errorMessage(error: unknown): string {
 }
 
 /** The tab's connection: `undefined` until the host answers, `null` when none is selected. */
-function useConnection(client: PowerToolsClient): ConnectionSnapshot | null | undefined {
+function useConnection(client: DynoClient): ConnectionSnapshot | null | undefined {
   const [connection, setConnection] = useState<ConnectionSnapshot | null | undefined>(undefined);
 
   useEffect(() => {
@@ -35,7 +35,7 @@ function useConnection(client: PowerToolsClient): ConnectionSnapshot | null | un
   return connection;
 }
 
-export function App({ client }: { client: PowerToolsClient }) {
+export function App({ client }: { client: DynoClient }) {
   const connection = useConnection(client);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export function App({ client }: { client: PowerToolsClient }) {
   return <Explorer key={`${connection.kind}:${connection.displayName}`} client={client} />;
 }
 
-function Explorer({ client }: { client: PowerToolsClient }) {
+function Explorer({ client }: { client: DynoClient }) {
   const [refreshCount, setRefreshCount] = useState(0);
   const [tables, setTables] = useState<TableInfo[] | null>(null);
   const [tablesError, setTablesError] = useState<string | null>(null);

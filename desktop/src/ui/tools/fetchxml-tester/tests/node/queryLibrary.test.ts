@@ -4,6 +4,7 @@ import { fetchErrorMessage } from "../../model/fetchError";
 import {
   deleteQuery,
   filterQueries,
+  LEGACY_QUERY_LIBRARY_STORAGE_KEY,
   loadQueries,
   QUERY_LIBRARY_STORAGE_KEY,
   saveQuery,
@@ -146,6 +147,41 @@ describe("queries saved before connection ids", () => {
       search: "",
     })).toHaveLength(1);
     expect(filterQueries(queries, { connectionId: "conn-1", allEnvironments: false, search: "" })).toEqual([]);
+  });
+});
+
+describe("queries saved by Power Tools", () => {
+  function keyedStore(): QueryStore & { values: Map<string, string> } {
+    const values = new Map<string, string>();
+    return {
+      values,
+      getItem: (key) => values.get(key) ?? null,
+      setItem: (key, value) => {
+        values.set(key, value);
+      },
+    };
+  }
+
+  const oldQuery = {
+    id: "old",
+    table: "account",
+    description: "Saved by Power Tools",
+    environment: "Contoso Dev",
+    connectionId: "conn-1",
+    fetchXml: accountQuery,
+    savedAt: "2026-01-01T00:00:00.000Z",
+  };
+
+  it("load from the old key until the first save writes the new one", () => {
+    const store = keyedStore();
+    store.setItem(LEGACY_QUERY_LIBRARY_STORAGE_KEY, JSON.stringify([oldQuery]));
+
+    const queries = loadQueries(store);
+    expect(queries.map((query) => query.id)).toEqual(["old"]);
+
+    writeQueries(store, deleteQuery(queries, "old"));
+    expect(store.values.get(QUERY_LIBRARY_STORAGE_KEY)).toBe("[]");
+    expect(loadQueries(store)).toEqual([]);
   });
 });
 

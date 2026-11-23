@@ -21,7 +21,7 @@ function exportedNames(file: string): string[] {
   return names;
 }
 
-describe("@powertools/ui exports", () => {
+describe("@dynoapp/ui exports", () => {
   it("exports every name of the desktop UI kit across the two entries", () => {
     const kit = exportedNames(kitIndex);
     const packaged = [

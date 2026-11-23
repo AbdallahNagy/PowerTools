@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ConnectionSnapshot, ThemeSnapshot, ToolResponse } from "@powertools/sdk/protocol";
+import type { ConnectionSnapshot, ThemeSnapshot, ToolResponse } from "@dynoapp/sdk/protocol";
 import { createBroker, type BrokerServices } from "../../src/ui/shell/community-tools/broker";
 
 // vi.waitFor gives up after 1s by default; a busy Windows machine can take longer to deliver a message.

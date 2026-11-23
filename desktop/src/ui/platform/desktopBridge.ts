@@ -149,14 +149,6 @@ export interface AppSettings {
   updatesEnabled: boolean;
 }
 
-/** An MCP client config that still starts PowerTools.API.exe --mcp-connector. Mirrors LegacySetup in src/electron/mcp/legacySetups.ts. */
-export interface McpLegacySetup {
-  client: "Claude Code" | "Claude Desktop" | "VS Code";
-  configPath: string;
-  server: string;
-  scope?: string;
-}
-
 /** The MCP server's state for the Agents dialog. Mirrors McpStatusInfo in src/electron/mcp/mcpIpc.ts. */
 export interface McpStatusInfo {
   enabled: boolean;
@@ -168,8 +160,6 @@ export interface McpStatusInfo {
   connectorCommand: string;
   connector: { command: string; args: string[] };
   recent: McpActivityEntry[];
-  /** Client setups that still start the deprecated connector inside the install folder, which blocks updates. */
-  legacySetups: McpLegacySetup[];
   /** Every tool group, with whether it is on and how many tools it has. */
   groups: Array<{ group: string; enabled: boolean; tools: number }>;
   /** Every agent tool, with whether the user left it on. */

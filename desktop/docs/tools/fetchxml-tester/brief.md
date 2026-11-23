@@ -4,7 +4,7 @@
 - **Catalog:** https://www.xrmtoolbox.com/plugins/MscrmTools.FetchXmlTester/
 - **NuGet:** `MscrmTools.FetchXmlTester` 1.2025.3.29 (28 Mar 2025). Description: “Test your FetchXml queries”. Tags: `XrmToolBox`, `FetchXml`. Depends only on `XrmToolBox >= 1.2016.11.4`. Open source. Latest release note: “Added support for XML comments when formatting XML”.
 - **Source:** https://github.com/MscrmTools/MscrmTools.FetchXmlTester (default branch `master`, commit `77f2d3a`, “Remove encoding for XML comment value”). NuGet `projectUrl` points at this repo.
-- **License:** GNU GPL 3.0 for the plugin. `AppCode/XMLViewer.cs` and `AppCode/CharacterEncoder.cs` are an embedded Microsoft RichTextBox sample under the Microsoft Public License (Ms-PL). Power Tools is MIT. Treat this as inspiration only: do not copy source, the RTF highlighter, icons, or wording.
+- **License:** GNU GPL 3.0 for the plugin. `AppCode/XMLViewer.cs` and `AppCode/CharacterEncoder.cs` are an embedded Microsoft RichTextBox sample under the Microsoft Public License (Ms-PL). Dyno is MIT. Treat this as inspiration only: do not copy source, the RTF highlighter, icons, or wording.
 - **Related:** FetchXML Builder (`Cinteros.Xrm.FetchXmlBuilder`, Jonas Rapp) is the visual builder already shipped as `fetchxml-builder`. It is not the behavior to copy here.
 - **Confidence:** High. Catalog, NuGet, and the repository agree, and the comment-formatting release note is present in `XMLViewer.ProcessElement`.
 
@@ -127,7 +127,7 @@ Failure modes to avoid copying:
 
 Builder stays the place to compose queries. Tester is the place to paste, format, run, and store a query as written, including aggregates, `top`, manual cookies, and comments.
 
-### Power Tools mapping
+### Dyno mapping
 
 Reuse `POST /api/fetch/execute`, `DataverseContextFilter`, `DataverseClientFactory`, and `DataverseErrorFormatter`. Do not add a second execute route, a metadata call, or `X-Target-*`. The current handler always rewrites paging in `FetchXmlPaging.Apply` and always formats option-sets and booleans, so the tester cannot call it as-is.
 
@@ -270,7 +270,7 @@ The caller is the connection user. Online uses that user’s delegated token. On
 
 #### Online versus on-premises
 
-The message and `FetchExpression` string are the same on both. Online uses `ServiceClient` with the bearer token. On-premises uses `Organization.svc`. Power Tools already rejects HTTP on-premises URLs.
+The message and `FetchExpression` string are the same on both. Online uses `ServiceClient` with the bearer token. On-premises uses `Organization.svc`. Dyno already rejects HTTP on-premises URLs.
 
 Online service protection applies per user, per web server: 6,000 requests in 300 seconds (`-2147015902`, `0x80072322`), 1,200 seconds of combined execution time in that window (`-2147015903`, `0x80072321`), and 52 concurrent requests (`-2147015898`, `0x80072326`). The SDK fault carries `Retry-After` in `OrganizationServiceFault.ErrorDetails`. The current formatter emits the message and hex code and drops `ErrorDetails`, so the retry delay is lost. These three codes are an online public-API limit. On-premises failures are SQL, IIS, and organization limits.
 
@@ -304,7 +304,7 @@ Elastic tables (500-row pages), `datasource="retained"`, and virtual-table query
 - “Aliased link-entity values stay under their alias key.” That is true for an attribute alias. Otherwise the key is `{link}.{column}` or a generated `{LogicalName}{N}` alias. `matchfirstrowusingcrossapply` uses schema names without that prefix.
 - “The primary key appears only when the fetch selects it.” `distinct="true"` omits primary-key values. The Web API FetchXML example returns the primary key when the fetch does not list it. SDK `Entity.Id` is the row id for an ordinary retrieve.
 - `no-lock` is not a documented result switch. The current reference calls it legacy and no longer necessary.
-- “Invalid FetchXML is sent as-is and fails at the server.” Well-formedness, DTD, root `<fetch>`, and `<entity>` fail locally on the Power Tools path. Server faults are the semantic ones.
+- “Invalid FetchXML is sent as-is and fails at the server.” Well-formedness, DTD, root `<fetch>`, and `<entity>` fail locally on the Dyno path. Server faults are the semantic ones.
 - Showing the SDK paging cookie as text does not make it ready to paste. It still needs XML attribute encoding, and `page` has to increment. Queries with no cookie can still set `MoreRecords`.
 - Treating `TotalRecordCount` as the full match set is wrong when `TotalRecordCountLimitExceeded` is true. The cap is 5,000, or 500 for elastic tables.
 

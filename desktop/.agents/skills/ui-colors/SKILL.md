@@ -1,9 +1,9 @@
 ---
 name: ui-colors
-description: "Use when making any UI modification that involves color or shared controls. Power Tools has one palette, defined as role-based tokens in src/ui/styles/theme.css. Use the token utilities (bg-surface, text-fg-muted, border-line, bg-accent...) and never hardcoded colors such as bg-[#hex], text-blue-500 or rgba() literals. If no token fits, ask the user before adding one."
+description: "Use when making any UI modification that involves color or shared controls. Dyno has one palette, defined as role-based tokens in src/ui/styles/theme.css. Use the token utilities (bg-surface, text-fg-muted, border-line, bg-accent...) and never hardcoded colors such as bg-[#hex], text-blue-500 or rgba() literals. If no token fits, ask the user before adding one."
 ---
 
-# Power Tools color palette
+# Dyno color palette
 
 ## Source of truth
 

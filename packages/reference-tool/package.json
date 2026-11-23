@@ -1,5 +1,5 @@
 {
-  "name": "@powertools/reference-tool",
+  "name": "@dynoapp/reference-tool",
   "version": "0.1.0",
   "private": true,
   "description": "Attribute Explorer rebuilt as a community tool: the runtime's test fixture and the example for tool authors.",
@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@powertools/sdk": "file:../sdk",
-    "@powertools/ui": "file:../ui",
+    "@dynoapp/sdk": "file:../sdk",
+    "@dynoapp/ui": "file:../ui",
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },

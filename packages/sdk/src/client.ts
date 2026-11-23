@@ -34,7 +34,7 @@ export type Unsubscribe = () => void;
 export interface FetchXmlOptions { page?: number; pagingCookie?: string | null; pageSize?: number }
 export interface OpenedFile { name: string; content: string }
 
-export interface PowerToolsClient {
+export interface DynoClient {
   connection: {
     get(): Promise<ConnectionSnapshot | null>;
     onChange(listener: (connection: ConnectionSnapshot | null) => void): Unsubscribe;
@@ -114,7 +114,7 @@ function listenerSet<T>() {
 }
 
 /** Wraps a connected host port. `ready` is the handshake reply that opened it. */
-export function createClient(port: MessagePort, ready: ReadyMessage): PowerToolsClient {
+export function createClient(port: MessagePort, ready: ReadyMessage): DynoClient {
   let nextId = 1;
   const pending = new Map<number, Pending>();
   let theme = ready.theme;
@@ -122,7 +122,7 @@ export function createClient(port: MessagePort, ready: ReadyMessage): PowerTools
   const connectionListeners = listenerSet<ConnectionSnapshot | null>();
 
   let closed = false;
-  const CLOSED = () => new ToolClientError("Cancelled", "The connection to Power Tools was closed.");
+  const CLOSED = () => new ToolClientError("Cancelled", "The connection to Dyno was closed.");
 
   // A closed port never answers, so settle what is waiting instead of leaving it pending forever.
   port.addEventListener("close", () => {

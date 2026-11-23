@@ -1,11 +1,11 @@
-# Power Tools
+# Dyno
 
 A Windows desktop toolbox for Dataverse and Power Platform. It hosts tools that work against the user's Dataverse connections.
 
 ## Language
 
 **Built-in tool**:
-A tool that ships inside Power Tools and is maintained in this repository.
+A tool that ships inside Dyno and is maintained in this repository.
 _Avoid_: Core tool, native tool
 
 **Community tool**:
@@ -13,7 +13,7 @@ A tool built outside this repository that runs in a sandboxed frame and reaches 
 _Avoid_: Plugin, extension, add-in
 
 **Tool manifest**:
-The `powertools-tool.json` file at the root of a **Community tool** package. It names the tool and declares its **Tool permissions**, the Dataverse messages it may execute, and the network hosts it may call.
+The `dyno-tool.json` file at the root of a **Community tool** package. It names the tool and declares its **Tool permissions**, the Dataverse messages it may execute, and the network hosts it may call.
 _Avoid_: Config, package file
 
 **Tool permission**:
@@ -33,11 +33,11 @@ Script a **Community tool** ships to run outside its tab's page, still sandboxed
 _Avoid_: Backend, service
 
 **Theme token**:
-A named, role-based colour of the Power Tools theme, with a value for light and for dark, that **Built-in tools** and **Community tools** both style with.
+A named, role-based colour of the Dyno theme, with a value for light and for dark, that **Built-in tools** and **Community tools** both style with.
 _Avoid_: Palette variable, CSS var
 
 **Agent tool**:
-An operation the Power Tools MCP server publishes to AI agents.
+An operation the Dyno MCP server publishes to AI agents.
 _Avoid_: MCP tool, command
 
 **Agent tool group**:
@@ -45,11 +45,11 @@ A named set of **Agent tools** the user can switch on or off, such as `metadata`
 _Avoid_: Category
 
 **Effect class**:
-Read, change or destructive, decided by Power Tools for every **Agent tool** call. It sets whether the user must approve.
+Read, change or destructive, decided by Dyno for every **Agent tool** call. It sets whether the user must approve.
 _Avoid_: Risk level, hint
 
 ## Relationships
 
 - A **Community tool** has a UI and may ship **Tool workers**
-- Power Tools gives every **Community tool** the current **Theme tokens**
-- Power Tools, never the **Agent tool**, decides a call's **Effect class**
+- Dyno gives every **Community tool** the current **Theme tokens**
+- Dyno, never the **Agent tool**, decides a call's **Effect class**

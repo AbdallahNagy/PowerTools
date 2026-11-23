@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ToolClientError, type ConnectionSnapshot, type PowerToolsClient } from "@powertools/sdk";
+import { ToolClientError, type ConnectionSnapshot, type DynoClient } from "@dynoapp/sdk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseManifest } from "../../../desktop/src/electron/communityTools/manifest";
 import { App } from "../src/App";
@@ -19,7 +19,7 @@ const COLUMNS = [
   { logicalName: "primarycontactid", displayName: "Primary Contact", type: "Lookup", isCustom: false, requiredLevel: "None", targets: ["contact"] },
 ];
 
-function fakeClient(options: { connection?: ConnectionSnapshot | null; metadata?: Partial<PowerToolsClient["metadata"]> } = {}) {
+function fakeClient(options: { connection?: ConnectionSnapshot | null; metadata?: Partial<DynoClient["metadata"]> } = {}) {
   const connection = options.connection === undefined ? { displayName: "Contoso", kind: "online" as const } : options.connection;
   const listeners: Array<(next: ConnectionSnapshot | null) => void> = [];
   const metadata = {
@@ -36,7 +36,7 @@ function fakeClient(options: { connection?: ConnectionSnapshot | null; metadata?
     },
     metadata,
     shell: { setStatus },
-  } as unknown as PowerToolsClient;
+  } as unknown as DynoClient;
   const fireConnectionChange = (next: ConnectionSnapshot | null) => act(() => listeners.forEach((listener) => listener(next)));
   return { client, metadata, setStatus, fireConnectionChange };
 }
@@ -176,9 +176,9 @@ describe("Attribute Explorer (reference)", () => {
   });
 });
 
-describe("powertools-tool.json", () => {
+describe("dyno-tool.json", () => {
   it("passes the host's manifest rules", () => {
-    const json: unknown = JSON.parse(readFileSync(resolve(__dirname, "../powertools-tool.json"), "utf8"));
+    const json: unknown = JSON.parse(readFileSync(resolve(__dirname, "../dyno-tool.json"), "utf8"));
     const result = parseManifest(json, "1.3.0");
     expect(result).toMatchObject({ ok: true });
   });

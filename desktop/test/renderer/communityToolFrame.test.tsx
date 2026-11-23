@@ -103,7 +103,7 @@ describe("CommunityToolFrame", () => {
     renderFrame();
     const iframe = screen.getByTitle("Demo tool");
     expect(iframe.getAttribute("sandbox")).toBe("allow-scripts");
-    expect(iframe.getAttribute("src")).toBe("pt-tool://acme.demo/dist/index.html");
+    expect(iframe.getAttribute("src")).toBe("dyno-tool://acme.demo/dist/index.html");
   });
 
   it("answers hello with ready, the theme and the forwarded shortcuts", async () => {
@@ -111,7 +111,7 @@ describe("CommunityToolFrame", () => {
     document.documentElement.style.setProperty("--color-canvas", "#f6f7f9");
     renderFrame();
     const { port, postMessage } = loadFrame();
-    expect(postMessage.mock.calls[0][0]).toEqual({ type: "pt-tool:connect" });
+    expect(postMessage.mock.calls[0][0]).toEqual({ type: "dyno-tool:connect" });
     expect(postMessage.mock.calls[0][1]).toBe("*");
 
     const reply = nextMessage(port);

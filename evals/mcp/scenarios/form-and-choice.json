@@ -2,7 +2,7 @@
   "id": "form-and-choice",
   "phase": 2,
   "description": "The agent adds a global choice and puts a column on a form with choice_apply, table_apply and form_apply, without execute_message.",
-  "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, create a global choice Eval Priority with the options Low, Medium and High, add a Priority column using it to the Eval Project table, and put that column on the Information form of the table, in its first section.",
+  "prompt": "On the Dyno connection \"{connection}\", in the solution PowerToolsEvals, create a global choice Eval Priority with the options Low, Medium and High, add a Priority column using it to the Eval Project table, and put that column on the Information form of the table, in its first section.",
   "setup": [
     { "tool": "table_apply", "arguments": { "solution": "PowerToolsEvals", "table": { "schemaName": "pte_EvalProject", "displayName": "Eval Project", "pluralName": "Eval Projects" } } }
   ],

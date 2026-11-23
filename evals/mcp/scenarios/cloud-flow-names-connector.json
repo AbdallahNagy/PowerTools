@@ -2,7 +2,7 @@
   "id": "cloud-flow-names-connector",
   "phase": 4,
   "description": "The agent builds a cloud flow with flow_apply after reading the cloud flow guide. The new Dataverse connection reference has no connection, so the flow stays off: the agent must tell the user which connector to sign in to, not retry or turn the flow on another way.",
-  "prompt": "On the Power Tools connection \"{connection}\", in the solution PowerToolsEvals, create a cloud flow Eval Account Follow-up that adds a task 'Call the new account' whenever an account is created, using a new connection reference pte_EvalDataverse. Turn it on.",
+  "prompt": "On the Dyno connection \"{connection}\", in the solution PowerToolsEvals, create a cloud flow Eval Account Follow-up that adds a task 'Call the new account' whenever an account is created, using a new connection reference pte_EvalDataverse. Turn it on.",
   "sandboxes": ["online"],
   "checks": [
     { "description": "the flow exists with its trigger", "tool": "inspect_solution", "arguments": { "kind": "flow", "name": "Eval Account Follow-up" }, "path": "result.definition.triggers", "exists": true },

@@ -17,7 +17,7 @@ function getStartupIconDataUrl() {
       "ui",
       "assets",
       "icons",
-      "power-tools-icon-256.png"
+      "dyno-icon-256.png"
     ),
   ];
 

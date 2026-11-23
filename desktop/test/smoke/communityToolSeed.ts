@@ -23,7 +23,7 @@ export async function seedCommunityTools(
   const ids: Record<string, string> = {};
   const grants: Record<string, { id: string; hash: string }> = {};
   for (const folder of consentedFolders) {
-    const manifest = JSON.parse(await readFile(join(folder, "powertools-tool.json"), "utf8")) as ManifestForConsent;
+    const manifest = JSON.parse(await readFile(join(folder, "dyno-tool.json"), "utf8")) as ManifestForConsent;
     ids[folder] = manifest.id;
     grants[folder] = { id: manifest.id, hash: consentHash(manifest) };
   }

@@ -65,7 +65,7 @@ describe("live harness: config and scenarios", () => {
 describe("live harness: transcripts and approvals", () => {
   it("counts Dyno tool calls and errors from stream-json", () => {
     const lines = [
-      JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use", name: "mcp__powertools__connections_list" }] } }),
+      JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use", name: "mcp__dyno__connections_list" }] } }),
       JSON.stringify({ type: "user", message: { content: [{ type: "tool_result", is_error: true }] } }),
       "not json",
       JSON.stringify({ type: "result", subtype: "success", total_cost_usd: 0.12 }),

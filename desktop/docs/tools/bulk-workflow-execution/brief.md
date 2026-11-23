@@ -95,7 +95,7 @@ All citations are in `XrmToolBox - Bulk Workflow Execution 2015/BulkWorkflowExec
 - discarding fault messages;
 - the empty final batch.
 
-### Power Tools mapping
+### Dyno mapping
 
 **Existing coverage:** none. Workflow Activities Viewer only lists processes that reference a custom workflow activity. FetchXML Builder and FetchXML Tester run queries but cannot execute workflows. **This should be a new activity-bar tool, not an extension of an existing one.**
 
@@ -191,13 +191,13 @@ Register `app.MapBulkWorkflowExecutionEndpoints()`, the job store singleton and 
 - **Open questions for the Dataverse review:** confirm the "Execute Workflow Job" privilege, how an empty `ExecuteMultiple` behaves, and whether to set `ReturnResponses = true` to capture the `asyncoperation` IDs for linking to system jobs.
 
 **Blockers and ambiguity**
-- No hard blockers. Nothing in Power Tools already covers this job.
+- No hard blockers. Nothing in Dyno already covers this job.
 - XrmToolBox catalog metadata (including the open-source flag) is unverified because of the egress block.
 - The repository license is unverified via the GitHub API. The clone has no LICENSE file.
 
 **Files**
 - Plugin source (scratchpad clone): `/tmp/claude-0/-home-user-PowerTools/5f42da65-92a1-5e94-9b28-8d61bce6baa8/scratchpad/bwe/XrmToolBox - Bulk Workflow Execution 2015/BulkWorkflowExecution.cs` and `.../Plugin.cs`
-- Power Tools references:
+- Dyno references:
   - `/home/user/PowerTools/desktop/src/ui/tools/registry.tsx`
   - `/home/user/PowerTools/desktop/src/ui/tools/publicCatalog.ts`
   - `/home/user/PowerTools/api/Dyno/Dyno.Api/Program.cs`
@@ -208,7 +208,7 @@ Register `app.MapBulkWorkflowExecutionEndpoints()`, the job store singleton and 
 
 ### Dataverse review
 
-**Evidence used.** `learn.microsoft.com` is blocked by the egress proxy, so I read the Microsoft documentation source instead: a sparse clone of `MicrosoftDocs/powerapps-docs` (`main`), specifically `developer/data-platform/org-service/execute-multiple-requests.md`, `developer/data-platform/api-limits.md`, `developer/data-platform/fetchxml/page-results.md`, `fetchxml/reference/fetch.md`, `includes/cc-ordering-paging.md`, `reference/entities/workflow.md` and `includes/data-service-error-codes.md`. I also read the Power Tools connection code: `Services/DataverseClientFactory.cs`, `ThirdParty/Data8.PowerPlatform.Dataverse.Client/OnPremiseClient.cs` and `Services/MigrationJobRunner.cs`. Claims below marked "not re-verified" come from platform knowledge that I could not check against a reachable Microsoft page this session.
+**Evidence used.** `learn.microsoft.com` is blocked by the egress proxy, so I read the Microsoft documentation source instead: a sparse clone of `MicrosoftDocs/powerapps-docs` (`main`), specifically `developer/data-platform/org-service/execute-multiple-requests.md`, `developer/data-platform/api-limits.md`, `developer/data-platform/fetchxml/page-results.md`, `fetchxml/reference/fetch.md`, `includes/cc-ordering-paging.md`, `reference/entities/workflow.md` and `includes/data-service-error-codes.md`. I also read the Dyno connection code: `Services/DataverseClientFactory.cs`, `ThirdParty/Data8.PowerPlatform.Dataverse.Client/OnPremiseClient.cs` and `Services/MigrationJobRunner.cs`. Claims below marked "not re-verified" come from platform knowledge that I could not check against a reachable Microsoft page this session.
 
 **Messages**
 
@@ -280,7 +280,7 @@ Register `app.MapBulkWorkflowExecutionEndpoints()`, the job store singleton and 
 
 - `ExecuteWorkflow` does not modify the workflow or any solution component. Running a workflow in a managed layer is allowed; `ismanaged` is informational only. The tool creates no solution components.
 - The tool does create data: one `asyncoperation` per record for background workflows, plus workflow logs depending on the environment's retention settings. Large runs consume database (log) storage. This belongs in the large-run warning.
-- Cancelling the Power Tools job stops new batches only. System jobs already queued keep running. Cancelling them would mean updating each `asyncoperation` to Canceled, which is out of scope. The UI copy must not suggest otherwise.
+- Cancelling the Dyno job stops new batches only. System jobs already queued keep running. Cancelling them would mean updating each `asyncoperation` to Canceled, which is out of scope. The UI copy must not suggest otherwise.
 
 **Scope corrections**
 
