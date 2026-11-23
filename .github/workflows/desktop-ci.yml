@@ -62,10 +62,10 @@ jobs:
       # ready timeout and leave the app stuck on its startup error dialog.
       # Building here makes the smoke test's `dotnet run` an up-to-date check.
       - name: Build sidecar
-        run: dotnet build ../api/PowerTools/PowerTools.API/PowerTools.API.csproj
+        run: dotnet build ../api/Dyno/Dyno.Api/Dyno.Api.csproj
 
       - name: Test sidecar
-        run: dotnet test ../api/PowerTools/PowerTools.sln
+        run: dotnet test ../api/Dyno/Dyno.sln
 
       - name: Run desktop checks
         run: npm run check

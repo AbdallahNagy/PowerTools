@@ -12,7 +12,7 @@
       "name": ".NET API (HTTPS)",
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--launch-profile", "https"],
-      "cwd": "api/PowerTools/PowerTools.API",
+      "cwd": "api/Dyno/Dyno.Api",
       "port": 7258
     },
     {

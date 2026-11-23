@@ -65,7 +65,7 @@ flowchart LR
 | Path | What it is |
 | --- | --- |
 | [`desktop/`](desktop/) | Electron and React client. Windows is the production target. |
-| [`api/PowerTools/`](api/PowerTools/) | Local ASP.NET Core API the desktop app starts. |
+| [`api/Dyno/`](api/Dyno/) | Local ASP.NET Core API the desktop app starts. |
 | [`website/`](website/) | Product website, deployed to Cloudflare Workers. |
 
 ## Develop
@@ -90,7 +90,7 @@ npm run check
 API tests:
 
 ```bash
-dotnet test api/PowerTools/PowerTools.sln
+dotnet test api/Dyno/Dyno.sln
 ```
 
 Website (the deploy workflow uses pnpm 11.9):

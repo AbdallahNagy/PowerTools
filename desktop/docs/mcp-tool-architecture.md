@@ -180,7 +180,7 @@ Planners that compare the environment with a spec are the riskiest code. Rules t
 ## Sidecar layout
 
 ```
-api/PowerTools/PowerTools.API/Tools/Agent/
+api/Dyno/Dyno.Api/Tools/Agent/
   Kernel/
     Plan.cs              PlanStep { Op, Target, Effect, Status, Detail, Request }, Plan { Steps, Effect, Hash }
     PlanExecutor.cs      runs steps in order, attaches SolutionUniqueName, retry policy, stops at the first failure
@@ -337,7 +337,7 @@ Evals and live tests start in Phase 0 with the first family, not at the end.
 | Level | What | Where and when |
 |---|---|---|
 | Generator tests | Spec → XML, XAML or JSON compared with golden files. Round trip: parse the output back to a spec and compare. | C#, every build |
-| Planner tests | Fake current state + spec → expected steps and effects. Includes immutable fields, no implicit delete, managed components, multi-language labels, missing capabilities, and an empty plan when nothing changed. | C#, with the fake `IAgentClient` (`PowerTools.API.Agent.Tests`), every build |
+| Planner tests | Fake current state + spec → expected steps and effects. Includes immutable fields, no implicit delete, managed components, multi-language labels, missing capabilities, and an empty plan when nothing changed. | C#, with the fake `IAgentClient` (`Dyno.Api.Agent.Tests`), every build |
 | Executor tests | A step fails halfway: the result is `partlyApplied`, `remaining` is correct, and sending the spec again finishes the work. Two calls on one form serialize. A changed hash refuses. | C#, every build |
 | Tool contract tests | Schemas match the DTOs; effect classification; approval text built from a plan; `outputSchema` matches the result contract; a **tool budget** test that fails above 28 tools, any description above 400 characters, or above a set total size of descriptions and schemas. | TypeScript (vitest), every build |
 | Live tests | Against two dedicated sandboxes, one online and one on-premises, never production: apply → verify → apply again (plan must be empty) → remove → environment back as before. A parity check compares the result shapes of the two runs. The platform validates what we generate: `ValidateApp`, activation of workflows and flows. | Opt-in suite with sandbox credentials, nightly and before a release. Not part of `npm test`, in line with `desktop/AGENTS.md`. |
@@ -373,7 +373,7 @@ Built on 2026-11-21:
 
 | Part | Where |
 |---|---|
-| Kernel: `Plan`, `PlanExecutor`, `ApplyResult` (with `partlyApplied` and verification), `RetryPolicy`, `Capabilities` and its cache, `Locks`, `SolutionContext`, `Labels`, `Publisher`, `AsyncJobs`, `MetadataCache`, `Dependencies`, `ApplyKernel` | `api/PowerTools/PowerTools.API/Tools/Agent/Kernel/` |
+| Kernel: `Plan`, `PlanExecutor`, `ApplyResult` (with `partlyApplied` and verification), `RetryPolicy`, `Capabilities` and its cache, `Locks`, `SolutionContext`, `Labels`, `Publisher`, `AsyncJobs`, `MetadataCache`, `Dependencies`, `ApplyKernel` | `api/Dyno/Dyno.Api/Tools/Agent/Kernel/` |
 | Routes: `POST /api/agent/{family}/plan`, `POST /api/agent/{family}/apply`, `GET /api/agent/capabilities`. A family is one `IApplyFamily` registered in DI. | `Kernel/AgentApplyEndpoints.cs` |
 | Async approval: `plan()` on `AgentTool`, plan timeout, the dialog listing steps, the hash sent to apply, the plan in the activity log, `dryRun` | `desktop/src/electron/mcp/mcpServer.ts`, `planDialog.ts`, `ApprovalDialog.tsx` |
 | `applyTool()` factory with the generated `outputSchema` | `desktop/src/electron/mcp/tools/applyTool.ts` |
@@ -397,12 +397,12 @@ Built on 2026-11-21:
 
 | Part | Where |
 |---|---|
-| `table_apply`: `TableApplySpec`, `TableSpecRules` (spec checks), `TableColumns` (type mapping and allowed changes), `TablePlanner` | `api/PowerTools/PowerTools.API/Tools/Agent/Components/Tables/` |
+| `table_apply`: `TableApplySpec`, `TableSpecRules` (spec checks), `TableColumns` (type mapping and allowed changes), `TablePlanner` | `api/Dyno/Dyno.Api/Tools/Agent/Components/Tables/` |
 | `solution_import`: `SolutionImportSpec`, `SolutionImportPlanner`, `SolutionZip`. `solution_export`: `SolutionExport` | `Components/Solutions/` |
 | `inspect_schema`: `SchemaInspector` (table, column, relationship, key, choice, role) | `Components/Inspect/` |
 | Family registration and the two read routes (`POST /api/agent/inspect/schema`, `POST /api/agent/solution/export`) | `Components/AgentComponentEndpoints.cs` |
 | Desktop tools, from the generated `table_apply.input.json` and `solution_import.input.json` | `desktop/src/electron/mcp/tools/tableTools.ts`, `solutionFileTools.ts` |
-| Planner tests against an in-memory metadata world that answers the SDK messages, so each spec is applied and planned again | `PowerTools.API.Tests/Tools/Agent/Components/` |
+| Planner tests against an in-memory metadata world that answers the SDK messages, so each spec is applied and planned again | `Dyno.Api.Tests/Tools/Agent/Components/` |
 | Live lifecycle tests and three new eval scenarios | `desktop/test/live/mcp/parity.live.ts`, `evals/mcp/scenarios/` |
 
 Decisions made while building:
@@ -437,7 +437,7 @@ Built on 2026-11-21. The server now offers exactly the 19 tools of the first rel
 | `inspect_ui`, `inspect_solution` and their routes (`POST /api/agent/inspect/ui`, `/inspect/solution`) | `Components/Inspect/`, `Components/AgentComponentEndpoints.cs` |
 | Ids of created records and components in the result (`steps[].ids`) | `Kernel/ApplyResult.cs`, `Kernel/PlanExecutor.cs` |
 | Desktop tools and Settings groups (`connections`, `read`, `records`, `records-delete`, `schema`, `ui`, `logic`, `solutions`, `remove`) | `desktop/src/electron/mcp/tools/`, `types.ts`, `src/ui/shell/settings/sections/agentTools.ts` |
-| Planner tests against an in-memory environment of rows and metadata (`RowWorld`): each spec is applied, verified and planned again | `PowerTools.API.Tests/Tools/Agent/Components/` |
+| Planner tests against an in-memory environment of rows and metadata (`RowWorld`): each spec is applied, verified and planned again | `Dyno.Api.Tests/Tools/Agent/Components/` |
 | Live lifecycles for `choice_apply`, `config_apply`, `records_write` and `records_delete`, parity reads for the three inspect tools, and two new eval scenarios | `desktop/test/live/mcp/parity.live.ts`, `evals/mcp/scenarios/` |
 
 Decisions made while building:
@@ -468,7 +468,7 @@ Built on 2026-11-21. The server offers 23 tools.
 | `customapi_apply` | `Components/CustomApis/CustomApiApply.cs` |
 | `role_apply`: roles, privileges, assignment, field security profiles | `Components/Security/RoleApply.cs` |
 | Desktop tools and the `security` Settings group; `ui` is now "Apps, forms and views", `logic` "Plug-ins and Custom APIs" | `desktop/src/electron/mcp/tools/components.ts`, `types.ts`, `src/ui/shell/settings/sections/agentTools.ts` |
-| Planner tests: each spec is applied, checked and planned again (empty) | `PowerTools.API.Tests/Tools/Agent/Components/` (`WebResourcePlannerTests`, `FormLayoutTests`, `AppPlannerTests`, `CustomApiPlannerTests`, `RolePlannerTests`) |
+| Planner tests: each spec is applied, checked and planned again (empty) | `Dyno.Api.Tests/Tools/Agent/Components/` (`WebResourcePlannerTests`, `FormLayoutTests`, `AppPlannerTests`, `CustomApiPlannerTests`, `RolePlannerTests`) |
 
 Decisions made while building:
 
@@ -492,9 +492,9 @@ Built on 2026-11-21. The server offers 24 tools and its first resource, the clou
 |---|---|
 | `flow_apply` (`FlowPlanner`): connection references, `clientdata`, on and off | `Components/Flows/FlowApply.cs` |
 | `inspect_solution` kind `flow` with a name returns the flow in the `flow_apply` shape | `Components/Inspect/SolutionInspector.cs` |
-| The guide `powertools://guides/cloud-flows`, served by `resources/list` and `resources/read`; the connector advertises resources and answers `resources/list` while the app is closed | `desktop/src/electron/mcp/guides.ts`, `mcpServer.ts`, `PowerTools.McpConnector/McpConnector.cs` |
+| The guide `powertools://guides/cloud-flows`, served by `resources/list` and `resources/read`; the connector advertises resources and answers `resources/list` while the app is closed | `desktop/src/electron/mcp/guides.ts`, `mcpServer.ts`, `Dyno.McpConnector/McpConnector.cs` |
 | Desktop tool in the `logic` group, now "Plug-ins, APIs and flows" | `desktop/src/electron/mcp/tools/components.ts`, `src/ui/shell/settings/sections/agentTools.ts` |
-| Planner tests | `PowerTools.API.Tests/Tools/Agent/Components/FlowPlannerTests.cs` |
+| Planner tests | `Dyno.Api.Tests/Tools/Agent/Components/FlowPlannerTests.cs` |
 | Evals and live test | `evals/mcp/scenarios/cloud-flow-names-connector.json`, `cloud-flow-onprem-route.json`; the flow lifecycle in `desktop/test/live/mcp/parity.live.ts` |
 
 Decisions made while building:
@@ -520,7 +520,7 @@ Built on 2026-11-21. The server offers 25 tools and two guides.
 | Saving: an unmanaged solution with only the process, imported with `AsyncJobs` | `Components/Processes/ProcessPackage.cs`, `ProcessPlanner.cs` |
 | `inspect_solution` kind `process` with a name returns the process in the `process_apply` shape, child workflows by name | `Components/Inspect/SolutionInspector.cs` |
 | The guide `powertools://guides/classic-workflows`; desktop tool in the `logic` group, now "Plug-ins, APIs and processes" | `desktop/src/electron/mcp/guides.ts`, `tools/components.ts` |
-| The sample workflows (12, anonymized) and the tests that read and write them | `PowerTools.API.Tests/Tools/Agent/TestFixtures/ClassicWorkflows/`, `ProcessXamlTests.cs`, `ProcessPlannerTests.cs` |
+| The sample workflows (12, anonymized) and the tests that read and write them | `Dyno.Api.Tests/Tools/Agent/TestFixtures/ClassicWorkflows/`, `ProcessXamlTests.cs`, `ProcessPlannerTests.cs` |
 | On-premises routes of `flow_apply`, `config_apply`, `customapi_apply` and `inspect_solution` now name `process_apply` | |
 
 Decisions made while building:

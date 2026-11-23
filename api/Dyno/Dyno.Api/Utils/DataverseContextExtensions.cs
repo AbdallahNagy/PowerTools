@@ -1,0 +1,56 @@
+using Microsoft.PowerPlatform.Dataverse.Client;
+using Dyno.Api.Filters;
+using Dyno.Api.Services;
+
+namespace Dyno.Api.Utils;
+
+public static class DataverseContextExtensions
+{
+    public static string GetDataverseToken(this HttpContext ctx) =>
+        ctx.GetDataverseConnectionContext() is OnlineConnectionContext online
+            ? online.AccessToken
+            : throw new InvalidOperationException("The current Dataverse connection does not use an online bearer token.");
+
+    public static string GetEnvironmentUrl(this HttpContext ctx) =>
+        ctx.GetDataverseConnectionContext().EnvironmentUrl;
+
+    public static string? GetTargetDataverseToken(this HttpContext ctx) =>
+        ctx.GetTargetDataverseConnectionContext() is OnlineConnectionContext online
+            ? online.AccessToken
+            : null;
+
+    public static string? GetTargetEnvironmentUrl(this HttpContext ctx) =>
+        ctx.GetTargetDataverseConnectionContext()?.EnvironmentUrl;
+
+    public static DataverseConnectionContext GetDataverseConnectionContext(this HttpContext ctx) =>
+        (DataverseConnectionContext)ctx.Items[DataverseContextFilter.ConnectionContextKey]!;
+
+    public static DataverseConnectionContext? GetTargetDataverseConnectionContext(this HttpContext ctx) =>
+        ctx.Items[DataverseTargetContextFilter.TargetConnectionContextKey] as DataverseConnectionContext;
+
+    public static IOrganizationServiceAsync2 CreateDataverseClient(
+        this HttpContext ctx,
+        DataverseClientFactory factory)
+    {
+        var client = factory.Create(ctx.GetDataverseConnectionContext());
+        if (client is IDisposable disposable)
+        {
+            ctx.Response.RegisterForDispose(disposable);
+        }
+        return client;
+    }
+
+    public static IOrganizationServiceAsync2? CreateTargetDataverseClient(
+        this HttpContext ctx,
+        DataverseClientFactory factory)
+    {
+        var connection = ctx.GetTargetDataverseConnectionContext();
+        if (connection is null) return null;
+        var client = factory.Create(connection);
+        if (client is IDisposable disposable)
+        {
+            ctx.Response.RegisterForDispose(disposable);
+        }
+        return client;
+    }
+}

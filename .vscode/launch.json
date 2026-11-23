@@ -10,9 +10,9 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/api/PowerTools/PowerTools.API/bin/Debug/net9.0/PowerTools.API.dll",
+            "program": "${workspaceFolder}/api/Dyno/Dyno.Api/bin/Debug/net9.0/Dyno.Api.dll",
             "args": [],
-            "cwd": "${workspaceFolder}/api/PowerTools/PowerTools.API",
+            "cwd": "${workspaceFolder}/api/Dyno/Dyno.Api",
             "stopAtEntry": false,
             // Enable launching a web browser when ASP.NET Core starts. For more information: https://aka.ms/VSCode-CS-LaunchJson-WebBrowser
             "serverReadyAction": {

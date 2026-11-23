@@ -5,7 +5,7 @@ export interface ConnectorLaunch {
   args: string[];
 }
 
-export const CONNECTOR_EXE = "PowerTools.McpConnector.exe";
+export const CONNECTOR_EXE = "Dyno.McpConnector.exe";
 
 export interface ConnectorCommandOptions {
   packaged: boolean;
@@ -31,11 +31,11 @@ export function connectorLaunch(options: ConnectorCommandOptions): ConnectorLaun
   }
 
   // Elsewhere a running file does not block replacing it, so the sidecar's deprecated connector mode is still used.
-  const exeName = "PowerTools.API";
+  const exeName = "Dyno.Api";
   if (options.packaged) {
     return { command: join(options.resourcesPath, "api", exeName), args: ["--mcp-connector"] };
   }
-  const exe = resolve(options.appPath, "..", "api", "PowerTools", "PowerTools.API", "bin", "Debug", "net9.0", exeName);
+  const exe = resolve(options.appPath, "..", "api", "Dyno", "Dyno.Api", "bin", "Debug", "net9.0", exeName);
   return { command: exe, args: ["--mcp-connector", "--discovery", options.discoveryPath] };
 }
 
@@ -47,7 +47,7 @@ export function connectorInstallFolder(localAppData: string, appFolderName: stri
 /** Where the connector to copy comes from: the bundled single file, or the dev build output. */
 export function bundledConnectorFolder(options: Pick<ConnectorCommandOptions, "packaged" | "resourcesPath" | "appPath">): string {
   if (options.packaged) return join(options.resourcesPath, "mcp-connector");
-  return resolve(options.appPath, "..", "api", "PowerTools", "PowerTools.McpConnector", "bin", "Debug", "net9.0");
+  return resolve(options.appPath, "..", "api", "Dyno", "Dyno.McpConnector", "bin", "Debug", "net9.0");
 }
 
 const quote = (value: string) => (/\s/.test(value) ? `"${value}"` : value);

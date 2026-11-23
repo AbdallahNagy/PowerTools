@@ -12,12 +12,12 @@ The same page has the commands to connect a client, the tools and the recent act
 
 ## Connect a client
 
-Agents start a small connector program that comes with Power Tools. It relays to the running app, and it needs no token in any config file. Each time Power Tools starts, it copies the connector to `%LOCALAPPDATA%\Power Tools\mcp\PowerTools.McpConnector.exe`, outside the install folder, so an agent keeping the connector running never blocks a Power Tools update. The dialog shows the exact commands for your user. Copy them from there. They look like this.
+Agents start a small connector program that comes with Power Tools. It relays to the running app, and it needs no token in any config file. Each time Power Tools starts, it copies the connector to `%LOCALAPPDATA%\Power Tools\mcp\Dyno.McpConnector.exe`, outside the install folder, so an agent keeping the connector running never blocks a Power Tools update. The dialog shows the exact commands for your user. Copy them from there. They look like this.
 
 **Claude Code**
 
 ```
-claude mcp add --scope user powertools -- "%LOCALAPPDATA%\Power Tools\mcp\PowerTools.McpConnector.exe"
+claude mcp add --scope user powertools -- "%LOCALAPPDATA%\Power Tools\mcp\Dyno.McpConnector.exe"
 ```
 
 `--scope user` makes Power Tools available in every folder you open Claude Code in. Without it, Claude Code only loads the server in the folder where you ran the command.
@@ -28,7 +28,7 @@ claude mcp add --scope user powertools -- "%LOCALAPPDATA%\Power Tools\mcp\PowerT
 {
   "mcpServers": {
     "powertools": {
-      "command": "C:\\Users\\<you>\\AppData\\Local\\Power Tools\\mcp\\PowerTools.McpConnector.exe",
+      "command": "C:\\Users\\<you>\\AppData\\Local\\Power Tools\\mcp\\Dyno.McpConnector.exe",
       "args": []
     }
   }
@@ -42,7 +42,7 @@ claude mcp add --scope user powertools -- "%LOCALAPPDATA%\Power Tools\mcp\PowerT
   "servers": {
     "powertools": {
       "type": "stdio",
-      "command": "C:\\Users\\<you>\\AppData\\Local\\Power Tools\\mcp\\PowerTools.McpConnector.exe",
+      "command": "C:\\Users\\<you>\\AppData\\Local\\Power Tools\\mcp\\Dyno.McpConnector.exe",
       "args": []
     }
   }

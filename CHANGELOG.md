@@ -17,6 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - **Data Migration: select all fields from the table header.** A checkbox in the field table's header replaces the Select all and Select none links. It checks or clears every field shown (only the matching ones while searching) and shows a partial state when some are checked. The primary id stays selected.
+- Power Tools is being renamed to Dyno. As a first step, the local API that ships inside the app now runs as `Dyno.Api.exe` (it was `PowerTools.API.exe`), and the MCP connector is `Dyno.McpConnector.exe`.
 - **The sidebar collapses to icons.** Hiding the sidebar (Ctrl+B or the title bar button) now leaves a narrow strip with every tool's icon, the connection dot, and Settings. Point at an icon to see its name at once. The tool of the active tab is marked in the sidebar.
 
 ### Fixed

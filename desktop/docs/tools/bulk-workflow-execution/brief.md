@@ -69,7 +69,7 @@ All citations are in `XrmToolBox - Bulk Workflow Execution 2015/BulkWorkflowExec
 
 **Errors (L1190-1206).**
 - It only counts faults. `Fault.Message` and the record ID (via `RequestIndex`) are thrown away.
-- **Our version should keep both**, as `MigrationJobRunner.ProcessBatch` already does in `api/PowerTools/PowerTools.API/Services/MigrationJobRunner.cs`.
+- **Our version should keep both**, as `MigrationJobRunner.ProcessBatch` already does in `api/Dyno/Dyno.Api/Services/MigrationJobRunner.cs`.
 
 **Privileges and connection.**
 - One connection.
@@ -100,7 +100,7 @@ All citations are in `XrmToolBox - Bulk Workflow Execution 2015/BulkWorkflowExec
 **Existing coverage:** none. Workflow Activities Viewer only lists processes that reference a custom workflow activity. FetchXML Builder and FetchXML Tester run queries but cannot execute workflows. **This should be a new activity-bar tool, not an extension of an existing one.**
 
 **Reuse:**
-- `api/PowerTools/PowerTools.API/Tools/Fetch/FetchXmlPaging.Apply` for FetchXML paging-cookie handling. The paging works directly on FetchXML; no `QueryExpression` conversion is needed.
+- `api/Dyno/Dyno.Api/Tools/Fetch/FetchXmlPaging.Apply` for FetchXML paging-cookie handling. The paging works directly on FetchXML; no `QueryExpression` conversion is needed.
 - `GET /api/metadata/entities` to resolve the primary-id attribute and display names.
 - The background-job pattern from Solution Components Mover: `SolutionComponentsMoverEndpoints.cs`, `SolutionCopyJob.cs`, `SolutionCopyJobRunner.cs` (store + hosted runner + polled `GET`).
 - The `ExecuteMultiple` fault-mapping pattern from `Services/MigrationJobRunner.cs`.
@@ -108,7 +108,7 @@ All citations are in `XrmToolBox - Bulk Workflow Execution 2015/BulkWorkflowExec
 - `useTabConnection`, `useToolStatus`, and `apiGet`/`apiPost` with `meta.connectionName`.
 - `POST /api/fetch/execute` is **not suitable** for the count. It caps pages at 250 and does not collect every ID.
 
-**New sidecar endpoints:** group `/api/bulk-workflow-execution` in `api/PowerTools/PowerTools.API/Tools/BulkWorkflowExecution/`, with `DataverseContextFilter`.
+**New sidecar endpoints:** group `/api/bulk-workflow-execution` in `api/Dyno/Dyno.Api/Tools/BulkWorkflowExecution/`, with `DataverseContextFilter`.
 
 1. **`GET /workflows`**
    - Returns `[{ id, name, primaryEntity, mode: "background" | "realtime", isManaged }]`.
@@ -140,7 +140,7 @@ All citations are in `XrmToolBox - Bulk Workflow Execution 2015/BulkWorkflowExec
    - Sets a cancel flag. The runner stops after the in-flight batch.
    - This is new: the existing job stores have no cancel operation.
 
-Register `app.MapBulkWorkflowExecutionEndpoints()`, the job store singleton and the hosted runner in `api/PowerTools/PowerTools.API/Program.cs`.
+Register `app.MapBulkWorkflowExecutionEndpoints()`, the job store singleton and the hosted runner in `api/Dyno/Dyno.Api/Program.cs`.
 
 **Desktop tool**
 - **Id:** `bulk-workflow-execution`
@@ -167,7 +167,7 @@ Register `app.MapBulkWorkflowExecutionEndpoints()`, the job store singleton and 
    - Implement `POST /runs`, `GET /runs/{id}` and `POST /runs/{id}/cancel`.
    - Behaviour: ID snapshot first, sequential `ExecuteMultiple` batches, fault capture, empty-batch skip, delay, cancel between batches.
    - Register everything in `Program.cs`.
-3. **Sidecar tests** in a new `PowerTools.API.BulkWorkflowExecution.Tests` project, or an existing one following that pattern:
+3. **Sidecar tests** in a new `Dyno.Api.BulkWorkflowExecution.Tests` project, or an existing one following that pattern:
    - FetchXML rewrite: attributes stripped, `distinct` added, aggregate rejected, entity mismatch rejected;
    - batch splitting, including an exact multiple of the batch size producing no empty batch;
    - fault-to-record mapping;
@@ -200,10 +200,10 @@ Register `app.MapBulkWorkflowExecutionEndpoints()`, the job store singleton and 
 - Power Tools references:
   - `/home/user/PowerTools/desktop/src/ui/tools/registry.tsx`
   - `/home/user/PowerTools/desktop/src/ui/tools/publicCatalog.ts`
-  - `/home/user/PowerTools/api/PowerTools/PowerTools.API/Program.cs`
-  - `/home/user/PowerTools/api/PowerTools/PowerTools.API/Tools/Fetch/FetchXmlPaging.cs`
-  - `/home/user/PowerTools/api/PowerTools/PowerTools.API/Services/MigrationJobRunner.cs`
-  - `/home/user/PowerTools/api/PowerTools/PowerTools.API/Tools/SolutionComponentsMover/SolutionComponentsMoverEndpoints.cs`
+  - `/home/user/PowerTools/api/Dyno/Dyno.Api/Program.cs`
+  - `/home/user/PowerTools/api/Dyno/Dyno.Api/Tools/Fetch/FetchXmlPaging.cs`
+  - `/home/user/PowerTools/api/Dyno/Dyno.Api/Services/MigrationJobRunner.cs`
+  - `/home/user/PowerTools/api/Dyno/Dyno.Api/Tools/SolutionComponentsMover/SolutionComponentsMoverEndpoints.cs`
 - Brief destination for the pipeline (not written by me): `/home/user/PowerTools/desktop/docs/tools/bulk-workflow-execution/brief.md`
 
 ### Dataverse review
@@ -423,7 +423,7 @@ Environment change in a tab during setup reloads the workflows and clears every 
 
 ### Implementation notes and test evidence
 
-**Sidecar** (`api/PowerTools/PowerTools.API/Tools/BulkWorkflowExecution/`, group `/api/bulk-workflow-execution` with `DataverseContextFilter`; the organization service comes from `DataverseClientFactory`):
+**Sidecar** (`api/Dyno/Dyno.Api/Tools/BulkWorkflowExecution/`, group `/api/bulk-workflow-execution` with `DataverseContextFilter`; the organization service comes from `DataverseClientFactory`):
 
 - `BulkWorkflowExecutionEndpoints.cs`: `GET /workflows`, `GET /views?entity=`, `POST /count`, `POST /runs`, `GET /runs/{jobId}`, `POST /runs/{jobId}/cancel`.
 - `BulkWorkflowExecutionQueries.cs`: the workflow filter is `category = 0`, `type = 1`, `statecode = 1`, `ondemand = true` and `primaryentity != none`. It returns `mode`, `runas`, `scope`, `ismanaged` and `asyncautodelete`. Both view queries read only `name` and `fetchxml`, and both are sorted.
@@ -441,7 +441,7 @@ Environment change in a tab during setup reloads the workflows and clears every 
   - A batch in which every item is `ExecuteNotOnDemandWorkflow` or `WorkflowIsNotOnDemand` stops the run.
   - The error list is capped at 500, and `errorsCapped` says so.
 - `Program.cs` registers the store, the delay, the hosted runner and `MapBulkWorkflowExecutionEndpoints()`.
-- New test project: `api/PowerTools/PowerTools.API.BulkWorkflowExecution.Tests`, added to `PowerTools.sln`, with a fake `IBulkWorkflowClient` and no Dataverse connection.
+- New test project: `api/Dyno/Dyno.Api.BulkWorkflowExecution.Tests`, added to `Dyno.sln`, with a fake `IBulkWorkflowClient` and no Dataverse connection.
 
 **Desktop** (`desktop/src/ui/tools/bulk-workflow-execution/`):
 
@@ -470,7 +470,7 @@ Environment change in a tab during setup reloads the workflows and clears every 
 - `npm run build`: passed. The only warning is Vite's existing chunk-size warning.
 - `npm run check`: typecheck, lint with `--max-warnings 0`, unit tests and the renderer build passed. The Playwright Electron smoke test (`test:smoke:run`) timed out after 120 s in this container, even under `xvfb-run`. It fails the same way on base commit 8e8c965, before any of this tool's code, so the cause is the headless container (Electron running as root with no session bus), not this change.
 - `dotnet build` (solution): 0 warnings, 0 errors. The container has only the .NET 8 SDK and the .NET 9 download host is blocked, so the build and the tests used the .NET 10 SDK from the Ubuntu archive. The tests ran with `DOTNET_ROLL_FORWARD=Major` against the .NET 10 runtime. All projects still target `net9.0`.
-- `dotnet test`: `PowerTools.API.BulkWorkflowExecution.Tests` 40 passed. The other suites also passed: PluginRegistration 81, SolutionComponentsMover 26, PolymorphicLookup 22, WorkflowActivities 16.
+- `dotnet test`: `Dyno.Api.BulkWorkflowExecution.Tests` 40 passed. The other suites also passed: PluginRegistration 81, SolutionComponentsMover 26, PolymorphicLookup 22, WorkflowActivities 16.
 
 **Not run:** the Electron smoke test, for the reason above. No check ran against a live Dataverse environment; the items under "Unverified after this review" are still unverified.
 

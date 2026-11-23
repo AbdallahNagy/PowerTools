@@ -44,8 +44,8 @@ Existing built-in tools are registered in `desktop/src/ui/tools/registry.tsx`. P
 
 Dataverse calls go through the local ASP.NET Core sidecar, not the renderer.
 
-- Endpoint groups live under `api/PowerTools/PowerTools.API/Tools/<Tool>/`.
-- Register new maps in `api/PowerTools/PowerTools.API/Program.cs`.
+- Endpoint groups live under `api/Dyno/Dyno.Api/Tools/<Tool>/`.
+- Register new maps in `api/Dyno/Dyno.Api/Program.cs`.
 - Attach `DataverseContextFilter` so handlers receive the active connection from `Authorization` + `X-Environment-Url` or `X-Connection-Name`.
 - Create the organization service with `DataverseClientFactory`.
 - Dual-environment tools follow Data Migration: source connection on the primary headers, target connection on `X-Target-*` via `DataverseTargetContextFilter`.

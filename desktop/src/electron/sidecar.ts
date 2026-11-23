@@ -6,7 +6,7 @@ import path from "path";
 import { isDev } from "./utils.js";
 
 /**
- * Manages the lifecycle of the bundled PowerTools.API process (the "sidecar").
+ * Manages the lifecycle of the bundled Dyno.Api process (the "sidecar").
  *
  * The sidecar is a self-contained ASP.NET Core minimal API that binds a
  * loopback port and brokers Dataverse calls on behalf of the renderer. Its
@@ -122,8 +122,8 @@ function resolveSpawn(port: number, secret: string): {
       app.getAppPath(),
       "..",
       "api",
-      "PowerTools",
-      "PowerTools.API"
+      "Dyno",
+      "Dyno.Api"
     );
     return {
       command: "dotnet",
@@ -141,7 +141,7 @@ function resolveSpawn(port: number, secret: string): {
   // Production: self-contained single-file executable bundled via
   // electron-builder.extraResources at `<resources>/api/`.
   const exeName =
-    process.platform === "win32" ? "PowerTools.API.exe" : "PowerTools.API";
+    process.platform === "win32" ? "Dyno.Api.exe" : "Dyno.Api";
   const exePath = path.join(process.resourcesPath, "api", exeName);
   return {
     command: exePath,

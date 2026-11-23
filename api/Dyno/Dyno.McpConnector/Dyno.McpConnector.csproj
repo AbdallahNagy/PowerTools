@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <!-- The stdio connector MCP clients start. It is a separate, tiny executable so that a client keeping it
+         running never locks the installed sidecar: the desktop app copies it to a per-user folder the installer
+         does not touch, and clients start that copy. Keep it free of package references. -->
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>Dyno.Mcp</RootNamespace>
+        <AssemblyName>Dyno.McpConnector</AssemblyName>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <UseSystemResourceKeys>true</UseSystemResourceKeys>
+        <IsTrimmable>true</IsTrimmable>
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
+    </PropertyGroup>
+
+    <!-- Self-contained, trimmed, single-file publish for bundling with the desktop app.
+         Activate with: dotnet publish -c Release -r <rid> -p:PublishingForDesktop=true -->
+    <PropertyGroup Condition="'$(PublishingForDesktop)' == 'true'">
+        <PublishSingleFile>true</PublishSingleFile>
+        <SelfContained>true</SelfContained>
+        <PublishTrimmed>true</PublishTrimmed>
+        <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+        <DebugType>none</DebugType>
+    </PropertyGroup>
+
+</Project>

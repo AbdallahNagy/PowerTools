@@ -61,7 +61,7 @@ This is a new activity-bar tool. It is not an extension of FetchXML Builder, Fet
 - `allowMultipleInstances`: true
 - One environment, through `useConnectionSelection` and `meta.connectionName`. No `meta.targetConnectionName`.
 - Folder: `desktop/src/ui/tools/workflow-activities-viewer/` with `tool.ts`, `api/`, `model/`, `components/`, and `tests/`. Register once in `desktop/src/ui/tools/registry.tsx`.
-- Sidecar folder: `api/PowerTools/PowerTools.API/Tools/WorkflowActivities/`. Map it from `Program.cs` with `DataverseContextFilter` and `DataverseClientFactory`.
+- Sidecar folder: `api/Dyno/Dyno.Api/Tools/WorkflowActivities/`. Map it from `Program.cs` with `DataverseContextFilter` and `DataverseClientFactory`.
 - Status text through `useToolStatus`. Activity and process contracts stay private to the tool.
 - Renderer calls `apiGet` only. No new Electron IPC.
 
@@ -238,12 +238,12 @@ Changing the selected environment clears the filter, the manual expansion, and t
 - Files added:
   - `desktop/src/ui/tools/workflow-activities-viewer/` (`tool.ts`, `WorkflowActivitiesViewer.tsx`, `workflow-activities-icon.svg`, `api/`, `model/`, `tests/`)
   - One registration in `desktop/src/ui/tools/registry.tsx`
-  - Sidecar `api/PowerTools/PowerTools.API/Tools/WorkflowActivities/`, mapped from `Program.cs` with `DataverseContextFilter` and `DataverseClientFactory`
-  - `api/PowerTools/PowerTools.API.WorkflowActivities.Tests/` and its solution entry
+  - Sidecar `api/Dyno/Dyno.Api/Tools/WorkflowActivities/`, mapped from `Program.cs` with `DataverseContextFilter` and `DataverseClientFactory`
+  - `api/Dyno/Dyno.Api.WorkflowActivities.Tests/` and its solution entry
 - Endpoints: `GET /api/workflow-activities` and `GET /api/workflow-activities/{pluginTypeId}/processes`. The renderer calls `apiGet` with `meta.connectionName` only. The tab follows the activity-bar environment and reloads when that connection changes.
 - Behavior taken from the Dataverse review and UX, where those sections override the earlier mapping: `RetrieveMultiple` only; database assemblies (`sourcetype` 0) and published custom workflow activities (`isworkflowactivity` true, `componentstate` 0); activity pages of 250 ordered by `assemblyname` then `plugintypeid`; groups by `pluginassemblyid`, sorted by assembly name; argument names parsed in the sidecar, with inputs and outputs returned independently and malformed XML kept as empty lists; missing names, dates, and lookup names stay empty and the screen shows Unknown. Processes are activated definitions (`type` 1, `statecode` 1, `componentstate` 0, `rendererobjecttypecode` null) in categories 0, 1, and 3, including global actions. `xaml` is read in the sidecar at page size 50, matched case-insensitively to the CLR type identity from `typename`, and dropped before the response. `categoryLabel` comes from formatted values. An intentional cap of 200 process pages sets `truncated`, and the screen says the process list stopped early. Unknown activity ids return 404. Dataverse faults, including service-protection faults with `Retry-After`, are returned as errors rather than empty lists. The screen allows more than one tab (`allowMultipleInstances: true`) with the UX states, columns, start-condition order, and shared controls named in ### UX. No plugin source, WinForms UI, icons, or unique copy was copied.
 - Commands and results:
-  - `dotnet test api/PowerTools/PowerTools.API.WorkflowActivities.Tests/PowerTools.API.WorkflowActivities.Tests.csproj` — passed, 16 tests. `UseAppHost=false` was not required.
+  - `dotnet test api/Dyno/Dyno.Api.WorkflowActivities.Tests/Dyno.Api.WorkflowActivities.Tests.csproj` — passed, 16 tests. `UseAppHost=false` was not required.
   - From `desktop/`: `npm test` — passed, 56 files, 274 tests.
   - From `desktop/`: `npm run lint` — passed.
   - From `desktop/`: `npm run build` — passed.

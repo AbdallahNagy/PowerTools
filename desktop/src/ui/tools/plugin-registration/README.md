@@ -9,7 +9,7 @@ Activity-bar tool for browsing and managing Dataverse plug-in assemblies, types,
 - `model/` — contracts, catalog tree, forms, node actions
 - `api/` — react-query hooks (`meta.connectionId`; mutations set `noAuthRetry`)
 - `components/` — tree, details, dialogs
-- Sidecar: `api/PowerTools/PowerTools.API/Tools/PluginRegistration/`
+- Sidecar: `api/Dyno/Dyno.Api/Tools/PluginRegistration/`
 
 ## Validation
 

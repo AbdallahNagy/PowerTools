@@ -18,14 +18,14 @@ beforeEach(async () => {
   sourceDir = join(dir, "resources", "mcp-connector");
   targetDir = join(dir, "LocalAppData", "Power Tools", "mcp");
   await mkdir(sourceDir, { recursive: true });
-  await writeFile(join(sourceDir, "PowerTools.McpConnector.exe"), "connector v2");
+  await writeFile(join(sourceDir, "Dyno.McpConnector.exe"), "connector v2");
 });
 
 afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 
-const target = () => join(targetDir, "PowerTools.McpConnector.exe");
+const target = () => join(targetDir, "Dyno.McpConnector.exe");
 
 /** A file system whose rename fails as Windows does when the target is a running executable. */
 function lockedFs(code = "EBUSY"): ConnectorInstallFs & { renames: number } {
@@ -43,7 +43,7 @@ function lockedFs(code = "EBUSY"): ConnectorInstallFs & { renames: number } {
 describe("installConnector", () => {
   it("copies the connector when there is no copy yet", async () => {
     const result = await installConnector({ sourceDir, targetDir });
-    expect(result).toEqual({ status: "copied", copied: ["PowerTools.McpConnector.exe"], locked: [] });
+    expect(result).toEqual({ status: "copied", copied: ["Dyno.McpConnector.exe"], locked: [] });
     expect(await readFile(target(), "utf-8")).toBe("connector v2");
   });
 
@@ -70,11 +70,11 @@ describe("installConnector", () => {
     await writeFile(target(), "connector v1");
     const fs = lockedFs(code);
     const result = await installConnector({ sourceDir, targetDir, fs });
-    expect(result).toEqual({ status: "locked", copied: [], locked: ["PowerTools.McpConnector.exe"] });
+    expect(result).toEqual({ status: "locked", copied: [], locked: ["Dyno.McpConnector.exe"] });
     expect(fs.renames).toBe(1);
     expect(await readFile(target(), "utf-8")).toBe("connector v1");
     // No temporary file is left behind.
-    expect(await nodeConnectorInstallFs.listFiles(targetDir)).toEqual(["PowerTools.McpConnector.exe"]);
+    expect(await nodeConnectorInstallFs.listFiles(targetDir)).toEqual(["Dyno.McpConnector.exe"]);
     expect(describeConnectorInstall(result, targetDir)).toMatch(/in use/);
   });
 
@@ -97,13 +97,13 @@ describe("installConnector", () => {
   });
 
   it("copies every file of a dev build folder", async () => {
-    await writeFile(join(sourceDir, "PowerTools.McpConnector.dll"), "dll");
-    await writeFile(join(sourceDir, "PowerTools.McpConnector.runtimeconfig.json"), "{}");
+    await writeFile(join(sourceDir, "Dyno.McpConnector.dll"), "dll");
+    await writeFile(join(sourceDir, "Dyno.McpConnector.runtimeconfig.json"), "{}");
     const result = await installConnector({ sourceDir, targetDir });
     expect(result.copied.sort()).toEqual([
-      "PowerTools.McpConnector.dll",
-      "PowerTools.McpConnector.exe",
-      "PowerTools.McpConnector.runtimeconfig.json",
+      "Dyno.McpConnector.dll",
+      "Dyno.McpConnector.exe",
+      "Dyno.McpConnector.runtimeconfig.json",
     ]);
   });
 });
