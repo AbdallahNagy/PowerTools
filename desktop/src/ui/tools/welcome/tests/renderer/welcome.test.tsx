@@ -31,7 +31,7 @@ describe("Welcome tool", () => {
     fireEvent.click(screen.getByRole("link", { name: "View on GitHub" }));
 
     expect(openedUrls).toEqual([
-      "https://github.com/AbdallahNagy/PowerTools",
+      "https://github.com/AbdallahNagy/Dyno",
     ]);
   });
 

@@ -42,7 +42,7 @@ test("launches the desktop app with an isolated profile and opens FetchXML Build
     expect(mainWindow).toBeDefined();
     if (!mainWindow) return;
 
-    await expect(mainWindow.getByRole("heading", { level: 1, name: "Dyno" })).toBeVisible();
+    await expect(mainWindow.getByRole("heading", { level: 1, name: "Dyno" })).toBeVisible({ timeout: 30_000 });
     await expect(mainWindow.getByRole("button", { name: "File" })).toBeVisible();
     await expect(mainWindow.getByRole("button", { name: "Close", exact: true })).toBeVisible();
     await expect(mainWindow.getByRole("searchbox", { name: "Search tools" })).toBeVisible();

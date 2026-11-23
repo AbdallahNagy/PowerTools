@@ -6,5 +6,5 @@ export function toolRequestUrl(appVersion: string): string {
     title: "[Tool request]: ",
     source: `desktop ${appVersion}`,
   });
-  return `https://github.com/AbdallahNagy/PowerTools/issues/new?${params.toString()}`;
+  return `https://github.com/AbdallahNagy/Dyno/issues/new?${params.toString()}`;
 }

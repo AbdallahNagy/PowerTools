@@ -1,13 +1,15 @@
-# Power Tools
+# Dyno
+
+_Formerly Power Tools._
 
 A modern open-source desktop toolkit for everyday Dataverse, Dynamics 365, and Power Platform work, with a friendly UI, secure local workflow, and tools that are easy to figure out and use. A free, modern XrmToolBox alternative for Windows.
 
-[![Website](https://img.shields.io/badge/website-powertools.abdallahnagy.com-1f6feb)](https://powertools.abdallahnagy.com/)
+[![Website](https://img.shields.io/badge/website-dyno.abdallahnagy.com-1f6feb)](https://dyno.abdallahnagy.com/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2ea043)](LICENSE)
 
-**[Download for Windows](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe)** · **[Website](https://powertools.abdallahnagy.com/)** · **[Changelog](CHANGELOG.md)** · **[Issues](https://github.com/AbdallahNagy/PowerTools/issues)**
+**[Download for Windows](https://github.com/AbdallahNagy/Dyno/releases/latest/download/Dyno-Setup.exe)** · **[Website](https://dyno.abdallahnagy.com/)** · **[Changelog](CHANGELOG.md)** · **[Issues](https://github.com/AbdallahNagy/Dyno/issues)**
 
-Power Tools is a Windows desktop app for Dataverse and Dynamics 365 developers. Migration, FetchXML, plug-in registration, and related metadata work live in one workspace. The app runs on your machine and connects directly to your environments.
+Dyno is a Windows desktop app for Dataverse and Dynamics 365 developers. Migration, FetchXML, plug-in registration, and related metadata work live in one workspace. The app runs on your machine and connects directly to your environments.
 
 ## Tools
 
@@ -36,9 +38,9 @@ Each tool opens in its own tab. The activity-bar tools can stay open in more tha
 
 The published installer is for Windows.
 
-1. Download [PowerTools-Setup.exe](https://github.com/AbdallahNagy/PowerTools/releases/latest/download/PowerTools-Setup.exe), or start from the [download page](https://powertools.abdallahnagy.com/download).
+1. Download [Dyno-Setup.exe](https://github.com/AbdallahNagy/Dyno/releases/latest/download/Dyno-Setup.exe), or start from the [download page](https://dyno.abdallahnagy.com/download).
 2. Run the installer on your machine.
-3. Open Power Tools and add a connection.
+3. Open Dyno and add a connection.
 4. The installed app checks for later releases.
 
 ### Connections
@@ -50,7 +52,7 @@ Switch or remove connections from the status bar.
 
 ## Your data stays local
 
-Power Tools runs on your machine and connects directly to Dataverse. Your Dataverse data stays on your machine. The [website](https://powertools.abdallahnagy.com/) introduces the app. It does not host or process your Dataverse data.
+Dyno runs on your machine and connects directly to Dataverse. Your Dataverse data stays on your machine. The [website](https://dyno.abdallahnagy.com/) introduces the app. It does not host or process your Dataverse data.
 
 The interface calls Dataverse through a local ASP.NET Core API bound to `127.0.0.1`. The desktop app starts that API and stops it when the app exits.
 
@@ -101,7 +103,7 @@ pnpm install
 pnpm dev
 ```
 
-Claude Code cloud sessions (Ubuntu): set the environment's setup script to `bash PowerTools/scripts/cloud-setup.sh`. It installs the .NET SDK and .NET 9 runtimes, restores the API, and runs `npm ci` in `desktop/`. Run `npm run dev:cloud` from `desktop/` instead of `npm run dev`: it adds a virtual display, the `--no-sandbox` flag Electron needs as root, and turns off crash reports. To launch the whole app headless (renderer, Electron, and API) and save a screenshot:
+Claude Code cloud sessions (Ubuntu): set the environment's setup script to `bash Dyno/scripts/cloud-setup.sh`. It installs the .NET SDK and .NET 9 runtimes, restores the API, and runs `npm ci` in `desktop/`. Run `npm run dev:cloud` from `desktop/` instead of `npm run dev`: it adds a virtual display, the `--no-sandbox` flag Electron needs as root, and turns off crash reports. To launch the whole app headless (renderer, Electron, and API) and save a screenshot:
 
 ```bash
 xvfb-run -a node scripts/cloud-app.mjs --tool "FetchXML Builder"
@@ -136,5 +138,5 @@ For desktop changes, run `npm run check` from `desktop/` before opening a pull r
 
 Abdallah Nagy — [abdallah@abdallahnagy.com](mailto:abdallah@abdallahnagy.com)
 
-- [GitHub issues](https://github.com/AbdallahNagy/PowerTools/issues)
-- [Contact page](https://powertools.abdallahnagy.com/contact)
+- [GitHub issues](https://github.com/AbdallahNagy/Dyno/issues)
+- [Contact page](https://dyno.abdallahnagy.com/contact)

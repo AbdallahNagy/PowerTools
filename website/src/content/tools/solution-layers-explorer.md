@@ -1,5 +1,5 @@
 ---
-seoTitle: "Solution Layers Explorer for Dataverse | PowerTools"
+seoTitle: "Solution Layers Explorer for Dataverse | Dyno"
 seoDescription: "See every solution layer of a Dataverse component, compare any two layers property by property, and remove the unmanaged Active layer when needed."
 xrmToolBoxEquivalent: "Solution Layers Explorer"
 features:

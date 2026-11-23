@@ -1,5 +1,5 @@
 ---
-seoTitle: "Dataverse Environment Variables Manager | PowerTools"
+seoTitle: "Dataverse Environment Variables Manager | Dyno"
 seoDescription: "List every Dataverse environment variable with its current value, edit values in place and save them together, and create, update, or delete definitions."
 features:
   - List every environment variable with its type, default value, and current value
@@ -18,7 +18,7 @@ Variables whose value came in with a managed solution are marked, so you know a 
 
 ## Edit values and save them together
 
-Change current values directly in the list. Text and numbers get a text box, Yes/No variables get a yes or no choice, and JSON and secret values open a dedicated editor in the details pane. Secret values are built from the parts of an Azure Key Vault path. PowerTools never reads the secret itself.
+Change current values directly in the list. Text and numbers get a text box, Yes/No variables get a yes or no choice, and JSON and secret values open a dedicated editor in the details pane. Secret values are built from the parts of an Azure Key Vault path. Dyno never reads the secret itself.
 
 Each value is checked against its type before anything is sent, because Dataverse does not validate values itself. Choose **Save Changes** to save every edit at once. A value row is created when the variable has none and updated when it does. Each row shows whether it saved or failed, and a failed row keeps your edit so you can fix it and try again.
 

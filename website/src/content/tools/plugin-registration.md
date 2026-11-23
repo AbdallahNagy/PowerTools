@@ -1,5 +1,5 @@
 ---
-seoTitle: "Plugin Registration Tool for Dataverse | PowerTools"
+seoTitle: "Plugin Registration Tool for Dataverse | Dyno"
 seoDescription: "Browse and manage Dataverse plug-in assemblies, types, steps, and images. Register, update, enable, disable, and unregister steps in a modern desktop UI."
 xrmToolBoxEquivalent: "Plugin Registration"
 features:

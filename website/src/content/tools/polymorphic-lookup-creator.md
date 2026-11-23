@@ -1,5 +1,5 @@
 ---
-seoTitle: "Polymorphic Lookup Creator for Dataverse | PowerTools"
+seoTitle: "Polymorphic Lookup Creator for Dataverse | Dyno"
 seoDescription: "Create multi-table polymorphic lookup columns in Dataverse without code. Add, update, or remove target tables and relationships, and delete lookups."
 xrmToolBoxEquivalent: "Polymorphic Lookup Creator"
 features:
@@ -15,7 +15,7 @@ features:
 
 A polymorphic lookup, also called a multi-table lookup, is one lookup column that can point to records in more than one table. The maker portal cannot create one. It takes an SDK call. Polymorphic Lookup Creator gives you a form for it.
 
-Choose an unmanaged solution, the table that gets the lookup, and the tables it should point to. PowerTools suggests a schema name from the display name and applies the solution publisher's prefix.
+Choose an unmanaged solution, the table that gets the lookup, and the tables it should point to. Dyno suggests a schema name from the display name and applies the solution publisher's prefix.
 
 ## Full control of each relationship
 

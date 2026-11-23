@@ -1,5 +1,5 @@
 ---
-seoTitle: "Bulk Workflow Execution for Dataverse and Dynamics 365 | PowerTools"
+seoTitle: "Bulk Workflow Execution for Dataverse and Dynamics 365 | Dyno"
 seoDescription: "Run an on-demand Dataverse workflow against every record a view or FetchXML query returns. Set batch size and delay, watch progress, and stop safely."
 xrmToolBoxEquivalent: "Bulk Workflow Execution"
 features:

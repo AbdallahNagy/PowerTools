@@ -1,6 +1,6 @@
 import type { UpdateStatus } from "../../platform/desktopBridge";
 
-export const RELEASES_URL = "https://github.com/AbdallahNagy/PowerTools/releases";
+export const RELEASES_URL = "https://github.com/AbdallahNagy/Dyno/releases";
 
 export function formatAppVersion(version: string) {
   return version ? `v${version}` : "";

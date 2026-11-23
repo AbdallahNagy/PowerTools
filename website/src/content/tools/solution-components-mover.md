@@ -1,5 +1,5 @@
 ---
-seoTitle: "Solution Components Mover for Dataverse | PowerTools"
+seoTitle: "Solution Components Mover for Dataverse | Dyno"
 seoDescription: "Copy components from one or more Dataverse solutions into unmanaged solutions in the same environment. Pick component types and review every result."
 xrmToolBoxEquivalent: "Solution Components Mover"
 features:

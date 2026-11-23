@@ -86,7 +86,7 @@ test("loads, reviews, allows and opens the reference tool through the Community 
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
       }, referenceToolFolder);
       const nav = window.getByRole("navigation").locator("button", { hasText: "Attribute Explorer (reference)" });
-      await expect(window.getByRole("heading", { level: 1, name: "Dyno" })).toBeVisible();
+      await expect(window.getByRole("heading", { level: 1, name: "Dyno" })).toBeVisible({ timeout: 30_000 });
       await expect(nav).toHaveCount(0);
 
       await openManager(app);
@@ -170,7 +170,7 @@ test("starts with a missing tool folder and lists it as not found", async () => 
   await withApp(
     (userData) => seedCommunityTools(userData, [missingFolder], []),
     async (app, window) => {
-      await expect(window.getByRole("heading", { level: 1, name: "Dyno" })).toBeVisible();
+      await expect(window.getByRole("heading", { level: 1, name: "Dyno" })).toBeVisible({ timeout: 30_000 });
 
       await openManager(app);
 

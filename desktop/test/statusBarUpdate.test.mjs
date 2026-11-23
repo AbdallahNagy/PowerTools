@@ -44,6 +44,6 @@ test("prompts with the update dialog only when the user can act", () => {
 });
 
 test("links to the GitHub release for the new version", () => {
-  expect(getReleaseUrl("0.2.0")).toBe("https://github.com/AbdallahNagy/PowerTools/releases/tag/v0.2.0");
-  expect(getReleaseUrl(undefined)).toBe("https://github.com/AbdallahNagy/PowerTools/releases");
+  expect(getReleaseUrl("0.2.0")).toBe("https://github.com/AbdallahNagy/Dyno/releases/tag/v0.2.0");
+  expect(getReleaseUrl(undefined)).toBe("https://github.com/AbdallahNagy/Dyno/releases");
 });

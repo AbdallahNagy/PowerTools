@@ -3,7 +3,7 @@
 // The website imports this module too.
 
 export const TOOL_REQUEST_ISSUE_URL =
-  "https://github.com/AbdallahNagy/PowerTools/issues/new";
+  "https://github.com/AbdallahNagy/Dyno/issues/new";
 
 const TITLE_PREFIX = "[Tool request]: ";
 

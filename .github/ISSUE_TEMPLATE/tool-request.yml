@@ -1,12 +1,12 @@
 name: Tool request
-description: Ask for a new PowerTools tool.
+description: Ask for a new Dyno tool.
 title: "[Tool request]: "
 labels: ["tool-request"]
 body:
   - type: markdown
     attributes:
       value: |
-        Tell us about a Dataverse task that PowerTools should make easier.
+        Tell us about a Dataverse task that Dyno should make easier.
         Search existing tool requests first, and add a 👍 to one that matches instead of opening a duplicate.
   - type: input
     id: tool-name
