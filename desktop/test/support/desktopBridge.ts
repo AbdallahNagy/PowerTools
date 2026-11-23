@@ -59,7 +59,6 @@ const offlineMcpStatus: Awaited<ReturnType<DesktopBridge["getMcpStatus"]>> = {
   connectorCommand: '"/users/test/appdata/local/dyno/mcp/Dyno.McpConnector.exe"',
   connector: { command: "/users/me/appdata/local/dyno/mcp/Dyno.McpConnector.exe", args: [] },
   recent: [],
-  legacySetups: [],
   groups: [
     { group: "connections", enabled: true, tools: 1 },
     { group: "read", enabled: true, tools: 1 },

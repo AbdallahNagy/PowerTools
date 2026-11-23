@@ -53,10 +53,6 @@ If Dyno is not running when the client starts, the client still connects and sho
 
 The dialog shows the real path in place of `%LOCALAPPDATA%`; use that, since not every client expands variables. An install from before the rename to Dyno keeps its Power Tools folders, so its path is `%LOCALAPPDATA%\Power Tools\mcp\Dyno.McpConnector.exe`. Development runs copy the connector to `%LOCALAPPDATA%\Dyno Dev\mcp` and add `--discovery` with the dev discovery file.
 
-### Updating an older setup
-
-Setups made before this connector start `<install folder>\resources\api\PowerTools.API.exe --mcp-connector`. That file is no longer installed (the local API is now `Dyno.Api.exe`), so these setups stop working until you replace them. **Agents (MCP)** looks for such setups in `~/.claude.json`, `claude_desktop_config.json` and VS Code's user `mcp.json`, warns about them, and shows the commands that replace them. It never edits those files. Workspace `.vscode/mcp.json` files are not checked; update them by hand.
-
 ### When the connector is updated
 
 Dyno copies the connector only when the bundled one differs from the copy. If an agent is running the copy, it is locked; Dyno leaves it as it is and copies on a later start. An older connector keeps working with a newer app: it only reads the discovery file (`port`, `token`) and relays MCP over HTTP on `127.0.0.1`.

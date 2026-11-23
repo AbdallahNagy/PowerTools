@@ -20,7 +20,6 @@ const OFF: McpStatusInfo = {
   connectorCommand: '"/users/test/appdata/local/dyno/mcp/Dyno.McpConnector.exe"',
   connector: { command: "/users/me/appdata/local/dyno/mcp/Dyno.McpConnector.exe", args: [] },
   recent: [],
-  legacySetups: [],
   groups: [
     { group: "connections", enabled: true, tools: 1 },
     { group: "schema", enabled: false, tools: 13 },
@@ -103,31 +102,6 @@ describe("Settings: MCP server", () => {
     const vscode = screen.getByText(/"servers"/);
     expect(vscode.textContent).toContain('"type": "stdio"');
     expect(vscode.textContent).toContain("Dyno.McpConnector.exe");
-  });
-
-  it("warns about client setups that still start PowerTools.API.exe and shows the new command", async () => {
-    renderAgents({
-      bridgeOverrides: {
-        getMcpStatus: async () => ({
-          ...OFF,
-          legacySetups: [
-            { client: "Claude Code", configPath: "C:\\Users\\me\\.claude.json", server: "powertools", scope: "user" },
-            { client: "Claude Desktop", configPath: "C:\\Users\\me\\AppData\\Roaming\\Claude\\claude_desktop_config.json", server: "pt" },
-          ],
-        }),
-      },
-    });
-    expect(await screen.findByText("Update your agent setup so Dyno can update")).toBeInTheDocument();
-    const fix = screen.getByText(/^claude mcp remove --scope user powertools/);
-    expect(fix.textContent).toContain("claude mcp add --scope user dyno -- ");
-    expect(fix.textContent).toContain("Dyno.McpConnector.exe");
-    expect(screen.getByText(/Replace the "pt" entry in .*claude_desktop_config\.json/)).toBeInTheDocument();
-  });
-
-  it("shows no update warning when every setup uses the new connector", async () => {
-    renderAgents({ bridgeOverrides: { getMcpStatus: async () => OFF } });
-    await screen.findByText("Off");
-    expect(screen.queryByText("Update your agent setup so Dyno can update")).not.toBeInTheDocument();
   });
 
   it("lists recent activity on its own tab without ids or tokens", async () => {

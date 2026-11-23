@@ -6,7 +6,6 @@ import {
   type ConnectorLaunch,
 } from "./connectorCommand.js";
 import { describeConnectorInstall, installConnector, type ConnectorInstallFs } from "./connectorInstall.js";
-import { knownClientConfigs, scanLegacySetups, type LegacySetup } from "./legacySetups.js";
 
 export interface ConnectorSetupDeps {
   packaged: boolean;
@@ -14,7 +13,6 @@ export interface ConnectorSetupDeps {
   resourcesPath: string;
   appPath: () => string;
   homePath: () => string;
-  appDataPath: () => string;
   localAppData: string | undefined;
   /** The app data folder name; see appFolderName in ../userDataFolder.ts. */
   appFolderName: () => string;
@@ -26,7 +24,6 @@ export interface ConnectorSetup {
   /** Copies the bundled connector to the per-user folder. Resolves even when that fails. */
   install(): Promise<void>;
   launch(discoveryPath: string): ConnectorLaunch;
-  legacySetups(): Promise<LegacySetup[]>;
 }
 
 /** Where MCP clients start the connector from, and keeping that copy current. */
@@ -51,11 +48,6 @@ export function createConnectorSetup(deps: ConnectorSetupDeps): ConnectorSetup {
     },
     launch(discoveryPath) {
       return connectorLaunch({ ...paths(), platform: deps.platform, discoveryPath, connectorDir: connectorDir() });
-    },
-    async legacySetups() {
-      // Elsewhere the deprecated command is still the current one.
-      if (deps.platform !== "win32") return [];
-      return scanLegacySetups(knownClientConfigs({ homeDir: deps.homePath(), appData: deps.appDataPath() }));
     },
   };
 }
