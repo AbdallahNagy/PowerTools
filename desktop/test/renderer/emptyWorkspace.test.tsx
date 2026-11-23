@@ -24,12 +24,11 @@ describe("empty workspace", () => {
       </TabProvider>,
     );
 
-    expect(screen.queryByRole("heading", { name: "Power Tools" })).not.toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "PowerTools" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Dyno" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Close all tabs" }));
 
-    expect(screen.queryByRole("heading", { name: "Power Tools" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Dyno" })).not.toBeInTheDocument();
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.getByText("to search tools").nextElementSibling).toHaveTextContent("Ctrl+P");
     expect(screen.getByText("to perform main tool action").nextElementSibling).toHaveTextContent(
@@ -38,6 +37,6 @@ describe("empty workspace", () => {
     expect(screen.getByText("to show or hide the sidebar").nextElementSibling).toHaveTextContent(
       "Ctrl+B",
     );
-    expect(screen.queryByRole("heading", { name: "PowerTools" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Dyno" })).not.toBeInTheDocument();
   });
 });

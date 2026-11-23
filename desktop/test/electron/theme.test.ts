@@ -84,7 +84,7 @@ describe("theme preference", () => {
     expect(state.nativeTheme.themeSource).toBe("dark");
     expect(windowBackgroundColor()).toBe("#262624");
     expect(windowBackgroundColor("canvas")).toBe("#1f1e1d");
-    expect(themeArgument()).toBe("--power-tools-theme=dark-orange");
+    expect(themeArgument()).toBe("--dyno-theme=dark-orange");
   });
 
   it("tells every window when switching between Dark and Dark Orange", async () => {

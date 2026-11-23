@@ -65,7 +65,7 @@ vi.mock("electron", () => {
   };
 });
 
-vi.mock("../../src/electron/devUserData.js", () => ({}));
+vi.mock("../../src/electron/userDataFolder.js", () => ({ appFolderName: () => "Dyno Dev" }));
 vi.mock("../../src/electron/sentry.js", () => ({}));
 vi.mock("electron-updater", () => ({ default: { autoUpdater: {} } }));
 vi.mock("../../src/electron/autoUpdate.js", () => ({

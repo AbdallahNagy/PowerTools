@@ -110,7 +110,7 @@ public sealed class Plan
 
     /// <summary>
     /// Optional fingerprint of the state the plan was made from (for example a form's versionnumber), so a change
-    /// outside Power Tools that leaves the steps the same still changes the hash.
+    /// outside Dyno that leaves the steps the same still changes the hash.
     /// </summary>
     public string? StateToken { get; }
 

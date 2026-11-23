@@ -32,7 +32,7 @@ const features: {
     ),
     title: "Local and secure",
     description:
-      "PowerTools runs on your machine and connects directly to Dataverse. Your data never leaves your machine.",
+      "Dyno runs on your machine and connects directly to Dataverse. Your data never leaves your machine.",
   },
   {
     icon: (
@@ -83,7 +83,7 @@ export default function WelcomeTab() {
               backgroundClip: "text",
             }}
           >
-            PowerTools
+            Dyno
           </h1>
 
           <p className="text-base sm:text-lg leading-relaxed max-w-xl" style={{ color: "var(--color-fg)" }}>
@@ -258,7 +258,7 @@ export default function WelcomeTab() {
             Current tools
           </h2>
           <p className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
-            PowerTools is a toolkit, starting with the workflows developers need often.
+            Dyno is a toolkit, starting with the workflows developers need often.
           </p>
         </div>
 

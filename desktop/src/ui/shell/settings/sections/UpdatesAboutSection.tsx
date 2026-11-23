@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ExternalLink, FolderOpen, RefreshCw } from "lucide-react";
 
-import PowerToolsIcon from "../../../assets/icons/power-tools-icon.svg";
+import AppIcon from "../../../assets/icons/power-tools-icon.svg";
 import { desktopBridge, type UpdateStatus } from "../../../platform/desktopBridge";
 import { Alert, Button, ProgressBar, Spinner } from "../../../shared/ui";
 import { bridgeErrorMessage } from "../../community-tools/bridgeErrorMessage";
@@ -13,7 +13,7 @@ import { SettingRow, SettingsGroup } from "./SettingRow";
 function describe(status: UpdateStatus): string {
   switch (status.state) {
     case "idle":
-      return "Power Tools is up to date.";
+      return "Dyno is up to date.";
     case "checking":
       return "Checking for updates…";
     case "available":
@@ -63,8 +63,8 @@ export function UpdatesAboutSection({ app }: { app: AppSettingsState }) {
         aria-label="About"
         className="flex items-center gap-4 rounded-xl bg-surface px-4 py-4"
       >
-        <img src={PowerToolsIcon} alt="" className="h-10 w-10 shrink-0" />
-        <p className="min-w-0 flex-1 text-base font-semibold text-fg-strong">Power Tools {version}</p>
+        <img src={AppIcon} alt="" className="h-10 w-10 shrink-0" />
+        <p className="min-w-0 flex-1 text-base font-semibold text-fg-strong">Dyno {version}</p>
         <Button variant="ghost" size="sm" onClick={() => void desktopBridge.openExternalUrl(RELEASES_URL)}>
           <ExternalLink size={14} aria-hidden="true" />
           Release notes
@@ -74,7 +74,7 @@ export function UpdatesAboutSection({ app }: { app: AppSettingsState }) {
       <SettingsGroup
         title="Updates"
         description={
-          updatesEnabled ? "Power Tools checks for updates when it starts and asks before downloading." : undefined
+          updatesEnabled ? "Dyno checks for updates when it starts and asks before downloading." : undefined
         }
       >
         {!updatesEnabled ? (
@@ -124,7 +124,7 @@ export function UpdatesAboutSection({ app }: { app: AppSettingsState }) {
       </SettingsGroup>
 
       <SettingsGroup title="Folders">
-        <SettingRow label="Data folder" description="Where Power Tools keeps its files on this computer.">
+        <SettingRow label="Data folder" description="Where Dyno keeps its files on this computer.">
           <Button variant="secondary" size="sm" onClick={() => void app.openFolder("data")}>
             <FolderOpen size={14} aria-hidden="true" />
             Open data folder

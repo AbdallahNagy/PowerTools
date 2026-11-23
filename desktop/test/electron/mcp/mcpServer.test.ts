@@ -78,18 +78,18 @@ describe("MCP server", () => {
       "records_query",
     ]);
     expect(client.getInstructions()).toBe(MCP_INSTRUCTIONS);
-    expect(client.getServerVersion()).toMatchObject({ name: "powertools", version: "1.0.0" });
+    expect(client.getServerVersion()).toMatchObject({ name: "dyno", version: "1.0.0" });
   });
 
   it("lists the guides as resources and reads one", async () => {
     const { client } = await setup();
     expect(client.getServerCapabilities()?.resources).toBeDefined();
     const { resources } = await client.listResources();
-    expect(resources.map((r) => r.uri)).toContain("powertools://guides/cloud-flows");
-    expect(resources.map((r) => r.uri)).toContain("powertools://guides/classic-workflows");
-    const { contents } = await client.readResource({ uri: "powertools://guides/cloud-flows" });
+    expect(resources.map((r) => r.uri)).toContain("dyno://guides/cloud-flows");
+    expect(resources.map((r) => r.uri)).toContain("dyno://guides/classic-workflows");
+    const { contents } = await client.readResource({ uri: "dyno://guides/cloud-flows" });
     expect(contents[0]).toMatchObject({ mimeType: "text/markdown", text: expect.stringContaining("connectionReferences") });
-    await expect(client.readResource({ uri: "powertools://guides/nope" })).rejects.toMatchObject({ code: -32602 });
+    await expect(client.readResource({ uri: "dyno://guides/nope" })).rejects.toMatchObject({ code: -32602 });
   });
 
   it("calls connections_list", async () => {
@@ -102,7 +102,7 @@ describe("MCP server", () => {
   it("calls the sidecar with the secret and connection headers", async () => {
     const { client, fetchFake, entries } = await setup();
     const result = await client.callTool({ name: "inspect_schema", arguments: { kind: "table", name: "account" } });
-    expect(result._meta).toMatchObject({ "powertools/untrusted": true });
+    expect(result._meta).toMatchObject({ "dyno/untrusted": true });
     const [url, init] = fetchFake.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe("http://sidecar/api/agent/inspect/schema");
     expect(init.headers).toMatchObject({ "X-Local-Secret": "sec", Authorization: "Bearer tok" });

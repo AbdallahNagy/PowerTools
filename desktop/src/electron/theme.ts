@@ -15,7 +15,7 @@ export const THEME_LABELS: Record<ThemePreference, string> = {
 };
 
 /** Renderer windows read their first theme from this argument, so they paint it without a flash. */
-export const THEME_ARGUMENT_PREFIX = "--power-tools-theme=";
+export const THEME_ARGUMENT_PREFIX = "--dyno-theme=";
 
 /** Sent to every window when the preference changes. */
 export const THEME_CHANGED_CHANNEL = "theme-preference-changed";

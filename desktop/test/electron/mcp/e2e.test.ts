@@ -14,7 +14,7 @@ import { bypassMsw } from "../../support/loopback";
 const desktopDir = resolve(fileURLToPath(new URL("../../..", import.meta.url)));
 const connectorExe =
   process.env.CONNECTOR_EXE ??
-  resolve(desktopDir, "..", "api", "PowerTools", "Dyno.McpConnector", "bin", "Debug", "net9.0", "Dyno.McpConnector.exe");
+  resolve(desktopDir, "..", "api", "Dyno", "Dyno.McpConnector", "bin", "Debug", "net9.0", "Dyno.McpConnector.exe");
 const built = existsSync(connectorExe);
 if (!built) {
   console.warn(`Skipping the connector end-to-end test: ${connectorExe} is missing. Run "dotnet build ../api/Dyno/Dyno.McpConnector" first.`);

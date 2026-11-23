@@ -18,7 +18,7 @@ describe("Welcome tool", () => {
     });
   });
 
-  it("opens the PowerTools repository through the desktop bridge", () => {
+  it("opens the Dyno repository through the desktop bridge", () => {
     const openedUrls: string[] = [];
     renderWithProviders(<WelcomeTab />, {
       bridgeOverrides: {

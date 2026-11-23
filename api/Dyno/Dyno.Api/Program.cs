@@ -27,7 +27,7 @@ using Dyno.Api.Tools.PluginRegistration.Services;
 // Agents (MCP) page asks users to switch to the separate connector. It never starts the sidecar web host.
 if (args.Contains("--mcp-connector"))
 {
-    Console.Error.WriteLine("powertools-mcp: Dyno.Api.exe --mcp-connector is deprecated and blocks Power Tools updates. Use the command under File → Agents (MCP)… instead.");
+    Console.Error.WriteLine("dyno-mcp: Dyno.Api.exe --mcp-connector is deprecated and blocks Dyno updates. Use the command under File → Agents (MCP)… instead.");
     Environment.ExitCode = await McpConnector.RunAsync(args, Console.OpenStandardInput(), Console.OpenStandardOutput(), CancellationToken.None);
     return;
 }

@@ -53,7 +53,7 @@ export function createConnectionResolver(deps: ConnectionResolverDeps): Connecti
         throw new AgentToolError(
           "SignInRequired",
           `Sign-in is required for "${displayName}"`,
-          "Ask the user to sign in to this connection in Power Tools.",
+          "Ask the user to sign in to this connection in Dyno.",
         );
       }
       throw new AgentToolError("NoConnection", auth.error);
@@ -71,7 +71,7 @@ export function createConnectionResolver(deps: ConnectionResolverDeps): Connecti
           throw new AgentToolError(
             "NoConnection",
             "There is no active connection",
-            'Ask the user to connect in Power Tools, or pass "connection".',
+            'Ask the user to connect in Dyno, or pass "connection".',
           );
         }
         return authFor(active.summary.id, active.displayName, active.summary.agentChangesWithoutAsking === true);

@@ -1,7 +1,7 @@
 /**
  * Live tests of the MCP server against the sandboxes in evals/mcp/sandboxes.json. Opt-in:
  *   npm run test:live:mcp
- * Needs a running Power Tools with the MCP server on, and a saved connection per sandbox. Never point it at production.
+ * Needs a running Dyno with the MCP server on, and a saved connection per sandbox. Never point it at production.
  */
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -16,7 +16,7 @@ if (problem) console.warn(`[mcp live] skipped: ${problem}`);
 
 type ToolResult = { isError?: boolean; structuredContent?: unknown };
 
-/** A small script on this computer for the webresource_apply lifecycle; Power Tools reads it from the same machine. */
+/** A small script on this computer for the webresource_apply lifecycle; Dyno reads it from the same machine. */
 function liveScript(): string {
   const path = join(mkdtempSync(join(tmpdir(), "pte-live-")), "form.js");
   writeFileSync(path, "function pteLive() { return 1; }\n");
@@ -269,7 +269,7 @@ describe.skipIf(!config)("MCP live: online and on-premises parity", () => {
   it("records_write then records_delete on every sandbox", async () => {
     for (const sandbox of sandboxes) {
       const on = { connection: sandbox.connection };
-      const written = await call("records_write", { operations: [{ op: "create", table: "account", values: { name: "Power Tools Live" } }], ...on });
+      const written = await call("records_write", { operations: [{ op: "create", table: "account", values: { name: "Dyno Live" } }], ...on });
       const id = (written.structuredContent as { steps: Array<{ ids?: string[] }> }).steps[0].ids?.[0];
       expect(id, `created id on ${sandbox.name}`).toBeTruthy();
       const deleted = await call("records_delete", { records: [{ table: "account", id }], ...on });

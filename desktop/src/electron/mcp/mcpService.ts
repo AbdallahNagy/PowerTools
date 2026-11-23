@@ -12,8 +12,8 @@ import { AGENT_TOOLS } from "./tools/index.js";
 import type { SidecarAuth } from "../sidecarHeaders.js";
 import { AGENT_TOOL_GROUPS, type AgentToolGroup } from "./types.js";
 
-export const MCP_INSTRUCTIONS = `Power Tools works on the user's Dataverse environments with their own sign-in.
-- Every tool accepts "connection" (a saved connection's display name; see connections_list). Omit it to use the connection active in Power Tools.
+export const MCP_INSTRUCTIONS = `Dyno works on the user's Dataverse environments with their own sign-in.
+- Every tool accepts "connection" (a saved connection's display name; see connections_list). Omit it to use the connection active in Dyno.
 - Read before you change: inspect_schema, inspect_ui and inspect_solution describe a component in the shape its apply tool takes, so read it, change it and send it back.
 - Apply tools (*_apply, records_write, records_delete, remove, plugin_deploy, solution_import) take a spec, show the user a plan and run only what differs. dryRun returns the plan without changing anything. On partlyApplied, fix the cause and send the same spec again.
 - A step marked unsupported names the route that works on that environment (online and on-premises differ); follow it instead of working around it with execute_message.

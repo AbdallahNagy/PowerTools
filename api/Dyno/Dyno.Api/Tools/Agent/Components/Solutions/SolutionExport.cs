@@ -8,7 +8,7 @@ public sealed class SolutionExportBody
     public string? Solution { get; set; }
     public bool? Managed { get; set; }
 
-    /// <summary>Absolute folder to write into. Default: Documents\Power Tools\Solutions.</summary>
+    /// <summary>Absolute folder to write into. Default: Documents\Dyno\Solutions.</summary>
     public string? Folder { get; set; }
 }
 
@@ -26,7 +26,7 @@ public sealed partial class SolutionExport(IAgentClient client, Capabilities cap
         var documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
         if (string.IsNullOrEmpty(documents)) documents = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         if (string.IsNullOrEmpty(documents)) documents = Path.GetTempPath();
-        return Path.Combine(documents, "Power Tools", "Solutions");
+        return Path.Combine(documents, "Dyno", "Solutions");
     }
 
     [GeneratedRegex("[^A-Za-z0-9_.-]")]

@@ -61,7 +61,7 @@ function setup(builtInToolIds: readonly string[] = ["welcome"]) {
   function writeTool(name: string, overrides: Record<string, unknown> = {}) {
     const folder = join(ROOT, name);
     memory.dirs.add(folder);
-    memory.files.set(join(folder, "powertools-tool.json"), JSON.stringify(manifest(overrides)));
+    memory.files.set(join(folder, "dyno-tool.json"), JSON.stringify(manifest(overrides)));
     memory.files.set(join(folder, "icon.svg"), ICON);
     return folder;
   }
@@ -113,7 +113,7 @@ describe("community tool store", () => {
     await store.addFolder(older);
     await store.grantConsent("contoso.record-counter");
     dirs.delete(older);
-    files.delete(join(older, "powertools-tool.json"));
+    files.delete(join(older, "dyno-tool.json"));
     expect((await store.list())[0]).toMatchObject({ status: "missing" });
 
     const added = await store.addFolder(writeTool("newer"));
@@ -248,6 +248,28 @@ describe("community tool store", () => {
     expect(a).not.toBe(c);
   });
 
+  it("reads a tool whose manifest still has the name from before the rename", async () => {
+    const { store, files, writeTool } = setup();
+    const folder = writeTool("older");
+    files.set(join(folder, "powertools-tool.json"), files.get(join(folder, "dyno-tool.json"))!);
+    files.delete(join(folder, "dyno-tool.json"));
+
+    const tool = await store.addFolder(folder);
+
+    expect(tool).toMatchObject({ folder, status: "ready", errors: [] });
+    expect(tool.manifest?.id).toBe("contoso.record-counter");
+  });
+
+  it("prefers dyno-tool.json when a folder has both manifests", async () => {
+    const { store, files, writeTool } = setup();
+    const folder = writeTool("both");
+    files.set(join(folder, "powertools-tool.json"), "not json");
+
+    const tool = await store.addFolder(folder);
+
+    expect(tool).toMatchObject({ status: "ready", errors: [] });
+  });
+
   it("lists a folder without a manifest as invalid", async () => {
     const { store, dirs } = setup();
     const folder = join(ROOT, "empty");
@@ -255,7 +277,7 @@ describe("community tool store", () => {
 
     const tool = await store.addFolder(folder);
 
-    expect(tool).toMatchObject({ id: folder, status: "invalid", errors: ["powertools-tool.json not found"], manifest: null });
+    expect(tool).toMatchObject({ id: folder, status: "invalid", errors: ["dyno-tool.json not found"], manifest: null });
     expect(store.folderFor(folder)).toBeNull();
   });
 
@@ -286,7 +308,7 @@ describe("community tool store", () => {
     await store.addFolder(gone);
     await store.addFolder(kept);
     dirs.delete(gone);
-    files.delete(join(gone, "powertools-tool.json"));
+    files.delete(join(gone, "dyno-tool.json"));
 
     const tools = await store.list();
 
@@ -337,7 +359,7 @@ describe("community tool store", () => {
     await store.addFolder(gone);
     await store.grantConsent("contoso.record-counter");
     dirs.delete(gone);
-    files.delete(join(gone, "powertools-tool.json"));
+    files.delete(join(gone, "dyno-tool.json"));
     expect((await store.list())[0]).toMatchObject({ status: "missing" });
 
     await store.remove(gone);

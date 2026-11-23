@@ -1,5 +1,5 @@
-// Must load first: Sentry writes into userData, so dev runs switch folders before it starts.
-import "./devUserData.js";
+// Must load first: Sentry writes into userData, so the app picks its data folder before Sentry starts.
+import "./userDataFolder.js";
 // Must load next so Sentry hooks the app before anything else runs.
 import "./sentry.js";
 import { spawn } from "child_process";
@@ -49,7 +49,7 @@ import { BUILT_IN_TOOL_IDS } from "./communityTools/builtInToolIds.js";
 import { registerCommunityToolIpc } from "./communityTools/toolIpc.js";
 import { createToolStore } from "./communityTools/toolStore.js";
 import { createConnectorSetup } from "./mcp/connectorSetup.js";
-import { DEV_USER_DATA_FOLDER } from "./devUserData.js";
+import { appFolderName } from "./userDataFolder.js";
 import { registerMcpIpc } from "./mcp/mcpIpc.js";
 import { createApprovalWindow } from "./mcp/approvalWindow.js";
 import { createMcpService } from "./mcp/mcpService.js";
@@ -78,7 +78,7 @@ app.whenReady().then(async () => {
       splashWindow.close();
     }
     dialog.showErrorBox(
-      "PowerTools failed to start",
+      "Dyno failed to start",
       `The local API process did not start.\n\n${(err as Error).message}`
     );
     app.quit();
@@ -120,7 +120,7 @@ app.whenReady().then(async () => {
         const options = {
           title: "Export connections",
           defaultPath: defaultName,
-          filters: [{ name: "Power Tools connections", extensions: ["json"] }],
+          filters: [{ name: "Dyno connections", extensions: ["json"] }],
         };
         const result = window ? await dialog.showSaveDialog(window, options) : await dialog.showSaveDialog(options);
         return result.canceled || !result.filePath ? null : result.filePath;
@@ -262,7 +262,7 @@ app.whenReady().then(async () => {
       getWindow: () => mainWindow,
       notify: (onClick) => {
         const notification = new Notification({
-          title: "Power Tools",
+          title: "Dyno",
           body: "An agent is waiting for your approval",
         });
         notification.on("click", onClick);
@@ -283,7 +283,7 @@ app.whenReady().then(async () => {
     homePath: () => app.getPath("home"),
     appDataPath: () => app.getPath("appData"),
     localAppData: process.env.LOCALAPPDATA,
-    appFolderName: () => (app.isPackaged ? app.getName() : DEV_USER_DATA_FOLDER),
+    appFolderName: () => appFolderName(),
   });
   // MCP clients start this copy, so the installed files stay free for updates. Never blocks or fails start-up.
   void connectorSetup.install();

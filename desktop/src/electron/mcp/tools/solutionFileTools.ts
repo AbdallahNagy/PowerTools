@@ -13,7 +13,7 @@ export const solutionExport: AgentTool = {
   group: "solutions",
   title: "Export a solution",
   description:
-    "Read-only. Exports an unmanaged solution, as managed or unmanaged, to a new .zip on this computer and answers its path. Changes nothing in the environment and never overwrites a file. Default folder: Documents\\Power Tools\\Solutions. Only published customizations are exported.",
+    "Read-only. Exports an unmanaged solution, as managed or unmanaged, to a new .zip on this computer and answers its path. Changes nothing in the environment and never overwrites a file. Default folder: Documents\\Dyno\\Solutions. Only published customizations are exported.",
   inputSchema: {
     type: "object",
     properties: {

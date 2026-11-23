@@ -86,7 +86,7 @@ test("loads, reviews, allows and opens the reference tool through the Community 
         dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
       }, referenceToolFolder);
       const nav = window.getByRole("navigation").locator("button", { hasText: "Attribute Explorer (reference)" });
-      await expect(window.getByRole("heading", { level: 1, name: "PowerTools" })).toBeVisible();
+      await expect(window.getByRole("heading", { level: 1, name: "Dyno" })).toBeVisible();
       await expect(nav).toHaveCount(0);
 
       await openManager(app);
@@ -104,7 +104,7 @@ test("loads, reviews, allows and opens the reference tool through the Community 
       await expect(review.getByText("Read table definitions")).toBeVisible();
       await expect(review.getByText("No hosts declared")).toBeVisible();
       await expect(
-        review.getByText("Power Tools limits which hosts a tool can call, but cannot fully block network access."),
+        review.getByText("Dyno limits which hosts a tool can call, but cannot fully block network access."),
       ).toBeVisible();
       await review.getByRole("button", { name: "Allow" }).click();
       await expect(review).toHaveCount(0);
@@ -170,7 +170,7 @@ test("starts with a missing tool folder and lists it as not found", async () => 
   await withApp(
     (userData) => seedCommunityTools(userData, [missingFolder], []),
     async (app, window) => {
-      await expect(window.getByRole("heading", { level: 1, name: "PowerTools" })).toBeVisible();
+      await expect(window.getByRole("heading", { level: 1, name: "Dyno" })).toBeVisible();
 
       await openManager(app);
 

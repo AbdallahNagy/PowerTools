@@ -25,10 +25,10 @@ test("shows an update action only when the user can do something", () => {
 test("explains what the update button does in each state", () => {
   expect(getUpdateActionHint({ state: "idle" })).toBe(null);
   expect(getUpdateActionHint({ state: "available", version: "0.1.1" })).toBe(
-    "Power Tools v0.1.1 is available. Click to see what's new and update.",
+    "Dyno v0.1.1 is available. Click to see what's new and update.",
   );
   expect(getUpdateActionHint({ state: "downloaded", version: "0.1.1" })).toBe(
-    "Power Tools v0.1.1 is ready. Click to restart and install it.",
+    "Dyno v0.1.1 is ready. Click to restart and install it.",
   );
   expect(getUpdateActionHint({ state: "error", message: "Network unavailable" })).toBe(
     "The update failed: Network unavailable. Click to try again.",

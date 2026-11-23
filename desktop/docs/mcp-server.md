@@ -1,34 +1,34 @@
-# The Power Tools MCP server
+# The Dyno MCP server
 
-Power Tools can let AI agents such as Claude Code, Claude Desktop and VS Code work on your Dataverse environments. The agent uses your own sign-in and the connections you already saved. It is off until you turn it on.
+Dyno can let AI agents such as Claude Code, Claude Desktop and VS Code work on your Dataverse environments. The agent uses your own sign-in and the connections you already saved. It is off until you turn it on.
 
 ## Turn it on
 
 1. Open **Settings** (the gear at the bottom of the sidebar, **File > Settings…**, or Ctrl+,) and choose **Agents (MCP)**. **File > Agents (MCP)…** opens the same page.
-2. Turn on **Let AI agents use Power Tools (MCP server)**. The status shows **Running**.
-3. Keep Power Tools open. Agents can only reach the server while the app is running; the server turns off when you quit.
+2. Turn on **Let AI agents use Dyno (MCP server)**. The status shows **Running**.
+3. Keep Dyno open. Agents can only reach the server while the app is running; the server turns off when you quit.
 
 The same page has the commands to connect a client, the tools and the recent activity. **Agent permissions** in Settings lists every connection with its "changes without asking" switch.
 
 ## Connect a client
 
-Agents start a small connector program that comes with Power Tools. It relays to the running app, and it needs no token in any config file. Each time Power Tools starts, it copies the connector to `%LOCALAPPDATA%\Power Tools\mcp\Dyno.McpConnector.exe`, outside the install folder, so an agent keeping the connector running never blocks a Power Tools update. The dialog shows the exact commands for your user. Copy them from there. They look like this.
+Agents start a small connector program that comes with Dyno. It relays to the running app, and it needs no token in any config file. Each time Dyno starts, it copies the connector to `%LOCALAPPDATA%\Dyno\mcp\Dyno.McpConnector.exe`, outside the install folder, so an agent keeping the connector running never blocks a Dyno update. The dialog shows the exact commands for your user. Copy them from there. They look like this.
 
 **Claude Code**
 
 ```
-claude mcp add --scope user powertools -- "%LOCALAPPDATA%\Power Tools\mcp\Dyno.McpConnector.exe"
+claude mcp add --scope user dyno -- "%LOCALAPPDATA%\Dyno\mcp\Dyno.McpConnector.exe"
 ```
 
-`--scope user` makes Power Tools available in every folder you open Claude Code in. Without it, Claude Code only loads the server in the folder where you ran the command.
+`--scope user` makes Dyno available in every folder you open Claude Code in. Without it, Claude Code only loads the server in the folder where you ran the command.
 
 **Claude Desktop**, in `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "powertools": {
-      "command": "C:\\Users\\<you>\\AppData\\Local\\Power Tools\\mcp\\Dyno.McpConnector.exe",
+    "dyno": {
+      "command": "C:\\Users\\<you>\\AppData\\Local\\Dyno\\mcp\\Dyno.McpConnector.exe",
       "args": []
     }
   }
@@ -40,44 +40,44 @@ claude mcp add --scope user powertools -- "%LOCALAPPDATA%\Power Tools\mcp\Dyno.M
 ```json
 {
   "servers": {
-    "powertools": {
+    "dyno": {
       "type": "stdio",
-      "command": "C:\\Users\\<you>\\AppData\\Local\\Power Tools\\mcp\\Dyno.McpConnector.exe",
+      "command": "C:\\Users\\<you>\\AppData\\Local\\Dyno\\mcp\\Dyno.McpConnector.exe",
       "args": []
     }
   }
 }
 ```
 
-If Power Tools is not running when the client starts, the client still connects and shows no tools. Start Power Tools and turn the server on; the tools appear without restarting the client.
+If Dyno is not running when the client starts, the client still connects and shows no tools. Start Dyno and turn the server on; the tools appear without restarting the client.
 
-The dialog shows the real path in place of `%LOCALAPPDATA%`; use that, since not every client expands variables. Development runs copy the connector to `%LOCALAPPDATA%\Power Tools Dev\mcp` and add `--discovery` with the dev discovery file.
+The dialog shows the real path in place of `%LOCALAPPDATA%`; use that, since not every client expands variables. An install from before the rename to Dyno keeps its Power Tools folders, so its path is `%LOCALAPPDATA%\Power Tools\mcp\Dyno.McpConnector.exe`. Development runs copy the connector to `%LOCALAPPDATA%\Dyno Dev\mcp` and add `--discovery` with the dev discovery file.
 
 ### Updating an older setup
 
-Setups made before this connector start `<install folder>\resources\api\PowerTools.API.exe --mcp-connector`. That still works for now, but it is deprecated: while the agent runs, the file stays locked and Power Tools cannot install updates. **Agents (MCP)** looks for such setups in `~/.claude.json`, `claude_desktop_config.json` and VS Code's user `mcp.json`, warns about them, and shows the commands that replace them. It never edits those files. Workspace `.vscode/mcp.json` files are not checked; update them by hand.
+Setups made before this connector start `<install folder>\resources\api\PowerTools.API.exe --mcp-connector`. That file is no longer installed (the local API is now `Dyno.Api.exe`), so these setups stop working until you replace them. **Agents (MCP)** looks for such setups in `~/.claude.json`, `claude_desktop_config.json` and VS Code's user `mcp.json`, warns about them, and shows the commands that replace them. It never edits those files. Workspace `.vscode/mcp.json` files are not checked; update them by hand.
 
 ### When the connector is updated
 
-Power Tools copies the connector only when the bundled one differs from the copy. If an agent is running the copy, it is locked; Power Tools leaves it as it is and copies on a later start. An older connector keeps working with a newer app: it only reads the discovery file (`port`, `token`) and relays MCP over HTTP on `127.0.0.1`.
+Dyno copies the connector only when the bundled one differs from the copy. If an agent is running the copy, it is locked; Dyno leaves it as it is and copies on a later start. An older connector keeps working with a newer app: it only reads the discovery file (`port`, `token`) and relays MCP over HTTP on `127.0.0.1`.
 
 ## Connections
 
-Every tool takes an optional `connection`, the display name of a saved connection such as `Contoso · Dev`. Without it, the agent uses the connection that is active in Power Tools. Agents can list the names with `connections_list`.
+Every tool takes an optional `connection`, the display name of a saved connection such as `Contoso · Dev`. Without it, the agent uses the connection that is active in Dyno. Agents can list the names with `connections_list`.
 
 ## What asks you first
 
-Power Tools decides this for every call. The agent cannot change it.
+Dyno decides this for every call. The agent cannot change it.
 
 | Kind of call | What happens |
 | --- | --- |
 | Reads (listing, metadata, queries) | Run without asking. |
-| Changes (creating or updating records, columns, solutions and so on) | Ask in Power Tools, unless the connection allows them without asking. |
+| Changes (creating or updating records, columns, solutions and so on) | Ask in Dyno, unless the connection allows them without asking. |
 | Destructive calls | **Always ask.** No setting turns this off. |
 
 To let an agent make non-destructive changes without asking on one connection, open **Manage connections**, pick the connection and turn on **Let agents make non-destructive changes without asking**. It is off for every connection until you do.
 
-Always asking covers `records_delete`, `remove` and `solution_import`, any plan with a destructive step (for example rolling up patches, or lowering a column's maximum length), and any Dataverse message Power Tools does not know. The dialog says what will be removed. **Deny** is the default button. If you do not answer in 5 minutes, the call fails. If Power Tools is in the background, you get a notification and the window flashes.
+Always asking covers `records_delete`, `remove` and `solution_import`, any plan with a destructive step (for example rolling up patches, or lowering a column's maximum length), and any Dataverse message Dyno does not know. The dialog says what will be removed. **Deny** is the default button. If you do not answer in 5 minutes, the call fails. If Dyno is in the background, you get a notification and the window flashes.
 
 New tables, columns, choices and similar components go into an unmanaged solution, whose publisher decides their prefix.
 
@@ -102,14 +102,14 @@ Data that comes back from Dataverse is marked as untrusted. Agents are told neve
 
 Record deletes and component removal are separate groups, so allowing one never allows the other.
 
-The server also offers guides as MCP resources, which tool descriptions point to. `powertools://guides/cloud-flows` explains the `flow_apply` spec: the definition, connection references, and what to do when a connector needs a sign-in. An agent cannot create connections: a flow whose connection references have no connection stays off, and the result names the connectors to sign in to in the maker portal. `powertools://guides/classic-workflows` explains the `process_apply` spec: triggers, steps, values and conditions, and how a process read with `inspect_solution` is sent back.
+The server also offers guides as MCP resources, which tool descriptions point to. `dyno://guides/cloud-flows` explains the `flow_apply` spec: the definition, connection references, and what to do when a connector needs a sign-in. An agent cannot create connections: a flow whose connection references have no connection stays off, and the result names the connectors to sign in to in the maker portal. `dyno://guides/classic-workflows` explains the `process_apply` spec: triggers, steps, values and conditions, and how a process read with `inspect_solution` is sent back.
 
 ### How a change runs
 
-Every tool that changes something takes the state you want, not a list of commands. Before it changes anything, Power Tools reads the environment and makes a plan. The dialog shows that plan, step by step in the order the steps run, not the agent's arguments. Only what differs runs, so sending the same spec again changes nothing, and nothing the spec leaves out is removed. What runs is exactly what you approved: if the environment changes between the dialog and the run, the call is refused and nothing changes. A step that cannot run on this environment (for example a connection reference on-premises) or that Dataverse does not allow (for example changing a column's type) is shown with the reason; the apply stops there, and the dialog says which steps run before it. An agent can ask for the plan alone with `dryRun`, which never asks you.
+Every tool that changes something takes the state you want, not a list of commands. Before it changes anything, Dyno reads the environment and makes a plan. The dialog shows that plan, step by step in the order the steps run, not the agent's arguments. Only what differs runs, so sending the same spec again changes nothing, and nothing the spec leaves out is removed. What runs is exactly what you approved: if the environment changes between the dialog and the run, the call is refused and nothing changes. A step that cannot run on this environment (for example a connection reference on-premises) or that Dataverse does not allow (for example changing a column's type) is shown with the reason; the apply stops there, and the dialog says which steps run before it. An agent can ask for the plan alone with `dryRun`, which never asks you.
 
 These tools work the same on Dataverse online and on-premises. Where a feature is missing, the plan says so and names what works instead.
 
 ## Activity log
 
-**Recent activity** on the page shows what agents did: when, which tool, which connection and the outcome. It is kept on this computer for 30 days, in your Power Tools user data folder, and never sent anywhere. It holds tool names and short summaries, not tokens or record contents.
+**Recent activity** on the page shows what agents did: when, which tool, which connection and the outcome. It is kept on this computer for 30 days, in your Dyno user data folder, and never sent anywhere. It holds tool names and short summaries, not tokens or record contents.

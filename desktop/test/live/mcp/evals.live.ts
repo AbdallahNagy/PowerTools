@@ -1,5 +1,5 @@
 /**
- * Agent evals: each scenario in evals/mcp/scenarios runs Claude Code headless with the Power Tools MCP server, on
+ * Agent evals: each scenario in evals/mcp/scenarios runs Claude Code headless with the Dyno MCP server, on
  * every sandbox, then checks the sandbox with plain MCP queries (never a model's judgement). Opt-in:
  *   npm run eval:mcp
  * Results go to evals/mcp/results/<time>.json (not committed).

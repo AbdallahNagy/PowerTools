@@ -96,7 +96,7 @@ export function authorize(manifest: Manifest, method: MethodName, args: unknown)
       return { ok: false, message: `Message "${message}" cannot be run by a community tool` };
     }
     if (!manifest.messages.includes(message)) {
-      return { ok: false, message: `Message "${message}" is not declared in powertools-tool.json` };
+      return { ok: false, message: `Message "${message}" is not declared in dyno-tool.json` };
     }
     const implied = MESSAGE_PERMISSION_BY_LOWER.get(message.toLowerCase()) ?? null;
     if (implied) needs.push(implied);

@@ -25,7 +25,7 @@ describe("title bar", () => {
     );
 
     const titleBar = await screen.findByTestId("title-bar");
-    const mark = screen.getByRole("img", { name: "Power Tools" });
+    const mark = screen.getByRole("img", { name: "Dyno" });
     const file = screen.getByRole("button", { name: "File" });
     const edit = screen.getByRole("button", { name: "Edit" });
     const view = screen.getByRole("button", { name: "View" });

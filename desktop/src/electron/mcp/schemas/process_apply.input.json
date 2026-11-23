@@ -1,5 +1,5 @@
 {
-  "description": "A classic workflow or custom process action, saved through a solution import so it behaves the same online and on-premises. The steps replace the process\u0027s steps. See the guide powertools://guides/classic-workflows.",
+  "description": "A classic workflow or custom process action, saved through a solution import so it behaves the same online and on-premises. The steps replace the process\u0027s steps. See the guide dyno://guides/classic-workflows.",
   "type": "object",
   "properties": {
     "solution": {
@@ -462,7 +462,7 @@
             "additionalProperties": false
           },
           "keep": {
-            "description": "A step Power Tools reads but cannot write (for example a custom step with outputs): its id from inspect_solution, kept exactly as it is.",
+            "description": "A step Dyno reads but cannot write (for example a custom step with outputs): its id from inspect_solution, kept exactly as it is.",
             "type": "string"
           },
           "summary": {

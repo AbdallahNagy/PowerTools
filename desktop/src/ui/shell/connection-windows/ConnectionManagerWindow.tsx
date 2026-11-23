@@ -400,7 +400,7 @@ function ImportDialog({
   return (
     <Modal
       open
-      title={`Import from ${preview.source === "xrmtoolbox" ? "XrmToolBox" : "Power Tools"}`}
+      title={`Import from ${preview.source === "xrmtoolbox" ? "XrmToolBox" : "Dyno"}`}
       description={preview.fileName}
       onClose={onClose}
       busy={busy}

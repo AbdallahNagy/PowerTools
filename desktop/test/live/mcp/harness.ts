@@ -1,6 +1,6 @@
 /**
  * Shared code for the opt-in MCP live tests and agent evals (desktop/docs/mcp-tool-architecture.md, "Making sure it
- * works"). They run against dedicated sandboxes, one online and one on-premises, through a running Power Tools app,
+ * works"). They run against dedicated sandboxes, one online and one on-premises, through a running Dyno app,
  * never production. The pure functions here are unit-tested in test/electron/mcp/liveHarness.test.ts.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
@@ -16,25 +16,27 @@ export interface Sandbox {
   /** "online" or "onprem": the label results are grouped by. */
   name: string;
   kind: "online" | "onpremise";
-  /** The display name of the saved Power Tools connection for this sandbox. */
+  /** The display name of the saved Dyno connection for this sandbox. */
   connection: string;
 }
 
 export interface LiveConfig {
   sandboxes: Sandbox[];
-  /** Power Tools' discovery file. Default: %APPDATA%\Power Tools\mcp-endpoint.json. */
+  /** Dyno's discovery file. Default: %APPDATA%\Dyno\mcp-endpoint.json, or the Power Tools folder of an older install. */
   endpointFile?: string;
-  /** Power Tools' activity log folder, read to count approvals. Default: next to the endpoint file. */
+  /** Dyno's activity log folder, read to count approvals. Default: next to the endpoint file. */
   activityDir?: string;
   /** The Claude Code command for evals. Default "claude". */
   claudeCommand?: string;
-  /** An MCP config file for Claude Code that adds the Power Tools connector as "powertools". */
+  /** An MCP config file for Claude Code that adds the Dyno connector as "powertools". */
   claudeMcpConfig?: string;
 }
 
 export function defaultEndpointFile(env: NodeJS.ProcessEnv = process.env): string {
   const appData = env.APPDATA ?? join(homedir(), "AppData", "Roaming");
-  return join(appData, "Power Tools", "mcp-endpoint.json");
+  // The app keeps an older install's "Power Tools" folder; see src/electron/userDataFolder.ts.
+  const folder = !existsSync(join(appData, "Dyno")) && existsSync(join(appData, "Power Tools")) ? "Power Tools" : "Dyno";
+  return join(appData, folder, "mcp-endpoint.json");
 }
 
 /** Reads and checks the sandbox config. Answers why it is unusable instead of throwing. */
@@ -64,10 +66,10 @@ export function loadLiveConfig(env: NodeJS.ProcessEnv = process.env): { config?:
   return parseLiveConfig(JSON.parse(readFileSync(path, "utf-8")));
 }
 
-/** Connects to the running Power Tools MCP server as a plain MCP client. */
+/** Connects to the running Dyno MCP server as a plain MCP client. */
 export async function connect(config: LiveConfig): Promise<Client> {
   const file = config.endpointFile ?? defaultEndpointFile();
-  if (!existsSync(file)) throw new Error(`Power Tools is not serving MCP: ${file} is missing. Start the app and turn on the MCP server.`);
+  if (!existsSync(file)) throw new Error(`Dyno is not serving MCP: ${file} is missing. Start the app and turn on the MCP server.`);
   const { port, token } = JSON.parse(readFileSync(file, "utf-8")) as { port: number; token: string };
   const client = new Client({ name: "powertools-live-tests", version: "1" });
   await client.connect(
@@ -217,7 +219,7 @@ export interface TranscriptMetrics {
 }
 
 /**
- * Reads the stream-json transcript of `claude -p --output-format stream-json --verbose`: which Power Tools tools the
+ * Reads the stream-json transcript of `claude -p --output-format stream-json --verbose`: which Dyno tools the
  * agent called, how many results were errors, and whether it finished.
  */
 export function readTranscript(lines: string): TranscriptMetrics {
@@ -245,7 +247,7 @@ export function readTranscript(lines: string): TranscriptMetrics {
   return metrics;
 }
 
-/** Counts approvals Power Tools asked the user for between two times, from its activity log lines. */
+/** Counts approvals Dyno asked the user for between two times, from its activity log lines. */
 export function countApprovals(logLines: string, from: Date, to: Date): number {
   return logLines
     .split("\n")

@@ -106,7 +106,7 @@ async function openAuthBrowserWindow(
   const authWindow = new BrowserWindow({
     width: 980,
     height: 720,
-    title: "PowerTools sign in",
+    title: "Dyno sign in",
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -132,7 +132,7 @@ async function openAuthBrowserWindow(
 }
 
 /**
- * Interactive login in a PowerTools sign-in window. Use when no account
+ * Interactive login in a Dyno sign-in window. Use when no account
  * exists yet (first-time connect) or when silent refresh fails. Rejects with
  * SignInCancelledError if the user closes the window before signing in.
  */
@@ -150,7 +150,7 @@ export async function acquireTokenInteractive(
     successTemplate: `
       <html><body style="font-family:sans-serif;padding:40px;text-align:center;background:#14171c;color:#d3d8df">
         <h2 style="color:#4ec9b0">&#10003; Microsoft sign-in complete</h2>
-        <p>PowerTools is validating access to Dataverse. You can close this tab and return to PowerTools.</p>
+        <p>Dyno is validating access to Dataverse. You can close this tab and return to Dyno.</p>
       </body></html>`,
     errorTemplate: renderAuthenticationErrorTemplate(),
   });

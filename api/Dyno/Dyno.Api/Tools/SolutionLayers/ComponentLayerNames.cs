@@ -8,7 +8,7 @@ public sealed record ComponentDefinition(int ComponentType, string Name, string?
 
 /// <summary>
 /// Maps solution component type numbers to the msdyn_solutioncomponentname value used to read layers.
-/// Written for Power Tools from the documented solutioncomponent.componenttype choice values.
+/// Written for Dyno from the documented solutioncomponent.componenttype choice values.
 /// </summary>
 public static class ComponentLayerNames
 {

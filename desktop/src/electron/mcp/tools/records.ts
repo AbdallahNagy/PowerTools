@@ -51,7 +51,7 @@ export const executeMessage: AgentTool = {
   group: "records",
   title: "Run a Dataverse message",
   description:
-    "Changes the environment. Runs a Dataverse message (SDK request or Custom API) by name, for what no other tool covers. Power Tools decides the effect from the message: known reads run, known writes ask, unknown messages ask as destructive. Wrappers like ExecuteMultiple are refused.",
+    "Changes the environment. Runs a Dataverse message (SDK request or Custom API) by name, for what no other tool covers. Dyno decides the effect from the message: known reads run, known writes ask, unknown messages ask as destructive. Wrappers like ExecuteMultiple are refused.",
   inputSchema: {
     type: "object",
     properties: {

@@ -52,7 +52,7 @@ export const viewApply: AgentTool = applyTool({
   group: "ui",
   title: "Apply a view",
   description:
-    "Changes the environment. Creates a public view or updates a public, advancedFind, associated, quickFind or lookup view: columns and widths, filter, sort, quick find columns, default view. Power Tools writes the FetchXML and layout so they match. Parts left out stay as they are. Read a view in this shape with inspect_ui kind view.",
+    "Changes the environment. Creates a public view or updates a public, advancedFind, associated, quickFind or lookup view: columns and widths, filter, sort, quick find columns, default view. Dyno writes the FetchXML and layout so they match. Parts left out stay as they are. Read a view in this shape with inspect_ui kind view.",
   spec: viewSpec,
   describe: (args, plan) => `apply view ${str(args.table)}/${str(args.name ?? args.type ?? "public")} (${steps(plan.steps.length)})`,
   summarize: (args) => `view_apply ${str(args.table)}`,
@@ -172,7 +172,7 @@ export const flowApply: AgentTool = applyTool({
   group: "logic",
   title: "Apply a cloud flow",
   description:
-    "Changes the environment. Creates or updates a cloud flow from its definition, creates missing connection references, and turns it on or off. A flow whose references have no connection stays off; the result names the connectors the user must sign in to. Online only; on-premises, build a classic workflow with process_apply. Read the guide powertools://guides/cloud-flows first.",
+    "Changes the environment. Creates or updates a cloud flow from its definition, creates missing connection references, and turns it on or off. A flow whose references have no connection stays off; the result names the connectors the user must sign in to. Online only; on-premises, build a classic workflow with process_apply. Read the guide dyno://guides/cloud-flows first.",
   spec: flowSpec,
   describe: (args, plan) => `apply cloud flow ${str(args.name)} (${steps(plan.steps.length)})`,
   summarize: (args) => `flow_apply ${str(args.name)}`,
@@ -185,7 +185,7 @@ export const processApply: AgentTool = applyTool({
   group: "logic",
   title: "Apply a classic workflow",
   description:
-    "Changes the environment. Creates or updates a classic workflow or custom process action from typed steps (update, create, send email, assign, change status, conditions, child workflow, action, custom step, stop) and activates it or leaves it in draft. Works online and on-premises. Read one with inspect_solution kind process. Read the guide powertools://guides/classic-workflows first.",
+    "Changes the environment. Creates or updates a classic workflow or custom process action from typed steps (update, create, send email, assign, change status, conditions, child workflow, action, custom step, stop) and activates it or leaves it in draft. Works online and on-premises. Read one with inspect_solution kind process. Read the guide dyno://guides/classic-workflows first.",
   spec: processSpec,
   describe: (args, plan) => `apply ${args.kind === "action" ? "action" : "workflow"} ${str(args.name)} (${steps(plan.steps.length)})`,
   summarize: (args) => `process_apply ${str(args.name)}`,

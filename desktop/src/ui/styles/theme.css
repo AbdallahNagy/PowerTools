@@ -1,5 +1,5 @@
 /*
- * Power Tools design tokens.
+ * Dyno design tokens.
  *
  * Tokens are named by role, not by value, so every theme can redefine them.
  * Tailwind generates utilities from each `--color-*` name:

@@ -140,7 +140,7 @@ export function validateChangelog(text) {
 export function releaseNotes(text, version) {
   const release = parseChangelog(text).releases.find((r) => r.version === version);
   if (!release?.body) return undefined;
-  return `# Power Tools ${version}\n\n${release.body}\n`;
+  return `# Dyno ${version}\n\n${release.body}\n`;
 }
 
 /** The version after `current` for a patch, minor, or major bump, or an exact x.y.z. */

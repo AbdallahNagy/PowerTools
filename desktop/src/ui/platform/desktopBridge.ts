@@ -176,7 +176,7 @@ export interface McpStatusInfo {
   tools: McpToolInfo[];
 }
 
-/** A community tool's validated powertools-tool.json. Mirrors src/electron/communityTools/manifest.ts. */
+/** A community tool's validated dyno-tool.json. Mirrors src/electron/communityTools/manifest.ts. */
 export interface CommunityToolManifest {
   manifestVersion: 1;
   id: string;

@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 namespace Dyno.Mcp;
 
 /// <summary>
-/// The stdio side of the Power Tools MCP server. An MCP client starts this as a child process and
+/// The stdio side of the Dyno MCP server. An MCP client starts this as a child process and
 /// speaks newline-delimited JSON-RPC to it; the connector relays each message to the endpoint the
 /// desktop app hosts on loopback. It holds no MCP logic: when the app is not running it only answers
 /// enough (initialize, tools/list, ping) to stay connected, then picks the app up when it appears.
@@ -21,10 +21,10 @@ namespace Dyno.Mcp;
 public static class McpConnector
 {
     public const string OfflineMessage =
-        "Power Tools is not running or its MCP server is off. Start Power Tools and turn it on under File → Agents (MCP)…; the tools will appear automatically.";
+        "Dyno is not running or its MCP server is off. Start Dyno and turn it on under File → Agents (MCP)…; the tools will appear automatically.";
 
     public const string InterruptedMessage =
-        "The connection to Power Tools was lost while the call was running. It may have completed; check before retrying.";
+        "The connection to Dyno was lost while the call was running. It may have completed; check before retrying.";
 
     public static async Task<int> RunAsync(string[] args, Stream stdin, Stream stdout, CancellationToken ct)
     {
@@ -112,7 +112,7 @@ public static class McpConnector
                     try { message = JsonNode.Parse(line); }
                     catch (JsonException)
                     {
-                        Console.Error.WriteLine("powertools-mcp: answering a line that is not JSON with a parse error");
+                        Console.Error.WriteLine("dyno-mcp: answering a line that is not JSON with a parse error");
                         WriteError(null, -32700, "Parse error");
                         continue;
                     }
@@ -165,7 +165,7 @@ public static class McpConnector
             catch (OperationCanceledException) when (_lifetime.IsCancellationRequested) { }
             catch (Exception ex)
             {
-                Console.Error.WriteLine($"powertools-mcp: {ex.GetType().Name}: {ex.Message}");
+                Console.Error.WriteLine($"dyno-mcp: {ex.GetType().Name}: {ex.Message}");
                 if (message["id"] is not null) WriteError(message["id"], -32000, OfflineMessage);
             }
         }
@@ -225,7 +225,7 @@ public static class McpConnector
             {
                 WriteError(message["id"], -32000, outcome switch
                 {
-                    Outcome.Error => $"Power Tools answered HTTP {status}.",
+                    Outcome.Error => $"Dyno answered HTTP {status}.",
                     Outcome.Lost when toolCall => InterruptedMessage,
                     _ => OfflineMessage,
                 });
@@ -262,7 +262,7 @@ public static class McpConnector
             var result = new JsonObject
             {
                 ["protocolVersion"] = message["params"]?["protocolVersion"]?.DeepClone() ?? "2025-03-26",
-                ["serverInfo"] = new JsonObject { ["name"] = "powertools", ["version"] = "connector" },
+                ["serverInfo"] = new JsonObject { ["name"] = "dyno", ["version"] = "connector" },
                 ["capabilities"] = new JsonObject
                 {
                     ["tools"] = new JsonObject { ["listChanged"] = true },
@@ -331,7 +331,7 @@ public static class McpConnector
         private async Task<string?> ReplayInitializeAsync((int Port, string Token) endpoint)
         {
             if (_initialize?.DeepClone() is not JsonObject init) return null;
-            init["id"] = "powertools-connector-init";
+            init["id"] = "dyno-connector-init";
             string? sessionId = null;
             var (outcome, _) = await HandshakePostAsync(endpoint, null, init, false, s => sessionId = s);
             if (outcome != Outcome.Ok || sessionId is null) return null;
@@ -355,7 +355,7 @@ public static class McpConnector
             }
             catch (OperationCanceledException) when (!_lifetime.IsCancellationRequested)
             {
-                Console.Error.WriteLine("powertools-mcp: Power Tools did not answer the handshake in time");
+                Console.Error.WriteLine("dyno-mcp: Dyno did not answer the handshake in time");
                 return (Outcome.Lost, 0);
             }
         }

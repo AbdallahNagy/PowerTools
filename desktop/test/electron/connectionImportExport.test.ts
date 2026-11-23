@@ -105,9 +105,9 @@ describe("XrmToolBox import", () => {
   });
 
   it("rejects files it cannot read", () => {
-    expect(() => parseImportFile("hello")).toThrow("Choose a Power Tools export");
+    expect(() => parseImportFile("hello")).toThrow("Choose a Dyno export");
     expect(() => parseImportFile("{ nope")).toThrow("not valid JSON");
-    expect(() => parseImportFile('{"connections": []}')).toThrow("not a Power Tools connections export");
+    expect(() => parseImportFile('{"connections": []}')).toThrow("not a Dyno connections export");
     expect(() => parseImportFile("<Something/>")).toThrow("no XrmToolBox connections");
   });
 
@@ -139,7 +139,7 @@ describe("XrmToolBox import", () => {
   });
 });
 
-describe("Power Tools export", () => {
+describe("Dyno export", () => {
   it("round-trips without secrets and keeps ids so a re-import is a duplicate", () => {
     const store = emptyStore();
     store.add({ envUrl: "https://contoso.crm.dynamics.com", crmType: "online", homeAccountId: "home-1", account: null, organization: "Contoso", environment: "Production", browser: { id: "chrome", profile: "Default" } });
@@ -150,12 +150,24 @@ describe("Power Tools export", () => {
     expect(file).not.toContain("home-1");
 
     const parsed = parseImportFile(file);
-    expect(parsed.source).toBe("powertools");
+    expect(parsed.source).toBe("dyno");
+    expect(JSON.parse(file).format).toBe("dyno-connections");
     expect(classifyImport(parsed.entries, store.list()).map((entry) => entry.status)).toEqual(["duplicate", "duplicate"]);
 
     const fresh = emptyStore();
     expect(commitImport(fresh, classifyImport(parsed.entries, fresh.list()), ["p0", "p1"])).toBe(2);
     expect(fresh.list().map((conn) => conn.id)).toEqual(store.list().map((conn) => conn.id));
     expect(fresh.get(store.list()[1].id)).toMatchObject({ needsPassword: true, username: "jo", domain: "LOCAL" });
+  });
+
+  it("imports a file exported before the rename to Dyno", () => {
+    const store = emptyStore();
+    store.add({ envUrl: "https://contoso.crm.dynamics.com", crmType: "online", homeAccountId: null, account: null, organization: "Contoso", environment: "Production", browser: null });
+    const older = JSON.stringify({ ...JSON.parse(exportConnections(store.list())), format: "powertools-connections" });
+
+    const parsed = parseImportFile(older);
+
+    expect(parsed.source).toBe("dyno");
+    expect(parsed.entries).toHaveLength(1);
   });
 });

@@ -63,7 +63,7 @@ describe("live harness: config and scenarios", () => {
 });
 
 describe("live harness: transcripts and approvals", () => {
-  it("counts Power Tools tool calls and errors from stream-json", () => {
+  it("counts Dyno tool calls and errors from stream-json", () => {
     const lines = [
       JSON.stringify({ type: "assistant", message: { content: [{ type: "tool_use", name: "mcp__powertools__connections_list" }] } }),
       JSON.stringify({ type: "user", message: { content: [{ type: "tool_result", is_error: true }] } }),

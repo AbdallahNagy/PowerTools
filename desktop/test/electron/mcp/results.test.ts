@@ -40,7 +40,7 @@ describe("clampPageSize", () => {
 describe("results", () => {
   it("marks Dataverse results as untrusted", () => {
     const r = dataverseResult("1 row", { rows: [1] }, "A · Dev");
-    expect(r._meta?.["powertools/untrusted"]).toBe(true);
+    expect(r._meta?.["dyno/untrusted"]).toBe(true);
     expect((r.content[0] as { text: string }).text.startsWith(UNTRUSTED_PREFIX)).toBe(true);
     expect(r.structuredContent).toEqual({ connection: "A · Dev", rows: [1] });
   });

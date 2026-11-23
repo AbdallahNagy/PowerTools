@@ -4,11 +4,11 @@ import { normalizeDriveLetter } from "../scripts/vitest.mjs";
 
 describe("normalizeDriveLetter", () => {
   it("uppercases a lowercase Windows drive letter", () => {
-    expect(normalizeDriveLetter("d:\\dev\\PowerTools\\desktop", "win32")).toBe("D:\\dev\\PowerTools\\desktop");
+    expect(normalizeDriveLetter("d:\\dev\\Dyno\\desktop", "win32")).toBe("D:\\dev\\Dyno\\desktop");
   });
 
   it("leaves an uppercase drive letter alone", () => {
-    expect(normalizeDriveLetter("D:\\dev\\PowerTools\\desktop", "win32")).toBe("D:\\dev\\PowerTools\\desktop");
+    expect(normalizeDriveLetter("D:\\dev\\Dyno\\desktop", "win32")).toBe("D:\\dev\\Dyno\\desktop");
   });
 
   it("leaves paths on other platforms alone", () => {

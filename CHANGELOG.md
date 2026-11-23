@@ -17,7 +17,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 ### Changed
 
 - **Data Migration: select all fields from the table header.** A checkbox in the field table's header replaces the Select all and Select none links. It checks or clears every field shown (only the matching ones while searching) and shows a partial state when some are checked. The primary id stays selected.
-- Power Tools is being renamed to Dyno. As a first step, the local API that ships inside the app now runs as `Dyno.Api.exe` (it was `PowerTools.API.exe`), and the MCP connector is `Dyno.McpConnector.exe`.
+- **Power Tools is now Dyno.** The app's name, title bar, shortcuts and messages say Dyno. Your connections, sign-ins and settings stay where they are: an install from before the rename keeps its `Power Tools` folders. Connection exports are now `dyno-connections` files, and exports from Power Tools still import. Community tools use a `dyno-tool.json` manifest, and a folder with `powertools-tool.json` still loads. The MCP server is named `dyno` and its guides are `dyno://guides/…`. The local API and the MCP connector run as `Dyno.Api.exe` and `Dyno.McpConnector.exe`, and solutions that agents export go to `Documents\Dyno\Solutions`.
 - **The sidebar collapses to icons.** Hiding the sidebar (Ctrl+B or the title bar button) now leaves a narrow strip with every tool's icon, the connection dot, and Settings. Point at an icon to see its name at once. The tool of the active tab is marked in the sidebar.
 
 ### Fixed

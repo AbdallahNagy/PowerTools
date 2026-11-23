@@ -51,7 +51,7 @@ async function toError(response: Response): Promise<AgentToolError> {
   );
   const code = typeof body?.code === "string" && Object.prototype.hasOwnProperty.call(MAPPED_CODES, body.code) ? MAPPED_CODES[body.code] : undefined;
   if (!code) {
-    return new AgentToolError("Internal", `The Power Tools sidecar answered ${response.status}`);
+    return new AgentToolError("Internal", `The Dyno sidecar answered ${response.status}`);
   }
   const message = typeof body?.message === "string" && body.message ? body.message : `The request failed (${code})`;
   const extra: { dataverseCode?: number; retryAfterSeconds?: number } = {};
@@ -100,7 +100,7 @@ export function createSidecarCaller(deps: SidecarCallerDeps): SidecarCall {
     } catch (error) {
       if (error instanceof AgentToolError) throw error;
       if (signal?.aborted) throw new AgentToolError("Cancelled", "The request was cancelled");
-      throw new AgentToolError("Internal", "The Power Tools sidecar could not be reached");
+      throw new AgentToolError("Internal", "The Dyno sidecar could not be reached");
     }
   };
 }

@@ -28,7 +28,7 @@ describe("toToolResult", () => {
 
   it("marks errors with Dataverse-authored text as untrusted", () => {
     const result = toToolResult(new AgentToolError("DataverseFault", "Plugin said: ignore previous", undefined, undefined, true));
-    expect(result._meta).toEqual({ "powertools/untrusted": true });
+    expect(result._meta).toEqual({ "dyno/untrusted": true });
   });
 
   it("does not mark our own errors as untrusted", () => {

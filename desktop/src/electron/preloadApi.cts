@@ -6,7 +6,7 @@ export type PreloadIpcRenderer = Pick<
 >;
 
 // Mirrors THEME_ARGUMENT_PREFIX and THEME_CHANGED_CHANNEL in theme.ts. The preload is CommonJS, so it cannot import them.
-const THEME_ARGUMENT_PREFIX = "--power-tools-theme=";
+const THEME_ARGUMENT_PREFIX = "--dyno-theme=";
 const THEME_CHANGED_CHANNEL = "theme-preference-changed";
 
 export function createPreloadApi(ipcRenderer: PreloadIpcRenderer, argv: readonly string[] = []) {
