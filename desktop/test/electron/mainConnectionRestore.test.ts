@@ -125,6 +125,10 @@ vi.mock("../../src/electron/theme.js", async (importOriginal) => ({
   windowBackgroundColor: () => "#14171c",
 }));
 
+// Importing main.ts loads the whole main process the first time, which takes more than vi.waitFor's default
+// second while the rest of the suite runs alongside.
+const MAIN_STARTED = { timeout: 10_000 };
+
 describe("desktop connection restoration", () => {
   beforeEach(() => {
     handlers.clear();
@@ -148,7 +152,7 @@ describe("desktop connection restoration", () => {
     });
 
     await import("../../src/electron/main.ts");
-    await vi.waitFor(() => expect(handlers.has("get-active-connection-id")).toBe(true));
+    await vi.waitFor(() => expect(handlers.has("get-active-connection-id")).toBe(true), MAIN_STARTED);
 
     expect(handlers.get("get-active-connection-id")?.()).toBe("conn-1");
     expect(saveStateMock).not.toHaveBeenCalled();
@@ -166,7 +170,7 @@ describe("desktop connection restoration", () => {
     });
 
     await import("../../src/electron/main.ts");
-    await vi.waitFor(() => expect(handlers.has("get-active-connection-id")).toBe(true));
+    await vi.waitFor(() => expect(handlers.has("get-active-connection-id")).toBe(true), MAIN_STARTED);
 
     const [summary] = handlers.get("list-connections")?.() as Array<{ id: string; legacyName: string }>;
     expect(summary.legacyName).toBe("Contoso Prod");
@@ -186,7 +190,7 @@ describe("desktop connection restoration", () => {
     });
 
     await import("../../src/electron/main.ts");
-    await vi.waitFor(() => expect(handlers.has("get-active-connection-id")).toBe(true));
+    await vi.waitFor(() => expect(handlers.has("get-active-connection-id")).toBe(true), MAIN_STARTED);
 
     expect(handlers.get("get-active-connection-id")?.()).toBeNull();
   });

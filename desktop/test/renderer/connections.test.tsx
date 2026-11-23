@@ -324,6 +324,39 @@ describe("shared connections", () => {
     expect(getActiveConnectionId).toHaveBeenCalledTimes(1);
   });
 
+  it("stamps a tool opened as soon as the active connection shows", async () => {
+    renderWithProviders(
+      <ConnectionsProvider>
+        <TabProvider>
+          <ConnectionState label="connection state" />
+          <OpenToolProbe />
+        </TabProvider>
+      </ConnectionsProvider>,
+      {
+        bridgeOverrides: {
+          getActiveConnectionId: async () => "Primary",
+          listConnections: async () => availableConnections,
+        },
+      },
+    );
+    const state = screen.getByRole("status", { name: "connection state" });
+
+    // Click in the same moment the active connection first renders, before anything else gets to run.
+    await new Promise<void>((resolve) => {
+      const observer = new MutationObserver(() => {
+        if (!state.textContent?.endsWith("|Primary")) return;
+        observer.disconnect();
+        fireEvent.click(screen.getByRole("button", { name: "Open FetchXML Builder" }));
+        resolve();
+      });
+      observer.observe(state, { childList: true, characterData: true, subtree: true });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByRole("status", { name: "tab connections" })).toHaveTextContent("fetchxml-builder:Primary"),
+    );
+  });
+
   it("stamps new tool tabs with the active connection and leaves them when it changes", async () => {
     const setActiveConnection = vi.fn(async () => ({ success: true as const }));
     const { bridge } = renderWithProviders(
