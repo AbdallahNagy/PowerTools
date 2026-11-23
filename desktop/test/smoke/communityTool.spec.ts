@@ -46,7 +46,7 @@ async function openManager(app: ElectronApplication): Promise<void> {
 }
 
 function toolFrame(window: Page) {
-  return window.frames().find((frame) => frame.url().startsWith("pt-tool://"));
+  return window.frames().find((frame) => frame.url().startsWith("dyno-tool://"));
 }
 
 test("loads the reference community tool in a sandboxed frame that follows the shell theme", async () => {
@@ -62,7 +62,7 @@ test("loads the reference community tool in a sandboxed frame that follows the s
       const iframe = window.locator("iframe");
       await expect(iframe).toHaveAttribute("sandbox", "allow-scripts");
       const src = await iframe.getAttribute("src");
-      expect(src?.startsWith("pt-tool://dyno.attribute-explorer-reference/")).toBe(true);
+      expect(src?.startsWith("dyno-tool://dyno.attribute-explorer-reference/")).toBe(true);
 
       await expect(window.frameLocator("iframe").getByText("No environment selected")).toBeVisible({
         timeout: 30_000,

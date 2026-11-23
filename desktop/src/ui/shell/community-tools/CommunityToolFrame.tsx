@@ -253,7 +253,7 @@ function ManifestFrame({
         ref={iframeRef}
         title={manifest.name}
         sandbox="allow-scripts"
-        src={`pt-tool://${manifest.id}/${manifest.entry}`}
+        src={`dyno-tool://${manifest.id}/${manifest.entry}`}
         onLoad={onFrameLoad}
         className="h-full w-full border-0 bg-canvas"
       />

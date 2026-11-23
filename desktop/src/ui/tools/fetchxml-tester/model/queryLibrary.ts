@@ -1,8 +1,10 @@
 import { formatXml, readPrimaryEntityName, XmlFormatError } from "./formatXml";
 import type { SavedQuery } from "./types";
 
-export const QUERY_LIBRARY_STORAGE_KEY = "powertools.fetchxml-tester.queries";
-export const QUERY_LIBRARY_CHANGED_EVENT = "powertools:fetchxml-tester-library-changed";
+export const QUERY_LIBRARY_STORAGE_KEY = "dyno.fetchxml-tester.queries";
+/** Where Power Tools kept the library. Read until the first save writes the new key. */
+export const LEGACY_QUERY_LIBRARY_STORAGE_KEY = "powertools.fetchxml-tester.queries";
+export const QUERY_LIBRARY_CHANGED_EVENT = "dyno:fetchxml-tester-library-changed";
 
 export interface QueryStore {
   getItem(key: string): string | null;
@@ -21,7 +23,7 @@ export type SaveQueryResult =
   | { ok: false; error: string };
 
 export function loadQueries(store: QueryStore): SavedQuery[] {
-  const raw = store.getItem(QUERY_LIBRARY_STORAGE_KEY);
+  const raw = store.getItem(QUERY_LIBRARY_STORAGE_KEY) ?? store.getItem(LEGACY_QUERY_LIBRARY_STORAGE_KEY);
   if (!raw) return [];
 
   try {

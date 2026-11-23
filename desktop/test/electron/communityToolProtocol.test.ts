@@ -76,7 +76,7 @@ describe("toolPolicy", () => {
     );
     expect(policy).toContain("connect-src 'none'");
     expect(policy).not.toContain("127.0.0.1");
-    expect(policy).not.toMatch(/pt-tool:(?!\/\/)/);
+    expect(policy).not.toMatch(/dyno-tool:(?!\/\/)/);
   });
 
   it("allows https to each listed network host", () => {
@@ -90,7 +90,7 @@ describe("toolPolicy", () => {
 describe("resolveToolRequest", () => {
   it("serves a tool file with its type, the tool policy, and the required headers", async () => {
     const deps = fakeDeps({ files: { [join(FOLDER, "index.html")]: "<p>hi</p>" } });
-    const response = await resolveToolRequest("pt-tool://acme.demo/index.html", deps);
+    const response = await resolveToolRequest("dyno-tool://acme.demo/index.html", deps);
     expect(response.status).toBe(200);
     expect(response.body?.toString("utf8")).toBe("<p>hi</p>");
     expect(response.headers).toEqual({
@@ -110,14 +110,14 @@ describe("resolveToolRequest", () => {
     ["blob.xyz", "application/octet-stream"],
   ])("serves %s as %s", async (file, type) => {
     const deps = fakeDeps({ files: { [join(FOLDER, file)]: "x" } });
-    const response = await resolveToolRequest(`pt-tool://acme.demo/${file}`, deps);
+    const response = await resolveToolRequest(`dyno-tool://acme.demo/${file}`, deps);
     expect(response.status).toBe(200);
     expect(response.headers["Content-Type"]).toBe(type);
   });
 
   it("serves the manifest entry for the tool root", async () => {
     const deps = fakeDeps({ files: { [join(FOLDER, "app", "index.html")]: "entry" } });
-    for (const url of ["pt-tool://acme.demo/", "pt-tool://acme.demo"]) {
+    for (const url of ["dyno-tool://acme.demo/", "dyno-tool://acme.demo"]) {
       const response = await resolveToolRequest(url, deps);
       expect(response.status).toBe(200);
       expect(response.body?.toString("utf8")).toBe("entry");
@@ -127,18 +127,18 @@ describe("resolveToolRequest", () => {
 
   it("decodes the path and ignores the query and fragment", async () => {
     const deps = fakeDeps({ files: { [join(FOLDER, "my file.js")]: "x" } });
-    const response = await resolveToolRequest("pt-tool://acme.demo/my%20file.js?v=1#top", deps);
+    const response = await resolveToolRequest("dyno-tool://acme.demo/my%20file.js?v=1#top", deps);
     expect(response.status).toBe(200);
   });
 
   it.each([
-    "pt-tool://acme.demo/../secret.txt",
-    "pt-tool://acme.demo/%2e%2e/secret.txt",
-    "pt-tool://acme.demo/a/..%5c..%5csecret",
-    "pt-tool://acme.demo/a%5csecret",
-    "pt-tool://acme.demo/a%00.js",
-    "pt-tool://acme.demo/%2e%2e%2fother/index.html",
-    "pt-tool://acme.demo/%E0%A4%A",
+    "dyno-tool://acme.demo/../secret.txt",
+    "dyno-tool://acme.demo/%2e%2e/secret.txt",
+    "dyno-tool://acme.demo/a/..%5c..%5csecret",
+    "dyno-tool://acme.demo/a%5csecret",
+    "dyno-tool://acme.demo/a%00.js",
+    "dyno-tool://acme.demo/%2e%2e%2fother/index.html",
+    "dyno-tool://acme.demo/%E0%A4%A",
   ])("rejects %s with 403", async (url) => {
     const deps = fakeDeps({
       files: { [join(TOOLS, "secret.txt")]: "secret", [join(OTHER_FOLDER, "index.html")]: "other" },
@@ -154,7 +154,7 @@ describe("resolveToolRequest", () => {
     const link = join(FOLDER, "leak.txt");
     const target = join(TOOLS, "secret.txt");
     const deps = fakeDeps({ files: { [target]: "secret" }, links: { [link]: target } });
-    const response = await resolveToolRequest("pt-tool://acme.demo/leak.txt", deps);
+    const response = await resolveToolRequest("dyno-tool://acme.demo/leak.txt", deps);
     expect(response.status).toBe(403);
     expect(deps.readFile).not.toHaveBeenCalled();
   });
@@ -163,13 +163,13 @@ describe("resolveToolRequest", () => {
     const link = join(FOLDER, "alias.js");
     const target = join(FOLDER, "real.js");
     const deps = fakeDeps({ files: { [target]: "real" }, links: { [link]: target } });
-    const response = await resolveToolRequest("pt-tool://acme.demo/alias.js", deps);
+    const response = await resolveToolRequest("dyno-tool://acme.demo/alias.js", deps);
     expect(response.status).toBe(200);
     expect(response.body?.toString("utf8")).toBe("real");
   });
 
   it("returns 404 for an unknown tool id, with a policy that allows nothing", async () => {
-    const response = await resolveToolRequest("pt-tool://nobody.here/index.html", fakeDeps());
+    const response = await resolveToolRequest("dyno-tool://nobody.here/index.html", fakeDeps());
     expect(response.status).toBe(404);
     expect(response.headers).toEqual({ "Content-Security-Policy": "default-src 'none'", "X-Content-Type-Options": "nosniff" });
   });
@@ -183,26 +183,26 @@ describe("resolveToolRequest", () => {
       // The real path of the file comes back in a different case than the folder's.
       deps.realpath.mockImplementation(async (path: string) => (path === FOLDER ? FOLDER : join(FOLDER.toUpperCase(), "index.html")));
       deps.readFile.mockResolvedValue(Buffer.from("<p>hi</p>"));
-      const response = await resolveToolRequest("pt-tool://acme.demo/index.html", deps);
+      const response = await resolveToolRequest("dyno-tool://acme.demo/index.html", deps);
       expect(response.status).toBe(200);
 
       // Case matters on other systems, so the same paths are two different places there.
       platform.mockReturnValue("linux");
-      expect((await resolveToolRequest("pt-tool://acme.demo/index.html", deps)).status).toBe(403);
+      expect((await resolveToolRequest("dyno-tool://acme.demo/index.html", deps)).status).toBe(403);
     } finally {
       platform.mockRestore();
     }
   });
 
   it("returns 404 for a missing file", async () => {
-    const response = await resolveToolRequest("pt-tool://acme.demo/missing.js", fakeDeps());
+    const response = await resolveToolRequest("dyno-tool://acme.demo/missing.js", fakeDeps());
     expect(response.status).toBe(404);
   });
 
   it("returns 404 when the file cannot be read", async () => {
     const deps = fakeDeps({ files: { [join(FOLDER, "dir")]: "x" } });
     deps.readFile.mockRejectedValueOnce(Object.assign(new Error("EISDIR"), { code: "EISDIR" }));
-    const response = await resolveToolRequest("pt-tool://acme.demo/dir", deps);
+    const response = await resolveToolRequest("dyno-tool://acme.demo/dir", deps);
     expect(response.status).toBe(404);
   });
 
@@ -213,11 +213,11 @@ describe("resolveToolRequest", () => {
 });
 
 describe("registerToolScheme", () => {
-  it("registers pt-tool with the privileges the spike verified", () => {
+  it("registers dyno-tool with the privileges the spike verified", () => {
     registerToolScheme();
-    expect(TOOL_SCHEME).toBe("pt-tool");
+    expect(TOOL_SCHEME).toBe("dyno-tool");
     expect(electronProtocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
-      { scheme: "pt-tool", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
+      { scheme: "dyno-tool", privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } },
     ]);
   });
 });
@@ -227,13 +227,13 @@ describe("consent", () => {
     const deps = fakeDeps({ files: { [join(FOLDER, "index.html")]: "<p>hi</p>" } });
     deps.consented.delete("acme.demo");
 
-    const before = await resolveToolRequest("pt-tool://acme.demo/index.html", deps);
+    const before = await resolveToolRequest("dyno-tool://acme.demo/index.html", deps);
     expect(before.status).toBe(404);
     expect(before.body).toBeNull();
     expect(deps.readFile).not.toHaveBeenCalled();
 
     deps.consented.add("acme.demo");
-    const after = await resolveToolRequest("pt-tool://acme.demo/index.html", deps);
+    const after = await resolveToolRequest("dyno-tool://acme.demo/index.html", deps);
     expect(after.status).toBe(200);
   });
 });
@@ -254,9 +254,9 @@ describe("installToolProtocol", () => {
       ready,
     });
 
-    expect(electronProtocol.handle).toHaveBeenCalledWith("pt-tool", expect.any(Function));
+    expect(electronProtocol.handle).toHaveBeenCalledWith("dyno-tool", expect.any(Function));
     const handler = electronProtocol.handle.mock.calls[0][1] as (request: Request) => Promise<Response>;
-    const pending = handler(new Request("pt-tool://acme.demo/index.html"));
+    const pending = handler(new Request("dyno-tool://acme.demo/index.html"));
     loaded = true;
     finishLoading();
 
@@ -269,7 +269,7 @@ describe("installToolProtocol", () => {
   it("still answers when loading the tool list failed", async () => {
     installToolProtocol({ ...fakeDeps(), ready: Promise.reject(new Error("boom")) });
     const handler = electronProtocol.handle.mock.calls[0][1] as (request: Request) => Promise<Response>;
-    const response = await handler(new Request("pt-tool://nobody.here/index.html"));
+    const response = await handler(new Request("dyno-tool://nobody.here/index.html"));
     expect(response.status).toBe(404);
   });
 });

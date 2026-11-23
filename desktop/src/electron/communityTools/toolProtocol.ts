@@ -1,11 +1,11 @@
-// Serves each community tool's files from its own pt-tool://<tool-id> origin with a strict policy.
+// Serves each community tool's files from its own dyno-tool://<tool-id> origin with a strict policy.
 // Electron does not enforce CORS on protocol.handle responses, so the Content Security Policy
 // is what keeps one tool from reading another tool's files or reaching the local sidecar.
 import { protocol } from "electron";
 import { extname, resolve, sep } from "node:path";
 import type { CommunityToolManifest } from "./manifest.js";
 
-export const TOOL_SCHEME = "pt-tool";
+export const TOOL_SCHEME = "dyno-tool";
 
 export interface ToolProtocolDeps {
   /** True when the user has reviewed this tool's permissions. An unreviewed tool is never served. */
@@ -45,7 +45,7 @@ const CONTENT_TYPES: Record<string, string> = {
   ".txt": "text/plain",
 };
 
-// Never add the bare `pt-tool:` scheme here: it would let a tool load or fetch another tool's files.
+// Never add the bare `dyno-tool:` scheme here: it would let a tool load or fetch another tool's files.
 // connect-src lists only `https://<host>` for hosts the manifest names. Never loosen it to a bare `https:`
 // or a wildcard, and never to http:, ws:, or a loopback address: that is how a tool would reach the sidecar
 // or the rest of the machine's network.
@@ -82,9 +82,9 @@ function isInside(folder: string, file: string): boolean {
   return comparable(file).startsWith(base);
 }
 
-/** Splits `pt-tool://<id><path>` by hand: the WHATWG parser would fold `..` away before we can refuse it. */
+/** Splits `dyno-tool://<id><path>` by hand: the WHATWG parser would fold `..` away before we can refuse it. */
 function parseToolUrl(url: string): { id: string; rawPath: string } | null {
-  const match = /^pt-tool:\/\/([^/?#]*)([^?#]*)/i.exec(url);
+  const match = /^dyno-tool:\/\/([^/?#]*)([^?#]*)/i.exec(url);
   return match ? { id: match[1].toLowerCase(), rawPath: match[2] } : null;
 }
 
@@ -147,7 +147,7 @@ export function registerToolScheme(): void {
 }
 
 /**
- * Serves pt-tool:// requests. `ready` settles once the tool store has loaded the remembered
+ * Serves dyno-tool:// requests. `ready` settles once the tool store has loaded the remembered
  * folders, so a tool opened right after start-up is found.
  */
 export function installToolProtocol(deps: ToolProtocolDeps & { ready: Promise<unknown> }): void {
