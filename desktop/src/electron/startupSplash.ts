@@ -1,42 +1,12 @@
 import { BrowserWindow } from "electron";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { getAppIconPath } from "./pathResolver.js";
 import { buildStartupSplashHtml } from "./startupSplashHtml.js";
 import { currentColorScheme, windowBackgroundColor } from "./theme.js";
 
-function getStartupIconDataUrl() {
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const iconPaths = [
-    getAppIconPath(),
-    join(
-      __dirname,
-      "..",
-      "src",
-      "ui",
-      "assets",
-      "icons",
-      "dyno-icon-256.png"
-    ),
-  ];
-
-  for (const iconPath of iconPaths) {
-    try {
-      const icon = readFileSync(iconPath);
-      return `data:image/png;base64,${icon.toString("base64")}`;
-    } catch {
-      // Try the next known runtime location before falling back to text.
-    }
-  }
-
-  return undefined;
-}
-
 export function createStartupSplashWindow() {
   const splashWindow = new BrowserWindow({
-    width: 420,
-    height: 260,
+    width: 440,
+    height: 280,
     frame: false,
     resizable: false,
     movable: true,
@@ -60,7 +30,7 @@ export function createStartupSplashWindow() {
 
   void splashWindow.loadURL(
     `data:text/html;charset=utf-8,${encodeURIComponent(
-      buildStartupSplashHtml(getStartupIconDataUrl(), currentColorScheme() === "dark-orange" ? "dark-orange" : "default")
+      buildStartupSplashHtml(currentColorScheme() === "dark-orange" ? "dark-orange" : "default")
     )}`
   );
 
