@@ -1,55 +1,57 @@
 export type StartupSplashScheme = "default" | "dark-orange";
 
-const WORDMARK = "Dyno";
-
-/**
- * The logo is drawn inline (same geometry as src/ui/assets/icons/dyno-icon.svg)
- * so its blades can fan out on their own. Each blade pivots on the hub at (30, 72).
+/*
+ * The wordmark follows the Dyno logo animation: a ring draws itself, the green arc lands at the
+ * upper right, the ring spins once, then it settles in as the "o" of "dyno" while d, y and n fade in.
+ *
+ * The letters are outlines of Nunito Black (SIL Open Font License 1.1), so the splash needs no font
+ * file. Units are the font's: 1000 per em, baseline at y = 0, y pointing down.
+ * The ring is measured from the promo: center (1970, -237), mid radius 180, stroke 161.
  */
-function logoSvg() {
-  const blades = [
-    { cls: "blade b3", angle: 66, delay: 280, fill: '#ffffff" fill-opacity="0.3' },
-    { cls: "blade b2", angle: 44, delay: 140, fill: '#ffffff" fill-opacity="0.5' },
-    { cls: "blade b1", angle: 22, delay: 0, fill: "#7fe3d4" },
-  ]
-    .map(
-      ({ cls, angle, delay, fill }) =>
-        `<rect class="${cls}" style="--angle: ${angle}deg; --delay: ${delay}ms" x="23" y="16" width="14" height="62" rx="7" fill="${fill}" />`
-    )
-    .join("\n          ");
+const LETTERS = [
+  {
+    letter: "d",
+    path: "M244 11Q181 11 132 -20Q84 -51 56 -109Q29 -167 29 -246Q29 -327 56 -384Q84 -441 132 -472Q181 -503 244 -503Q299 -503 343 -477Q374 -458 391 -432V-624Q391 -668 414 -691Q437 -714 480 -714Q522 -714 546 -691Q569 -668 569 -624V-81Q569 -37 546 -14Q524 9 481 9Q439 9 416 -14Q397 -33 394 -65Q378 -36 346 -17Q301 11 244 11ZM301 -120Q328 -120 349 -134Q370 -147 382 -174Q393 -202 393 -246Q393 -313 367 -342Q341 -372 301 -372Q274 -372 253 -359Q232 -346 220 -318Q208 -291 208 -246Q208 -180 234 -150Q260 -120 301 -120Z",
+  },
+  {
+    letter: "y",
+    path: "M773 189Q742 189 723 173Q704 157 700 131Q695 105 708 76L759 -34L604 -388Q591 -418 596 -444Q600 -470 622 -486Q644 -501 682 -501Q714 -501 734 -486Q753 -472 769 -430L852 -213L941 -431Q957 -472 978 -486Q998 -501 1033 -501Q1063 -501 1081 -486Q1099 -470 1103 -444Q1107 -418 1094 -388L867 122Q849 162 828 176Q806 189 773 189Z",
+  },
+  {
+    letter: "n",
+    path: "M1219 9Q1177 9 1154 -14Q1131 -37 1131 -81V-412Q1131 -455 1154 -478Q1176 -501 1218 -501Q1260 -501 1282 -478Q1301 -458 1304 -424Q1326 -458 1362 -478Q1406 -503 1463 -503Q1522 -503 1560 -480Q1598 -458 1617 -410Q1636 -363 1636 -291V-81Q1636 -37 1613 -14Q1590 9 1547 9Q1504 9 1481 -14Q1458 -37 1458 -81V-284Q1458 -329 1442 -348Q1427 -367 1397 -367Q1357 -367 1333 -342Q1309 -316 1309 -273V-81Q1309 9 1219 9Z",
+  },
+];
 
-  return `<svg class="logo" viewBox="0 0 100 100" aria-hidden="true">
-        <defs>
-          <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0" stop-color="#34b6a3" />
-            <stop offset="0.5" stop-color="#1f8075" />
-            <stop offset="1" stop-color="#0f4a43" />
-          </linearGradient>
-          <linearGradient id="front" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stop-color="#ffffff" />
-            <stop offset="1" stop-color="#d4f3ee" />
-          </linearGradient>
-        </defs>
-        <rect class="tile" x="4" y="4" width="92" height="92" rx="22" fill="url(#tile)" />
-        <g class="fan">
-          ${blades}
-          <rect class="front" x="23" y="16" width="14" height="62" rx="7" fill="url(#front)" />
-          <circle cx="30" cy="25" r="3" fill="#1f8075" />
-          <circle cx="30" cy="72" r="5" fill="#0f4a43" />
+/* Arcs in degrees clockwise from 12 o'clock, measured on the stroke's center line. */
+const RING_ARC = { from: 118, to: 332 };
+const ACCENT_ARC = { from: 22, to: 68 };
+
+/* An SVG circle starts at 3 o'clock, so rotate by (start - 90) to begin the dash at `from`. */
+function arc(cls: string, { from, to }: { from: number; to: number }) {
+  return `<circle class="${cls}" style="--len: ${to - from}" cx="1970" cy="-237" r="180" pathLength="360" transform="rotate(${from - 90} 1970 -237)" />`;
+}
+
+function wordmarkSvg() {
+  const letters = LETTERS.map(
+    ({ letter, path }, index) => `<path class="letter l${index}" data-letter="${letter}" d="${path}" />`
+  ).join("\n          ");
+
+  return `<svg class="wordmark" viewBox="0 -730 2260 930" role="img" aria-label="dyno">
+        <g class="letters">
+          ${letters}
+        </g>
+        <g class="ring-move">
+          <g class="ring-spin">
+            ${arc("ring", RING_ARC)}
+            ${arc("accent", ACCENT_ARC)}
+          </g>
         </g>
       </svg>`;
 }
 
-function wordmarkHtml() {
-  const letters = [...WORDMARK]
-    .map((letter, index) => `<span class="letter" style="--i: ${index}">${letter}</span>`)
-    .join("");
-  return `<h1 class="wordmark" aria-label="${WORDMARK}"><span class="word" aria-hidden="true">${letters}</span><span class="caret" aria-hidden="true"></span></h1>`;
-}
-
 /**
- * The splash stays up until the main window is ready to show, so every motion loops.
- * One cycle: the blades fan out and the name types in, both hold, then fold away and start over.
+ * The splash stays up until the main window is ready to show, so the animation loops.
  * It uses CSS only: the window's content security policy allows no script.
  */
 export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") {
@@ -61,54 +63,43 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dyno</title>
     <style>
-      /* Mirrors canvas, fg-strong, fg, line and accent-text in src/ui/styles/theme.css. */
+      /* Brand colors from the Dyno logo; canvas, fg and line mirror src/ui/styles/theme.css. */
       :root {
         color-scheme: dark light;
         font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-        --canvas: #14171c;
-        --fg-strong: #f3f5f8;
-        --fg: #d3d8df;
-        --line: #2e3540;
-        --accent-text: #3fbfae;
-        --shadow: rgba(0, 0, 0, 0.32);
-        --cycle: 4.2s;
-        --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --canvas: #0f1013;
+        --mark: #f3f4ec;
+        --accent: #c6f232;
+        --fg: #8b8f98;
+        --line: #26282e;
+        --cycle: 5.6s;
+        --ease: cubic-bezier(0.65, 0, 0.35, 1);
         --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-        --ease-in: cubic-bezier(0.55, 0, 0.75, 0.2);
         background: var(--canvas);
-        color: var(--fg-strong);
       }
 
       @media (prefers-color-scheme: light) {
         :root {
           --canvas: #f6f7f9;
-          --fg-strong: #0f1216;
-          --fg: #2a303a;
+          --mark: #111214;
+          --accent: #6f9a00;
+          --fg: #5b616b;
           --line: #d6dae1;
-          --accent-text: #1a6e64;
-          --shadow: rgba(15, 18, 22, 0.14);
         }
       }
 
-      /* Dark Orange. Mirrors the [data-theme="dark-orange"] values in theme.css. */
+      /* Dark Orange keeps the brand mark and takes the theme's warm canvas. */
       :root[data-theme="dark-orange"] {
         --canvas: #1f1e1d;
-        --fg-strong: #faf9f5;
-        --fg: #c2c0b6;
+        --mark: #faf9f5;
+        --accent: #c6f232;
+        --fg: #9c9a92;
         --line: #3e3d39;
-        --accent-text: #d97757;
-        --shadow: rgba(0, 0, 0, 0.32);
-      }
-
-      * {
-        box-sizing: border-box;
       }
 
       body {
         align-items: center;
-        background:
-          radial-gradient(ellipse at 30% 20%, color-mix(in srgb, var(--accent-text) 18%, transparent), transparent 60%),
-          var(--canvas);
+        background: var(--canvas);
         display: flex;
         height: 100vh;
         justify-content: center;
@@ -121,93 +112,91 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
         align-items: center;
         display: flex;
         flex-direction: column;
-        gap: 30px;
-        padding: 28px;
         width: 100%;
       }
 
-      .brand {
+      .scene {
         align-items: center;
+        animation: scene var(--cycle) infinite both;
         display: flex;
-        height: 84px;
-        justify-content: center;
+        flex-direction: column;
+        gap: 14px;
       }
 
-      /* Logo: the tile pops in once, then the blades fan out and fold back each cycle. */
-      .logo {
-        animation: float 2.8s ease-in-out infinite;
-        filter: drop-shadow(0 12px 18px var(--shadow));
-        flex: none;
-        height: 84px;
-        overflow: visible;
-        width: 84px;
-      }
-
-      .tile {
-        animation: pop 0.7s var(--spring) both;
-        transform-origin: 50px 50px;
-      }
-
-      .fan {
-        animation: fade-in 0.3s 0.25s both;
-      }
-
-      .blade {
-        animation: fan var(--cycle) var(--delay) infinite both;
-        transform-origin: 30px 72px;
-      }
-
-      /* Wordmark: letters type in one by one behind a caret, and the logo slides aside to make room. */
       .wordmark {
-        align-items: center;
-        display: flex;
-        font-size: 46px;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        line-height: 1;
-        margin: 0;
-      }
-
-      .word {
-        animation: word var(--cycle) infinite both;
-        display: inline-flex;
-        padding-left: 16px;
+        height: 103px;
+        overflow: visible;
+        width: 250px;
       }
 
       .letter {
-        animation: type var(--cycle) calc(var(--i) * 160ms) infinite both;
-        display: inline-block;
-        overflow: hidden;
-        white-space: pre;
+        fill: var(--mark);
       }
 
-      .caret {
-        animation: blink 0.9s step-end infinite;
-        background: var(--accent-text);
-        border-radius: 2px;
-        height: 40px;
-        margin-left: 4px;
-        width: 3px;
+      .l0 {
+        animation: letter-0 var(--cycle) var(--ease-out) infinite both;
       }
 
-      /* Loading state: plain text plus a bar that never stops sliding. */
+      .l1 {
+        animation: letter-1 var(--cycle) var(--ease-out) infinite both;
+      }
+
+      .l2 {
+        animation: letter-2 var(--cycle) var(--ease-out) infinite both;
+      }
+
+      .ring,
+      .accent {
+        fill: none;
+        stroke-linecap: round;
+        stroke-width: 161;
+      }
+
+      .ring {
+        animation: draw-ring var(--cycle) infinite both;
+        stroke: var(--mark);
+      }
+
+      .accent {
+        animation: draw-accent var(--cycle) infinite both;
+        stroke: var(--accent);
+      }
+
+      /* Transforms on SVG elements use the viewBox's units. */
+      .ring-move {
+        animation: ring-move var(--cycle) infinite both;
+        transform-origin: 1970px -237px;
+      }
+
+      .ring-spin {
+        animation: ring-spin var(--cycle) infinite both;
+        transform-origin: 1970px -237px;
+      }
+
+      .tagline {
+        animation: tagline var(--cycle) infinite both;
+        color: var(--fg);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        margin: 0;
+      }
+
       .status {
         align-items: center;
+        bottom: 26px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
+        left: 0;
+        position: absolute;
+        right: 0;
       }
 
       .status p {
         color: var(--fg);
-        font-size: 13px;
-        line-height: 1.5;
+        font-size: 12px;
         margin: 0;
-      }
-
-      .dot {
-        animation: dot 1.4s infinite both;
-        animation-delay: calc(var(--i) * 0.2s);
       }
 
       .bar {
@@ -215,12 +204,12 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
         border-radius: 999px;
         height: 3px;
         overflow: hidden;
-        width: 168px;
+        width: 140px;
       }
 
       .bar::after {
         animation: slide 1.5s ease-in-out infinite;
-        background: var(--accent-text);
+        background: var(--accent);
         border-radius: inherit;
         content: "";
         display: block;
@@ -228,101 +217,147 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
         width: 40%;
       }
 
-      @keyframes pop {
-        from {
-          opacity: 0;
-          transform: scale(0.4) rotate(-25deg);
-        }
-        to {
-          opacity: 1;
-          transform: none;
-        }
-      }
-
-      @keyframes fade-in {
-        from {
-          opacity: 0;
-        }
-      }
-
-      @keyframes float {
-        50% {
-          transform: translateY(-3px);
-        }
-      }
-
-      @keyframes fan {
+      /* One cycle: 0-16% the ring draws, 16-22% the green arc lands, 22-40% one spin,
+         40-52% the ring settles as the "o" and the letters fade in, 58% the tagline, 88-96% fade out. */
+      @keyframes scene {
         0%,
-        6% {
-          animation-timing-function: var(--spring);
+        88% {
+          opacity: 1;
+        }
+        96%,
+        100% {
           opacity: 0;
-          transform: rotate(0deg);
+        }
+      }
+
+      /* The big intro ring is thinner, like the app icon, and thickens as it becomes the "o". */
+      @keyframes draw-ring {
+        0%,
+        3% {
+          animation-timing-function: var(--ease);
+          opacity: 0;
+          stroke-dasharray: 0 360;
+          stroke-width: 100;
+        }
+        4% {
+          opacity: 1;
+        }
+        16%,
+        40% {
+          animation-timing-function: var(--ease);
+          opacity: 1;
+          stroke-dasharray: var(--len) 360;
+          stroke-width: 100;
+        }
+        52%,
+        100% {
+          opacity: 1;
+          stroke-dasharray: var(--len) 360;
+          stroke-width: 161;
+        }
+      }
+
+      @keyframes draw-accent {
+        0%,
+        16% {
+          animation-timing-function: var(--ease-out);
+          opacity: 0;
+          stroke-dasharray: 0 360;
+          stroke-width: 100;
         }
         22%,
-        72% {
-          animation-timing-function: var(--ease-in);
+        40% {
+          animation-timing-function: var(--ease);
           opacity: 1;
-          transform: rotate(var(--angle));
+          stroke-dasharray: var(--len) 360;
+          stroke-width: 100;
         }
-        86%,
+        52%,
         100% {
-          opacity: 0;
+          opacity: 1;
+          stroke-dasharray: var(--len) 360;
+          stroke-width: 161;
+        }
+      }
+
+      @keyframes ring-spin {
+        0%,
+        3% {
+          animation-timing-function: var(--ease);
+          transform: rotate(-150deg);
+        }
+        16%,
+        22% {
+          animation-timing-function: var(--ease);
           transform: rotate(0deg);
         }
+        40%,
+        100% {
+          transform: rotate(360deg);
+        }
       }
 
-      /* The last letter starts 480ms late, so it must be gone by 88% to finish before the next cycle. */
-      @keyframes type {
+      @keyframes ring-move {
         0%,
-        8% {
-          animation-timing-function: var(--ease-out);
-          max-width: 0;
-          opacity: 0;
-          transform: translateY(12px);
+        40% {
+          animation-timing-function: var(--ease);
+          transform: translate(-840px, -23px) scale(1.6);
         }
-        18%,
-        82% {
-          animation-timing-function: ease-in-out;
-          max-width: 1em;
-          opacity: 1;
-          transform: none;
-        }
-        88%,
+        52%,
         100% {
-          max-width: 0;
-          opacity: 0;
           transform: none;
         }
       }
 
-      @keyframes word {
+      @keyframes letter-0 {
         0%,
-        76% {
-          opacity: 1;
-        }
-        82%,
-        100% {
+        42% {
           opacity: 0;
+          transform: translateX(-60px);
+        }
+        52%,
+        100% {
+          opacity: 1;
+          transform: none;
         }
       }
 
-      @keyframes blink {
-        50% {
+      @keyframes letter-1 {
+        0%,
+        45% {
           opacity: 0;
+          transform: translateX(-60px);
+        }
+        55%,
+        100% {
+          opacity: 1;
+          transform: none;
         }
       }
 
-      @keyframes dot {
+      @keyframes letter-2 {
         0%,
-        20% {
-          opacity: 0.2;
+        48% {
+          opacity: 0;
+          transform: translateX(-60px);
         }
-        50% {
-          opacity: 1;
-        }
-        80%,
+        58%,
         100% {
-          opacity: 0.2;
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      @keyframes tagline {
+        0%,
+        56% {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        64%,
+        100% {
+          opacity: 1;
+          transform: none;
         }
       }
 
@@ -335,25 +370,21 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
         }
       }
 
-      /* Reduced motion: show the finished logo and name, keep only the loading bar moving. */
+      /* Reduced motion: show the finished logo and keep only the loading bar moving. */
       @media (prefers-reduced-motion: reduce) {
-        .logo,
-        .tile,
-        .fan,
-        .blade,
-        .word,
+        .scene,
         .letter,
-        .caret,
-        .dot {
+        .ring,
+        .accent,
+        .ring-move,
+        .ring-spin,
+        .tagline {
           animation: none;
         }
 
-        .blade {
-          transform: rotate(var(--angle));
-        }
-
-        .caret {
-          display: none;
+        .ring,
+        .accent {
+          stroke-dasharray: var(--len) 360;
         }
 
         .bar::after {
@@ -364,12 +395,12 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
   </head>
   <body>
     <main class="shell" role="status" aria-live="polite">
-      <div class="brand">
-      ${logoSvg()}
-      ${wordmarkHtml()}
+      <div class="scene">
+        ${wordmarkSvg()}
+        <p class="tagline">Dynamics toolbox + MCP server</p>
       </div>
       <div class="status">
-        <p>Starting local services<span class="dot" style="--i: 0">.</span><span class="dot" style="--i: 1">.</span><span class="dot" style="--i: 2">.</span></p>
+        <p>Starting local services</p>
         <div class="bar" aria-hidden="true"></div>
       </div>
     </main>

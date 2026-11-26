@@ -5,8 +5,8 @@ import { currentColorScheme, windowBackgroundColor } from "./theme.js";
 
 export function createStartupSplashWindow() {
   const splashWindow = new BrowserWindow({
-    width: 440,
-    height: 280,
+    width: 480,
+    height: 300,
     frame: false,
     resizable: false,
     movable: true,
