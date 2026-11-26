@@ -55,6 +55,18 @@ description: "Use when making any UI modification that involves color or shared 
 
 `accent` and `accent-text` are different on purpose. White text on `accent` passes WCAG AA (4.8:1). `accent-text` passes AA as text on `canvas`, `surface` and `raised`. Dark Orange keeps Claude's own values, which are a little lower: white on its `accent` is 4.0:1, and its `accent-text` is 4.2:1 on `raised` (AA on `canvas` and `surface`). Never put body text in `accent`, and never put `accent-fg` on `accent-text`.
 
+### Brand (the Dyno logo)
+
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `brand-ring` | `#f3f4ec` | `#121316` | `#faf9f5` | The logo's ring and the "dyno" wordmark |
+| `brand` | `#c6f232` | `#6f9a00` | `#c6f232` | The logo's lime piece; fill for brand buttons and dots |
+| `brand-hover` | `#b3dd22` | `#5f8400` | `#b3dd22` | Hover fill for anything using `brand` |
+| `brand-fg` | `#121316` | `#121316` | `#121316` | Text and icons on a `brand` fill |
+| `brand-text` | `#c6f232` | `#4f6e00` | `#c6f232` | Brand-colored text and icons on `canvas` and `surface` |
+
+Brand tokens are for brand moments, such as the welcome page and the logo. Tools and controls keep using `accent`. `font-brand` (Nunito) sets the wordmark only.
+
 ### Status
 
 | Token | Dark | Light | Dark Orange | Use |
