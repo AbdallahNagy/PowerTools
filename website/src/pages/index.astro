@@ -4,8 +4,8 @@ import Icon from "../components/Icon.astro";
 import DynoWordmark from "../components/DynoWordmark.astro";
 import HeroCycle from "../components/HeroCycle.astro";
 import ToolIcon from "../components/ToolIcon.astro";
-import appDark from "../assets/images/app-data-migration-dark.png";
-import appLight from "../assets/images/app-data-migration-light.png";
+import appDark from "../assets/images/app-welcome-dark.png";
+import appLight from "../assets/images/app-welcome-light.png";
 import { RELEASED_TOOLS } from "../../../desktop/src/ui/tools/publicCatalog";
 import { toolPath } from "../lib/tools";
 
@@ -86,6 +86,7 @@ const localPath = (path: string) =>
   description="Dyno is a free, open-source Windows toolkit and MCP server for Dataverse, Dynamics 365, and Power Platform developers. FetchXML Builder, Plugin Registration, data migration, and an MCP server for AI agents, online and on-premises. A modern XrmToolBox alternative."
   structuredData={[faqStructuredData]}
 >
+  <div class="home-hero-glow">
   <section class="home-hero">
     <div class="home-hero-copy">
       <DynoWordmark size={84} tagline />
@@ -98,7 +99,7 @@ const localPath = (path: string) =>
       </p>
       <div class="hero-actions">
         <a class="button primary" href={localPath("/download")}>Download for Windows</a>
-        <a class="button secondary" href="#mcp">Set up AI agents</a>
+        <a class="button secondary" href="#mcp"><Icon name="radar" class="button-icon" />Set up AI agents</a>
       </div>
       <p class="fine-print">Free and open source. Runs on your machine with your own sign-in.</p>
     </div>
@@ -106,6 +107,7 @@ const localPath = (path: string) =>
       <HeroCycle />
     </div>
   </section>
+  </div>
 
   <section class="section">
     <p class="eyebrow">What Dyno does</p>
@@ -242,7 +244,7 @@ const localPath = (path: string) =>
         width={appLight.width}
         height={appLight.height}
         loading="lazy"
-        alt="Dyno Data Migration tool comparing fields between a dev and a test environment"
+        alt="The Dyno app open on its welcome page, with the tools in the sidebar"
       />
       <img
         class="theme-dark-only"
@@ -250,7 +252,7 @@ const localPath = (path: string) =>
         width={appDark.width}
         height={appDark.height}
         loading="lazy"
-        alt="Dyno Data Migration tool comparing fields between a dev and a test environment"
+        alt="The Dyno app open on its welcome page, with the tools in the sidebar"
       />
     </figure>
 

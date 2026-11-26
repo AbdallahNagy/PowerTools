@@ -11,7 +11,7 @@ import Icon from "../components/Icon.astro";
 import DynoWordmark from "../components/DynoWordmark.astro";
 import appIcon from "../assets/images/dyno-icon-512.png";
 import appMark from "../assets/images/dyno-mark.svg";
-import socialImage from "../assets/images/app-data-migration-light.png";
+import socialImage from "../assets/images/app-welcome-dark.png";
 
 interface Props {
   title: string;
@@ -103,13 +103,13 @@ const isActive = (href: string) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f6f7f9" />
+    <meta name="theme-color" content="#14171c" />
     <script is:inline>
-      // Light is the default. Apply a saved dark choice before first paint.
+      // Dark is the default, as in the app. Apply a saved light choice before first paint.
       try {
-        if (localStorage.getItem("dyno-theme") === "dark") {
-          document.documentElement.dataset.theme = "dark";
-          document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#14171c");
+        if (localStorage.getItem("dyno-theme") === "light") {
+          document.documentElement.dataset.theme = "light";
+          document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f6f7f9");
         }
       } catch {}
     </script>
@@ -126,7 +126,7 @@ const isActive = (href: string) => {
     <meta property="og:image" content={socialImageUrl} />
     <meta property="og:image:width" content={String(socialImage.width)} />
     <meta property="og:image:height" content={String(socialImage.height)} />
-    <meta property="og:image:alt" content="Dyno Data Migration tool comparing two Dataverse environments" />
+    <meta property="og:image:alt" content="The Dyno app with its welcome page: tools and an MCP server for Dataverse" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
@@ -149,8 +149,8 @@ const isActive = (href: string) => {
       <button
         class="theme-toggle"
         type="button"
-        aria-label="Use dark theme"
-        aria-pressed="false"
+        aria-label="Use light theme"
+        aria-pressed="true"
       >
         <Icon name="moon" class="theme-light-only" />
         <Icon name="sun" class="theme-dark-only" />
@@ -200,7 +200,7 @@ const isActive = (href: string) => {
       const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 
       const syncThemeButton = () => {
-        const isDark = root.dataset.theme === "dark";
+        const isDark = root.dataset.theme !== "light";
         themeButton?.setAttribute("aria-pressed", String(isDark));
         themeButton?.setAttribute("aria-label", isDark ? "Use light theme" : "Use dark theme");
         themeColor?.setAttribute("content", isDark ? "#14171c" : "#f6f7f9");
@@ -209,11 +209,11 @@ const isActive = (href: string) => {
       syncThemeButton();
 
       themeButton?.addEventListener("click", () => {
-        const isDark = root.dataset.theme !== "dark";
+        const isDark = root.dataset.theme === "light";
         if (isDark) {
-          root.dataset.theme = "dark";
-        } else {
           delete root.dataset.theme;
+        } else {
+          root.dataset.theme = "light";
         }
         try {
           localStorage.setItem("dyno-theme", isDark ? "dark" : "light");
