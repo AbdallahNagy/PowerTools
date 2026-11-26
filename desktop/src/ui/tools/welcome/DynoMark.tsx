@@ -25,17 +25,35 @@ export function DynoMark({ size, className }: { size: number; className?: string
   );
 }
 
-/** The lowercase "dyno" wordmark, whose "o" is the mark. */
+/*
+ * The wordmark's "o" is drawn at the weight of the letters around it, so it is heavier than the
+ * icon. The arcs are shorter than the icon's to keep a clear gap on each side of the lime piece
+ * at that weight: each rounded end reaches about 28° past its arc, and the ends sit 68° apart.
+ */
+const WORD_RING = "M63.71 62.79 A18.75 18.75 0 1 1 37.21 36.29";
+const WORD_PIECE = "M57.92 33.01 A18.75 18.75 0 0 1 66.99 42.08";
+const WORD_STROKE = 18.5;
+
+/** The lowercase "dyno" wordmark, whose "o" is the mark at letter weight. */
 export function DynoWordmark() {
   return (
     <div className="flex flex-col gap-2">
       <div
         role="img"
         aria-label="dyno"
-        className="flex items-end font-brand text-[64px] font-black leading-[0.85] tracking-[-0.03em] text-brand-ring"
+        className="font-brand text-[64px] font-black leading-none tracking-[-0.03em] text-brand-ring"
       >
-        <span aria-hidden="true">dyn</span>
-        <DynoMark size={44} className="mb-px ml-[3px]" />
+        <span aria-hidden="true">
+          dyn
+          <svg
+            aria-hidden="true"
+            viewBox="22 22 56 56"
+            className="ml-[0.02em] inline-block h-[0.53em] w-[0.53em] align-baseline"
+          >
+            <path d={WORD_RING} fill="none" stroke="var(--color-brand-ring)" strokeWidth={WORD_STROKE} strokeLinecap="round" />
+            <path d={WORD_PIECE} fill="none" stroke="var(--color-brand)" strokeWidth={WORD_STROKE} strokeLinecap="round" />
+          </svg>
+        </span>
       </div>
       <span className="font-brand text-sm font-extrabold text-fg-muted">Dynamics toolbox + MCP server</span>
     </div>
