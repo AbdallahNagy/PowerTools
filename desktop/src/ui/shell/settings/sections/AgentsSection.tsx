@@ -39,7 +39,7 @@ function Snippet({ label, text }: { label: string; text: string }) {
 
   return (
     <div className="relative">
-      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-lg bg-canvas p-3 pr-24 font-mono text-xs text-fg">
+      <pre className="overflow-x-auto whitespace-pre-wrap break-all rounded-md border border-line bg-canvas p-3 pr-24 font-mono text-xs text-fg">
         {text}
       </pre>
       <Button
@@ -63,8 +63,8 @@ function ConnectClient({ status }: { status: McpStatusInfo }) {
 
   return (
     <SettingsGroup title="Connect a client" description="Pick your agent, then copy its setup.">
-      <div className="flex flex-col gap-3 p-4">
-        <div role="group" aria-label="Client" className="flex w-fit gap-0.5 rounded-md bg-canvas p-0.5">
+      <div className="flex flex-col gap-3 py-3">
+        <div role="group" aria-label="Client" className="flex w-fit gap-0.5 rounded-md border border-line bg-canvas p-0.5">
           {MCP_CLIENTS.map((entry) => (
             <button
               key={entry.id}

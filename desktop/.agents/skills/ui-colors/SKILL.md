@@ -14,7 +14,7 @@ description: "Use when making any UI modification that involves color or shared 
 - **Dark Orange** uses the tokens of Claude's dark mode: warm neutral surfaces, ivory text, and a clay (orange) accent instead of lime. Its `alt` is Claude's blue, because the accent is already orange. `test/themeTokens.test.ts` fails if it leaves out a token that the light theme defines.
 - `[data-theme="dark"]` and `[data-theme="light"]` also work on any element, which then draws its subtree in that theme. The Settings theme previews use this. The nested dark block repeats the default values (`test/themeTokens.test.ts` keeps them equal); when you change a dark value, change both. Do not use the `-soft` tokens inside such a subtree: they are mixed on `<html>`.
 - Always check a change in every theme. Anything drawn with a fixed color, such as an image or an inverted icon, breaks in one of them.
-- Identity: cool slate neutrals with one lime accent, the lime piece of the Dyno logo. Lime is the only brand color. Blue is not part of the Dark and Light palettes; Dark Orange is the one theme that brings its own identity.
+- Identity: cool slate neutrals with one lime accent, the lime piece of the Dyno logo. Lime is the only brand color. Blue appears in the Dark and Light palettes only as `control`, the fill of switches; Dark Orange is the one theme that brings its own identity.
 
 ## Palette
 
@@ -65,7 +65,15 @@ Lime is light, so text on an `accent` fill is near-black (`accent-fg`): 14.3:1 o
 | `brand-fg` | `#121316` | `#121316` | `#121316` | Text and icons on a `brand` fill |
 | `brand-text` | `#c6f232` | `#4f6e00` | `#c6f232` | Brand-colored text and icons on `canvas` and `surface` |
 
-Brand tokens are for brand moments, such as the welcome page and the logo. In Dark and Light they equal the accent; Dark Orange keeps its clay accent and the lime logo. Tools and controls use `accent`. `font-brand` (Nunito) sets the wordmark only.
+Brand tokens are for brand moments, such as the welcome page and the logo. In Dark and Light they equal the accent; Dark Orange keeps its clay accent and the lime logo. Tools and controls use `accent`, except switches, which use `control`. `font-brand` (Nunito) sets the wordmark only.
+
+### Controls
+
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `control` | `#3b82f6` | `#2563eb` | `#2c84db` | Fill of a switch that is on. One plain blue in every theme, so a switch reads as a control, not as the brand. |
+| `control-hover` | `#2f72e0` | `#1d4fd0` | `#2573c2` | Hover fill for anything using `control` |
+| `control-fg` | `#ffffff` | `#ffffff` | `#ffffff` | The switch thumb |
 
 ### Status
 
@@ -104,6 +112,7 @@ Filter-group nesting cycles `line`, `accent-text/30`, `nest-a`, `nest-b`.
 | Link | `text-accent-text hover:underline` |
 | Tag / badge | `bg-accent-soft text-accent-text` |
 | Error message | `text-danger`, banner `bg-danger-soft border-danger` |
+| Switch (on) | `bg-control hover:bg-control-hover`, thumb `bg-control-fg` (use the shared `Switch`) |
 | Native checkbox / radio | `accent-accent` |
 
 For a translucent variant, use Tailwind's opacity modifier on a token, for example `bg-accent-text/25` or `border-accent-text/30`. In inline styles, use `color-mix(in srgb, var(--color-accent-text) 20%, transparent)`.

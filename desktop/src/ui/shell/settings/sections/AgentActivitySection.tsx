@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { Ban, CircleAlert, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 
 import type { McpActivityEntry, McpToolInfo } from "../../../platform/desktopBridge";
 import { Alert, Button, EmptyState, SearchInput, Spinner } from "../../../shared/ui";
 import type { AgentsState } from "../../agents/useAgents";
-import { EffectTile, FilterSegments } from "./agentToolDisplay";
-import { relativeTime, toolIcon } from "./agentTools";
+import { EffectTag, FilterSegments } from "./agentToolDisplay";
+import { relativeTime } from "./agentTools";
 
 type ActivityFilter = "all" | "changes" | "errors";
 
 /** How each approval outcome reads under a call. Calls that needed no approval say nothing. */
-const APPROVALS: Record<McpActivityEntry["approval"], { label: string; tone: "accent" | "danger" } | null> = {
+const APPROVALS: Record<McpActivityEntry["approval"], { label: string; tone: "neutral" | "danger" } | null> = {
   "not-needed": null,
-  auto: { label: "Allowed without asking", tone: "accent" },
-  allowed: { label: "You approved", tone: "accent" },
+  auto: { label: "Allowed without asking", tone: "neutral" },
+  allowed: { label: "You approved", tone: "neutral" },
   denied: { label: "Declined", tone: "danger" },
   "timed-out": { label: "Approval timed out", tone: "danger" },
   unavailable: { label: "Could not ask for approval", tone: "danger" },
@@ -132,39 +132,35 @@ export function AgentActivitySection({ agents }: { agents: AgentsState }) {
       ) : visible.length === 0 ? (
         <EmptyState title="No matching calls" description="Try another word or show all calls." />
       ) : (
-        <div className="-mx-2.5 flex flex-col">
+        <div className="flex flex-col">
           {days.map((day) => (
             <section key={day.key} aria-label={day.label} className="flex flex-col">
-              <div className="sticky top-0 z-10 flex justify-between bg-canvas px-2.5 pb-2 pt-4 text-xs text-fg-muted">
+              <div className="sticky top-0 z-10 flex justify-between border-b border-line bg-surface pb-2 pt-4 text-xs text-fg-muted">
                 <h4 className="font-medium text-fg">{day.label}</h4>
                 <span>{countLabel(day.entries)}</span>
               </div>
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col divide-y divide-line">
                 {day.entries.map((entry, index) => {
                   const time = new Date(entry.time);
                   const failed = entry.outcome === "error";
                   const approval = APPROVALS[entry.approval];
                   const target = targetOf(entry);
-                  const icon = !failed ? toolIcon(entry.tool, entry.effect) : REFUSED.has(entry.approval) ? Ban : CircleAlert;
                   return (
-                    <li
-                      key={`${entry.time}-${index}`}
-                      className="flex items-start gap-3 rounded-lg px-2.5 py-2 hover:bg-surface"
-                    >
-                      <EffectTile icon={icon} effect={entry.effect} error={failed} />
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <p className="truncate text-sm text-fg-strong">
-                          {titleOf(entry)}
-                          {target ? <span className="ml-1.5 font-mono text-xs text-fg">{target}</span> : null}
+                    <li key={`${entry.time}-${index}`} className="flex items-start gap-6 py-2.5">
+                      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                        <p className="flex min-w-0 items-center gap-2 text-sm text-fg-strong">
+                          <span className="truncate">
+                            {titleOf(entry)}
+                            {target ? <span className="ml-1.5 font-mono text-xs text-fg-muted">{target}</span> : null}
+                          </span>
+                          {failed ? null : <EffectTag effect={entry.effect} />}
                         </p>
-                        <p className="mt-0.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-fg-muted">
+                        <p className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-xs text-fg-muted">
                           {failed && !REFUSED.has(entry.approval) ? (
-                            <span className="rounded-sm bg-danger-soft px-1.5 py-px font-medium text-danger">
-                              {entry.code ?? "Error"}
-                            </span>
+                            <EffectTag effect={entry.effect} error={entry.code ?? "Error"} />
                           ) : null}
                           {approval ? (
-                            <span className={approval.tone === "danger" ? "text-danger" : "text-accent-text"}>{approval.label}</span>
+                            <span className={approval.tone === "danger" ? "text-danger" : "text-fg"}>{approval.label}</span>
                           ) : null}
                           <span>{entry.connection ?? "No connection"}</span>
                           {entry.client ? <span>{entry.client}</span> : null}

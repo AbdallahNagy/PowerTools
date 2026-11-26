@@ -113,6 +113,7 @@ vi.mock("../../src/electron/sidecar.js", () => ({
 }));
 vi.mock("../../src/electron/startupSplash.js", () => ({
   createStartupSplashWindow: () => ({ close: vi.fn(), isDestroyed: () => false }),
+  waitForStartupSplash: async () => {},
 }));
 vi.mock("../../src/electron/storage.js", () => ({
   loadState: loadStateMock,
