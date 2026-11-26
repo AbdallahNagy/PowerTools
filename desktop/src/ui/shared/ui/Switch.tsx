@@ -50,7 +50,9 @@ export function Switch({
       <span
         aria-hidden="true"
         className={cn(
-          "inline-block rounded-full bg-accent-fg shadow-sm transition-transform duration-150 ease-out motion-reduce:transition-none",
+          "inline-block rounded-full shadow-sm transition-transform duration-150 ease-out motion-reduce:transition-none",
+          // The thumb contrasts with its track: accent-fg on the accent fill, fg-strong on the grey track.
+          checked ? "bg-accent-fg" : "bg-fg-strong",
           s.thumb,
           checked ? s.on : s.off,
         )}

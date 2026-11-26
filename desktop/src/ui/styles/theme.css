@@ -47,11 +47,11 @@
   --color-fg: #d3d8df;
   --color-fg-muted: #8b94a3;
 
-  /* Accent: fill for buttons and selection, text for links on surfaces */
-  --color-accent: #1f8075;
-  --color-accent-hover: #1a6d64;
-  --color-accent-fg: #ffffff;
-  --color-accent-text: #3fbfae;
+  /* Accent: the logo's lime. Fill for buttons and selection, text for links on surfaces */
+  --color-accent: #c6f232;
+  --color-accent-hover: #b3dd22;
+  --color-accent-fg: #121316;
+  --color-accent-text: #c6f232;
   --color-accent-soft: color-mix(in srgb, var(--color-accent-text) 14%, transparent);
 
   /* Brand: the logo's ring and the lime piece that completes it. Welcome and other brand moments only. */
@@ -105,10 +105,10 @@
   --color-fg: #d3d8df;
   --color-fg-muted: #8b94a3;
 
-  --color-accent: #1f8075;
-  --color-accent-hover: #1a6d64;
-  --color-accent-fg: #ffffff;
-  --color-accent-text: #3fbfae;
+  --color-accent: #c6f232;
+  --color-accent-hover: #b3dd22;
+  --color-accent-fg: #121316;
+  --color-accent-text: #c6f232;
 
   /* Brand: the logo's ring and the lime piece that completes it. Welcome and other brand moments only. */
   --color-brand-ring: #f3f4ec;
@@ -142,10 +142,10 @@
   --color-fg: #2a303a;
   --color-fg-muted: #5f6877;
 
-  --color-accent: #1f7f74;
-  --color-accent-hover: #1a6d64;
-  --color-accent-fg: #ffffff;
-  --color-accent-text: #1a6e64;
+  --color-accent: #6f9a00;
+  --color-accent-hover: #5f8400;
+  --color-accent-fg: #121316;
+  --color-accent-text: #4f6e00;
 
   /* Brand: the logo's ring and the lime piece that completes it. Welcome and other brand moments only. */
   --color-brand-ring: #121316;
