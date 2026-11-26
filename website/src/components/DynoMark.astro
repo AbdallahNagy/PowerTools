@@ -1,0 +1,24 @@
+---
+/*
+ * The Dyno mark: a ring with one piece missing at the upper right, and the lime piece that
+ * completes it. Same geometry as desktop/src/ui/tools/welcome/DynoMark.tsx, which is measured
+ * from the logo artwork, so the gaps between the ring and the piece match the icon.
+ */
+interface Props {
+  size: number;
+  class?: string;
+}
+
+const { size, class: className } = Astro.props;
+---
+
+<svg
+  aria-hidden="true"
+  width={size}
+  height={size}
+  viewBox="22 22 56 56"
+  class:list={["dyno-mark", className]}
+>
+  <path class="dyno-ring" d="M71.83 55.04 A22.4 22.4 0 1 1 44.96 28.18" fill="none" stroke-width="10.4" stroke-linecap="round" />
+  <path class="dyno-piece" d="M57.66 28.95 A22.4 22.4 0 0 1 71.05 42.34" fill="none" stroke-width="10.4" stroke-linecap="round" />
+</svg>

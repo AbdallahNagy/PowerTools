@@ -2,7 +2,8 @@
  * Dyno website palette.
  *
  * Mirrors the desktop app tokens in desktop/src/ui/styles/theme.css:
- * cool slate neutrals with one deep teal accent. Token names match the app
+ * cool slate neutrals, with the brand lime of the logo as the one accent, as on
+ * the app's welcome page (the app's brand-* tokens). Token names match the app
  * roles (canvas, surface, raised, line, fg, accent...). Light is the default;
  * the header toggle sets data-theme="dark" on <html> and remembers the choice.
  * When the app palette changes, update both files together.
@@ -25,20 +26,26 @@
   --fg: #2a303a;
   --fg-muted: #5f6877;
 
-  /* Accent: fill for buttons, text for links and highlights */
-  --accent: #1f7f74;
-  --accent-hover: #1a6d64;
-  --accent-fg: #ffffff;
-  --accent-text: #1a6e64;
+  /* Accent: the logo's lime piece. Fill for buttons, text for links and highlights */
+  --accent: #6f9a00;
+  --accent-hover: #5f8400;
+  --accent-fg: #121316;
+  --accent-text: #4f6e00;
+
+  /* Brand: the logo's ring and the lime piece that completes it */
+  --brand-ring: #121316;
+  --brand: #6f9a00;
 
   --shadow: 0 24px 60px rgba(15, 18, 22, 0.14);
 
   --font-sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", "Cascadia Mono", Consolas, ui-monospace, monospace;
+  /* The rounded face of the "dyno" wordmark. Brand moments only, never body text. */
+  --font-brand: "Nunito", "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
 
   /* Derived accent tints, as in the app's welcome page */
   --accent-soft: color-mix(in srgb, var(--accent-text) 14%, transparent);
-  --accent-glow: color-mix(in srgb, var(--accent-text) 18%, transparent);
+  --accent-glow: color-mix(in srgb, var(--accent-text) 10%, transparent);
   --accent-border: color-mix(in srgb, var(--accent-text) 40%, transparent);
   --accent-border-subtle: color-mix(in srgb, var(--accent-text) 22%, transparent);
 
@@ -60,10 +67,13 @@
   --fg: #d3d8df;
   --fg-muted: #8b94a3;
 
-  --accent: #1f8075;
-  --accent-hover: #1a6d64;
-  --accent-fg: #ffffff;
-  --accent-text: #3fbfae;
+  --accent: #c6f232;
+  --accent-hover: #b3dd22;
+  --accent-fg: #121316;
+  --accent-text: #c6f232;
+
+  --brand-ring: #f3f4ec;
+  --brand: #c6f232;
 
   --shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
 }
@@ -112,7 +122,8 @@ a {
 .site-header,
 .site-footer,
 .section,
-.hero {
+.hero,
+.home-hero {
   width: min(1120px, calc(100% - 40px));
   margin-inline: auto;
 }
@@ -133,10 +144,49 @@ a {
   color: var(--fg-strong);
 }
 
-.brand-mark {
-  width: 34px;
-  height: 34px;
+/* The logo and the "dyno" wordmark */
+.dyno-ring {
+  stroke: var(--brand-ring);
+}
+
+.dyno-piece {
+  stroke: var(--brand);
+}
+
+.dyno-mark {
   display: block;
+  flex: none;
+}
+
+.dyno-wordmark {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dyno-word {
+  display: block;
+  color: var(--brand-ring);
+  font-family: var(--font-brand);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.dyno-word-o {
+  display: inline-block;
+  width: 0.53em;
+  height: 0.53em;
+  margin-left: 0.02em;
+  vertical-align: baseline;
+}
+
+.dyno-tagline {
+  color: var(--fg-muted);
+  font-family: var(--font-brand);
+  font-size: 0.875rem;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .site-nav {
@@ -285,24 +335,31 @@ a {
   justify-content: center;
 }
 
-/* Pill badge, as on the app's welcome page */
+/* Section label, as on the app's welcome page */
 .eyebrow {
+  margin: 0 0 8px;
+  color: var(--accent-text);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Pill badge for news, as in the welcome hero */
+.pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 18px;
   border: 1px solid var(--accent-border);
   border-radius: 999px;
   padding: 4px 12px;
   color: var(--accent-text);
   background: var(--accent-soft);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
 }
 
-.eyebrow::before {
+.pill::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -332,12 +389,9 @@ h1 {
   letter-spacing: -0.02em;
 }
 
-/* Fades from strong text into teal, like the app's welcome heading */
+/* The highlighted word in a page title, in the brand lime */
 .gradient-text {
-  background: linear-gradient(135deg, var(--fg-strong) 40%, var(--accent-text) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--accent-text);
 }
 
 h2 {
@@ -982,10 +1036,19 @@ h3 {
 }
 
 @media (max-width: 560px) {
+  .home-hero h1 {
+    font-size: 2.1rem;
+  }
+
+  .safeguards {
+    grid-template-columns: 1fr;
+  }
+
   .site-header,
   .site-footer,
   .section,
   .hero,
+  .home-hero,
   .page-hero {
     width: min(100% - 32px, 1120px);
   }
@@ -996,11 +1059,6 @@ h3 {
 
   .feature-grid {
     grid-template-columns: 1fr;
-  }
-
-  .brand-mark {
-    width: 32px;
-    height: 32px;
   }
 
   .security-band {
@@ -1070,4 +1128,559 @@ h3 {
 
 .request-form .form-note {
   font-size: 0.9rem;
+}
+
+/*
+ * Home page, laid out like the app's welcome page: the wordmark hero with the
+ * ring picture, the two pillars, the agent walkthrough, then the tools.
+ */
+.home-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 48px;
+  padding: 64px 0 48px;
+}
+
+.home-hero-copy {
+  display: flex;
+  flex: 1 1 480px;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.home-hero-copy .dyno-word {
+  font-size: clamp(56px, 9vw, 84px) !important;
+}
+
+.home-hero h1 {
+  max-width: 580px;
+  margin: 8px 0 0;
+  font-size: clamp(2.3rem, 4.6vw, 3.4rem);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+}
+
+.home-hero .lead {
+  margin: 0;
+  max-width: 560px;
+}
+
+.home-hero .hero-actions {
+  margin-top: 4px;
+}
+
+.fine-print {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 0.88rem;
+}
+
+.home-hero-art {
+  display: flex;
+  flex: 1 1 380px;
+  min-width: 0;
+  justify-content: center;
+}
+
+.hero-cycle {
+  position: relative;
+  width: 440px;
+  max-width: 100%;
+  aspect-ratio: 1;
+}
+
+.hero-cycle > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.hero-cycle-piece {
+  animation: hero-snap 0.9s 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+@keyframes hero-snap {
+  from {
+    opacity: 0;
+    transform: translate(44px, -44px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.hero-cycle-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hero-cycle-center span {
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+}
+
+.hero-cycle-center strong {
+  color: var(--fg-strong);
+  font-size: clamp(1.6rem, 5vw, 2.3rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.hero-cycle-label {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 12px;
+  color: var(--fg-strong);
+  background: var(--surface);
+  font-size: clamp(0.72rem, 2.4vw, 0.88rem);
+  font-weight: 500;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+}
+
+.hero-cycle-dyno {
+  border-color: var(--brand);
+  font-family: var(--font-brand);
+  font-size: clamp(0.85rem, 2.6vw, 1rem);
+  font-weight: 900;
+}
+
+/* Two ways to work */
+.pillars {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  gap: 20px;
+}
+
+.pillar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px;
+  background: var(--surface);
+}
+
+.pillar-mcp {
+  border-color: var(--accent-border);
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--brand) 12%, var(--surface)) 0%,
+    var(--surface) 60%
+  );
+}
+
+.pillar-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pillar-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.pillar-mcp .pillar-icon {
+  color: var(--accent-fg);
+  background: var(--accent);
+}
+
+.pillar-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.pillar-kicker {
+  color: var(--fg-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pillar-mcp .pillar-kicker {
+  color: var(--accent-text);
+}
+
+.pillar-new {
+  margin-left: auto;
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  padding: 1px 8px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pillar h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  line-height: 1.3;
+}
+
+.pillar p {
+  margin: 0;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip-list li {
+  border-radius: 6px;
+  padding: 3px 10px;
+  color: var(--fg);
+  background: var(--raised);
+  font-size: 0.85rem;
+}
+
+.chip-list .chip-more {
+  border: 1px dashed var(--line-strong);
+  color: var(--fg-muted);
+  background: transparent;
+}
+
+.pillar-link {
+  margin-top: auto;
+  padding-top: 4px;
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.pillar-link:hover {
+  color: var(--fg-strong);
+}
+
+/* Work agentically: a full-width band */
+.band {
+  border-block: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.band-inner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 48px;
+  width: min(1120px, calc(100% - 40px));
+  margin-inline: auto;
+  padding: 72px 0;
+}
+
+.band-col {
+  display: flex;
+  flex: 1 1 440px;
+  min-width: 0;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.band-col h2 {
+  margin-bottom: 10px;
+}
+
+.band-col .lead {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: 32px 1fr;
+  gap: 14px;
+}
+
+.step-number {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  color: var(--accent-fg);
+  background: var(--accent);
+  font-weight: 700;
+}
+
+.steps h3 {
+  margin: 4px 0 4px;
+}
+
+.steps p {
+  margin: 0;
+  color: var(--fg);
+}
+
+.steps code,
+.approval code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  color: var(--fg-strong);
+}
+
+.client-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.client-names span {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 10px;
+  background: var(--canvas);
+  font-size: 0.85rem;
+}
+
+/* An illustration of an agent change waiting for approval; nothing in it is a control */
+.approval {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+}
+
+.chat-bubble {
+  align-self: flex-end;
+  max-width: 86%;
+  border-radius: 14px 14px 4px 14px;
+  padding: 12px 16px;
+  color: var(--fg-strong);
+  background: var(--raised);
+  font-size: 0.95rem;
+}
+
+.chat-bubble small {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.approval-card {
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--canvas);
+  box-shadow: var(--shadow);
+}
+
+.approval-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 16px;
+  color: var(--fg-strong);
+  font-weight: 600;
+}
+
+.approval-title svg {
+  width: 18px;
+  height: 18px;
+  color: var(--accent-text);
+}
+
+.approval-card ol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 16px 10px 40px;
+  font-size: 0.95rem;
+}
+
+.approval-note {
+  margin: 0;
+  padding: 0 16px;
+  color: var(--fg-muted);
+  font-size: 0.85rem;
+}
+
+.approval-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 16px;
+}
+
+.approval-actions span {
+  border-radius: 6px;
+  padding: 7px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.approval-deny {
+  border: 1px solid var(--line-strong);
+  color: var(--fg-strong);
+  background: var(--raised);
+}
+
+.approval-approve {
+  color: var(--accent-fg);
+  background: var(--accent);
+}
+
+.safeguards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.safeguards li {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.safeguards strong {
+  display: block;
+  color: var(--fg-strong);
+}
+
+.safeguards span {
+  color: var(--fg-muted);
+  font-size: 0.88rem;
+}
+
+/* Tool tiles with the app's tool icons */
+.tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: 12px;
+}
+
+.tile {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px;
+  background: var(--surface);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+
+.tile:hover {
+  border-color: var(--accent-border);
+  background: var(--raised);
+}
+
+.tile .feature-icon {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  margin: 0;
+}
+
+.tile .tool-icon-glyph {
+  width: 20px;
+  height: 20px;
+}
+
+.tile h3 {
+  margin: 0 0 2px;
+  font-size: 1rem;
+}
+
+.tile p {
+  margin: 0;
+  color: var(--fg-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.section-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.section-row h2,
+.section-row p {
+  margin-bottom: 0;
+}
+
+.section-row p {
+  margin-top: 6px;
+  color: var(--fg-muted);
+}
+
+@media (max-width: 860px) {
+  .band-inner {
+    padding: 56px 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .band-inner {
+    width: min(100% - 32px, 1120px);
+  }
+
+  .pillar {
+    padding: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-cycle-piece {
+    animation: none;
+  }
+}
+
+.tile-grid-spaced {
+  margin-top: 24px;
 }

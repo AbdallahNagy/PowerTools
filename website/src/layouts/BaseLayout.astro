@@ -4,10 +4,13 @@ import "@fontsource/ibm-plex-sans/500.css";
 import "@fontsource/ibm-plex-sans/600.css";
 import "@fontsource/ibm-plex-sans/700.css";
 import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/nunito/800.css";
+import "@fontsource/nunito/900.css";
 import "../styles/global.css";
 import Icon from "../components/Icon.astro";
-import appIcon from "../assets/images/dyno-icon.png";
-import appMark from "../assets/images/dyno-icon.svg";
+import DynoWordmark from "../components/DynoWordmark.astro";
+import appIcon from "../assets/images/dyno-icon-512.png";
+import appMark from "../assets/images/dyno-mark.svg";
 import socialImage from "../assets/images/app-data-migration-light.png";
 
 interface Props {
@@ -48,7 +51,7 @@ const siteStructuredData = [
     name: siteName,
     alternateName: ["Power Tools", "PowerTools", "Dyno for Dataverse and Dynamics 365"],
     description:
-      "Free, open-source Windows desktop toolkit for Dataverse, Dynamics 365, and Power Platform developers. A modern alternative to XrmToolBox.",
+      "Free, open-source Windows toolkit and MCP server for Dataverse, Dynamics 365, and Power Platform developers. Modern tools for everyday work, and an MCP server so AI agents can work on Dataverse online and on-premises. A modern alternative to XrmToolBox.",
     url: absoluteUrl("/"),
     downloadUrl: `${githubUrl}/releases/latest/download/Dyno-Setup.exe`,
     applicationCategory: "DeveloperApplication",
@@ -141,8 +144,7 @@ const isActive = (href: string) => {
   <body>
     <header class="site-header">
       <a class="brand" href={localPath("/")} aria-label="Dyno home">
-        <img class="brand-mark" src={appMark.src} alt="" width="34" height="34" />
-        <span>Dyno</span>
+        <DynoWordmark size={30} />
       </a>
       <button
         class="theme-toggle"
@@ -182,8 +184,8 @@ const isActive = (href: string) => {
     </main>
     <footer class="site-footer">
       <div>
-        <strong>Dyno</strong>
-        <span>Free, open-source desktop tools for Dataverse and Dynamics 365 developers.</span>
+        <DynoWordmark size={26} tagline />
+        <span>Free and open source, for Dataverse, Power Platform and Dynamics 365 developers.</span>
       </div>
       <div class="footer-links">
         <a href={localPath("/download")}>Download</a>

@@ -1,6 +1,9 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Icon from "../components/Icon.astro";
+import DynoWordmark from "../components/DynoWordmark.astro";
+import HeroCycle from "../components/HeroCycle.astro";
+import ToolIcon from "../components/ToolIcon.astro";
 import appDark from "../assets/images/app-data-migration-dark.png";
 import appLight from "../assets/images/app-data-migration-light.png";
 import { RELEASED_TOOLS } from "../../../desktop/src/ui/tools/publicCatalog";
@@ -9,34 +12,33 @@ import { toolPath } from "../lib/tools";
 const githubUrl = "https://github.com/AbdallahNagy/Dyno";
 const baseUrl = import.meta.env.BASE_URL;
 const basePath = baseUrl.replace(/\/$/, "");
-const features = [
-  {
-    icon: "sparkles",
-    title: "Modern UI",
-    description: "A cleaner interface for Dataverse work, designed for daily use."
-  },
-  {
-    icon: "list",
-    title: "Friendly UX",
-    description: "Tools are easier to figure out without digging through old dialogs."
-  },
-  {
-    icon: "shield-check",
-    title: "Local and secure",
-    description: "The app runs on your machine and connects directly to Dataverse."
-  },
-  {
-    icon: "arrow-left-right",
-    title: "Open source",
-    description: "Inspect the code, suggest improvements, and contribute on GitHub."
-  }
-] as const;
+
+/** Tools named on the Tools card; the full list is further down. */
+const featuredIds = ["fetchxml-builder", "plugin-registration", "data-migration", "solution-layers-explorer"];
+const featured = featuredIds
+  .map((id) => RELEASED_TOOLS.find((tool) => tool.id === id))
+  .filter((tool) => tool !== undefined);
+const moreCount = RELEASED_TOOLS.length - featured.length;
+
+const safeguards = [
+  { title: "Reads never ask", detail: "Schema, forms, solutions, queries" },
+  { title: "Changes ask you first", detail: "Or trust a dev connection" },
+  { title: "Deletes always ask", detail: "No setting turns this off" },
+  { title: "Online and on-premises", detail: "The same tools on both" }
+];
+
+const clients = ["Claude Code", "Claude Desktop", "VS Code"];
 
 const faqs = [
   {
     question: "What is Dyno?",
     answer:
       "Dyno is a free, open-source Windows desktop app with built-in tools for Microsoft Dataverse, Dynamics 365 Customer Engagement, and Power Platform developers. It covers FetchXML, plug-in registration, data migration, metadata, translations, and solution work in one workspace."
+  },
+  {
+    question: "What does the Dyno MCP server do?",
+    answer:
+      "It lets an AI agent such as Claude Code, Claude Desktop, or GitHub Copilot in VS Code read and change your Dataverse environments through Dyno, with your sign-in and the connections you already saved. Reads run right away, changes show you a plan and wait for your approval, and deletes always ask. It works with Dataverse online and on-premises."
   },
   {
     question: "Is Dyno the same app as Power Tools?",
@@ -80,23 +82,157 @@ const localPath = (path: string) =>
 ---
 
 <BaseLayout
-  title="Dyno: Free Dynamics 365 and Dataverse Developer Tools"
-  description="Dyno is a free, open-source Windows toolkit for Dynamics 365, Dataverse, and Power Platform developers. FetchXML Builder, Plugin Registration, data migration, and more. A modern XrmToolBox alternative."
+  title="Dyno: Dataverse Tools and MCP Server for Dynamics 365 Developers"
+  description="Dyno is a free, open-source Windows toolkit and MCP server for Dataverse, Dynamics 365, and Power Platform developers. FetchXML Builder, Plugin Registration, data migration, and an MCP server for AI agents, online and on-premises. A modern XrmToolBox alternative."
   structuredData={[faqStructuredData]}
 >
-  <section class="hero">
-    <div class="hero-copy">
-      <p class="eyebrow">Open-source desktop toolkit</p>
-      <h1><span class="gradient-text">Dyno</span> for Dataverse and Dynamics 365 Developers</h1>
+  <section class="home-hero">
+    <div class="home-hero-copy">
+      <DynoWordmark size={84} tagline />
+      <a class="pill" href="#mcp">New: the Dyno MCP server, online and on-premises</a>
+      <h1>The last tool you need for Dataverse.</h1>
       <p class="lead">
-        A modern open-source desktop toolkit for everyday Dataverse, Dynamics
-        365, and Power Platform work, with a friendly UI, secure local
-        workflow, and tools that are easy to figure out and use.
+        You already work across Dataverse, Power Platform and Dynamics 365. Dyno is the piece that
+        completes it: modern tools for every day, and an MCP server so your AI agent can do the work
+        with you. Nothing missing, so you stay in flow.
       </p>
       <div class="hero-actions">
         <a class="button primary" href={localPath("/download")}>Download for Windows</a>
-        <a class="button secondary" href={githubUrl}>View on GitHub</a>
+        <a class="button secondary" href="#mcp">Set up AI agents</a>
       </div>
+      <p class="fine-print">Free and open source. Runs on your machine with your own sign-in.</p>
+    </div>
+    <div class="home-hero-art">
+      <HeroCycle />
+    </div>
+  </section>
+
+  <section class="section">
+    <p class="eyebrow">What Dyno does</p>
+    <h2>Two ways to work. One place.</h2>
+    <div class="pillars">
+      <article class="pillar">
+        <div class="pillar-head">
+          <span class="pillar-icon"><Icon name="layout-grid" /></span>
+          <span class="pillar-kicker">1 · Tools</span>
+        </div>
+        <h3>Dataverse tools that finally feel modern</h3>
+        <p>
+          The jobs you do every day, from FetchXML to plug-in steps to solution layers, in clear
+          screens that are quick to learn and pleasant to come back to. No old dialogs to dig
+          through.
+        </p>
+        <ul class="chip-list">
+          {featured.map((tool) => <li>{tool.title}</li>)}
+          {moreCount > 0 && <li class="chip-more">+ {moreCount} more</li>}
+        </ul>
+        <a class="pillar-link" href="#tools">Browse all tools →</a>
+      </article>
+
+      <article class="pillar pillar-mcp">
+        <div class="pillar-head">
+          <span class="pillar-icon"><Icon name="radar" /></span>
+          <span class="pillar-kicker">2 · MCP server</span>
+          <span class="pillar-new">New</span>
+        </div>
+        <h3>An MCP server your agent can rely on</h3>
+        <p>
+          Let Claude Code, Claude Desktop or VS Code read and change your environments through
+          Dyno, with your sign-in and the connections you already saved. The same tools on
+          Dataverse online and on-premises.
+        </p>
+        <a class="pillar-link" href="#mcp">See how it works →</a>
+      </article>
+    </div>
+  </section>
+
+  <section class="band" id="mcp">
+    <div class="band-inner">
+      <div class="band-col">
+        <div>
+          <p class="eyebrow">Work agentically</p>
+          <h2>Describe the outcome. Approve the plan. Done.</h2>
+          <p class="lead">
+            Your agent says what it wants your environment to look like. Dyno reads the
+            environment, works out exactly what has to change, and shows you that plan before
+            anything runs.
+          </p>
+        </div>
+        <ol class="steps">
+          <li>
+            <span class="step-number">1</span>
+            <div>
+              <h3>Turn on the server</h3>
+              <p>Settings › Agents (MCP) in Dyno. One switch, and it stays on your machine.</p>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">2</span>
+            <div>
+              <h3>Connect your client</h3>
+              <p>No token in any config file. Dyno shows the setup for your client, ready to copy.</p>
+              <div class="client-names">{clients.map((client) => <span>{client}</span>)}</div>
+            </div>
+          </li>
+          <li>
+            <span class="step-number">3</span>
+            <div>
+              <h3>Ask for what you want</h3>
+              <p>
+                Tables, columns, forms, views, plug-ins, flows, roles, solutions and records. Reads
+                run right away; changes wait for you.
+              </p>
+            </div>
+          </li>
+        </ol>
+      </div>
+
+      <div class="band-col">
+        <figure class="approval" aria-label="Example: an agent asks for a change and Dyno shows the plan first">
+          <div class="chat-bubble">
+            <small>You, in Claude Code</small>
+            Add a Priority choice to Case with Low, Normal and High, and put it on the main form.
+          </div>
+          <div class="approval-card">
+            <div class="approval-title">
+              <Icon name="shield-check" />
+              Claude Code wants to change Contoso · Dev
+            </div>
+            <ol>
+              <li>Create the global choice <code>new_priority</code> with 3 options</li>
+              <li>Add the column <code>new_priority</code> to Case</li>
+              <li>Add the field to the Case main form, General tab</li>
+              <li>Publish Case</li>
+            </ol>
+            <p class="approval-note">Goes into an unmanaged solution. Nothing runs until you approve.</p>
+            <div class="approval-actions" aria-hidden="true">
+              <span class="approval-deny">Deny</span>
+              <span class="approval-approve">Approve 4 steps</span>
+            </div>
+          </div>
+        </figure>
+        <ul class="safeguards">
+          {
+            safeguards.map((item) => (
+              <li>
+                <strong>{item.title}</strong>
+                <span>{item.detail}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="tools">
+    <div class="section-row">
+      <div>
+        <p class="eyebrow">Your toolkit</p>
+        <h2>{RELEASED_TOOLS.length} tools, one click away</h2>
+        <p>Each one runs on your machine and connects straight to your environments.</p>
+      </div>
+      <a class="button secondary" href={localPath("/request-tool")}>Request a tool</a>
     </div>
 
     <figure class="product-panel">
@@ -105,6 +241,7 @@ const localPath = (path: string) =>
         src={appLight.src}
         width={appLight.width}
         height={appLight.height}
+        loading="lazy"
         alt="Dyno Data Migration tool comparing fields between a dev and a test environment"
       />
       <img
@@ -116,71 +253,19 @@ const localPath = (path: string) =>
         alt="Dyno Data Migration tool comparing fields between a dev and a test environment"
       />
     </figure>
-  </section>
 
-  <section class="section">
-    <div class="section-header">
-      <div>
-        <p class="eyebrow">Why Dyno</p>
-        <h2>Dataverse tooling that feels easier to use.</h2>
-      </div>
-      <p>
-        Dyno focuses on developer flow: clear screens, discoverable
-        actions, and less friction around the tasks you repeat every day.
-      </p>
-    </div>
-
-    <div class="feature-grid">
-      {
-        features.map((feature) => (
-          <article class="feature-card">
-            <span class="feature-icon">
-              <Icon name={feature.icon} />
-            </span>
-            <h3>{feature.title}</h3>
-            <p>{feature.description}</p>
-          </article>
-        ))
-      }
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="section-header">
-      <div>
-        <p class="eyebrow">Current tools</p>
-        <h2>Dynamics 365 and Dataverse tools developers need often.</h2>
-      </div>
-      <p>
-        Dyno is a desktop workspace for Dataverse developer tools. Each
-        tool below is in the app today.
-      </p>
-    </div>
-
-    <div class="tool-grid">
+    <div class="tile-grid tile-grid-spaced">
       {
         RELEASED_TOOLS.map((tool) => (
-          <a class="feature-card tool-card tool-link-card" href={localPath(toolPath(tool.id))}>
-            <h3>{tool.title}</h3>
-            <p>{tool.description}</p>
+          <a class="tile" href={localPath(toolPath(tool.id))}>
+            <ToolIcon id={tool.id} />
+            <div>
+              <h3>{tool.title}</h3>
+              <p>{tool.description}</p>
+            </div>
           </a>
         ))
       }
-    </div>
-    <div class="action-row">
-      <a class="button secondary" href={localPath("/tools/")}>See all tools</a>
-    </div>
-  </section>
-
-  <section class="section">
-    <div class="security-band">
-      <p class="eyebrow">Secure by design</p>
-      <h2>Your data never leaves your machine.</h2>
-      <p class="lead">
-        Dyno runs locally and connects directly from the desktop app to
-        your Dataverse environments. The website introduces the tool; it does
-        not host or process your Dataverse data.
-      </p>
     </div>
   </section>
 
