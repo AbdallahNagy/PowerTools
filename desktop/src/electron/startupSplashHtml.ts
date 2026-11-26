@@ -1,5 +1,16 @@
 export type StartupSplashScheme = "default" | "dark-orange";
 
+/** How long the logo animation runs. */
+export const STARTUP_SPLASH_ANIMATION_MS = 3600;
+
+/** The shortest time the splash stays up: the whole animation plus a short look at the finished wordmark. */
+export const STARTUP_SPLASH_MIN_MS = STARTUP_SPLASH_ANIMATION_MS + 500;
+
+/** Milliseconds the splash must still stay up so its animation can finish. */
+export function startupSplashTimeLeft(startedAt: number, now: number, minimumMs = STARTUP_SPLASH_MIN_MS) {
+  return Math.max(0, startedAt + minimumMs - now);
+}
+
 /*
  * The wordmark follows the Dyno logo animation: a ring draws itself, the green arc lands at the
  * upper right, the ring spins once, then it settles in as the "o" of "dyno" while d, y and n fade in.
@@ -53,7 +64,8 @@ function wordmarkSvg() {
 }
 
 /**
- * The splash stays up until the main window is ready to show, so the animation loops.
+ * The animation plays once and ends on the finished wordmark. The main window waits for it
+ * (see STARTUP_SPLASH_MIN_MS), and if startup takes longer, the wordmark stays while the bar keeps moving.
  * It uses CSS only: the window's content security policy allows no script.
  */
 export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") {
@@ -74,7 +86,7 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
         --accent: #c6f232;
         --fg: #8b8f98;
         --line: #26282e;
-        --cycle: 5.6s;
+        --cycle: ${STARTUP_SPLASH_ANIMATION_MS}ms;
         --ease: cubic-bezier(0.65, 0, 0.35, 1);
         --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
         background: var(--canvas);
@@ -119,7 +131,6 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
 
       .scene {
         align-items: center;
-        animation: scene var(--cycle) infinite both;
         display: flex;
         flex-direction: column;
         gap: 14px;
@@ -136,15 +147,15 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
       }
 
       .l0 {
-        animation: letter-0 var(--cycle) var(--ease-out) infinite both;
+        animation: letter-0 var(--cycle) var(--ease-out) both;
       }
 
       .l1 {
-        animation: letter-1 var(--cycle) var(--ease-out) infinite both;
+        animation: letter-1 var(--cycle) var(--ease-out) both;
       }
 
       .l2 {
-        animation: letter-2 var(--cycle) var(--ease-out) infinite both;
+        animation: letter-2 var(--cycle) var(--ease-out) both;
       }
 
       .ring,
@@ -155,28 +166,28 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
       }
 
       .ring {
-        animation: draw-ring var(--cycle) infinite both;
+        animation: draw-ring var(--cycle) both;
         stroke: var(--mark);
       }
 
       .accent {
-        animation: draw-accent var(--cycle) infinite both;
+        animation: draw-accent var(--cycle) both;
         stroke: var(--accent);
       }
 
       /* Transforms on SVG elements use the viewBox's units. */
       .ring-move {
-        animation: ring-move var(--cycle) infinite both;
+        animation: ring-move var(--cycle) both;
         transform-origin: 1970px -237px;
       }
 
       .ring-spin {
-        animation: ring-spin var(--cycle) infinite both;
+        animation: ring-spin var(--cycle) both;
         transform-origin: 1970px -237px;
       }
 
       .tagline {
-        animation: tagline var(--cycle) infinite both;
+        animation: tagline var(--cycle) both;
         color: var(--fg);
         font-size: 12px;
         font-weight: 600;
@@ -219,39 +230,28 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
         width: 40%;
       }
 
-      /* One cycle: 0-16% the ring draws, 16-22% the green arc lands, 22-40% one spin,
-         40-52% the ring settles as the "o" and the letters fade in, 58% the tagline, 88-96% fade out. */
-      @keyframes scene {
-        0%,
-        88% {
-          opacity: 1;
-        }
-        96%,
-        100% {
-          opacity: 0;
-        }
-      }
-
-      /* The big intro ring is thinner, like the app icon, and thickens as it becomes the "o". */
+      /* The animation plays once (3.6 s): 0-25% the ring draws, 25-34% the green arc lands, 34-62% one spin,
+         62-91% the ring settles as the "o" while the letters fade in, 88-100% the tagline. It then holds on the
+         finished wordmark while the bar keeps moving. */
       @keyframes draw-ring {
         0%,
-        3% {
+        4.7% {
           animation-timing-function: var(--ease);
           opacity: 0;
           stroke-dasharray: 0 360;
           stroke-width: 100;
         }
-        4% {
+        6.2% {
           opacity: 1;
         }
-        16%,
-        40% {
+        25%,
+        62.5% {
           animation-timing-function: var(--ease);
           opacity: 1;
           stroke-dasharray: var(--len) 360;
           stroke-width: 100;
         }
-        52%,
+        81.2%,
         100% {
           opacity: 1;
           stroke-dasharray: var(--len) 360;
@@ -261,20 +261,20 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
 
       @keyframes draw-accent {
         0%,
-        16% {
+        25% {
           animation-timing-function: var(--ease-out);
           opacity: 0;
           stroke-dasharray: 0 360;
           stroke-width: 100;
         }
-        22%,
-        40% {
+        34.4%,
+        62.5% {
           animation-timing-function: var(--ease);
           opacity: 1;
           stroke-dasharray: var(--len) 360;
           stroke-width: 100;
         }
-        52%,
+        81.2%,
         100% {
           opacity: 1;
           stroke-dasharray: var(--len) 360;
@@ -284,16 +284,16 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
 
       @keyframes ring-spin {
         0%,
-        3% {
+        4.7% {
           animation-timing-function: var(--ease);
           transform: rotate(-150deg);
         }
-        16%,
-        22% {
+        25%,
+        34.4% {
           animation-timing-function: var(--ease);
           transform: rotate(0deg);
         }
-        40%,
+        62.5%,
         100% {
           transform: rotate(360deg);
         }
@@ -301,11 +301,11 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
 
       @keyframes ring-move {
         0%,
-        40% {
+        62.5% {
           animation-timing-function: var(--ease);
           transform: translate(-840px, -23px) scale(1.6);
         }
-        52%,
+        81.2%,
         100% {
           transform: none;
         }
@@ -313,11 +313,11 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
 
       @keyframes letter-0 {
         0%,
-        42% {
+        65.6% {
           opacity: 0;
           transform: translateX(-60px);
         }
-        52%,
+        81.2%,
         100% {
           opacity: 1;
           transform: none;
@@ -326,11 +326,11 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
 
       @keyframes letter-1 {
         0%,
-        45% {
+        70.3% {
           opacity: 0;
           transform: translateX(-60px);
         }
-        55%,
+        85.9%,
         100% {
           opacity: 1;
           transform: none;
@@ -339,11 +339,11 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
 
       @keyframes letter-2 {
         0%,
-        48% {
+        75% {
           opacity: 0;
           transform: translateX(-60px);
         }
-        58%,
+        90.6%,
         100% {
           opacity: 1;
           transform: none;
@@ -352,11 +352,10 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
 
       @keyframes tagline {
         0%,
-        56% {
+        87.5% {
           opacity: 0;
           transform: translateY(6px);
         }
-        64%,
         100% {
           opacity: 1;
           transform: none;
@@ -374,7 +373,6 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
 
       /* Reduced motion: show the finished logo and keep only the loading bar moving. */
       @media (prefers-reduced-motion: reduce) {
-        .scene,
         .letter,
         .ring,
         .accent,
