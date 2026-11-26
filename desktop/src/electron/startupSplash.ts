@@ -1,42 +1,24 @@
 import { BrowserWindow } from "electron";
-import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { getAppIconPath } from "./pathResolver.js";
-import { buildStartupSplashHtml } from "./startupSplashHtml.js";
+import { buildStartupSplashHtml, startupSplashTimeLeft } from "./startupSplashHtml.js";
 import { currentColorScheme, windowBackgroundColor } from "./theme.js";
 
-function getStartupIconDataUrl() {
-  const __dirname = dirname(fileURLToPath(import.meta.url));
-  const iconPaths = [
-    getAppIconPath(),
-    join(
-      __dirname,
-      "..",
-      "src",
-      "ui",
-      "assets",
-      "icons",
-      "dyno-icon-256.png"
-    ),
-  ];
+const splashStartedAt = new WeakMap<BrowserWindow, number>();
 
-  for (const iconPath of iconPaths) {
-    try {
-      const icon = readFileSync(iconPath);
-      return `data:image/png;base64,${icon.toString("base64")}`;
-    } catch {
-      // Try the next known runtime location before falling back to text.
-    }
-  }
-
-  return undefined;
+/**
+ * Resolves once the splash has played its whole animation, so a fast start still shows it.
+ * A slow start has already waited long enough and resolves at once.
+ */
+export function waitForStartupSplash(splashWindow: BrowserWindow, now = Date.now()) {
+  const startedAt = splashStartedAt.get(splashWindow);
+  const timeLeft = splashWindow.isDestroyed() || startedAt === undefined ? 0 : startupSplashTimeLeft(startedAt, now);
+  return new Promise<void>((resolve) => setTimeout(resolve, timeLeft));
 }
 
 export function createStartupSplashWindow() {
   const splashWindow = new BrowserWindow({
-    width: 420,
-    height: 260,
+    width: 480,
+    height: 300,
     frame: false,
     resizable: false,
     movable: true,
@@ -58,9 +40,10 @@ export function createStartupSplashWindow() {
     }
   });
 
+  splashStartedAt.set(splashWindow, Date.now());
   void splashWindow.loadURL(
     `data:text/html;charset=utf-8,${encodeURIComponent(
-      buildStartupSplashHtml(getStartupIconDataUrl(), currentColorScheme() === "dark-orange" ? "dark-orange" : "default")
+      buildStartupSplashHtml(currentColorScheme() === "dark-orange" ? "dark-orange" : "default")
     )}`
   );
 
