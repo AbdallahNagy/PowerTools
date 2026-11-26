@@ -18,8 +18,8 @@ test("startup splash draws the dyno wordmark with the ring as its o", () => {
   expect(html).toMatch(/<svg class="wordmark"[^>]*aria-label="dyno"/);
   const letters = [...html.matchAll(/class="letter l\d" data-letter="(.)"/g)].map((match) => match[1]);
   expect(letters.join("")).toBe("dyn");
-  expect(html).toMatch(/<circle class="ring" style="--len: 214"/);
-  expect(html).toMatch(/<circle class="accent" style="--len: 46"[^>]*transform="rotate\(-68 /);
+  expect(html).toMatch(/<circle class="ring" style="--len: 243"/);
+  expect(html).toMatch(/<circle class="accent" style="--len: 47"[^>]*transform="rotate\(-68 /);
   expect(html).toMatch(/Dynamics toolbox \+ MCP server/);
 });
 

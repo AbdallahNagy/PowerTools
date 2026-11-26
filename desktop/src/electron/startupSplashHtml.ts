@@ -6,7 +6,8 @@ export type StartupSplashScheme = "default" | "dark-orange";
  *
  * The letters are outlines of Nunito Black (SIL Open Font License 1.1), so the splash needs no font
  * file. Units are the font's: 1000 per em, baseline at y = 0, y pointing down.
- * The ring is measured from the promo: center (1970, -237), mid radius 180, stroke 161.
+ * The ring keeps the app icon's proportions (dyno-icon-light-1024.png): outer radius 260 around
+ * (1970, -237), so mid radius 209 and stroke 102, with clear gaps on both sides of the green arc.
  */
 const LETTERS = [
   {
@@ -24,12 +25,12 @@ const LETTERS = [
 ];
 
 /* Arcs in degrees clockwise from 12 o'clock, measured on the stroke's center line. */
-const RING_ARC = { from: 118, to: 332 };
-const ACCENT_ARC = { from: 22, to: 68 };
+const RING_ARC = { from: 103, to: 346 };
+const ACCENT_ARC = { from: 22, to: 69 };
 
 /* An SVG circle starts at 3 o'clock, so rotate by (start - 90) to begin the dash at `from`. */
 function arc(cls: string, { from, to }: { from: number; to: number }) {
-  return `<circle class="${cls}" style="--len: ${to - from}" cx="1970" cy="-237" r="180" pathLength="360" transform="rotate(${from - 90} 1970 -237)" />`;
+  return `<circle class="${cls}" style="--len: ${to - from}" cx="1970" cy="-237" r="209" pathLength="360" transform="rotate(${from - 90} 1970 -237)" />`;
 }
 
 function wordmarkSvg() {
@@ -149,7 +150,7 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
       .accent {
         fill: none;
         stroke-linecap: round;
-        stroke-width: 161;
+        stroke-width: 102;
       }
 
       .ring {
@@ -230,14 +231,12 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
         }
       }
 
-      /* The big intro ring is thinner, like the app icon, and thickens as it becomes the "o". */
       @keyframes draw-ring {
         0%,
         3% {
           animation-timing-function: var(--ease);
           opacity: 0;
           stroke-dasharray: 0 360;
-          stroke-width: 100;
         }
         4% {
           opacity: 1;
@@ -247,13 +246,11 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
           animation-timing-function: var(--ease);
           opacity: 1;
           stroke-dasharray: var(--len) 360;
-          stroke-width: 100;
         }
         52%,
         100% {
           opacity: 1;
           stroke-dasharray: var(--len) 360;
-          stroke-width: 161;
         }
       }
 
@@ -263,20 +260,17 @@ export function buildStartupSplashHtml(scheme: StartupSplashScheme = "default") 
           animation-timing-function: var(--ease-out);
           opacity: 0;
           stroke-dasharray: 0 360;
-          stroke-width: 100;
         }
         22%,
         40% {
           animation-timing-function: var(--ease);
           opacity: 1;
           stroke-dasharray: var(--len) 360;
-          stroke-width: 100;
         }
         52%,
         100% {
           opacity: 1;
           stroke-dasharray: var(--len) 360;
-          stroke-width: 161;
         }
       }
 
