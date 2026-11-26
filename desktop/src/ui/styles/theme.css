@@ -52,6 +52,11 @@
   --color-accent-text: #3fbfae;
   --color-accent-soft: color-mix(in srgb, var(--color-accent-text) 14%, transparent);
 
+  /* Switches: one plain blue in every theme, so a switch reads as a control, not as the brand */
+  --color-control: #3b82f6;
+  --color-control-hover: #2f72e0;
+  --color-control-fg: #ffffff;
+
   /* Status */
   --color-danger: #f0846f;
   --color-danger-soft: color-mix(in srgb, var(--color-danger) 14%, transparent);
@@ -101,6 +106,10 @@
   --color-accent-fg: #ffffff;
   --color-accent-text: #3fbfae;
 
+  --color-control: #3b82f6;
+  --color-control-hover: #2f72e0;
+  --color-control-fg: #ffffff;
+
   --color-danger: #f0846f;
   --color-warn: #e0b13a;
   --color-ok: #5cbf7a;
@@ -130,6 +139,10 @@
   --color-accent-hover: #1a6d64;
   --color-accent-fg: #ffffff;
   --color-accent-text: #1a6e64;
+
+  --color-control: #2563eb;
+  --color-control-hover: #1d4fd0;
+  --color-control-fg: #ffffff;
 
   --color-danger: #c2412d;
   --color-warn: #9a6b00;
@@ -167,6 +180,10 @@
   --color-accent-hover: #ae5630;
   --color-accent-fg: #ffffff;
   --color-accent-text: #d97757;
+
+  --color-control: #2c84db;
+  --color-control-hover: #2573c2;
+  --color-control-fg: #ffffff;
 
   --color-danger: #ea928a;
   --color-warn: #e0a84e;

@@ -14,7 +14,7 @@ description: "Use when making any UI modification that involves color or shared 
 - **Dark Orange** uses the tokens of Claude's dark mode: warm neutral surfaces, ivory text, and a clay (orange) accent instead of teal. Its `alt` is Claude's blue, because the accent is already orange. `test/themeTokens.test.ts` fails if it leaves out a token that the light theme defines.
 - `[data-theme="dark"]` and `[data-theme="light"]` also work on any element, which then draws its subtree in that theme. The Settings theme previews use this. The nested dark block repeats the default values (`test/themeTokens.test.ts` keeps them equal); when you change a dark value, change both. Do not use the `-soft` tokens inside such a subtree: they are mixed on `<html>`.
 - Always check a change in every theme. Anything drawn with a fixed color, such as an image or an inverted icon, breaks in one of them.
-- Identity: cool slate neutrals with one deep teal accent. Teal is the only brand color. Blue is not part of the Dark and Light palettes; Dark Orange is the one theme that brings its own identity.
+- Identity: cool slate neutrals with one deep teal accent. Teal is the only brand color. Blue appears in the Dark and Light palettes only as `control`, the fill of switches; Dark Orange is the one theme that brings its own identity.
 
 ## Palette
 
@@ -55,6 +55,14 @@ description: "Use when making any UI modification that involves color or shared 
 
 `accent` and `accent-text` are different on purpose. White text on `accent` passes WCAG AA (4.8:1). `accent-text` passes AA as text on `canvas`, `surface` and `raised`. Dark Orange keeps Claude's own values, which are a little lower: white on its `accent` is 4.0:1, and its `accent-text` is 4.2:1 on `raised` (AA on `canvas` and `surface`). Never put body text in `accent`, and never put `accent-fg` on `accent-text`.
 
+### Controls
+
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `control` | `#3b82f6` | `#2563eb` | `#2c84db` | Fill of a switch that is on. One plain blue in every theme, so a switch reads as a control, not as the brand. |
+| `control-hover` | `#2f72e0` | `#1d4fd0` | `#2573c2` | Hover fill for anything using `control` |
+| `control-fg` | `#ffffff` | `#ffffff` | `#ffffff` | The switch thumb |
+
 ### Status
 
 | Token | Dark | Light | Dark Orange | Use |
@@ -92,6 +100,7 @@ Filter-group nesting cycles `line`, `accent-text/30`, `nest-a`, `nest-b`.
 | Link | `text-accent-text hover:underline` |
 | Tag / badge | `bg-accent-soft text-accent-text` |
 | Error message | `text-danger`, banner `bg-danger-soft border-danger` |
+| Switch (on) | `bg-control hover:bg-control-hover`, thumb `bg-control-fg` (use the shared `Switch`) |
 | Native checkbox / radio | `accent-accent` |
 
 For a translucent variant, use Tailwind's opacity modifier on a token, for example `bg-accent-text/25` or `border-accent-text/30`. In inline styles, use `color-mix(in srgb, var(--color-accent-text) 20%, transparent)`.

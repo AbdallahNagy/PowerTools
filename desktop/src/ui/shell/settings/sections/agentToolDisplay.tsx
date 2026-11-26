@@ -1,37 +1,23 @@
-import type { LucideIcon } from "lucide-react";
-
 import type { McpToolInfo } from "../../../platform/desktopBridge";
 import { cn } from "../../../shared/ui";
 
-const EFFECT_TILE: Record<McpToolInfo["effect"], string> = {
-  read: "bg-raised text-fg-muted",
-  change: "bg-warn-soft text-warn",
-  destructive: "bg-danger-soft text-danger",
-};
-
-/** A small rounded square holding an icon, tinted by what the tool does. */
-export function EffectTile({
-  icon: Icon,
-  effect,
-  error,
-  size = "md",
-}: {
-  icon: LucideIcon;
-  effect: McpToolInfo["effect"];
-  /** Draws the tile as an error whatever the effect. */
-  error?: boolean;
-  size?: "sm" | "md";
-}) {
+/**
+ * A small outlined word saying what a tool does to the environment, or that a call failed.
+ * Reads tag nothing: most tools only read, and a tag on every row would be noise.
+ */
+export function EffectTag({ effect, error }: { effect: McpToolInfo["effect"]; error?: string }) {
+  const text = error ?? (effect === "destructive" ? "Destructive" : effect === "change" ? "Change" : null);
+  if (!text) return null;
+  const tone = error || effect === "destructive" ? "danger" : "neutral";
   return (
     <span
-      aria-hidden="true"
+      data-tone={tone}
       className={cn(
-        "flex shrink-0 items-center justify-center",
-        size === "sm" ? "size-6 rounded-md" : "size-7 rounded-lg",
-        error ? "bg-danger-soft text-danger" : EFFECT_TILE[effect],
+        "inline-flex shrink-0 items-center rounded-sm border px-1.5 text-2xs font-normal",
+        tone === "danger" ? "border-danger/45 text-danger" : "border-line-strong text-fg-muted",
       )}
     >
-      <Icon size={size === "sm" ? 13 : 15} strokeWidth={2} />
+      {text}
     </span>
   );
 }
