@@ -11,10 +11,10 @@ description: "Use when making any UI modification that involves color or shared 
 - Each `--color-<name>` token generates utilities: `bg-<name>`, `text-<name>`, `border-<name>`, `ring-<name>`, `accent-<name>`, `fill-<name>`, and so on.
 - Tokens are named by **role**, not by value. Dark is the default theme. `[data-theme="light"]` and `[data-theme="dark-orange"]` redefine the same names, so a component that uses tokens works in every theme without changes.
 - The user picks **System**, **Dark**, **Light**, or **Dark Orange** in **View > Theme**. The main process (`src/electron/theme.ts`) saves the choice in `settings.json` and sets `nativeTheme.themeSource` (`dark` for Dark Orange). The renderer follows `prefers-color-scheme`, or the Dark Orange preference that main passes to each window, and sets `data-theme` on `<html>` (`src/ui/shell/theme/colorScheme.ts`). Window background colors in `theme.ts` and the startup splash (`startupSplashHtml.ts`) mirror `surface` and `canvas`; change those places together.
-- **Dark Orange** uses the tokens of Claude's dark mode: warm neutral surfaces, ivory text, and a clay (orange) accent instead of teal. Its `alt` is Claude's blue, because the accent is already orange. `test/themeTokens.test.ts` fails if it leaves out a token that the light theme defines.
+- **Dark Orange** uses the tokens of Claude's dark mode: warm neutral surfaces, ivory text, and a clay (orange) accent instead of lime. Its `alt` is Claude's blue, because the accent is already orange. `test/themeTokens.test.ts` fails if it leaves out a token that the light theme defines.
 - `[data-theme="dark"]` and `[data-theme="light"]` also work on any element, which then draws its subtree in that theme. The Settings theme previews use this. The nested dark block repeats the default values (`test/themeTokens.test.ts` keeps them equal); when you change a dark value, change both. Do not use the `-soft` tokens inside such a subtree: they are mixed on `<html>`.
 - Always check a change in every theme. Anything drawn with a fixed color, such as an image or an inverted icon, breaks in one of them.
-- Identity: cool slate neutrals with one deep teal accent. Teal is the only brand color. Blue appears in the Dark and Light palettes only as `control`, the fill of switches; Dark Orange is the one theme that brings its own identity.
+- Identity: cool slate neutrals with one lime accent, the lime piece of the Dyno logo. Lime is the only brand color. Blue appears in the Dark and Light palettes only as `control`, the fill of switches; Dark Orange is the one theme that brings its own identity.
 
 ## Palette
 
@@ -42,18 +42,30 @@ description: "Use when making any UI modification that involves color or shared 
 | `fg` | `#d3d8df` | `#2a303a` | `#c2c0b6` | Body text, input values, default labels |
 | `fg-muted` | `#8b94a3` | `#5f6877` | `#9c9a92` | Hints, placeholders, column headers, metadata, disabled text |
 
-### Accent (teal; clay in Dark Orange)
+### Accent (lime; clay in Dark Orange)
 
 | Token | Dark | Light | Dark Orange | Use |
 |---|---|---|---|---|
-| `accent` | `#1f8075` | `#1f7f74` | `#c6613f` | **Fill**: primary buttons, status bar, progress bars, checked checkboxes |
-| `accent-hover` | `#1a6d64` | `#1a6d64` | `#ae5630` | Hover fill for anything using `accent` |
-| `accent-fg` | `#ffffff` | `#ffffff` | `#ffffff` | Text and icons placed on an `accent` fill |
-| `accent-text` | `#3fbfae` | `#1a6e64` | `#d97757` | **Foreground**: links, active tab underline, selected indicators, "Custom" tags |
+| `accent` | `#c6f232` | `#6f9a00` | `#c6613f` | **Fill**: primary buttons, status bar, progress bars, checked checkboxes |
+| `accent-hover` | `#b3dd22` | `#5f8400` | `#ae5630` | Hover fill for anything using `accent` |
+| `accent-fg` | `#121316` | `#121316` | `#ffffff` | Text and icons placed on an `accent` fill |
+| `accent-text` | `#c6f232` | `#4f6e00` | `#d97757` | **Foreground**: links, active tab underline, selected indicators, "Custom" tags |
 | `accent-soft` | `accent-text` at 14% | same | same | Selected row background, tag background, drop targets, text selection |
 | `focus` | = `accent-text` | = `accent-text` | = `accent-text` | Focus border on inputs and the global keyboard focus ring |
 
-`accent` and `accent-text` are different on purpose. White text on `accent` passes WCAG AA (4.8:1). `accent-text` passes AA as text on `canvas`, `surface` and `raised`. Dark Orange keeps Claude's own values, which are a little lower: white on its `accent` is 4.0:1, and its `accent-text` is 4.2:1 on `raised` (AA on `canvas` and `surface`). Never put body text in `accent`, and never put `accent-fg` on `accent-text`.
+Lime is light, so text on an `accent` fill is near-black (`accent-fg`): 14.3:1 on Dark's lime and 5.6:1 on Light's olive. In Dark, `accent-text` is the same lime and passes AA on `canvas`, `surface` and `raised`. Light uses a darker olive for `accent-text` (5.2:1 or more on its surfaces), so `accent` and `accent-text` differ there. Dark Orange keeps Claude's own values, which are a little lower: white on its `accent` is 4.0:1, and its `accent-text` is 4.2:1 on `raised` (AA on `canvas` and `surface`). Never put body text in `accent`, and never put `accent-fg` on `accent-text`.
+
+### Brand (the Dyno logo)
+
+| Token | Dark | Light | Dark Orange | Use |
+|---|---|---|---|---|
+| `brand-ring` | `#f3f4ec` | `#121316` | `#faf9f5` | The logo's ring and the "dyno" wordmark |
+| `brand` | `#c6f232` | `#6f9a00` | `#c6f232` | The logo's lime piece; fill for brand buttons and dots |
+| `brand-hover` | `#b3dd22` | `#5f8400` | `#b3dd22` | Hover fill for anything using `brand` |
+| `brand-fg` | `#121316` | `#121316` | `#121316` | Text and icons on a `brand` fill |
+| `brand-text` | `#c6f232` | `#4f6e00` | `#c6f232` | Brand-colored text and icons on `canvas` and `surface` |
+
+Brand tokens are for brand moments, such as the welcome page and the logo. In Dark and Light they equal the accent; Dark Orange keeps its clay accent and the lime logo. Tools and controls use `accent`, except switches, which use `control`. `font-brand` (Nunito) sets the wordmark only.
 
 ### Controls
 

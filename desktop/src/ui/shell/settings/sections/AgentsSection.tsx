@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Check, Copy } from "lucide-react";
 
 import type { McpStatusInfo } from "../../../platform/desktopBridge";
+import { MCP_CLIENTS, type McpClientId } from "../../../shared/agents";
 import { Alert, Badge, Button, cn } from "../../../shared/ui";
 import type { AgentsState } from "../../agents/useAgents";
 import { useSettings } from "../SettingsContext";
@@ -13,40 +14,6 @@ function statusOf(status: McpStatusInfo | null): { label: string; tone: "neutral
   if (status?.running) return { label: "Running", tone: "ok" };
   return { label: "Off", tone: "neutral" };
 }
-
-/** Both snippets use the same launch, so a client config and the Claude Code command cannot disagree. */
-function claudeCodeCommand(status: McpStatusInfo): string {
-  return `claude mcp add --scope user dyno -- ${status.connectorCommand}`;
-}
-
-function clientConfigJson(status: McpStatusInfo): string {
-  return JSON.stringify(
-    { mcpServers: { dyno: { command: status.connector.command, args: status.connector.args } } },
-    null,
-    2,
-  );
-}
-
-function vsCodeConfigJson(status: McpStatusInfo): string {
-  return JSON.stringify(
-    { servers: { dyno: { type: "stdio", command: status.connector.command, args: status.connector.args } } },
-    null,
-    2,
-  );
-}
-
-type ClientId = "claude-code" | "claude-desktop" | "vs-code";
-
-const CLIENTS: Array<{ id: ClientId; label: string; hint: string; snippet(status: McpStatusInfo): string }> = [
-  { id: "claude-code", label: "Claude Code", hint: "Run this in a terminal.", snippet: claudeCodeCommand },
-  {
-    id: "claude-desktop",
-    label: "Claude Desktop",
-    hint: "Add this to claude_desktop_config.json, then restart Claude Desktop.",
-    snippet: clientConfigJson,
-  },
-  { id: "vs-code", label: "VS Code", hint: "Save this as .vscode/mcp.json in your workspace.", snippet: vsCodeConfigJson },
-];
 
 function Snippet({ label, text }: { label: string; text: string }) {
   const [copied, setCopied] = useState(false);
@@ -91,14 +58,14 @@ function Snippet({ label, text }: { label: string; text: string }) {
 
 /** One client's setup at a time, so the page is not three snippets long. */
 function ConnectClient({ status }: { status: McpStatusInfo }) {
-  const [clientId, setClientId] = useState<ClientId>("claude-code");
-  const client = CLIENTS.find((entry) => entry.id === clientId) ?? CLIENTS[0];
+  const [clientId, setClientId] = useState<McpClientId>("claude-code");
+  const client = MCP_CLIENTS.find((entry) => entry.id === clientId) ?? MCP_CLIENTS[0];
 
   return (
     <SettingsGroup title="Connect a client" description="Pick your agent, then copy its setup.">
       <div className="flex flex-col gap-3 py-3">
         <div role="group" aria-label="Client" className="flex w-fit gap-0.5 rounded-md border border-line bg-canvas p-0.5">
-          {CLIENTS.map((entry) => (
+          {MCP_CLIENTS.map((entry) => (
             <button
               key={entry.id}
               type="button"
