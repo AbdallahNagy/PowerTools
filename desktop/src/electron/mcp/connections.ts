@@ -40,6 +40,15 @@ export interface ConnectionResolver {
   list(): ConnectionListing[];
 }
 
+/** A connection name without case, separators or punctuation: words and digits joined by single spaces. */
+export function looseName(name: string): string {
+  return name
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean)
+    .join(" ");
+}
+
 const SIGN_IN_PATTERN = /interaction|sign.?in|consent|cancel/i;
 
 export function createConnectionResolver(deps: ConnectionResolverDeps): ConnectionResolver {
@@ -77,7 +86,9 @@ export function createConnectionResolver(deps: ConnectionResolverDeps): Connecti
         return authFor(active.summary.id, active.displayName, active.summary.agentChangesWithoutAsking === true);
       }
       const wanted = name.trim().toLowerCase();
-      const matches = all.filter((entry) => entry.displayName.toLowerCase() === wanted);
+      let matches = all.filter((entry) => entry.displayName.toLowerCase() === wanted);
+      // "PL400 dev", "pl400-dev" and "PL400 / dev" all name "PL400 · dev": people and agents rarely type the dot.
+      if (matches.length === 0) matches = all.filter((entry) => looseName(entry.displayName) === looseName(name));
       if (matches.length !== 1) {
         throw new AgentToolError(
           "ConnectionNotFound",

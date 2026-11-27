@@ -157,7 +157,8 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
             ["typeName"] = ComponentLayerNames.ClassicLayerName(row.GetAttributeValue<OptionSetValue>("componenttype")?.Value ?? row.GetAttributeValue<int?>("componenttype") ?? 0),
             ["objectId"] = row.GetAttributeValue<Guid?>("objectid")?.ToString("D"),
         }).ToList();
-        return new InspectListDto("solutioncomponents", items.Count, items, rows.Count > limit);
+        var truncated = rows.Count > limit;
+        return new InspectListDto("solutioncomponents", truncated ? await RowInspect.CountAsync(client, query, ct) : items.Count, items, truncated);
     }
 
     private async Task<object> LayersAsync(InspectBody body, CancellationToken ct)
@@ -173,8 +174,11 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
     private async Task<object> EnvVarsAsync(InspectBody body, CancellationToken ct)
     {
         string[] columns = ["schemaname", "displayname", "type", "defaultvalue", "description", "ismanaged"];
-        var list = body.Name is null
-            ? (await RowInspect.ListAsync(client, "envvar", "environmentvariabledefinition", "schemaname", columns, null, body.Filter, body.Top, ct)).Items.Cast<Dictionary<string, object?>>().ToList()
+        var listed = body.Name is null
+            ? await RowInspect.ListAsync(client, "envvar", "environmentvariabledefinition", "schemaname", columns, null, body.Filter, body.Top, ct)
+            : null;
+        var list = listed is not null
+            ? listed.Items.Cast<Dictionary<string, object?>>().ToList()
             : [RowInspect.Plain(await RowInspect.FindAsync(client, "environmentvariabledefinition", "schemaname", body.Name, columns, null, ct)
                 ?? throw RowInspect.NotFound($"Environment variable {body.Name}"), columns)];
         var values = (await client.RetrieveMultipleAsync(new QueryExpression("environmentvariablevalue") { NoLock = true, ColumnSet = new ColumnSet("value", "environmentvariabledefinitionid") }, ct)).Entities;
@@ -186,7 +190,7 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
             if (secret) item["defaultvalue"] = null;
         }
 
-        return body.Name is null ? new InspectListDto("envvar", list.Count, list.Cast<object>().ToList(), false) : list[0];
+        return listed is not null ? listed with { Items = list.Cast<object>().ToList() } : list[0];
     }
 
     private async Task<object> AssemblyAsync(InspectBody body, CancellationToken ct)

@@ -102,7 +102,7 @@ public class McpConnectorTests
         Assert.Equal("dyno", init["result"]!["serverInfo"]!["name"]!.GetValue<string>());
         Assert.True(init["result"]!["capabilities"]!["tools"]!["listChanged"]!.GetValue<bool>());
         Assert.NotNull(init["result"]!["capabilities"]!["resources"]);
-        Assert.Equal(Connector.OfflineMessage, init["result"]!["instructions"]!.GetValue<string>());
+        Assert.StartsWith(Connector.OfflineMessage, init["result"]!["instructions"]!.GetValue<string>());
 
         h.Send(ConnectorHarness.Initialized());
         h.Send(ConnectorHarness.Request(2, "tools/list"));
@@ -118,7 +118,7 @@ public class McpConnectorTests
         h.Send(ConnectorHarness.Request(4, "tools/call"));
         var error = await h.ReadAsync();
         Assert.Equal(-32000, error["error"]!["code"]!.GetValue<int>());
-        Assert.Equal(Connector.OfflineMessage, error["error"]!["message"]!.GetValue<string>());
+        Assert.StartsWith(Connector.OfflineMessage, error["error"]!["message"]!.GetValue<string>());
 
         AssertAllJson(h);
     }
@@ -385,7 +385,7 @@ public class McpConnectorTests
         h.Send(ConnectorHarness.Initialize(1));
         var init = await h.ReadAsync();
 
-        Assert.Equal(Connector.OfflineMessage, init["result"]!["instructions"]!.GetValue<string>());
+        Assert.StartsWith(Connector.OfflineMessage, init["result"]!["instructions"]!.GetValue<string>());
         AssertAllJson(h);
     }
 

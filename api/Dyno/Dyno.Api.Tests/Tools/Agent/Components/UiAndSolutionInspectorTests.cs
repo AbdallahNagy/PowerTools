@@ -37,6 +37,19 @@ public sealed class UiAndSolutionInspectorTests
     }
 
     [Fact]
+    public async Task A_list_cut_to_top_reports_the_total_of_every_match_not_the_page_size()
+    {
+        foreach (var name in new[] { "new_A", "new_B", "new_C" })
+            world.Add(new Entity("environmentvariabledefinition") { ["schemaname"] = name, ["type"] = new OptionSetValue(100000000) });
+
+        var cut = Assert.IsType<InspectListDto>((await Solutions.InspectAsync(new InspectBody { Kind = "envvar", Top = 2 }, CancellationToken.None)).Value);
+        var all = Assert.IsType<InspectListDto>((await Solutions.InspectAsync(new InspectBody { Kind = "envvar" }, CancellationToken.None)).Value);
+
+        Assert.Equal((3, 2, true), (cut.Total, cut.Items.Count, cut.Truncated));
+        Assert.Equal((3, 3, false), (all.Total, all.Items.Count, all.Truncated));
+    }
+
+    [Fact]
     public async Task A_view_described_and_sent_back_to_view_apply_plans_nothing()
     {
         world.Schema.AddTable("new_project", primary: "new_name");

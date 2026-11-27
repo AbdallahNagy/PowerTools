@@ -275,6 +275,22 @@ public sealed class RemovePlannerTests
         var step = Assert.Single(plan.Steps);
         Assert.Equal(PlanStepKind.Blocked, step.Kind);
         Assert.Contains("2 component(s) depend", step.Reason);
+        Assert.Equal(PlanEffect.Destructive, step.Effect);
+    }
+
+    [Fact]
+    public async Task A_dependent_is_named_by_kind_and_name_not_by_type_number_and_id()
+    {
+        var resource = Resource();
+        var form = new Entity("systemform", Guid.NewGuid()) { ["name"] = "Information", ["objecttypecode"] = "account" };
+        world.Add(form);
+        world.DependentComponents[resource.Id] = [(60, form.Id)];
+
+        var plan = await PlanAsync(new RemoveSpec { Kind = RemoveKind.WebResource, Name = "new_/main.js" });
+
+        var reason = Assert.Single(plan.Steps).Reason;
+        Assert.Contains("form \"Information\" on account", reason);
+        Assert.DoesNotContain(form.Id.ToString("D"), reason);
     }
 
     [Fact]

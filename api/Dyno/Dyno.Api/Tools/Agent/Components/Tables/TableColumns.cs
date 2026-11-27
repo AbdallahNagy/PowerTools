@@ -98,6 +98,12 @@ public static class TableColumns
     public static string BehaviorName(DateBehavior behavior) => BehaviorName(Behavior(behavior));
 
     /// <summary>
+    /// The behavior a new column gets when the spec leaves it out: a date-only column holds a calendar day, so it is
+    /// Date only and never shifts across time zones; a date and time column is User local, as in the maker portal.
+    /// </summary>
+    public static DateBehavior DefaultBehavior(ColumnType type) => type == ColumnType.DateOnly ? DateBehavior.DateOnly : DateBehavior.UserLocal;
+
+    /// <summary>
     /// A new column's metadata, apart from lookups (a relationship) and the choice options, which the caller adds.
     /// Every value comes from the spec or a fixed default, so the plan detail can name it.
     /// </summary>
@@ -144,7 +150,7 @@ public static class TableColumns
             },
             ColumnType.DateOnly => new DateTimeAttributeMetadata(DateTimeFormat.DateOnly)
             {
-                DateTimeBehavior = Behavior(column.Behavior ?? DateBehavior.UserLocal),
+                DateTimeBehavior = Behavior(column.Behavior ?? DefaultBehavior(ColumnType.DateOnly)),
             },
             ColumnType.Choice => new PicklistAttributeMetadata(),
             ColumnType.MultiChoice => new MultiSelectPicklistAttributeMetadata(),
@@ -184,7 +190,7 @@ public static class TableColumns
                 parts.Add($"yes {Quote(column.TrueLabel ?? "Yes")}, no {Quote(column.FalseLabel ?? "No")}");
                 break;
             case ColumnType.DateTime or ColumnType.DateOnly:
-                parts.Add($"behavior {BehaviorName(column.Behavior ?? DateBehavior.UserLocal)}");
+                parts.Add($"behavior {BehaviorName(column.Behavior ?? DefaultBehavior(column.Type))}");
                 break;
             case ColumnType.File:
                 parts.Add($"max size {column.MaxSizeInKb ?? 32768} KB");
