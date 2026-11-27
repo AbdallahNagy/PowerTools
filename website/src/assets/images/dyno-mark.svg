@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="22 22 56 56">
+  <style>
+    .ring { stroke: #121316; }
+    .piece { stroke: #6f9a00; }
+    @media (prefers-color-scheme: dark) {
+      .ring { stroke: #f3f4ec; }
+      .piece { stroke: #c6f232; }
+    }
+  </style>
+  <path class="ring" d="M71.83 55.04 A22.4 22.4 0 1 1 44.96 28.18" fill="none" stroke-width="10.4" stroke-linecap="round"/>
+  <path class="piece" d="M57.66 28.95 A22.4 22.4 0 0 1 71.05 42.34" fill="none" stroke-width="10.4" stroke-linecap="round"/>
+</svg>

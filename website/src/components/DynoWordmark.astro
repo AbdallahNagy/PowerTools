@@ -1,0 +1,35 @@
+---
+/*
+ * The lowercase "dyno" wordmark, whose "o" is the mark drawn at the weight of the letters.
+ * Same geometry as DynoWordmark in desktop/src/ui/tools/welcome/DynoMark.tsx: the arcs are
+ * shorter than the icon's so a clear gap stays on each side of the lime piece at this weight.
+ */
+interface Props {
+  /** Font size of the word, in px. */
+  size: number;
+  /** Show "Dynamics toolbox + MCP server" under the word. */
+  tagline?: boolean;
+  class?: string;
+}
+
+const { size, tagline = false, class: className } = Astro.props;
+---
+
+<span class:list={["dyno-wordmark", className]}>
+  <span class="dyno-word" role="img" aria-label="dyno" style={`font-size: ${size}px`}>
+    <span aria-hidden="true">dyn<svg class="dyno-word-o" viewBox="22 22 56 56"><path
+          class="dyno-ring"
+          d="M63.71 62.79 A18.75 18.75 0 1 1 37.21 36.29"
+          fill="none"
+          stroke-width="18.5"
+          stroke-linecap="round"
+        /><path
+          class="dyno-piece"
+          d="M57.92 33.01 A18.75 18.75 0 0 1 66.99 42.08"
+          fill="none"
+          stroke-width="18.5"
+          stroke-linecap="round"
+        /></svg></span>
+  </span>
+  {tagline && <span class="dyno-tagline">Dynamics toolbox + MCP server</span>}
+</span>

@@ -4,11 +4,14 @@ import "@fontsource/ibm-plex-sans/500.css";
 import "@fontsource/ibm-plex-sans/600.css";
 import "@fontsource/ibm-plex-sans/700.css";
 import "@fontsource/ibm-plex-mono/400.css";
+import "@fontsource/nunito/800.css";
+import "@fontsource/nunito/900.css";
 import "../styles/global.css";
 import Icon from "../components/Icon.astro";
-import appIcon from "../assets/images/dyno-icon.png";
-import appMark from "../assets/images/dyno-icon.svg";
-import socialImage from "../assets/images/app-data-migration-light.png";
+import DynoWordmark from "../components/DynoWordmark.astro";
+import appIcon from "../assets/images/dyno-icon-512.png";
+import appMark from "../assets/images/dyno-mark.svg";
+import socialImage from "../assets/images/app-welcome-dark.png";
 
 interface Props {
   title: string;
@@ -48,7 +51,7 @@ const siteStructuredData = [
     name: siteName,
     alternateName: ["Power Tools", "PowerTools", "Dyno for Dataverse and Dynamics 365"],
     description:
-      "Free, open-source Windows desktop toolkit for Dataverse, Dynamics 365, and Power Platform developers. A modern alternative to XrmToolBox.",
+      "Free, open-source Windows toolkit and MCP server for Dataverse, Dynamics 365, and Power Platform developers. Modern tools for everyday work, and an MCP server so AI agents can work on Dataverse online and on-premises. A modern alternative to XrmToolBox.",
     url: absoluteUrl("/"),
     downloadUrl: `${githubUrl}/releases/latest/download/Dyno-Setup.exe`,
     applicationCategory: "DeveloperApplication",
@@ -100,13 +103,13 @@ const isActive = (href: string) => {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#f6f7f9" />
+    <meta name="theme-color" content="#14171c" />
     <script is:inline>
-      // Light is the default. Apply a saved dark choice before first paint.
+      // Dark is the default, as in the app. Apply a saved light choice before first paint.
       try {
-        if (localStorage.getItem("dyno-theme") === "dark") {
-          document.documentElement.dataset.theme = "dark";
-          document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#14171c");
+        if (localStorage.getItem("dyno-theme") === "light") {
+          document.documentElement.dataset.theme = "light";
+          document.querySelector('meta[name="theme-color"]')?.setAttribute("content", "#f6f7f9");
         }
       } catch {}
     </script>
@@ -123,7 +126,7 @@ const isActive = (href: string) => {
     <meta property="og:image" content={socialImageUrl} />
     <meta property="og:image:width" content={String(socialImage.width)} />
     <meta property="og:image:height" content={String(socialImage.height)} />
-    <meta property="og:image:alt" content="Dyno Data Migration tool comparing two Dataverse environments" />
+    <meta property="og:image:alt" content="The Dyno app with its welcome page: tools and an MCP server for Dataverse" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
@@ -141,14 +144,13 @@ const isActive = (href: string) => {
   <body>
     <header class="site-header">
       <a class="brand" href={localPath("/")} aria-label="Dyno home">
-        <img class="brand-mark" src={appMark.src} alt="" width="34" height="34" />
-        <span>Dyno</span>
+        <DynoWordmark size={30} />
       </a>
       <button
         class="theme-toggle"
         type="button"
-        aria-label="Use dark theme"
-        aria-pressed="false"
+        aria-label="Use light theme"
+        aria-pressed="true"
       >
         <Icon name="moon" class="theme-light-only" />
         <Icon name="sun" class="theme-dark-only" />
@@ -182,8 +184,8 @@ const isActive = (href: string) => {
     </main>
     <footer class="site-footer">
       <div>
-        <strong>Dyno</strong>
-        <span>Free, open-source desktop tools for Dataverse and Dynamics 365 developers.</span>
+        <DynoWordmark size={26} tagline />
+        <span>Free and open source, for Dataverse, Power Platform and Dynamics 365 developers.</span>
       </div>
       <div class="footer-links">
         <a href={localPath("/download")}>Download</a>
@@ -198,7 +200,7 @@ const isActive = (href: string) => {
       const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
 
       const syncThemeButton = () => {
-        const isDark = root.dataset.theme === "dark";
+        const isDark = root.dataset.theme !== "light";
         themeButton?.setAttribute("aria-pressed", String(isDark));
         themeButton?.setAttribute("aria-label", isDark ? "Use light theme" : "Use dark theme");
         themeColor?.setAttribute("content", isDark ? "#14171c" : "#f6f7f9");
@@ -207,11 +209,11 @@ const isActive = (href: string) => {
       syncThemeButton();
 
       themeButton?.addEventListener("click", () => {
-        const isDark = root.dataset.theme !== "dark";
+        const isDark = root.dataset.theme === "light";
         if (isDark) {
-          root.dataset.theme = "dark";
-        } else {
           delete root.dataset.theme;
+        } else {
+          root.dataset.theme = "light";
         }
         try {
           localStorage.setItem("dyno-theme", isDark ? "dark" : "light");

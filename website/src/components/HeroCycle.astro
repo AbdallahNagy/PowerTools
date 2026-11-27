@@ -1,0 +1,46 @@
+---
+import DynoMark from "./DynoMark.astro";
+
+/*
+ * The hero picture, as on the app's welcome page: Dataverse, Power Platform and Dynamics 365
+ * make up most of a circle, and Dyno is the last piece that completes it.
+ * The ring is a circle of radius 140 around (230, 230), at the same angles as the mark.
+ */
+const labels = [
+  { text: "Dynamics 365", left: "12.3%", top: "28.3%" },
+  { text: "Power Platform", left: "19.3%", top: "80.7%" },
+  { text: "Dataverse", left: "71.7%", top: "87.6%" }
+];
+---
+
+<div
+  class="hero-cycle"
+  role="img"
+  aria-label="Dataverse, Power Platform and Dynamics 365 form most of a circle. Dyno is the last piece that completes it."
+>
+  <svg aria-hidden="true" viewBox="0 0 460 460">
+    <path class="dyno-ring" d="M366.4 261.5 A140 140 0 1 1 198.5 93.6" fill="none" stroke-width="60" stroke-linecap="round" />
+    <path
+      class="dyno-piece hero-cycle-piece"
+      d="M277.9 98.4 A140 140 0 0 1 361.6 182.1"
+      fill="none"
+      stroke-width="60"
+      stroke-linecap="round"
+    />
+  </svg>
+  <div class="hero-cycle-center">
+    <span>Your Dataverse work,</span>
+    <strong>in flow</strong>
+  </div>
+  {
+    labels.map((label) => (
+      <span class="hero-cycle-label" aria-hidden="true" style={`left: ${label.left}; top: ${label.top}`}>
+        {label.text}
+      </span>
+    ))
+  }
+  <span class="hero-cycle-label hero-cycle-dyno" aria-hidden="true" style="left: 84%; top: 14%">
+    <DynoMark size={16} />
+    dyno
+  </span>
+</div>
