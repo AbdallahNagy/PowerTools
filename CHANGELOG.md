@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-27
+
 ### Added
 
 - Community tools: load a tool from a local folder (File > Community tools).
@@ -158,7 +160,8 @@ The first public beta, built for Windows.
 - **Data Migration.** Move data between Dataverse environments with a guided workflow.
 - **FetchXML Builder.** Build, run, and refine FetchXML queries.
 
-[Unreleased]: https://github.com/AbdallahNagy/Dyno/compare/v1.3.0...HEAD
+[Unreleased]: https://github.com/AbdallahNagy/Dyno/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/AbdallahNagy/Dyno/compare/v1.3.0...v2.0.0
 [1.3.0]: https://github.com/AbdallahNagy/Dyno/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/AbdallahNagy/Dyno/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/AbdallahNagy/Dyno/compare/v1.0.1...v1.1.0
