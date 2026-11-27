@@ -190,10 +190,15 @@ public static class ProcessPackage
 
     private static string Bit(bool value) => value ? "1" : "0";
 
+    /// <summary>
+    /// Writes one entry as UTF-8 without a byte order mark, as the classic designer's exports do. The import reads the
+    /// workflow's .xaml file as text, and a leading byte order mark fails it with "Data at the root level is invalid.
+    /// Line 1, position 1".
+    /// </summary>
     private static void Add(ZipArchive zip, string name, string text)
     {
         var entry = zip.CreateEntry(name, CompressionLevel.Optimal);
-        using var writer = new StreamWriter(entry.Open(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
+        using var writer = new StreamWriter(entry.Open(), new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         writer.Write(text);
     }
 }
