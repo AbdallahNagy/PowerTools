@@ -1,15 +1,39 @@
-# Dyno
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/readme/dyno-wordmark-dark.png">
+    <img src="docs/assets/readme/dyno-wordmark-light.png" alt="dyno" width="230">
+  </picture>
+</p>
 
-_Formerly Power Tools._
+<p align="center"><strong>Dynamics toolbox + MCP server</strong></p>
 
-A modern open-source desktop toolkit for everyday Dataverse, Dynamics 365, and Power Platform work, with a friendly UI, secure local workflow, and tools that are easy to figure out and use. A free, modern XrmToolBox alternative for Windows.
+<p align="center">
+  <a href="https://dyno.abdallahnagy.com/"><img src="https://img.shields.io/badge/website-dyno.abdallahnagy.com-c6f232?labelColor=0f1013" alt="Website"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-c6f232?labelColor=0f1013" alt="License: MIT"></a>
+</p>
 
-[![Website](https://img.shields.io/badge/website-dyno.abdallahnagy.com-1f6feb)](https://dyno.abdallahnagy.com/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-2ea043)](LICENSE)
+<p align="center">
+  <a href="https://github.com/AbdallahNagy/Dyno/releases/latest/download/Dyno-Setup.exe"><strong>Download for Windows</strong></a> ·
+  <a href="https://dyno.abdallahnagy.com/"><strong>Website</strong></a> ·
+  <a href="CHANGELOG.md"><strong>Changelog</strong></a> ·
+  <a href="https://github.com/AbdallahNagy/Dyno/issues"><strong>Issues</strong></a>
+</p>
 
-**[Download for Windows](https://github.com/AbdallahNagy/Dyno/releases/latest/download/Dyno-Setup.exe)** · **[Website](https://dyno.abdallahnagy.com/)** · **[Changelog](CHANGELOG.md)** · **[Issues](https://github.com/AbdallahNagy/Dyno/issues)**
+# The last tool you need for Dataverse
 
-Dyno is a Windows desktop app for Dataverse and Dynamics 365 developers. Migration, FetchXML, plug-in registration, and related metadata work live in one workspace. The app runs on your machine and connects directly to your environments.
+You already work across Dataverse, Power Platform and Dynamics 365. Dyno is the piece that completes it: modern tools for every day, and an MCP server so your AI agent can do the work with you. Nothing missing, so you stay in flow.
+
+Dyno is a free, open-source Windows desktop app. It runs on your machine, connects directly to your environments with your own sign-in, and works with Dataverse online and on-premises. It was formerly called Power Tools.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="website/src/assets/images/app-welcome-dark.png">
+  <img src="website/src/assets/images/app-welcome-light.png" alt="The Dyno welcome tab: the dyno wordmark, the tool list in the sidebar, and the two things Dyno does, tools and the MCP server.">
+</picture>
+
+## Two ways to work. One place.
+
+1. **Dataverse tools that finally feel modern.** The jobs you do every day, from FetchXML to plug-in steps to solution layers, in clear screens that are quick to learn and pleasant to come back to. A free, modern alternative to XrmToolBox, with 12 built-in tools.
+2. **An MCP server your agent can rely on.** Let Claude Code, Claude Desktop or VS Code read and change your environments through Dyno, with your sign-in and the connections you already saved. The same tools on Dataverse online and on-premises.
 
 ## Tools
 
@@ -34,13 +58,32 @@ Dyno is a Windows desktop app for Dataverse and Dynamics 365 developers. Migrati
 
 Each tool opens in its own tab. The activity-bar tools can stay open in more than one tab at a time, and each tab keeps its own state.
 
+## MCP server for AI agents
+
+> The MCP server is new and not in a release yet. It is listed under Unreleased in the [changelog](CHANGELOG.md).
+
+Describe the outcome, approve the plan, done. Your agent says what it wants your environment to look like. Dyno reads the environment, works out exactly what has to change, and shows you that plan before anything runs.
+
+1. **Turn on the server** under Settings > Agents (MCP). It is off by default and stays on your machine.
+2. **Connect your client.** Dyno shows the setup for Claude Code, Claude Desktop or VS Code, ready to copy. No token goes in any config file.
+3. **Ask for what you want.** Tables, columns, forms, views, plug-ins, flows, roles, solutions and records.
+
+| | |
+| --- | --- |
+| Reads never ask | Schema, forms, solutions, queries |
+| Changes ask you first | Or trust a dev connection |
+| Deletes always ask | No setting turns this off |
+| Online and on-premises | The same tools on both |
+
+The [MCP server guide](desktop/docs/mcp-server.md) lists every tool and how approvals work.
+
 ## Download
 
 The published installer is for Windows.
 
 1. Download [Dyno-Setup.exe](https://github.com/AbdallahNagy/Dyno/releases/latest/download/Dyno-Setup.exe), or start from the [download page](https://dyno.abdallahnagy.com/download).
 2. Run the installer on your machine.
-3. Open Dyno and add a connection.
+3. Open Dyno and connect to an environment.
 4. The installed app checks for later releases.
 
 ### Connections
@@ -52,13 +95,14 @@ Switch or remove connections from the status bar.
 
 ## Your data stays local
 
-Dyno runs on your machine and connects directly to Dataverse. Your Dataverse data stays on your machine. The [website](https://dyno.abdallahnagy.com/) introduces the app. It does not host or process your Dataverse data.
+Dyno runs on your machine and connects directly to Dataverse. Your Dataverse data stays on your machine, and the MCP server runs locally too. The [website](https://dyno.abdallahnagy.com/) introduces the app. It does not host or process your Dataverse data.
 
 The interface calls Dataverse through a local ASP.NET Core API bound to `127.0.0.1`. The desktop app starts that API and stops it when the app exits.
 
 ```mermaid
 flowchart LR
   app["Electron and React"] --> api["Local API on 127.0.0.1"]
+  agent["AI agent"] --> connector["MCP connector"] --> api
   api --> dataverse["Your Dataverse environment"]
 ```
 
