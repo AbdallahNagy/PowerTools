@@ -290,8 +290,6 @@ function DataMigrationPage() {
         <FilterModal
           open={filterOpen}
           onClose={() => setFilterOpen(false)}
-          entityLogicalName={entity.logicalName}
-          selectedAttributes={attributes}
           value={fetchFilter}
           onApply={(f) => {
             setFetchFilter(f);

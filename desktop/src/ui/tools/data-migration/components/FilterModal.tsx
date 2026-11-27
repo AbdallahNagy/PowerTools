@@ -4,8 +4,6 @@ import { Button, CodeEditor, Field, Modal } from "../../../shared/ui";
 interface FilterModalProps {
   open: boolean;
   onClose: () => void;
-  entityLogicalName: string;
-  selectedAttributes: string[];
   value: string;
   onApply: (filter: string) => void;
 }
@@ -13,8 +11,6 @@ interface FilterModalProps {
 export function FilterModal({
   open,
   onClose,
-  entityLogicalName,
-  selectedAttributes,
   value,
   onApply,
 }: FilterModalProps) {
@@ -56,12 +52,6 @@ export function FilterModal({
     if (validate(draft)) onApply(draft);
   };
 
-  const composed = buildFetchXmlPreview(
-    entityLogicalName,
-    selectedAttributes,
-    draft
-  );
-
   return (
     <Modal open={open} onClose={onClose} title="FetchXML Filter">
       <div>
@@ -78,7 +68,7 @@ export function FilterModal({
             value={draft}
             onChange={handleChange}
             placeholder={`<filter>\n  <condition attribute="statecode" operator="eq" value="0" />\n</filter>`}
-            className="h-32"
+            className="h-80"
           />
         </Field>
         <p className="text-xs text-fg-muted mt-1">
@@ -87,19 +77,6 @@ export function FilterModal({
           <code className="text-fg">&lt;link-entity&gt;</code> elements, or
           paste full FetchXML. Leave blank to migrate all records.
         </p>
-      </div>
-
-      <div>
-        <p className="text-xs text-fg-muted tracking-wider mb-1.5">
-          Composed FetchXML
-        </p>
-        <CodeEditor
-          aria-label="Composed FetchXML"
-          value={composed}
-          readOnly
-          lineNumbers={false}
-          className="[&_.cm-editor]:max-h-40"
-        />
       </div>
 
       <div className="flex justify-between pt-1">
@@ -115,14 +92,4 @@ export function FilterModal({
       </div>
     </Modal>
   );
-}
-
-function buildFetchXmlPreview(
-  entity: string,
-  attrs: string[],
-  filter: string
-): string {
-  const attrLines = attrs.map((a) => `  <attribute name="${a}" />`).join("\n");
-  const filterBlock = filter.trim() ? `\n  ${filter.trim()}` : "";
-  return `<fetch>\n  <entity name="${entity}">\n${attrLines}${filterBlock}\n  </entity>\n</fetch>`;
 }
