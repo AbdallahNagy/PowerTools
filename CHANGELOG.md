@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **MCP: `process_apply` creates classic workflows and actions again.** Every new workflow or custom action failed with "Data at the root level is invalid. Line 1, position 1". Dyno now writes the workflow file without a byte order mark, as the classic designer's exports do.
+
 ## [2.0.0] - 2026-11-27
 
 ### Added
