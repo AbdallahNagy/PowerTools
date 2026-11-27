@@ -1,0 +1,21 @@
+/* The lime piece snaps into the ring when the welcome page opens. */
+.welcome-snap-piece {
+  animation: welcome-snap 0.9s 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
+}
+
+@keyframes welcome-snap {
+  from {
+    opacity: 0;
+    transform: translate(44px, -44px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-snap-piece {
+    animation: none;
+  }
+}

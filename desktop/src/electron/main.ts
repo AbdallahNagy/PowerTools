@@ -10,7 +10,7 @@ import { app, BrowserWindow, dialog, ipcMain, net, Notification, shell } from "e
 import electronUpdater from "electron-updater";
 import { isDev } from "./utils.js";
 import { getAppIconPath, getPreloadPath } from "./pathResolver.js";
-import { createStartupSplashWindow } from "./startupSplash.js";
+import { createStartupSplashWindow, waitForStartupSplash } from "./startupSplash.js";
 import {
   configureAutoUpdates,
   shouldCheckForUpdates,
@@ -374,10 +374,14 @@ app.whenReady().then(async () => {
   if (mcpSettings().enabled === true) void mcpService.start();
   mainWindow.maximize();
   mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
-    if (!splashWindow.isDestroyed()) {
-      splashWindow.close();
-    }
+    // Let the splash finish its logo animation before the app appears.
+    void waitForStartupSplash(splashWindow).then(() => {
+      if (mainWindow.isDestroyed()) return;
+      mainWindow.show();
+      if (!splashWindow.isDestroyed()) {
+        splashWindow.close();
+      }
+    });
     updateController = configureAutoUpdates({
       isPackaged: app.isPackaged,
       isDevelopment: isDev(),

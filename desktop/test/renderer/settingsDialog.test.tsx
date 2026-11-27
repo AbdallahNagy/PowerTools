@@ -293,6 +293,30 @@ describe("Settings: MCP server", () => {
     expect(screen.getByText(/Creates or updates a table\. Asks you first unless the connection allows changes\. A call that removes or replaces something always asks/)).toBeInTheDocument();
   });
 
+  it("tags tools that change or delete with a word, and leaves read tools untagged", async () => {
+    const status: McpStatusInfo = {
+      ...OFF,
+      groups: [...OFF.groups, { group: "records-delete", enabled: true, tools: 1 }],
+      tools: [
+        ...OFF.tools,
+        { name: "records_delete", title: "Delete records", description: "Destructive: deletes records.", group: "records-delete", effect: "destructive", perCall: true, enabled: true },
+      ],
+    };
+    renderAgents({ bridgeOverrides: { getMcpStatus: async () => status } });
+    await screen.findByText("Off");
+    await openTab("Agent tools");
+    fireEvent.click(await screen.findByRole("button", { name: "Show Connections tools" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Record deletes tools" }));
+    fireEvent.click(screen.getByRole("button", { name: "Show Schema tools" }));
+
+    const readRow = screen.getByText("List connections").closest("li") as HTMLElement;
+    expect(within(readRow).queryByText(/^(Change|Destructive)$/)).not.toBeInTheDocument();
+    const changeRow = screen.getByText("Apply a global choice").closest("li") as HTMLElement;
+    expect(within(changeRow).getByText("Change")).toHaveAttribute("data-tone", "neutral");
+    const deleteRow = screen.getByText("Delete records").closest("li") as HTMLElement;
+    expect(within(deleteRow).getByText("Destructive")).toHaveAttribute("data-tone", "danger");
+  });
+
   it("shows declined calls and errors in the activity and filters to errors", async () => {
     renderAgents({
       bridgeOverrides: {
@@ -309,7 +333,7 @@ describe("Settings: MCP server", () => {
     await screen.findByText("Off");
     await openTab("Agent activity");
     expect(await screen.findByText("Declined")).toBeInTheDocument();
-    expect(screen.getByText("InvalidRequest")).toBeInTheDocument();
+    expect(screen.getByText("InvalidRequest")).toHaveAttribute("data-tone", "danger");
     expect(screen.getByText("You approved")).toBeInTheDocument();
     expect(screen.getByText("List connections")).toBeInTheDocument();
 

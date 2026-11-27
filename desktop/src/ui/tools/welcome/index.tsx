@@ -1,315 +1,304 @@
-import { ArrowLeftRight, List, ShieldCheck, Sparkles } from "lucide-react";
-import type { ReactElement } from "react";
-import { desktopBridge } from "../../platform/desktopBridge";
-import { openToolRequest } from "../../shared/links/openToolRequest";
-import { PUBLIC_TOOLS } from "../publicCatalog";
+import { LayoutGrid, Radar } from "lucide-react";
+import { useEffect, type CSSProperties, type ReactNode } from "react";
 
-const features: {
-  icon: ReactElement;
-  title: string;
-  description: string;
-  highlight?: boolean;
-}[] = [
-  {
-    icon: (
-      <Sparkles size={28} strokeWidth={1.5} aria-hidden="true" />
-    ),
-    title: "Modern UI",
-    description:
-      "A clean desktop experience for Dataverse work, built to feel clear, focused, and comfortable for daily developer workflows.",
-  },
-  {
-    icon: (
-      <List size={28} strokeWidth={1.5} aria-hidden="true" />
-    ),
-    title: "Friendly UX",
-    description:
-      "Tools are designed to be easy to discover, understand, and use without digging through confusing old dialogs.",
-  },
-  {
-    icon: (
-      <ShieldCheck size={28} strokeWidth={1.5} aria-hidden="true" />
-    ),
-    title: "Local and secure",
-    description:
-      "Dyno runs on your machine and connects directly to Dataverse. Your data never leaves your machine.",
-  },
-  {
-    icon: (
-      <ArrowLeftRight size={28} strokeWidth={1.5} aria-hidden="true" />
-    ),
-    title: "Open source",
-    description:
-      "Built in the open so developers can inspect how it works, suggest improvements, and shape the toolkit over time.",
-  },
+import { desktopBridge } from "../../platform/desktopBridge";
+import { useMcpServer } from "../../shared/agents";
+import { openToolRequest } from "../../shared/links/openToolRequest";
+import { useAgentSettings, useNewConnection, useOpenTool } from "../../shared/workspace";
+import { PUBLIC_TOOLS } from "../publicCatalog";
+import { TOOL_REGISTRY } from "../registry";
+import { DynoWordmark } from "./DynoMark";
+import { HeroCycle } from "./HeroCycle";
+import { ApprovalExample, ClientSetup, McpStatusRow } from "./McpSection";
+import "./welcome.css";
+
+const GITHUB_URL = "https://github.com/AbdallahNagy/Dyno";
+
+/** Tools named on the Tools card; the full list is further down. */
+const FEATURED_TOOL_IDS = ["fetchxml-builder", "plugin-registration", "data-migration", "solution-layers-explorer"];
+
+const SAFEGUARDS = [
+  { title: "Reads never ask", detail: "Schema, forms, solutions, queries" },
+  { title: "Changes ask you first", detail: "Or trust a dev connection" },
+  { title: "Deletes always ask", detail: "No setting turns this off" },
+  { title: "Online and on-premises", detail: "The same tools on both" },
 ];
 
+function Eyebrow({ children }: { children: ReactNode }) {
+  return <p className="m-0 mb-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-brand-text">{children}</p>;
+}
+
+function scrollToSection(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
+
+/** The tool's own icon, tinted like the activity bar draws it. */
+function ToolGlyph({ toolId }: { toolId: string }) {
+  const src = TOOL_REGISTRY[toolId]?.icon;
+  if (!src) return null;
+  const mask = `url("${src}") center / contain no-repeat`;
+  const style: CSSProperties = { mask, WebkitMask: mask };
+  return <span aria-hidden="true" className="inline-block h-5 w-5 bg-current" style={style} />;
+}
+
+const primaryButton =
+  "inline-flex h-11 items-center justify-center gap-2 rounded-md bg-brand px-5 text-sm font-semibold text-brand-fg transition-colors hover:bg-brand-hover";
+const secondaryButton =
+  "inline-flex h-11 items-center justify-center gap-2 rounded-md border border-line-strong bg-raised px-5 text-sm font-medium text-fg-strong transition-colors hover:bg-hover";
+
 export default function WelcomeTab() {
+  const openTool = useOpenTool();
+  const newConnection = useNewConnection();
+  const { settingsOpen, openAgentSettings } = useAgentSettings();
+  const server = useMcpServer();
+  const { refresh } = server;
+
+  // The server may have been turned on or off in Settings; read it again when Settings closes.
+  useEffect(() => {
+    if (!settingsOpen) void refresh();
+  }, [settingsOpen, refresh]);
+
+  const featured = FEATURED_TOOL_IDS.map((id) => PUBLIC_TOOLS.find((tool) => tool.id === id)).filter(
+    (tool) => tool !== undefined,
+  );
+  const moreCount = PUBLIC_TOOLS.length - featured.length;
+
   return (
-    <div className="h-full overflow-y-auto bg-canvas text-fg-strong">
+    <div className="h-full overflow-y-auto bg-canvas text-sm text-fg">
       {/* Hero */}
-      <div className="relative flex flex-col items-center justify-center px-6 py-16 text-center overflow-hidden">
-        {/* Decorative glow */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: "radial-gradient(ellipse 70% 50% at 50% 0%, color-mix(in srgb, var(--color-accent-text) 18%, transparent) 0%, transparent 70%)",
-          }}
-        />
+      <section
+        className="px-8 pb-14 pt-16"
+        style={{
+          background:
+            "radial-gradient(ellipse 55% 65% at 80% 35%, color-mix(in srgb, var(--color-brand) 10%, transparent) 0%, transparent 70%)",
+        }}
+      >
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-12">
+          <div className="flex min-w-0 flex-[1_1_480px] flex-col items-start gap-5">
+            <DynoWordmark />
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand/40 bg-brand/15 px-3 py-1 text-xs font-semibold text-brand-text">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-brand" />
+              New: the Dyno MCP server, online and on-premises
+            </span>
+            <h1 className="m-0 mt-2 max-w-[560px] text-4xl font-semibold leading-tight tracking-tight text-fg-strong">
+              The last tool you need for Dataverse.
+            </h1>
+            <p className="m-0 max-w-[540px] text-base leading-relaxed text-fg">
+              You already work across Dataverse, Power Platform and Dynamics 365. Dyno is the piece that completes it:
+              modern tools for every day, and an MCP server so your AI agent can do the work with you. Nothing missing,
+              so you stay in flow.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <button type="button" className={primaryButton} onClick={newConnection}>
+                Connect to an environment
+              </button>
+              <button type="button" className={secondaryButton} onClick={openAgentSettings}>
+                <Radar size={16} strokeWidth={1.8} aria-hidden="true" />
+                Set up AI agents
+              </button>
+            </div>
+            <p className="m-0 text-xs text-fg-muted">Free and open source. Runs on your machine with your own sign-in.</p>
+          </div>
+          <div className="flex min-w-0 flex-[1_1_400px] justify-center">
+            <HeroCycle />
+          </div>
+        </div>
+      </section>
 
-        <div className="relative z-10 flex flex-col items-center gap-5 max-w-2xl mx-auto">
-          {/* Badge */}
-          <span
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-widest uppercase"
-            style={{
-              background: "color-mix(in srgb, var(--color-accent-text) 15%, transparent)",
-              border: "1px solid color-mix(in srgb, var(--color-accent-text) 40%, transparent)",
-              color: "var(--color-accent-text)",
-            }}
-          >
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
-              style={{ background: "var(--color-accent)" }}
-            />
-            Open-source desktop toolkit
-          </span>
+      {/* What Dyno does */}
+      <section className="px-8 pb-16 pt-6">
+        <div className="mx-auto max-w-[1120px]">
+          <Eyebrow>What Dyno does</Eyebrow>
+          <h2 className="m-0 mb-7 text-2xl font-semibold text-fg-strong">Two ways to work. One place.</h2>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-5">
+            <article className="flex flex-col gap-4 rounded-xl border border-line bg-surface p-7">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand/15 text-brand-text">
+                  <LayoutGrid size={22} strokeWidth={1.7} aria-hidden="true" />
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-[0.06em] text-fg-muted">1 · Tools</span>
+              </div>
+              <h3 className="m-0 text-xl font-semibold leading-snug text-fg-strong">
+                Dataverse tools that finally feel modern
+              </h3>
+              <p className="m-0">
+                The jobs you do every day, from FetchXML to plug-in steps to solution layers, in clear screens that are quick
+                to learn and pleasant to come back to. No old dialogs to dig through.
+              </p>
+              <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+                {featured.map((tool) => (
+                  <li key={tool.id} className="rounded-md bg-raised px-2.5 py-1 text-xs text-fg">
+                    {tool.title}
+                  </li>
+                ))}
+                {moreCount > 0 && (
+                  <li className="rounded-md border border-dashed border-line-strong px-2.5 py-1 text-xs text-fg-muted">
+                    + {moreCount} more
+                  </li>
+                )}
+              </ul>
+              <div className="mt-auto pt-2">
+                <button
+                  type="button"
+                  className="font-semibold text-brand-text hover:text-fg-strong"
+                  onClick={() => scrollToSection("welcome-tools")}
+                >
+                  Browse all tools →
+                </button>
+              </div>
+            </article>
 
-          <h1
-            className="text-5xl sm:text-6xl font-bold leading-tight tracking-tight"
-            style={{
-              background: "linear-gradient(135deg, var(--color-fg-strong) 40%, var(--color-accent-text) 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-            }}
-          >
-            Dyno
-          </h1>
-
-          <p className="text-base sm:text-lg leading-relaxed max-w-xl" style={{ color: "var(--color-fg)" }}>
-            A modern open-source desktop toolkit for everyday Dataverse work, with a friendly UI, secure local workflow,
-            and tools that are easy to figure out and use.
-          </p>
-
-          <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
-            <button
-              className="px-5 py-2.5 rounded-md text-sm font-medium transition-opacity hover:opacity-90 active:opacity-75"
+            <article
+              className="flex flex-col gap-4 rounded-xl border border-brand/40 p-7"
               style={{
-                background: "var(--color-accent)",
-                color: "var(--color-accent-fg)",
-              }}
-              onClick={() => {
-                const el = document.getElementById("pt-features");
-                el?.scrollIntoView({ behavior: "smooth" });
+                background:
+                  "linear-gradient(160deg, color-mix(in srgb, var(--color-brand) 12%, var(--color-surface)) 0%, var(--color-surface) 60%)",
               }}
             >
-              Explore toolkit
-            </button>
-            <a
-              href="https://github.com/AbdallahNagy/Dyno"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-5 py-2.5 rounded-md text-sm font-medium transition-colors"
-              style={{
-                background: "var(--color-raised)",
-                color: "var(--color-fg)",
-                border: "1px solid var(--color-line)",
-              }}
-              onClick={(event) => {
-                event.preventDefault();
-                void desktopBridge.openExternalUrl(
-                  "https://github.com/AbdallahNagy/Dyno"
-                );
-              }}
-            >
-              View on GitHub
-            </a>
-            <button
-              type="button"
-              className="px-5 py-2.5 rounded-md text-sm font-medium transition-colors"
-              style={{
-                background: "var(--color-raised)",
-                color: "var(--color-fg)",
-                border: "1px solid var(--color-line)",
-              }}
-              onClick={() => void openToolRequest()}
-            >
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-brand text-brand-fg">
+                  <Radar size={22} strokeWidth={1.7} aria-hidden="true" />
+                </span>
+                <span className="text-xs font-semibold uppercase tracking-[0.06em] text-brand-text">2 · MCP server</span>
+                <span className="ml-auto rounded-full border border-brand/40 bg-brand/15 px-2 py-0.5 text-2xs font-semibold uppercase tracking-[0.06em] text-brand-text">
+                  New
+                </span>
+              </div>
+              <h3 className="m-0 text-xl font-semibold leading-snug text-fg-strong">An MCP server your agent can rely on</h3>
+              <p className="m-0">
+                Let Claude Code, Claude Desktop or VS Code read and change your environments through Dyno, with your sign-in
+                and the connections you already saved. The same tools on Dataverse online and on-premises.
+              </p>
+              <McpStatusRow server={server} onOpenSettings={openAgentSettings} />
+              <div className="mt-auto pt-2">
+                <button
+                  type="button"
+                  className="font-semibold text-brand-text hover:text-fg-strong"
+                  onClick={() => scrollToSection("welcome-mcp")}
+                >
+                  See how it works →
+                </button>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      {/* Work agentically */}
+      <section id="welcome-mcp" className="border-y border-line bg-surface px-8 py-16">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-start gap-12">
+          <div className="flex min-w-0 flex-[1_1_440px] flex-col gap-6">
+            <div>
+              <Eyebrow>Work agentically</Eyebrow>
+              <h2 className="m-0 mb-2.5 text-3xl font-semibold leading-tight text-fg-strong">
+                Describe the outcome. Approve the plan. Done.
+              </h2>
+              <p className="m-0 text-base text-fg">
+                Your agent says what it wants your environment to look like. Dyno reads the environment, works out exactly
+                what has to change, and shows you that plan before anything runs.
+              </p>
+            </div>
+            <ol className="m-0 flex list-none flex-col gap-5 p-0">
+              <Step number={1} title="Turn on the server">
+                Settings › Agents (MCP). One switch, and it stays on your machine.
+              </Step>
+              <Step number={2} title="Connect your client">
+                <span className="mb-2.5 block">No token in any config file. Copy the setup for your client.</span>
+                <ClientSetup status={server.status} />
+              </Step>
+              <Step number={3} title="Ask for what you want">
+                Tables, columns, forms, views, plug-ins, flows, roles, solutions and records. Reads run right away; changes
+                wait for you.
+              </Step>
+            </ol>
+          </div>
+          <div className="flex min-w-0 flex-[1_1_440px] flex-col gap-3.5">
+            <ApprovalExample />
+            <ul className="m-0 mt-1.5 grid list-none grid-cols-2 gap-2.5 p-0">
+              {SAFEGUARDS.map((item) => (
+                <li key={item.title} className="rounded-md border border-line px-3.5 py-3">
+                  <div className="font-semibold text-fg-strong">{item.title}</div>
+                  <div className="text-xs text-fg-muted">{item.detail}</div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* Tools */}
+      <section id="welcome-tools" className="px-8 py-16">
+        <div className="mx-auto max-w-[1120px]">
+          <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <Eyebrow>Your toolkit</Eyebrow>
+              <h2 className="m-0 text-2xl font-semibold text-fg-strong">{PUBLIC_TOOLS.length} tools, one click away</h2>
+              <p className="m-0 mt-1.5 text-fg-muted">Each opens in a new tab on your active connection.</p>
+            </div>
+            <button type="button" className={secondaryButton} onClick={() => void openToolRequest()}>
               Request a tool
             </button>
           </div>
-        </div>
-      </div>
-
-      {/* Stats strip */}
-      {/* <div
-        className="border-y"
-        style={{
-          borderColor: "var(--color-line)",
-          background: "var(--color-surface)",
-        }}
-      >
-        <div className="flex justify-center divide-x divide-line max-w-3xl mx-auto">
-          {[
-            // { value: "100%", label: "Local & private" },
-            { value: "∞", label: "Environments" },
-            { value: "Open", label: "Source" },
-          ].map((stat) => (
-            <div key={stat.label} className="flex flex-col items-center py-5 px-4 gap-1">
-              <span
-                className="text-2xl font-bold"
-                style={{ color: "var(--color-accent-text)" }}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
+            {PUBLIC_TOOLS.map((tool) => (
+              <button
+                key={tool.id}
+                type="button"
+                aria-label={`Open ${tool.title}`}
+                onClick={() => openTool(tool.id)}
+                className="flex items-start gap-3 rounded-lg border border-line bg-surface p-4 text-left transition-colors hover:border-brand/40 hover:bg-raised"
               >
-                {stat.value}
-              </span>
-              <span
-                className="text-xs tracking-wide"
-                style={{ color: "var(--color-fg-muted)" }}
-              >
-                {stat.label}
-              </span>
-            </div>
-          ))}
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand/15 text-brand-text">
+                  <ToolGlyph toolId={tool.id} />
+                </span>
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="font-semibold text-fg-strong">{tool.title}</span>
+                  <span className="text-xs text-fg-muted">{tool.description}</span>
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div> */}
+      </section>
 
-      {/* Features grid */}
-      <div id="pt-features" className="px-6 py-14 max-w-5xl mx-auto">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ color: "var(--color-fg-strong)" }}>
-            Built for Dataverse developers
-          </h2>
-          <p className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
-            A focused desktop workspace for developer flow: clear screens, discoverable actions, and less friction
-            around repeatable work.
-          </p>
+      {/* Footer */}
+      <section className="px-8 pb-14">
+        <div className="mx-auto flex max-w-[1120px] flex-wrap items-center justify-between gap-4 rounded-xl border border-line bg-surface px-7 py-6">
+          <div>
+            <div className="font-semibold text-fg-strong">Built in the open</div>
+            <div className="text-fg-muted">Dyno is open source. Read the code, suggest a tool, or help shape what comes next.</div>
+          </div>
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-brand-text hover:text-fg-strong"
+            onClick={(event) => {
+              event.preventDefault();
+              void desktopBridge.openExternalUrl(GITHUB_URL);
+            }}
+          >
+            View on GitHub
+          </a>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {features.map((feature) => (
-            <div
-              key={feature.title}
-              className="flex flex-col gap-3 rounded-lg p-5 transition-all duration-200"
-              style={
-                feature.highlight
-                  ? {
-                      background: "linear-gradient(135deg, color-mix(in srgb, var(--color-accent-text) 18%, transparent) 0%, color-mix(in srgb, var(--color-accent-text) 6%, transparent) 100%)",
-                      border: "1px solid color-mix(in srgb, var(--color-accent-text) 45%, transparent)",
-                      boxShadow: "0 0 24px color-mix(in srgb, var(--color-accent-text) 12%, transparent)",
-                    }
-                  : {
-                      background: "var(--color-surface)",
-                      border: "1px solid var(--color-line)",
-                    }
-              }
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLDivElement).style.borderColor = "color-mix(in srgb, var(--color-accent-text) 45%, transparent)";
-                (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 20px color-mix(in srgb, var(--color-accent-text) 10%, transparent)";
-              }}
-              onMouseLeave={(e) => {
-                if (feature.highlight) {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "color-mix(in srgb, var(--color-accent-text) 45%, transparent)";
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "0 0 24px color-mix(in srgb, var(--color-accent-text) 12%, transparent)";
-                } else {
-                  (e.currentTarget as HTMLDivElement).style.borderColor = "var(--color-line)";
-                  (e.currentTarget as HTMLDivElement).style.boxShadow = "none";
-                }
-              }}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className="flex items-center justify-center w-11 h-11 rounded-md shrink-0"
-                  style={{
-                    background: feature.highlight ? "color-mix(in srgb, var(--color-accent-text) 20%, transparent)" : "color-mix(in srgb, var(--color-accent-text) 12%, transparent)",
-                    color: "var(--color-accent-text)",
-                  }}
-                >
-                  {feature.icon}
-                </div>
-                {feature.highlight && (
-                  <span
-                    className="ml-auto text-[10px] font-semibold px-2 py-0.5 rounded-full tracking-wider uppercase"
-                    style={{
-                      background: "color-mix(in srgb, var(--color-accent-text) 20%, transparent)",
-                      color: "var(--color-accent-text)",
-                      border: "1px solid color-mix(in srgb, var(--color-accent-text) 35%, transparent)",
-                    }}
-                  >
-                    New
-                  </span>
-                )}
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold mb-1" style={{ color: "var(--color-fg-strong)" }}>
-                  {feature.title}
-                </h3>
-                <p className="text-xs leading-relaxed" style={{ color: "var(--color-fg-muted)" }}>
-                  {feature.description}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Current tools */}
-      <div className="px-6 pb-14 max-w-5xl mx-auto">
-        <div className="text-center mb-10">
-          <h2 className="text-2xl sm:text-3xl font-semibold mb-3" style={{ color: "var(--color-fg-strong)" }}>
-            Current tools
-          </h2>
-          <p className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
-            Dyno is a toolkit, starting with the workflows developers need often.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {PUBLIC_TOOLS.map((tool) => (
-            <div
-              key={tool.title}
-              className="rounded-lg p-5"
-              style={{
-                background: "var(--color-surface)",
-                border: "1px solid color-mix(in srgb, var(--color-accent-text) 22%, transparent)",
-              }}
-            >
-              <h3 className="text-base font-semibold mt-4 mb-2" style={{ color: "var(--color-fg-strong)" }}>
-                {tool.title}
-              </h3>
-              <p className="text-xs leading-relaxed" style={{ color: "var(--color-fg-muted)" }}>
-                {tool.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* CTA footer */}
-      <div
-        className="mx-6 mb-12 rounded-xl p-8 sm:p-10 flex flex-col sm:flex-row items-center justify-between gap-6 max-w-5xl lg:mx-auto"
-        style={{
-          background: "linear-gradient(135deg, color-mix(in srgb, var(--color-accent-text) 12%, transparent) 0%, color-mix(in srgb, var(--color-accent-text) 4%, transparent) 100%)",
-          border: "1px solid color-mix(in srgb, var(--color-accent-text) 20%, transparent)",
-        }}
-      >
-        <div className="text-center sm:text-left">
-          <h3 className="text-lg font-semibold mb-1" style={{ color: "var(--color-fg-strong)" }}>
-            Ready to start building?
-          </h3>
-          <p className="text-sm" style={{ color: "var(--color-fg-muted)" }}>
-            Open a Dataverse connection, then pick a tool from the activity bar on the left.
-          </p>
-        </div>
-        <div
-          className="text-xs px-4 py-2 rounded-md font-mono shrink-0"
-          style={{
-            background: "var(--color-canvas)",
-            color: "var(--color-accent-text)",
-            border: "1px solid color-mix(in srgb, var(--color-accent-text) 30%, transparent)",
-          }}
-        >
-          Connect → Select tool → Go
-        </div>
-      </div>
+      </section>
     </div>
+  );
+}
+
+function Step({ number, title, children }: { number: number; title: string; children: ReactNode }) {
+  return (
+    <li className="flex gap-3.5">
+      <span
+        aria-hidden="true"
+        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/15 text-sm font-semibold text-brand-text"
+      >
+        {number}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="font-semibold text-fg-strong">{title}</div>
+        <div className="text-fg-muted">{children}</div>
+      </div>
+    </li>
   );
 }

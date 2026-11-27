@@ -13,10 +13,10 @@ interface SettingsGroupProps {
   className?: string;
 }
 
-/** Related settings under one heading, drawn as rows of one card. */
+/** Related settings under one heading, drawn as rows split by thin lines. */
 export function SettingsGroup({ title, hideTitle, description, action, children, className }: SettingsGroupProps) {
   return (
-    <section aria-label={title} className="flex flex-col gap-2">
+    <section aria-label={title} className="flex flex-col gap-1">
       {hideTitle && !description && !action ? null : (
         <div className="flex items-end justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-0.5">
@@ -26,7 +26,7 @@ export function SettingsGroup({ title, hideTitle, description, action, children,
           {action ? <div className="shrink-0">{action}</div> : null}
         </div>
       )}
-      <div className={cn("flex flex-col divide-y divide-line/60 overflow-hidden rounded-xl bg-surface", className)}>
+      <div className={cn("flex flex-col divide-y divide-line", className)}>
         {children}
       </div>
     </section>
@@ -43,7 +43,7 @@ interface SettingRowProps {
 /** One setting: what it is on the left, its control on the right. */
 export function SettingRow({ label, description, children }: SettingRowProps) {
   return (
-    <div className="flex items-center justify-between gap-6 px-4 py-3">
+    <div className="flex items-center justify-between gap-6 py-3">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="text-sm text-fg-strong">{label}</span>
         {description ? <span className="text-xs text-fg-muted">{description}</span> : null}

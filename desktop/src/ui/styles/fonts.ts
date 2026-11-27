@@ -6,3 +6,6 @@ import "@fontsource/ibm-plex-sans/600.css";
 import "@fontsource/ibm-plex-sans/700.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "@fontsource/ibm-plex-mono/500.css";
+// Nunito sets the "dyno" wordmark on the welcome page. Only its heavy weights are loaded.
+import "@fontsource/nunito/800.css";
+import "@fontsource/nunito/900.css";

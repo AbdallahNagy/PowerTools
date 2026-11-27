@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ExternalLink, FolderOpen, RefreshCw } from "lucide-react";
 
-import AppIcon from "../../../assets/icons/dyno-icon.svg";
 import { desktopBridge, type UpdateStatus } from "../../../platform/desktopBridge";
 import { Alert, Button, ProgressBar, Spinner } from "../../../shared/ui";
 import { bridgeErrorMessage } from "../../community-tools/bridgeErrorMessage";
@@ -59,17 +58,17 @@ export function UpdatesAboutSection({ app }: { app: AppSettingsState }) {
   return (
     <>
       {app.error ? <Alert tone="danger">{app.error}</Alert> : null}
-      <section
-        aria-label="About"
-        className="flex items-center gap-4 rounded-xl bg-surface px-4 py-4"
-      >
-        <img src={AppIcon} alt="" className="h-10 w-10 shrink-0" />
-        <p className="min-w-0 flex-1 text-base font-semibold text-fg-strong">Dyno {version}</p>
-        <Button variant="ghost" size="sm" onClick={() => void desktopBridge.openExternalUrl(RELEASES_URL)}>
-          <ExternalLink size={14} aria-hidden="true" />
-          Release notes
-        </Button>
-      </section>
+      <SettingsGroup title="About" hideTitle>
+        <SettingRow label="Version">
+          <span className="text-sm tabular-nums text-fg">{version ? `Dyno ${version}` : "…"}</span>
+        </SettingRow>
+        <SettingRow label="Release notes" description="What changed in each version.">
+          <Button variant="secondary" size="sm" onClick={() => void desktopBridge.openExternalUrl(RELEASES_URL)}>
+            <ExternalLink size={14} aria-hidden="true" />
+            Open release notes
+          </Button>
+        </SettingRow>
+      </SettingsGroup>
 
       <SettingsGroup
         title="Updates"
@@ -78,7 +77,7 @@ export function UpdatesAboutSection({ app }: { app: AppSettingsState }) {
         }
       >
         {!updatesEnabled ? (
-          <p className="px-4 py-3 text-sm text-fg-muted">
+          <p className="py-3 text-sm text-fg-muted">
             This is a development build, so it does not check for updates. Installed builds check when they start.
           </p>
         ) : update && status ? (
@@ -108,18 +107,18 @@ export function UpdatesAboutSection({ app }: { app: AppSettingsState }) {
               ) : null}
             </SettingRow>
             {status.state === "downloading" ? (
-              <div className="px-4 py-3">
+              <div className="py-3">
                 <ProgressBar value={status.percent ?? 0} max={100} label="Downloading the update" />
               </div>
             ) : null}
             {checkError ? (
-              <div className="px-4 py-3">
+              <div className="py-3">
                 <Alert tone="danger">{checkError}</Alert>
               </div>
             ) : null}
           </>
         ) : (
-          <p className="px-4 py-3 text-sm text-fg-muted">Updates are not available here.</p>
+          <p className="py-3 text-sm text-fg-muted">Updates are not available here.</p>
         )}
       </SettingsGroup>
 

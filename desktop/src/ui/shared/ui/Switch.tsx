@@ -42,7 +42,7 @@ export function Switch({
       className={cn(
         "relative inline-flex shrink-0 items-center rounded-full transition-colors duration-150",
         "disabled:cursor-not-allowed disabled:opacity-50",
-        checked ? "bg-accent enabled:hover:bg-accent-hover" : "bg-line-strong enabled:hover:bg-fg-muted",
+        checked ? "bg-control enabled:hover:bg-control-hover" : "bg-line-strong enabled:hover:bg-fg-muted",
         s.track,
         className,
       )}
@@ -50,7 +50,9 @@ export function Switch({
       <span
         aria-hidden="true"
         className={cn(
-          "inline-block rounded-full bg-accent-fg shadow-sm transition-transform duration-150 ease-out motion-reduce:transition-none",
+          "inline-block rounded-full shadow-sm transition-transform duration-150 ease-out motion-reduce:transition-none",
+          // The thumb contrasts with its track: control-fg on the blue fill, fg-strong on the grey track.
+          checked ? "bg-control-fg" : "bg-fg-strong",
           s.thumb,
           checked ? s.on : s.off,
         )}
