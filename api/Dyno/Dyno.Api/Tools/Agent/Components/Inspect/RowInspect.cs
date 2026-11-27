@@ -44,7 +44,30 @@ internal static class RowInspect
         query.Orders.Add(new OrderExpression(nameColumn, OrderType.Ascending));
         var rows = (await client.RetrieveMultipleAsync(query, ct)).Entities;
         var items = rows.Take(limit).Select(row => (object)Plain(row, columns)).ToList();
-        return new InspectListDto(kind, items.Count, items, rows.Count > limit);
+        var truncated = rows.Count > limit;
+        return new InspectListDto(kind, truncated ? await CountAsync(client, query, ct) : items.Count, items, truncated);
+    }
+
+    private const int CountPage = 5000;
+
+    /// <summary>
+    /// How many rows the query matches in all, not just the page shown. Pages through ids only, which works the same
+    /// online and on-premises (aggregate queries stop at 50,000 rows and are off on some on-premises servers).
+    /// </summary>
+    public static async Task<int> CountAsync(IAgentClient client, QueryExpression shown, CancellationToken ct)
+    {
+        var query = new QueryExpression(shown.EntityName) { NoLock = true, ColumnSet = new ColumnSet(false), Criteria = shown.Criteria };
+        foreach (var link in shown.LinkEntities) query.LinkEntities.Add(link);
+        query.PageInfo = new PagingInfo { Count = CountPage, PageNumber = 1 };
+        var total = 0;
+        while (true)
+        {
+            var page = await client.RetrieveMultipleAsync(query, ct);
+            total += page.Entities.Count;
+            if (!page.MoreRecords) return total;
+            query.PageInfo.PageNumber++;
+            query.PageInfo.PagingCookie = page.PagingCookie;
+        }
     }
 
     /// <summary>One row by name or id, with the columns asked for; null when it does not exist.</summary>

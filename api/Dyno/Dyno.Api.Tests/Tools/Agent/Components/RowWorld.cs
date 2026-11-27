@@ -28,6 +28,9 @@ internal sealed class RowWorld : IAgentClient
     /// <summary>Components that depend on an id, answered by RetrieveDependenciesForDelete.</summary>
     public Dictionary<Guid, int> Dependents { get; } = [];
 
+    /// <summary>Named dependents of an id (type and id), answered by RetrieveDependenciesForDelete before the count above.</summary>
+    public Dictionary<Guid, List<(int Type, Guid Id)>> DependentComponents { get; } = [];
+
     public Func<OrganizationRequest, Exception?>? Fail { get; set; }
 
     public HashSet<string> Features { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -238,10 +241,11 @@ internal sealed class RowWorld : IAgentClient
             case RetrieveDependenciesForDeleteRequest dependencies:
             {
                 var count = Dependents.GetValueOrDefault(dependencies.ObjectId);
-                var rows = Enumerable.Range(0, count).Select(_ => new Entity("dependency")
+                var named = DependentComponents.GetValueOrDefault(dependencies.ObjectId) ?? [];
+                var rows = named.Concat(Enumerable.Range(0, count).Select(_ => (Type: 60, Id: Guid.NewGuid()))).Select(d => new Entity("dependency")
                 {
-                    ["dependentcomponenttype"] = new OptionSetValue(60),
-                    ["dependentcomponentobjectid"] = Guid.NewGuid(),
+                    ["dependentcomponenttype"] = new OptionSetValue(d.Type),
+                    ["dependentcomponentobjectid"] = d.Id,
                     ["requiredcomponenttype"] = new OptionSetValue(dependencies.ComponentType),
                     ["requiredcomponentobjectid"] = dependencies.ObjectId,
                 }).ToList();

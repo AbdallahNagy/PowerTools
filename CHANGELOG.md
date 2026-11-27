@@ -6,6 +6,12 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **MCP: list totals are the real totals.** `inspect_solution` and `inspect_ui` lists cut by `top` now report how many components match in all, not how many were returned.
+- **MCP: form tabs keep their names.** When `form_apply` matches a tab or section that has no name (such as the first tab of a new table's main form), it gives it the name from the layout, so `inspect_ui` reads it back by that name. Form fields read back with lower-case logical names, and a field without its own label shows no empty label.
+- **MCP: clearer dependency messages.** When `remove` is blocked because other components depend on the target, the message names them (for example form "Information" on account) instead of showing type numbers and ids, and the blocked step is marked destructive.
+
 ## [2.0.0] - 2026-11-27
 
 ### Added
