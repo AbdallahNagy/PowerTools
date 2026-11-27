@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **MCP: date-only columns keep the day.** A `dateonly` column that `table_apply` creates without a `behavior` is now Date only instead of User local, so its dates no longer shift across time zones. Existing columns are not changed.
+
 ## [2.0.0] - 2026-11-27
 
 ### Added

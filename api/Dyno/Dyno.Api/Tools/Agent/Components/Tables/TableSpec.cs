@@ -151,7 +151,7 @@ public sealed class ColumnDefinition
     [Description("Decimal places. decimal 0 to 10, float 0 to 5, money 0 to 4 (default: the currency's).")]
     public int? Precision { get; init; }
 
-    [Description("datetime and dateonly. Can change only from userLocal, once.")]
+    [Description("datetime and dateonly. New columns default to userLocal for datetime and dateOnly for dateonly. Can change only from userLocal, once; left out, an existing column keeps its behavior.")]
     public DateBehavior? Behavior { get; init; }
 
     [Description("choice and multichoice: the column's own options. Existing options not listed are kept.")]
