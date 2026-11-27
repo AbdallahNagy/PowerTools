@@ -245,6 +245,66 @@ public static class ComponentKinds
         }
     }
 
+    /// <summary>
+    /// A component as a person reads it, for messages: its kind and name (form "Information" on account), or its kind
+    /// and id when the name cannot be read. Never throws for a component it cannot describe.
+    /// </summary>
+    public static async Task<string> DescribeAsync(IAgentClient client, int componentType, Guid id, CancellationToken ct)
+    {
+        var typeName = TypeLabel(componentType);
+        try
+        {
+            switch (componentType)
+            {
+                case EntityType:
+                    var entity = ((RetrieveEntityResponse)await client.ExecuteAsync(
+                        new RetrieveEntityRequest { MetadataId = id, EntityFilters = EntityFilters.Entity, RetrieveAsIfPublished = true }, ct)).EntityMetadata;
+                    return $"{typeName} {entity.LogicalName}";
+                case AttributeType:
+                    var attribute = ((RetrieveAttributeResponse)await client.ExecuteAsync(
+                        new RetrieveAttributeRequest { MetadataId = id, RetrieveAsIfPublished = true }, ct)).AttributeMetadata;
+                    return $"{typeName} {attribute.EntityLogicalName}.{attribute.LogicalName}";
+            }
+
+            var rowKind = Rows.Values.FirstOrDefault(r => r.ComponentType == componentType);
+            if (rowKind is null) return $"{typeName} {id:D}";
+            // Each table names its own table column; asking for one it lacks would fail the whole retrieve.
+            var tableColumn = rowKind.Table switch { "systemform" => "objecttypecode", "savedquery" => "returnedtypecode", _ => null };
+            var row = await client.RetrieveAsync(rowKind.Table, id, new ColumnSet(tableColumn is null ? [rowKind.NameColumn] : [rowKind.NameColumn, tableColumn]), ct);
+            var name = row.GetAttributeValue<string>(rowKind.NameColumn);
+            if (string.IsNullOrEmpty(name)) return $"{typeName} {id:D}";
+            var table = row.GetAttributeValue<string>("objecttypecode") ?? row.GetAttributeValue<string>("returnedtypecode");
+            return table is null ? $"{typeName} \"{name}\"" : $"{typeName} \"{name}\" on {table}";
+        }
+        catch (Exception ex) when (RetryPolicy.FindFault(ex) is { } fault && !RetryPolicy.ServiceProtectionCodes.Contains(fault.ErrorCode))
+        {
+            return $"{typeName} {id:D}";
+        }
+    }
+
+    private static string TypeLabel(int componentType) => componentType switch
+    {
+        1 => "table",
+        2 => "column",
+        9 => "choice",
+        10 => "relationship",
+        14 => "key",
+        20 => "security role",
+        26 => "view",
+        29 => "process",
+        59 => "chart",
+        60 => "form",
+        61 => "web resource",
+        62 => "site map",
+        80 => "app",
+        90 => "plug-in type",
+        91 => "plug-in assembly",
+        92 => "plug-in step",
+        93 => "plug-in step image",
+        380 => "environment variable",
+        _ => $"component of type {componentType}",
+    };
+
     internal static AgentProblemException Invalid(string message) => new(AgentFaults.InvalidRequest(message));
 }
 

@@ -117,6 +117,7 @@ public static class FormLayoutWriter
                     new XAttribute("showlabel", "true"),
                     new XElement("labels"))
                 : new XElement("tab", existingTab.Attributes(), existingTab.Elements().Where(e => e.Name != "columns"));
+            NameIfUnnamed(tabElement, tab.Name);
             if (tab.Label is not null || existingTab is null) editor.SetLabel(tabElement, tab.Label ?? tab.Name.Trim());
             if (tab.Visible is { } tabVisible) FormEditor.SetVisible(tabElement, tabVisible);
 
@@ -131,6 +132,7 @@ public static class FormLayoutWriter
                 var sectionElement = existing is null
                     ? editor.NewSection(section.Name.Trim(), section.Label ?? section.Name.Trim())
                     : new XElement("section", existing.Attributes(), existing.Elements().Where(e => e.Name != "rows"), new XElement("rows"));
+                NameIfUnnamed(sectionElement, section.Name);
                 if (section.Label is not null) editor.SetLabel(sectionElement, section.Label);
                 if (section.Visible is { } sectionVisible) FormEditor.SetVisible(sectionElement, sectionVisible);
                 var rows = sectionElement.Element("rows")!;
@@ -309,6 +311,16 @@ public static class FormLayoutWriter
 
         if (dashboard) Unique(layout.Tabs.SelectMany(t => t.Sections).SelectMany(s => s.Components ?? []).Select(c => c.Name), "component");
         else Unique(layout.Tabs.SelectMany(t => t.Sections).SelectMany(s => s.Fields ?? []), "field");
+    }
+
+    /// <summary>
+    /// A tab or section matched by its label (as on a new table's main form, whose first tab has no name) takes the
+    /// name the layout gives it, so form_apply, inspect_ui and scripts can find it by that name. A name it already
+    /// has is never changed, because scripts may use it.
+    /// </summary>
+    private static void NameIfUnnamed(XElement element, string name)
+    {
+        if (string.IsNullOrWhiteSpace((string?)element.Attribute("name"))) element.SetAttributeValue("name", name.Trim());
     }
 
     private static void Unique(IEnumerable<string> names, string what)

@@ -79,6 +79,35 @@ public sealed class FormLayoutTests
     }
 
     [Fact]
+    public async Task A_tab_matched_by_its_label_takes_the_layout_name_when_it_has_none_and_reads_back_by_it()
+    {
+        // A new table's main form: the first tab has a label but no name.
+        var unnamed = world.Add(new Entity("systemform")
+        {
+            ["name"] = "Unnamed tab",
+            ["objecttypecode"] = "account",
+            ["type"] = new OptionSetValue(2),
+            ["formxml"] = AgentFormXmlTests.Form.Replace(" name='general'", "", StringComparison.Ordinal),
+        });
+        var spec = new FormApplySpec
+        {
+            Solution = "Core",
+            Table = "account",
+            Form = "Unnamed tab",
+            Layout = Layout(new LayoutTab { Name = "general", Sections = [new LayoutSection { Name = "summary", Fields = ["name", "telephone1"] }] }),
+        };
+
+        await world.ApplyAsync(Family, spec);
+
+        Assert.Equal("general", (string?)Xml(unnamed.Id).Descendants("tab").Single().Attribute("name"));
+        var read = await new Dyno.Api.Tools.Agent.Components.Inspect.UiInspector(world, world.Capabilities())
+            .InspectAsync(new Dyno.Api.Tools.Agent.Components.Inspect.InspectBody { Kind = "form", Table = "account", Name = "Unnamed tab" }, CancellationToken.None);
+        var form = Assert.IsType<Dyno.Api.Tools.Agent.Components.Inspect.FormDescription>(read.Value);
+        Assert.Equal("general", Assert.Single(form.Tabs).Name);
+        Assert.Empty((await PlanAsync(spec)).Steps);
+    }
+
+    [Fact]
     public async Task A_layout_for_a_form_that_does_not_exist_creates_it()
     {
         var spec = new FormApplySpec
