@@ -239,7 +239,7 @@ export default function WelcomeTab() {
               Request a tool
             </button>
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
+          <div className="grid auto-rows-fr grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
             {PUBLIC_TOOLS.map((tool) => (
               <button
                 key={tool.id}
@@ -253,7 +253,7 @@ export default function WelcomeTab() {
                 </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
                   <span className="font-semibold text-fg-strong">{tool.title}</span>
-                  <span className="text-xs text-fg-muted">{tool.description}</span>
+                  <span className="text-xs text-fg-muted">{tool.summary}</span>
                 </span>
               </button>
             ))}
