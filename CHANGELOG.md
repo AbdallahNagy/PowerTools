@@ -6,6 +6,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Fixed
+
+- **MCP: clearer message when an agent cannot reach Dyno.** When the connector finds a discovery file left by a Dyno that is no longer running (often a development build), or reads a different file than the installed app writes, the message the agent gets says so and names the installed app's file. The message now points to Settings > Agents (MCP).
+- **MCP: connection names without the middle dot.** An agent can name a connection as "PL400 dev", "pl400-dev" or "PL400 / dev" for "PL400 · dev". An exact name still wins, and a name that fits two connections is refused with the list of names.
+
 ## [2.0.0] - 2026-11-27
 
 ### Added

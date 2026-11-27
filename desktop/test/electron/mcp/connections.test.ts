@@ -50,6 +50,26 @@ describe("createConnectionResolver", () => {
     expect(conn.auth.id).toBe("id-test");
   });
 
+  it("matches a name typed without the middle dot or with other separators", async () => {
+    for (const typed of ["A Test", "a-test", "A / Test", "a_test", "A·Test"]) {
+      expect((await resolver().resolve(typed)).auth.id).toBe("id-test");
+    }
+  });
+
+  it("prefers an exact name over a loose one", async () => {
+    const both = [...summaries, { ...summaries[0], id: "id-loose", organization: null, environment: null, legacyName: "A-Dev" }];
+    const conn = await resolver({ summaries: () => both }).resolve("A-Dev");
+    expect(conn.auth.id).toBe("id-loose");
+  });
+
+  it("refuses a loose name that fits two connections and lists the names", async () => {
+    const both = [...summaries, { ...summaries[0], id: "id-twin", organization: null, environment: null, legacyName: "A-Dev" }];
+    const err = await resolver({ summaries: () => both }).resolve("a dev").catch((e: unknown) => e as AgentToolError);
+    expect(err).toMatchObject({ code: "ConnectionNotFound" });
+    expect((err as AgentToolError).hint).toContain("A · Dev");
+    expect((err as AgentToolError).hint).toContain("A-Dev");
+  });
+
   it("lists valid names when nothing matches", async () => {
     const err = await resolver().resolve("Nope").catch((e: unknown) => e as AgentToolError);
     expect(err).toMatchObject({ code: "ConnectionNotFound" });

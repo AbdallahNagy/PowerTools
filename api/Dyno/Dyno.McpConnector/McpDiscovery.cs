@@ -25,6 +25,52 @@ public static class McpDiscovery
         return Path.Combine(appData, folder, "mcp-endpoint.json");
     }
 
+    /// <summary>
+    /// Why the app cannot be reached, for the client: the plain offline message, plus what the discovery file says
+    /// when that helps. A file left by a Dyno that has exited (often a development build) is named, and a client that
+    /// reads another file than the installed app writes is told which file that is.
+    /// </summary>
+    public static string OfflineMessage(string path, string defaultPath, Func<int, bool> isRunning)
+    {
+        var message = Dyno.Mcp.McpConnector.OfflineMessage;
+        if (TryReadPid(path) is { } pid && !isRunning(pid))
+            message += $" The file this connector reads ({path}) was left by a Dyno that is no longer running (process {pid}).";
+        if (!string.Equals(Path.GetFullPath(path), Path.GetFullPath(defaultPath), StringComparison.OrdinalIgnoreCase))
+            message += $" This connector reads {path}, but the installed Dyno writes {defaultPath}; if you use the installed app, set the client up again from Dyno's Settings > Agents (MCP).";
+        return message;
+    }
+
+    /// <summary>Whether a process with this id is running.</summary>
+    public static bool IsRunning(int pid)
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.GetProcessById(pid);
+            return !process.HasExited;
+        }
+        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>The pid the app wrote, or null when the file or the value is missing.</summary>
+    public static int? TryReadPid(string path)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var doc = JsonDocument.Parse(stream);
+            return doc.RootElement.ValueKind == JsonValueKind.Object && doc.RootElement.TryGetProperty("pid", out var pid) && pid.TryGetInt32(out var value) && value > 0
+                ? value
+                : null;
+        }
+        catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
     /// <summary>Null when the file is missing, unreadable or incomplete.</summary>
     public static (int Port, string Token)? TryRead(string path)
     {

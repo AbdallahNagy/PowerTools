@@ -21,7 +21,7 @@ namespace Dyno.Mcp;
 public static class McpConnector
 {
     public const string OfflineMessage =
-        "Dyno is not running or its MCP server is off. Start Dyno and turn it on under File → Agents (MCP)…; the tools will appear automatically.";
+        "Dyno is not running or its MCP server is off. Start Dyno and turn it on under Settings > Agents (MCP); the tools will appear automatically.";
 
     public const string InterruptedMessage =
         "The connection to Dyno was lost while the call was running. It may have completed; check before retrying.";
@@ -166,7 +166,7 @@ public static class McpConnector
             catch (Exception ex)
             {
                 Console.Error.WriteLine($"dyno-mcp: {ex.GetType().Name}: {ex.Message}");
-                if (message["id"] is not null) WriteError(message["id"], -32000, OfflineMessage);
+                if (message["id"] is not null) WriteError(message["id"], -32000, Offline);
             }
         }
 
@@ -227,7 +227,7 @@ public static class McpConnector
                 {
                     Outcome.Error => $"Dyno answered HTTP {status}.",
                     Outcome.Lost when toolCall => InterruptedMessage,
-                    _ => OfflineMessage,
+                    _ => Offline,
                 });
             }
         }
@@ -248,7 +248,7 @@ public static class McpConnector
                     WriteResult(id, new JsonObject());
                     break;
                 default:
-                    WriteError(id, -32000, OfflineMessage);
+                    WriteError(id, -32000, Offline);
                     break;
             }
         }
@@ -268,7 +268,7 @@ public static class McpConnector
                     ["tools"] = new JsonObject { ["listChanged"] = true },
                     ["resources"] = new JsonObject(),
                 },
-                ["instructions"] = OfflineMessage,
+                ["instructions"] = Offline,
             };
             WriteResult(message["id"], result);
         }
@@ -276,6 +276,9 @@ public static class McpConnector
         // ── Connection state ─────────────────────────────────────────────────
 
         private (int Port, string Token)? ReadEndpoint() => McpDiscovery.TryRead(_discoveryPath);
+
+        /// <summary>The offline message with what the discovery file says, read when it is sent.</summary>
+        private string Offline => McpDiscovery.OfflineMessage(_discoveryPath, McpDiscovery.DefaultPath(), McpDiscovery.IsRunning);
 
         /// <summary>Call while holding _gate.</summary>
         private void SetOnline((int Port, string Token) endpoint, string sessionId)
