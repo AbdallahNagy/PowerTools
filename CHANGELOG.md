@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ## [Unreleased]
 
+### Added
+
+- **Business process flows for agents.** The MCP server has a new tool, `bpf_apply`, that creates and updates a business process flow on one table: its stages in order and the columns each stage asks for, required or not. It activates the flow, or leaves it in draft, and adds the table that keeps each record's progress to the solution so the flow exports whole. A stage that keeps its name keeps the records at it. Agents read a flow with `inspect_solution` kind `bpf`, and a guide explains the format. It works online and on-premises. Flows with branches or stage workflows can be read but not rewritten yet.
+
 ## [2.0.0] - 2026-11-27
 
 ### Added

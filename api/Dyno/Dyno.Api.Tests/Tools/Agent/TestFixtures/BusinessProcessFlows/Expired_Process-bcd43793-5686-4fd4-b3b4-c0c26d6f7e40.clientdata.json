@@ -1,0 +1,477 @@
+{
+  "__class": "WorkflowStep:#Microsoft.Crm.Workflow.ObjectModel",
+  "id": "WorkflowStep0",
+  "description": "This is the default process flow for working Expired KnowledgeArticle.",
+  "name": "Step_0",
+  "stepLabels": {
+    "list": []
+  },
+  "steps": {
+    "list": [
+      {
+        "__class": "RelationshipCollectionStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "RelationshipCollectionStep2",
+        "description": "",
+        "name": "Step_2",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": []
+        }
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep3",
+        "description": "knowledgearticle",
+        "name": "Step_3",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep2",
+              "description": "Review",
+              "name": "Step_2",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "e33cdd31-c568-4a14-8dcb-60d790cc85cb",
+                    "languageCode": 1033,
+                    "description": "Review"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep3",
+                    "description": "Expired Review Options",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "09bac7d9-efdd-41c6-b455-0b1a1637140f",
+                          "languageCode": 1033,
+                          "description": "Expired Review Options"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep4",
+                          "description": "",
+                          "name": "Step_4",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "expiredreviewoptions",
+                          "classId": "3ef39988-22bb-4f0b-bbbe-64b5a3748aee",
+                          "dataFieldName": "expiredreviewoptions",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Expired Review Options",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "09bac7d9-efdd-41c6-b455-0b1a1637140f",
+                    "isProcessRequired": false,
+                    "isHidden": false
+                  },
+                  {
+                    "__class": "ConditionStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "ConditionStep9",
+                    "description": "",
+                    "name": "Step_9",
+                    "stepLabels": {
+                      "list": []
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ConditionBranchStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ConditionBranchStep10",
+                          "description": null,
+                          "name": "Step_10",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "steps": {
+                            "list": [
+                              {
+                                "__class": "SetNextStageStep:#Microsoft.Crm.Workflow.ObjectModel",
+                                "id": "SetNextStageStep15",
+                                "description": "",
+                                "name": "Step_15",
+                                "stepLabels": {
+                                  "list": []
+                                },
+                                "stageId": "5c2b5c67-6ab5-4653-890b-b700bb5d5813",
+                                "parentStageId": "e33cdd31-c568-4a14-8dcb-60d790cc85cb"
+                              }
+                            ]
+                          },
+                          "conditionExpression": {
+                            "__class": "BinaryExpression:#Microsoft.Crm.Workflow.Expressions",
+                            "type": "0",
+                            "typeSet": false,
+                            "behavior": 0,
+                            "conditionOperatoroperator": "6",
+                            "left": {
+                              "__class": "EntityAttributeExpression:#Microsoft.Crm.Workflow.Expressions",
+                              "type": "10",
+                              "typeSet": false,
+                              "behavior": 0,
+                              "entity": {
+                                "__class": "PrimaryEntity:#Microsoft.Crm.Workflow.Expressions",
+                                "parameterName": "primaryEntity",
+                                "entityName": "knowledgearticle"
+                              },
+                              "attributeName": "expiredreviewoptions"
+                            },
+                            "right": [
+                              {
+                                "__class": "PrimitiveExpression:#Microsoft.Crm.Workflow.Expressions",
+                                "type": "10",
+                                "typeSet": false,
+                                "behavior": 0,
+                                "primitiveValue": "0"
+                              }
+                            ]
+                          }
+                        },
+                        {
+                          "__class": "ConditionBranchStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ConditionBranchStep35",
+                          "description": null,
+                          "name": "Step_35",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "steps": {
+                            "list": [
+                              {
+                                "__class": "SetNextStageStep:#Microsoft.Crm.Workflow.ObjectModel",
+                                "id": "SetNextStageStep40",
+                                "description": "",
+                                "name": "Step_40",
+                                "stepLabels": {
+                                  "list": []
+                                },
+                                "stageId": "397596bd-de78-5384-9b5e-4e791a4eed61",
+                                "parentStageId": "e33cdd31-c568-4a14-8dcb-60d790cc85cb"
+                              }
+                            ]
+                          },
+                          "conditionExpression": {
+                            "__class": "BinaryExpression:#Microsoft.Crm.Workflow.Expressions",
+                            "type": "0",
+                            "typeSet": false,
+                            "behavior": 0,
+                            "conditionOperatoroperator": "6",
+                            "left": {
+                              "__class": "EntityAttributeExpression:#Microsoft.Crm.Workflow.Expressions",
+                              "type": "10",
+                              "typeSet": false,
+                              "behavior": 0,
+                              "entity": {
+                                "__class": "PrimaryEntity:#Microsoft.Crm.Workflow.Expressions",
+                                "parameterName": "primaryEntity",
+                                "entityName": "knowledgearticle"
+                              },
+                              "attributeName": "expiredreviewoptions"
+                            },
+                            "right": [
+                              {
+                                "__class": "PrimitiveExpression:#Microsoft.Crm.Workflow.Expressions",
+                                "type": "10",
+                                "typeSet": false,
+                                "behavior": 0,
+                                "primitiveValue": "1"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "containsElsebranch": false
+                  },
+                  {
+                    "__class": "CustomJavascriptStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "CustomJavascriptStep53",
+                    "description": null,
+                    "name": "Step_53",
+                    "stepLabels": {
+                      "list": []
+                    },
+                    "javascript": "function%20bpf_e33cdd31c5684a148dcb60d790cc85cb%28eventContext%29%7btry%7bvar%20v0%3d%28%21Mscrm.BusinessRules.Utility.isNull%28eventContext%29%20%26%26%20typeof%20eventContext.getFormContext%20%3d%3d%3d%20%22function%22%29%20%3f%20eventContext.getFormContext%28%29.data.entity%20%3a%20Xrm.Page.data.entity%3bvar%20v1%3dv0.attributes.get%28%27expiredreviewoptions%27%29%3bif%20%28%28%28v1%29%20%3d%3d%20undefined%20%7c%7c%20%28v1%29%20%3d%3d%20null%20%7c%7c%20%28v1%29%20%3d%3d%3d%20%22%22%29%29%7breturn%3b%7dvar%20v2%3d%28v1%29%20%3f%20v1.getValue%28%29%20%3a%20null%3bif%28%28v2%29%20%3d%3d%3d%20%280%29%29%7bif%20%28Xrm.Page.ui.process%20%21%3d%20null%29%20%7bXrm.Page.ui.process.reflow%28true%2c%27e33cdd31-c568-4a14-8dcb-60d790cc85cb%27%2c%275c2b5c67-6ab5-4653-890b-b700bb5d5813%27%29%7d%3b%7delse%20if%28%28v2%29%20%3d%3d%3d%20%281%29%29%7bif%20%28Xrm.Page.ui.process%20%21%3d%20null%29%20%7bXrm.Page.ui.process.reflow%28true%2c%27e33cdd31-c568-4a14-8dcb-60d790cc85cb%27%2c%27397596bd-de78-5384-9b5e-4e791a4eed61%27%29%7d%3b%7delse%7bif%20%28Xrm.Page.ui.process%20%21%3d%20null%29%20%7bXrm.Page.ui.process.reflow%28true%2c%27e33cdd31-c568-4a14-8dcb-60d790cc85cb%27%2c%27%27%29%7d%3b%7d%7dcatch%20%28e%29%7bMscrm.BusinessRules.ErrorHandlerFactory.getHandler%28e%2c%20arguments.callee%29.handleError%28%29%3b%7d%7d"
+                  }
+                ]
+              },
+              "stageId": "e33cdd31-c568-4a14-8dcb-60d790cc85cb",
+              "nextStageId": null,
+              "stageCategory": null
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep4",
+        "description": "knowledgearticle",
+        "name": "Step_4",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep12",
+              "description": "Update Content",
+              "name": "Step_12",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "5c2b5c67-6ab5-4653-890b-b700bb5d5813",
+                    "languageCode": 1033,
+                    "description": "Update Content"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep14",
+                    "description": "Content Updated",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "dd2a2d36-8ec7-c2d1-9eaa-e5b93cc77741",
+                          "languageCode": 1033,
+                          "description": "Content Updated"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep14",
+                          "description": "",
+                          "name": "Step_14",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "updatecontent",
+                          "classId": "67fac785-cd58-4f9f-abb3-4b7ddc6ed5ed",
+                          "dataFieldName": "updatecontent",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Content Updated",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "dd2a2d36-8ec7-c2d1-9eaa-e5b93cc77741",
+                    "isProcessRequired": true,
+                    "isHidden": false
+                  }
+                ]
+              },
+              "stageId": "5c2b5c67-6ab5-4653-890b-b700bb5d5813",
+              "nextStageId": "5a77533e-e252-36cb-ca00-12160ceb78ea",
+              "stageCategory": "-1"
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep5",
+        "description": "knowledgearticle",
+        "name": "Step_5",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep29",
+              "description": "Publish",
+              "name": "Step_29",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "5a77533e-e252-36cb-ca00-12160ceb78ea",
+                    "languageCode": 1033,
+                    "description": "Publish"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep49",
+                    "description": "Expire On",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "8711e71a-60ec-eded-6ee3-a3b6d6193e77",
+                          "languageCode": 1033,
+                          "description": "Expire On"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep50",
+                          "description": "",
+                          "name": "Step_50",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "expirationdate",
+                          "classId": "5b773807-9fb2-42db-97c3-7a91eff8adff",
+                          "dataFieldName": "expirationdate",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Expiration Date",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "8711e71a-60ec-eded-6ee3-a3b6d6193e77",
+                    "isProcessRequired": false,
+                    "isHidden": false
+                  }
+                ]
+              },
+              "stageId": "5a77533e-e252-36cb-ca00-12160ceb78ea",
+              "nextStageId": null,
+              "stageCategory": "-1"
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep6",
+        "description": "knowledgearticle",
+        "name": "Step_6",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep37",
+              "description": "publish",
+              "name": "Step_37",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "397596bd-de78-5384-9b5e-4e791a4eed61",
+                    "languageCode": 1033,
+                    "description": "Publish"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep51",
+                    "description": "Expire On",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "7a068306-8407-e10d-9792-15303a0d6b74",
+                          "languageCode": 1033,
+                          "description": "Expire On"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep52",
+                          "description": "",
+                          "name": "Step_52",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "expirationdate1",
+                          "classId": "5b773807-9fb2-42db-97c3-7a91eff8adff",
+                          "dataFieldName": "expirationdate",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Expiration Date",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "7a068306-8407-e10d-9792-15303a0d6b74",
+                    "isProcessRequired": false,
+                    "isHidden": false
+                  }
+                ]
+              },
+              "stageId": "397596bd-de78-5384-9b5e-4e791a4eed61",
+              "nextStageId": null,
+              "stageCategory": "-1"
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      }
+    ]
+  },
+  "primaryEntityName": "knowledgearticle",
+  "nextStepIndex": "54",
+  "isCrmUIWorkflow": true,
+  "category": "4",
+  "businessProcessType": "0",
+  "mode": "0",
+  "title": "Expired Process",
+  "workflowEntityId": "bcd43793-5686-4fd4-b3b4-c0c26d6f7e40",
+  "formId": null,
+  "argumentsArray": [],
+  "variables": [],
+  "inputs": []
+}

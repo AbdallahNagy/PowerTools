@@ -31,6 +31,8 @@
   <ItemGroup>
     <!-- Exported classic workflows that process_apply reads and writes back. -->
     <None Include="Tools\Agent\TestFixtures\ClassicWorkflows\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <!-- Designer-made business process flows that bpf_apply reads and writes back. -->
+    <None Include="Tools\Agent\TestFixtures\BusinessProcessFlows\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Plugin Registration inspects real plugin assemblies. Build the fixture projects and copy them to

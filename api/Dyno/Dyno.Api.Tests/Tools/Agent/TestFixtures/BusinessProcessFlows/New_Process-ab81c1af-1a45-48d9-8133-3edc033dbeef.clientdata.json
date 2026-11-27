@@ -1,0 +1,545 @@
+{
+  "__class": "WorkflowStep:#Microsoft.Crm.Workflow.ObjectModel",
+  "id": "WorkflowStep0",
+  "description": "This is the default process flow for working New KnowledgeArticle.",
+  "name": "Step_0",
+  "stepLabels": {
+    "list": []
+  },
+  "steps": {
+    "list": [
+      {
+        "__class": "RelationshipCollectionStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "RelationshipCollectionStep2",
+        "description": "",
+        "name": "Step_2",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": []
+        }
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep3",
+        "description": "knowledgearticle",
+        "name": "Step_3",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep2",
+              "description": "Author",
+              "name": "Step_2",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "0c6ed1c6-e9f1-4b43-8d9b-f680fded9b67",
+                    "languageCode": 1033,
+                    "description": "Author"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep3",
+                    "description": "Set Keywords",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "6801213b-df49-4314-9cb0-d55cebefd4d1",
+                          "languageCode": 1033,
+                          "description": "Set Keywords"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep4",
+                          "description": "",
+                          "name": "Step_4",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "keywords",
+                          "classId": "e0dece4b-6fc8-4a8f-a065-082708572369",
+                          "dataFieldName": "keywords",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Set Keywords",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "6801213b-df49-4314-9cb0-d55cebefd4d1",
+                    "isProcessRequired": true,
+                    "isHidden": false
+                  },
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep6",
+                    "description": "Article Subject",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "4632c900-da91-a12e-0e8e-1c5dccce4788",
+                          "languageCode": 1033,
+                          "description": "Article Subject"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep7",
+                          "description": "",
+                          "name": "Step_7",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "subjectid",
+                          "classId": "270bd3db-d9af-4782-9025-509e298dec0a",
+                          "dataFieldName": "subjectid",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Article Subject",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "4632c900-da91-a12e-0e8e-1c5dccce4788",
+                    "isProcessRequired": true,
+                    "isHidden": false
+                  },
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep8",
+                    "description": "Assign Primary Author",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "469a5dd2-19d3-226a-232b-78ba3c91d628",
+                          "languageCode": 1033,
+                          "description": "Assign Primary Author"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep9",
+                          "description": "",
+                          "name": "Step_9",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "primaryauthorid",
+                          "classId": "270bd3db-d9af-4782-9025-509e298dec0a",
+                          "dataFieldName": "primaryauthorid",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Primary Author",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "469a5dd2-19d3-226a-232b-78ba3c91d628",
+                    "isProcessRequired": true,
+                    "isHidden": false
+                  },
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep10",
+                    "description": "Mark for Review",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "8ad9451d-12d1-55de-bc04-79e801ed9a8c",
+                          "languageCode": 1033,
+                          "description": "Mark for Review"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep11",
+                          "description": "",
+                          "name": "Step_11",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "readyforreview",
+                          "classId": "67fac785-cd58-4f9f-abb3-4b7ddc6ed5ed",
+                          "dataFieldName": "readyforreview",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Ready for Review",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "8ad9451d-12d1-55de-bc04-79e801ed9a8c",
+                    "isProcessRequired": true,
+                    "isHidden": false
+                  }
+                ]
+              },
+              "stageId": "0c6ed1c6-e9f1-4b43-8d9b-f680fded9b67",
+              "nextStageId": "508cc4cd-0c56-a25d-aedb-b6d59aad8e15",
+              "stageCategory": null
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep4",
+        "description": "knowledgearticle",
+        "name": "Step_4",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep12",
+              "description": "Review",
+              "name": "Step_12",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "508cc4cd-0c56-a25d-aedb-b6d59aad8e15",
+                    "languageCode": 1033,
+                    "description": "Review"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep14",
+                    "description": "Review",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "14b7b237-e228-a2d6-e085-9d2c7ab4c60a",
+                          "languageCode": 1033,
+                          "description": "Review"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep14",
+                          "description": "",
+                          "name": "Step_14",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "review",
+                          "classId": "3ef39988-22bb-4f0b-bbbe-64b5a3748aee",
+                          "dataFieldName": "review",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Review",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "14b7b237-e228-a2d6-e085-9d2c7ab4c60a",
+                    "isProcessRequired": true,
+                    "isHidden": false
+                  },
+                  {
+                    "__class": "ConditionStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "ConditionStep15",
+                    "description": "",
+                    "name": "Step_15",
+                    "stepLabels": {
+                      "list": []
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ConditionBranchStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ConditionBranchStep16",
+                          "description": null,
+                          "name": "Step_16",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "steps": {
+                            "list": [
+                              {
+                                "__class": "SetNextStageStep:#Microsoft.Crm.Workflow.ObjectModel",
+                                "id": "SetNextStageStep21",
+                                "description": "",
+                                "name": "Step_21",
+                                "stepLabels": {
+                                  "list": []
+                                },
+                                "stageId": "1926340e-b1a8-7702-b123-49e4884ed323",
+                                "parentStageId": "508cc4cd-0c56-a25d-aedb-b6d59aad8e15"
+                              }
+                            ]
+                          },
+                          "conditionExpression": {
+                            "__class": "BinaryExpression:#Microsoft.Crm.Workflow.Expressions",
+                            "type": "0",
+                            "typeSet": false,
+                            "behavior": 0,
+                            "conditionOperatoroperator": "6",
+                            "left": {
+                              "__class": "EntityAttributeExpression:#Microsoft.Crm.Workflow.Expressions",
+                              "type": "10",
+                              "typeSet": false,
+                              "behavior": 0,
+                              "entity": {
+                                "__class": "PrimaryEntity:#Microsoft.Crm.Workflow.Expressions",
+                                "parameterName": "primaryEntity",
+                                "entityName": "knowledgearticle"
+                              },
+                              "attributeName": "review"
+                            },
+                            "right": [
+                              {
+                                "__class": "PrimitiveExpression:#Microsoft.Crm.Workflow.Expressions",
+                                "type": "10",
+                                "typeSet": false,
+                                "behavior": 0,
+                                "primitiveValue": "1"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    },
+                    "containsElsebranch": false
+                  },
+                  {
+                    "__class": "CustomJavascriptStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "CustomJavascriptStep31",
+                    "description": null,
+                    "name": "Step_31",
+                    "stepLabels": {
+                      "list": []
+                    },
+                    "javascript": "function%20bpf_508cc4cd0c56a25daedbb6d59aad8e15%28eventContext%29%7btry%7bvar%20v0%3d%28%21Mscrm.BusinessRules.Utility.isNull%28eventContext%29%20%26%26%20typeof%20eventContext.getFormContext%20%3d%3d%3d%20%22function%22%29%20%3f%20eventContext.getFormContext%28%29.data.entity%20%3a%20Xrm.Page.data.entity%3bvar%20v1%3dv0.attributes.get%28%27review%27%29%3bif%20%28%28%28v1%29%20%3d%3d%20undefined%20%7c%7c%20%28v1%29%20%3d%3d%20null%20%7c%7c%20%28v1%29%20%3d%3d%3d%20%22%22%29%29%7breturn%3b%7dvar%20v2%3d%28v1%29%20%3f%20v1.getValue%28%29%20%3a%20null%3bif%28%28v2%29%20%3d%3d%3d%20%281%29%29%7bif%20%28Xrm.Page.ui.process%20%21%3d%20null%29%20%7bXrm.Page.ui.process.reflow%28true%2c%27508cc4cd-0c56-a25d-aedb-b6d59aad8e15%27%2c%271926340e-b1a8-7702-b123-49e4884ed323%27%29%7d%3b%7delse%7bif%20%28Xrm.Page.ui.process%20%21%3d%20null%29%20%7bXrm.Page.ui.process.reflow%28true%2c%27508cc4cd-0c56-a25d-aedb-b6d59aad8e15%27%2c%27%27%29%7d%3b%7d%7dcatch%20%28e%29%7bMscrm.BusinessRules.ErrorHandlerFactory.getHandler%28e%2c%20arguments.callee%29.handleError%28%29%3b%7d%7d"
+                  }
+                ]
+              },
+              "stageId": "508cc4cd-0c56-a25d-aedb-b6d59aad8e15",
+              "nextStageId": "11230204-8518-212c-81b5-aaed12ad363e",
+              "stageCategory": "-1"
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep5",
+        "description": "knowledgearticle",
+        "name": "Step_5",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep18",
+              "description": "Update Content",
+              "name": "Step_18",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "1926340e-b1a8-7702-b123-49e4884ed323",
+                    "languageCode": 1033,
+                    "description": "Update Content"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep20",
+                    "description": "Update Content",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "6381c037-97c7-bd84-1c2c-e798bb9a2511",
+                          "languageCode": 1033,
+                          "description": "Update Content"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep20",
+                          "description": "",
+                          "name": "Step_20",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "updatecontent",
+                          "classId": "67fac785-cd58-4f9f-abb3-4b7ddc6ed5ed",
+                          "dataFieldName": "updatecontent",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Content Updated",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "6381c037-97c7-bd84-1c2c-e798bb9a2511",
+                    "isProcessRequired": true,
+                    "isHidden": false
+                  }
+                ]
+              },
+              "stageId": "1926340e-b1a8-7702-b123-49e4884ed323",
+              "nextStageId": "11230204-8518-212c-81b5-aaed12ad363e",
+              "stageCategory": "-1"
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep6",
+        "description": "knowledgearticle",
+        "name": "Step_6",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep22",
+              "description": "Publish",
+              "name": "Step_22",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "11230204-8518-212c-81b5-aaed12ad363e",
+                    "languageCode": 1033,
+                    "description": "Publish"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep29",
+                    "description": "Set Expiration Date",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "1400d4e1-314e-2402-7745-c3c383d795a5",
+                          "languageCode": 1033,
+                          "description": "Set Expiration Date"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep30",
+                          "description": "",
+                          "name": "Step_30",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "expirationdate",
+                          "classId": "5b773807-9fb2-42db-97c3-7a91eff8adff",
+                          "dataFieldName": "expirationdate",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Expiration Date",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "1400d4e1-314e-2402-7745-c3c383d795a5",
+                    "isProcessRequired": false,
+                    "isHidden": false
+                  }
+                ]
+              },
+              "stageId": "11230204-8518-212c-81b5-aaed12ad363e",
+              "nextStageId": null,
+              "stageCategory": "-1"
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      }
+    ]
+  },
+  "primaryEntityName": "knowledgearticle",
+  "nextStepIndex": "32",
+  "isCrmUIWorkflow": true,
+  "category": "4",
+  "businessProcessType": "0",
+  "mode": "0",
+  "title": "New Process",
+  "workflowEntityId": "ab81c1af-1a45-48d9-8133-3edc033dbeef",
+  "formId": null,
+  "argumentsArray": [],
+  "variables": [],
+  "inputs": []
+}

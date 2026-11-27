@@ -250,6 +250,7 @@ internal sealed class SchemaWorld
         if (entity.Description is not null) table.Description = entity.Description;
         if (entity.IsAuditEnabled is not null) table.IsAuditEnabled = entity.IsAuditEnabled;
         if (entity.ChangeTrackingEnabled is not null) table.ChangeTrackingEnabled = entity.ChangeTrackingEnabled;
+        if (entity.IsBusinessProcessEnabled is not null) table.IsBusinessProcessEnabled = entity.IsBusinessProcessEnabled;
         if (update.Parameters.Contains("HasNotes")) Set(table, "HasNotes", update.HasNotes);
         if (update.Parameters.Contains("HasActivities")) Set(table, "HasActivities", update.HasActivities);
     }

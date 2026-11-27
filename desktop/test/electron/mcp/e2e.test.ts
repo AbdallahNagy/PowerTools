@@ -64,8 +64,8 @@ describe("stdio connector end to end", () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((tool) => tool.name)).toContain("connections_list");
-    // The 25 tools after Phase 5.
-    expect(tools).toHaveLength(25);
+    // The 25 tools after Phase 5, plus bpf_apply.
+    expect(tools).toHaveLength(26);
 
     const result = await client.callTool({ name: "connections_list", arguments: {} });
     expect(result.isError).toBeFalsy();

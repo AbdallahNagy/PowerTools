@@ -525,7 +525,9 @@ public sealed class ProcessPlanner(
         if (row.GetAttributeValue<string>("description") is { Length: > 0 } description) result["description"] = description;
         if (category is not (WorkflowCategory or ActionCategory))
         {
-            result["note"] = "process_apply writes only classic workflows and actions.";
+            result["note"] = category == 4
+                ? "process_apply writes only classic workflows and actions. Read and write a business process flow with inspect_solution kind bpf and bpf_apply."
+                : "process_apply writes only classic workflows and actions.";
             return result;
         }
 

@@ -33,6 +33,7 @@ public static class KernelSchemas
         ["role_apply.input"] = typeof(Components.Security.RoleApplySpec),
         ["flow_apply.input"] = typeof(Components.Flows.FlowApplySpec),
         ["process_apply.input"] = typeof(Components.Processes.ProcessApplySpec),
+        ["bpf_apply.input"] = typeof(Components.BusinessProcessFlows.BpfApplySpec),
         ["app_apply.input"] = typeof(Components.Apps.AppApplySpec),
     };
 

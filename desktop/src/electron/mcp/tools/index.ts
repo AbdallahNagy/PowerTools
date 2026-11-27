@@ -1,6 +1,7 @@
 import type { AgentTool } from "../types.js";
 import {
   appApply,
+  bpfApply,
   choiceApply,
   configApply,
   customApiApply,
@@ -44,6 +45,7 @@ export const AGENT_TOOLS: AgentTool[] = [
   customApiApply,
   flowApply,
   processApply,
+  bpfApply,
   roleApply,
   solutionApply,
   configApply,
