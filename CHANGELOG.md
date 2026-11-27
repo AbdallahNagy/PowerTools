@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **MCP: `process_apply` creates classic workflows and actions again.** Every new workflow or custom action failed with "Data at the root level is invalid. Line 1, position 1". Dyno now writes the workflow file without a byte order mark, as the classic designer's exports do.
 - **MCP: date-only columns keep the day.** A `dateonly` column that `table_apply` creates without a `behavior` is now Date only instead of User local, so its dates no longer shift across time zones. Existing columns are not changed.
 
 ## [2.0.0] - 2026-11-27
