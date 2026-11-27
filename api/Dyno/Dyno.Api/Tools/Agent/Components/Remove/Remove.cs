@@ -108,10 +108,19 @@ public sealed class RemovePlanner(ISolutionLayersCache layersCache) : IComponent
             var dependents = await Dependencies.ForDeleteAsync(client, found.ComponentType, found.Id, ct);
             if (dependents.Count > 0)
             {
-                var listed = string.Join(", ", dependents.Take(MaxDependents).Select(d => $"type {d.DependentComponentType} {d.DependentComponentId:D}"));
+                var names = new List<string>();
+                foreach (var d in dependents.Take(MaxDependents)) names.Add(await ComponentKinds.DescribeAsync(client, d.DependentComponentType, d.DependentComponentId, ct));
+                var listed = string.Join(", ", names);
+                // Still a delete: the plan's effect stays destructive even though nothing runs.
                 return new Plan(
-                    [PlanStep.Blocked("delete", label,
-                        $"{dependents.Count} component(s) depend on {label}: {listed}{(dependents.Count > MaxDependents ? ", …" : "")}. Remove them or their use of it first.")],
+                    [new PlanStep
+                    {
+                        Op = "delete",
+                        Target = label,
+                        Kind = PlanStepKind.Blocked,
+                        Effect = PlanEffect.Destructive,
+                        Reason = $"{dependents.Count} component(s) depend on {label}: {listed}{(dependents.Count > MaxDependents ? ", …" : "")}. Remove them or their use of it first.",
+                    }],
                     lockKeys: locks);
             }
         }

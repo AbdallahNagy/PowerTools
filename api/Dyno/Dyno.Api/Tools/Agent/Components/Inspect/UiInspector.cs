@@ -101,7 +101,9 @@ public sealed class UiInspector(IAgentClient client, Capabilities capabilities)
         FormFieldItem Field(XElement control)
         {
             var cell = control.Ancestors("cell").FirstOrDefault();
-            return new FormFieldItem((string?)control.Attribute("datafieldname") ?? "", cell is null ? null : editor.LabelOf(cell), cell is null || FormEditor.IsVisible(cell));
+            // Logical names are lower case everywhere else; a form written by another tool may keep the schema name's case.
+            var label = cell is null ? null : editor.LabelOf(cell);
+            return new FormFieldItem(((string?)control.Attribute("datafieldname") ?? "").ToLowerInvariant(), string.IsNullOrEmpty(label) ? null : label, cell is null || FormEditor.IsVisible(cell));
         }
 
         var tabs = (doc.Root?.Element("tabs")?.Elements("tab") ?? []).Select(tab => new FormTabItem(
@@ -115,7 +117,7 @@ public sealed class UiInspector(IAgentClient client, Capabilities capabilities)
                 section.Descendants("control").Where(c => c.Attribute("datafieldname") is not null).Select(Field).ToList(),
                 section.Descendants("control").Where(c => (string?)c.Attribute("classid") is { } cls && cls.Equals(FormEditor.SubgridClassId, StringComparison.OrdinalIgnoreCase))
                     .Select(c => (string?)c.Attribute("id") ?? "").ToList())).ToList())).ToList();
-        var header = doc.Root?.Element("header")?.Descendants("control").Select(c => (string?)c.Attribute("datafieldname")).OfType<string>().ToList() ?? [];
+        var header = doc.Root?.Element("header")?.Descendants("control").Select(c => ((string?)c.Attribute("datafieldname"))?.ToLowerInvariant()).OfType<string>().ToList() ?? [];
         var typeName = kind switch { FormKind.QuickCreate => "quickCreate", FormKind.QuickView => "quickView", FormKind.Card => "card", _ => "main" };
         return new FormDescription(table, form.GetAttributeValue<string>("name") ?? name, form.Id.ToString("D"), typeName, tabs, header);
     }
