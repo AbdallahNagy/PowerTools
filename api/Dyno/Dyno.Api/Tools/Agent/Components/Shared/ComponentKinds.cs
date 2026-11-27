@@ -268,7 +268,9 @@ public static class ComponentKinds
 
             var rowKind = Rows.Values.FirstOrDefault(r => r.ComponentType == componentType);
             if (rowKind is null) return $"{typeName} {id:D}";
-            var row = await client.RetrieveAsync(rowKind.Table, id, new ColumnSet(rowKind.Table is "systemform" or "savedquery" ? [rowKind.NameColumn, "objecttypecode", "returnedtypecode"] : [rowKind.NameColumn]), ct);
+            // Each table names its own table column; asking for one it lacks would fail the whole retrieve.
+            var tableColumn = rowKind.Table switch { "systemform" => "objecttypecode", "savedquery" => "returnedtypecode", _ => null };
+            var row = await client.RetrieveAsync(rowKind.Table, id, new ColumnSet(tableColumn is null ? [rowKind.NameColumn] : [rowKind.NameColumn, tableColumn]), ct);
             var name = row.GetAttributeValue<string>(rowKind.NameColumn);
             if (string.IsNullOrEmpty(name)) return $"{typeName} {id:D}";
             var table = row.GetAttributeValue<string>("objecttypecode") ?? row.GetAttributeValue<string>("returnedtypecode");
