@@ -1,0 +1,193 @@
+{
+  "__class": "WorkflowStep:#Microsoft.Crm.Workflow.ObjectModel",
+  "id": "WorkflowStep0",
+  "description": "This is the default process flow for KnowledgeArticle Translations.",
+  "name": "Step_0",
+  "stepLabels": {
+    "list": []
+  },
+  "steps": {
+    "list": [
+      {
+        "__class": "RelationshipCollectionStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "RelationshipCollectionStep2",
+        "description": "",
+        "name": "Step_2",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": []
+        }
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep3",
+        "description": "knowledgearticle",
+        "name": "Step_3",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep2",
+              "description": "Author",
+              "name": "Step_2",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "24c90895-7a93-4851-9856-2da2dd47bf32",
+                    "languageCode": 1033,
+                    "description": "Author"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep3",
+                    "description": "New Step",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "70fd6400-6034-4005-983a-d9b2d47edc26",
+                          "languageCode": 1033,
+                          "description": "Set Language"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep4",
+                          "description": "",
+                          "name": "Step_4",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "languagelocaleid",
+                          "classId": "270BD3DB-D9AF-4782-9025-509E298DEC0A",
+                          "dataFieldName": "languagelocaleid",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Language",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "70fd6400-6034-4005-983a-d9b2d47edc26",
+                    "isProcessRequired": true,
+                    "isHidden": false
+                  }
+                ]
+              },
+              "stageId": "24c90895-7a93-4851-9856-2da2dd47bf32",
+              "nextStageId": "aa6abdb4-459c-9026-e3db-7ec2b32e1cc8",
+              "stageCategory": null
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      },
+      {
+        "__class": "EntityStep:#Microsoft.Crm.Workflow.ObjectModel",
+        "id": "EntityStep4",
+        "description": "knowledgearticle",
+        "name": "Step_4",
+        "stepLabels": {
+          "list": []
+        },
+        "steps": {
+          "list": [
+            {
+              "__class": "StageStep:#Microsoft.Crm.Workflow.ObjectModel",
+              "id": "StageStep10",
+              "description": "Publish",
+              "name": "Step_10",
+              "stepLabels": {
+                "list": [
+                  {
+                    "labelId": "aa6abdb4-459c-9026-e3db-7ec2b32e1cc8",
+                    "languageCode": 1033,
+                    "description": "Publish"
+                  }
+                ]
+              },
+              "steps": {
+                "list": [
+                  {
+                    "__class": "StepStep:#Microsoft.Crm.Workflow.ObjectModel",
+                    "id": "StepStep16",
+                    "description": "Set Expiration Date",
+                    "name": null,
+                    "stepLabels": {
+                      "list": [
+                        {
+                          "labelId": "511691c3-d56e-081a-c490-76075ca90ace",
+                          "languageCode": 1033,
+                          "description": "Set Expiration Date"
+                        }
+                      ]
+                    },
+                    "steps": {
+                      "list": [
+                        {
+                          "__class": "ControlStep:#Microsoft.Crm.Workflow.ObjectModel",
+                          "id": "ControlStep17",
+                          "description": "",
+                          "name": "Step_17",
+                          "stepLabels": {
+                            "list": []
+                          },
+                          "controlId": "expirationdate",
+                          "classId": "5b773807-9fb2-42db-97c3-7a91eff8adff",
+                          "dataFieldName": "expirationdate",
+                          "systemStepType": "IdentifyContact",
+                          "isSystemControl": false,
+                          "parameters": "",
+                          "controlDisplayName": "Expiration Date",
+                          "isUnbound": false,
+                          "controlType": "0"
+                        }
+                      ]
+                    },
+                    "stepStepId": "511691c3-d56e-081a-c490-76075ca90ace",
+                    "isProcessRequired": false,
+                    "isHidden": false
+                  }
+                ]
+              },
+              "stageId": "aa6abdb4-459c-9026-e3db-7ec2b32e1cc8",
+              "nextStageId": null,
+              "stageCategory": "-1"
+            }
+          ]
+        },
+        "relationshipName": null,
+        "attributeName": null,
+        "isClosedLoop": false
+      }
+    ]
+  },
+  "primaryEntityName": "knowledgearticle",
+  "nextStepIndex": "18",
+  "isCrmUIWorkflow": true,
+  "category": "4",
+  "businessProcessType": "0",
+  "mode": "0",
+  "title": "Translation Process",
+  "workflowEntityId": "bd57803e-0408-44d6-b21d-ae7158ec6555",
+  "formId": null,
+  "argumentsArray": [],
+  "variables": [],
+  "inputs": []
+}

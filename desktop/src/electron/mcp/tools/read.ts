@@ -56,9 +56,9 @@ export const inspectSolution = inspectTool(
   "inspect_solution",
   "/inspect/solution",
   "Inspect solutions",
-  "Read-only. Describes or lists: solution (with patches), solutioncomponents (name = solution), layers (of one component: componentKind, name), publisher, envvar (secrets hidden), connectionreference, pluginassembly (with types), pluginstep (in the shape plugin_step_apply takes), customapi, process (one in the shape process_apply takes), flow.",
+  "Read-only. Describes or lists: solution (with patches), solutioncomponents (name = solution), layers (of one component: componentKind, name), publisher, envvar (secrets hidden), connectionreference, pluginassembly (with types), pluginstep (in the shape plugin_step_apply takes), customapi, process and bpf (business process flow), each in the shape its apply tool takes, flow.",
   inspectSchema(
-    ["solution", "solutioncomponents", "layers", "publisher", "envvar", "connectionreference", "pluginassembly", "pluginstep", "customapi", "process", "flow"],
+    ["solution", "solutioncomponents", "layers", "publisher", "envvar", "connectionreference", "pluginassembly", "pluginstep", "customapi", "process", "bpf", "flow"],
     "the layers of a column, form, view or key",
     { componentKind: { type: "string", enum: COMPONENT_KINDS, description: "layers: the kind of component." } },
   ),

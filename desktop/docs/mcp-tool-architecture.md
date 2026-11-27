@@ -62,7 +62,7 @@ The agent never needs to know where the environment runs. The same tool list, th
 
 **Proof.** Every live test and every eval scenario runs against one online and one on-premises sandbox, and a parity check compares the two result shapes (see Making sure it works).
 
-## The tool set: 25 tools, replacing 57
+## The tool set: 26 tools, replacing 57
 
 ### Read: run without asking
 
@@ -73,7 +73,7 @@ The agent never needs to know where the environment runs. The same tool list, th
 | `connections_list` | Saved connections, whether each is online or on-premises, and the active one. | (kept) |
 | `inspect_schema` | Kinds: table, column, relationship, key, choice, role. Describes one by name or id, or lists them with a filter. | `metadata_*` (7) |
 | `inspect_ui` | Kinds: form, view, app, sitemap, command, webresource. | (new) |
-| `inspect_solution` | Kinds: solution, solutioncomponents, layers, publisher, envvar, connectionreference, pluginassembly, pluginstep, customapi, process, flow. | `solutions_list*` (4), `plugins_list`, `plugins_get_step_options`, `envvars_list` |
+| `inspect_solution` | Kinds: solution, solutioncomponents, layers, publisher, envvar, connectionreference, pluginassembly, pluginstep, customapi, process, bpf, flow. | `solutions_list*` (4), `plugins_list`, `plugins_get_step_options`, `envvars_list` |
 | `records_query` | FetchXML, or a table with a simple filter and columns. One record by id is the same call. Pages. | `records_query`, `records_get` |
 | `solution_export` | Exports a solution as managed or unmanaged to a local `.zip`. | (new) |
 
@@ -93,6 +93,7 @@ The agent never needs to know where the environment runs. The same tool list, th
 | `plugin_step_apply` | Steps with their images and enabled state, for a plug-in type, a webhook or a Service Bus endpoint. A step is matched by name or id. | `plugins_register_step`, `plugins_update_step`, `plugins_set_step_state`, `plugins_register_image`, `plugins_update_image` |
 | `flow_apply` | A cloud flow (online only): name, definition, the connection references it uses, and on or off. | (new) |
 | `process_apply` | A classic workflow or custom process action from typed steps, on both deployment types (Phase 5). | (new) |
+| `bpf_apply` | A business process flow on one table: stages in order and their data steps, active or draft. Adds the table that holds progress to the solution. On both deployment types. | (new) |
 | `role_apply` | A security role with privileges per table and depth, plus miscellaneous privileges. Assigning it to users and teams. Field security profiles. | (new) |
 | `solution_apply` | Publisher, solution, patch, version, and adding components. Rolling up patches (`clone`) is a destructive step in the plan. | `solutions_create`, `solutions_create_patch`, `solutions_add_component`, `solutions_clone` |
 | `config_apply` | Environment variable definitions and values, and connection references. | `envvars_create_definition`, `envvars_set_value` |
@@ -533,6 +534,27 @@ Decisions made while building:
 Not in v1 (the samples do not cover them; the guide says so): wait conditions and timeouts, delete triggers, user and business unit scope, action output arguments, global actions, date and text-search condition operators, literal number, date and money values, and custom step outputs (kept, not written).
 
 Still open for Phase 5, unverified until the live tests run: the import itself on both sandboxes (online and on-premises), importing over a process that was activated, a new action created by import (its message name, prefix plus `UniqueName`), a stop step with status canceled, more than one recipient in a party list, and opening a written process in the classic designer.
+
+## Business process flows status
+
+`bpf_apply` step 1 (linear flows on one table) built on 2026-11-27. The server offers 26 tools and three guides.
+
+| Part | Where |
+|---|---|
+| The spec: table, stages, data steps (column, label, required), state | `Components/BusinessProcessFlows/BpfApplySpec.cs` |
+| XAML and client data reader and writer in the designer's layout | `Components/BusinessProcessFlows/BpfXaml.cs` |
+| Planning and saving: create or update the `workflow` row (category 4), deactivate while saving, activate, add the progress table to the solution, turn business process flows on for the table | `Components/BusinessProcessFlows/BpfPlanner.cs` |
+| `inspect_solution` kind `bpf`; removal through `remove` kind `process` | `Components/Inspect/SolutionInspector.cs` |
+| The guide `dyno://guides/business-process-flows`; desktop tool in the `logic` group | `desktop/src/electron/mcp/guides.ts`, `tools/components.ts` |
+| Designer-made flows from an online org (system knowledge article flows) and their tests | `Dyno.Api.Tests/Tools/Agent/TestFixtures/BusinessProcessFlows/`, `BpfTests.cs` |
+
+Decisions made while building:
+
+- **SDK messages, not solution import.** Unlike classic workflows, a business process flow is created and updated as a `workflow` row with `xaml` and `clientdata`, then activated with `SetState`. The same path works online and on-premises.
+- **Stable ids.** A stage keeps its id when its name stays the same, and a step keeps its id when its column stays in the same stage, so records at a stage keep their place. New ids come from the flow, stage and column, so the plan hash is stable.
+- **The reader matches by local name**, so flows saved with `Version=7.0.0.0` namespaces read the same as new ones.
+
+Next: branches (step 2), then stage workflows, process order and stages on other tables (step 3). Flows with those read back with problems and are not rewritten.
 
 ## Open questions
 

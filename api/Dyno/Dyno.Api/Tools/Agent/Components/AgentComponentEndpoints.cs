@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Dyno.Api.Services;
 using Dyno.Api.Tools.Agent.Components.Apps;
+using Dyno.Api.Tools.Agent.Components.BusinessProcessFlows;
 using Dyno.Api.Tools.Agent.Components.Choices;
 using Dyno.Api.Tools.Agent.Components.Config;
 using Dyno.Api.Tools.Agent.Components.CustomApis;
@@ -62,6 +63,7 @@ public static class AgentComponentEndpoints
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<AppApplySpec>(AppPlanner.Family, new AppPlanner()));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<FlowApplySpec>(FlowPlanner.Family, new FlowPlanner()));
         services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<ProcessApplySpec>(ProcessPlanner.Family, new ProcessPlanner()));
+        services.AddSingleton<IApplyFamily>(_ => new ApplyFamily<BpfApplySpec>(BpfPlanner.Family, new BpfPlanner()));
         return services;
     }
 

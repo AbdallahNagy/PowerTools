@@ -161,6 +161,55 @@ begins with), custom step outputs (kept as they are), and literal number, date o
 classic designer.
 `;
 
+const BUSINESS_PROCESS_FLOWS = `# Business process flows with bpf_apply
+
+A business process flow guides a record of one table through stages. Each stage lists data steps: columns of that
+table the user fills in, shown in the stage's flyout. bpf_apply writes the flow with SDK messages, the same way
+online and on-premises.
+
+## The spec
+
+{
+  "solution": "ContosoCore",
+  "name": "Permit review",
+  "table": "contoso_permit",
+  "description": "Moves a permit from application to closing.",
+  "stages": [
+    { "name": "Apply", "steps": [ { "column": "contoso_applicantid", "required": true }, { "column": "contoso_name" } ] },
+    { "name": "Review", "steps": [ { "column": "contoso_decision", "label": "Decide" } ] },
+    { "name": "Close" }
+  ],
+  "state": "active"
+}
+
+- Stages run in the order given. Stage names are unique in the flow.
+- A step's label defaults to the column's display name; required defaults to false.
+- Steps can show text, number, money, date, yes/no, choice, choices, status reason and lookup (customer and owner
+  too) columns. A column can appear in more than one stage.
+- The stages replace the flow's stages. A stage that keeps its name keeps its id, so records at it stay there; a
+  renamed stage is a new stage. A step that keeps its column keeps its label and required setting unless given.
+- Removing a stage is destructive: records at it lose their place in the flow.
+
+## What happens
+
+- If the table does not allow business process flows yet, the plan turns them on first. That cannot be undone.
+- A new flow is active unless state is draft. Activating creates the table that keeps each record's progress
+  (named like contoso_bpf_<id>); bpf_apply adds it to the solution so the flow exports whole.
+- An active flow is deactivated while it is saved and activated again after.
+- The flow joins the solution and gets a name of its own from the solution's publisher.
+
+## Reading and removing
+
+inspect_solution kind bpf lists the flows; with a name it returns one in the shape bpf_apply takes, plus its
+progressTable. Add solution and send it back. Remove a flow with remove kind process.
+
+## Not written yet
+
+Branches (conditions that choose the next stage), stage workflows, stages on other tables, and task flows. A flow
+that has them reads back with problems, and bpf_apply refuses to rewrite its stages (it can still activate or
+deactivate it). Build those in the designer.
+`;
+
 export const MCP_GUIDES: readonly McpGuide[] = [
   {
     uri: "dyno://guides/cloud-flows",
@@ -175,6 +224,13 @@ export const MCP_GUIDES: readonly McpGuide[] = [
     title: "Classic workflows and actions",
     description: "How to write a process_apply spec: kinds, triggers, steps, values, conditions and reading a process back.",
     text: CLASSIC_WORKFLOWS,
+  },
+  {
+    uri: "dyno://guides/business-process-flows",
+    name: "business-process-flows",
+    title: "Business process flows",
+    description: "How to write a bpf_apply spec: stages, data steps, activation, the progress table and reading a flow back.",
+    text: BUSINESS_PROCESS_FLOWS,
   },
 ];
 

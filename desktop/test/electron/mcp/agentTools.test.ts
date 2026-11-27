@@ -62,6 +62,7 @@ describe("the first release tool set", () => {
       ["customapi_apply", "logic", "change"],
       ["flow_apply", "logic", "change"],
       ["process_apply", "logic", "change"],
+      ["bpf_apply", "logic", "change"],
       ["role_apply", "security", "change"],
       ["solution_apply", "solutions", "change"],
       ["config_apply", "solutions", "change"],
@@ -74,8 +75,8 @@ describe("the first release tool set", () => {
 
   it("counts every tool under Read, Change or Destructive in Settings, by the effect its description states", () => {
     const count = (effect: string) => registry.tools().filter((t) => t.effect === effect).length;
-    expect([count("read"), count("change"), count("destructive")]).toEqual([6, 16, 3]);
-    expect(registry.tools().filter((t) => t.perCall).map((t) => t.name)).toHaveLength(19);
+    expect([count("read"), count("change"), count("destructive")]).toEqual([6, 17, 3]);
+    expect(registry.tools().filter((t) => t.perCall).map((t) => t.name)).toHaveLength(20);
   });
 
   it.each([
@@ -93,6 +94,7 @@ describe("the first release tool set", () => {
     ["app_apply", "app_apply.input.json", "app"],
     ["customapi_apply", "customapi_apply.input.json", "customapi"],
     ["role_apply", "role_apply.input.json", "role"],
+    ["bpf_apply", "bpf_apply.input.json", "bpf"],
   ])("%s takes the spec generated from C# and plans with the %s family", async (name, file, family) => {
     const schema = (await import(`../../../src/electron/mcp/schemas/${file.replace(/\.json$/, "")}.json`)).default as { properties: object; required?: string[] };
     const apply = tool(name);

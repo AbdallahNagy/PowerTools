@@ -6,6 +6,7 @@ import formSpec from "../schemas/form_apply.input.json" with { type: "json" };
 import flowSpec from "../schemas/flow_apply.input.json" with { type: "json" };
 import deploySpec from "../schemas/plugin_deploy.input.json" with { type: "json" };
 import processSpec from "../schemas/process_apply.input.json" with { type: "json" };
+import bpfSpec from "../schemas/bpf_apply.input.json" with { type: "json" };
 import stepSpec from "../schemas/plugin_step_apply.input.json" with { type: "json" };
 import removeSpec from "../schemas/remove.input.json" with { type: "json" };
 import roleSpec from "../schemas/role_apply.input.json" with { type: "json" };
@@ -189,6 +190,19 @@ export const processApply: AgentTool = applyTool({
   spec: processSpec,
   describe: (args, plan) => `apply ${args.kind === "action" ? "action" : "workflow"} ${str(args.name)} (${steps(plan.steps.length)})`,
   summarize: (args) => `process_apply ${str(args.name)}`,
+});
+
+/** bpf_apply: a business process flow, its stages and data steps (online and on-premises). */
+export const bpfApply: AgentTool = applyTool({
+  name: "bpf_apply",
+  family: "bpf",
+  group: "logic",
+  title: "Apply a business process flow",
+  description:
+    "Changes the environment. Creates or updates a business process flow on one table: stages in order and the columns each stage asks for, required or not. Activates it (which creates the table that holds progress and adds it to the solution) or leaves it in draft. Works online and on-premises. Read one with inspect_solution kind bpf. Guide: dyno://guides/business-process-flows.",
+  spec: bpfSpec,
+  describe: (args, plan) => `apply business process flow ${str(args.name)} (${steps(plan.steps.length)})`,
+  summarize: (args) => `bpf_apply ${str(args.name)}`,
 });
 
 /** role_apply: a security role, who has it, and field security profiles. */

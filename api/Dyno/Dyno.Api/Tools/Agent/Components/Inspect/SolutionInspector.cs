@@ -16,7 +16,7 @@ namespace Dyno.Api.Tools.Agent.Components.Inspect;
 public sealed class SolutionInspector(IAgentClient client, Capabilities capabilities, ISolutionLayersCache layersCache, string connectionKey)
 {
     public static readonly string[] Kinds =
-        ["solution", "solutioncomponents", "layers", "publisher", "envvar", "connectionreference", "pluginassembly", "pluginstep", "customapi", "process", "flow"];
+        ["solution", "solutioncomponents", "layers", "publisher", "envvar", "connectionreference", "pluginassembly", "pluginstep", "customapi", "process", "bpf", "flow"];
 
     private const int SecretType = 100000005;
 
@@ -41,6 +41,7 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
                     ? await CustomApiAsync(body, ct)
                     : throw NotSupported("This environment has no Custom APIs. Use a classic custom process action instead, written with process_apply."),
                 "process" => await ProcessAsync(body, ct),
+                "bpf" => await BpfAsync(body, ct),
                 "flow" => await FlowAsync(body, ct),
                 _ => throw Invalid($"kind must be one of: {string.Join(", ", Kinds)}."),
             };
@@ -95,6 +96,22 @@ public sealed class SolutionInspector(IAgentClient client, Capabilities capabili
         if (row.GetAttributeValue<EntityReference>("sdkmessageid") is { } messageId)
             message = (await client.RetrieveAsync("sdkmessage", messageId.Id, new ColumnSet("name"), ct)).GetAttributeValue<string>("name");
         return Processes.ProcessPlanner.Describe(row, names, message);
+    }
+
+    /// <summary>Business process flows: a list, or one flow in the shape bpf_apply takes.</summary>
+    private async Task<object> BpfAsync(InspectBody body, CancellationToken ct)
+    {
+        Action<QueryExpression> flows = q =>
+        {
+            q.Criteria.AddCondition("type", ConditionOperator.Equal, 1);
+            q.Criteria.AddCondition("category", ConditionOperator.Equal, BusinessProcessFlows.BpfPlanner.Category);
+            q.Criteria.AddCondition("businessprocesstype", ConditionOperator.Equal, 0);
+        };
+        string[] columns = ["name", "primaryentity", "statecode", "ismanaged", "description"];
+        if (body.Name is null) return await RowsWhere(body, "bpf", "workflow", "name", columns, flows, ct);
+        var row = await RowInspect.FindAsync(client, "workflow", "name", body.Name, [.. columns, "xaml", "uniquename"], flows, ct)
+            ?? throw RowInspect.NotFound($"business process flow {body.Name}");
+        return BusinessProcessFlows.BpfPlanner.Describe(row);
     }
 
     /// <summary>Cloud flows: a list, or one flow in the shape flow_apply takes.</summary>

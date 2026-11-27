@@ -1,0 +1,76 @@
+{
+  "description": "A business process flow on one table: its stages in order, each with the columns users fill in. Written with SDK messages, so it works online and on-premises. The stages replace the flow\u0027s stages. See the guide dyno://guides/business-process-flows.",
+  "type": "object",
+  "properties": {
+    "solution": {
+      "description": "Unique name of the unmanaged solution the flow, and the table that holds its progress, go into.",
+      "type": "string"
+    },
+    "name": {
+      "description": "The flow\u0027s name; an existing business process flow matches by name.",
+      "type": "string"
+    },
+    "table": {
+      "description": "Logical name of the table the flow runs on. Cannot change. Business process flows are turned on for the table if they are not yet; that cannot be undone.",
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "stages": {
+      "description": "The stages, in the order a record moves through them. Needed for a new flow. A stage keeps its id (and the records at it) when its name stays the same.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "description": "The stage name, unique in the flow.",
+            "type": "string"
+          },
+          "steps": {
+            "description": "The data steps, in order. A stage may have none.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "column": {
+                  "description": "Logical name of a column on the flow\u0027s table.",
+                  "type": "string"
+                },
+                "label": {
+                  "description": "Text shown for the step. Default: the column\u0027s display name, or the current label.",
+                  "type": "string"
+                },
+                "required": {
+                  "description": "The step must have a value before the record moves to the next stage. Default false, or the current setting.",
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "column"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "state": {
+      "description": "active or draft. Default: a new flow is active, an existing one keeps its state.",
+      "enum": [
+        "active",
+        "draft"
+      ]
+    }
+  },
+  "required": [
+    "solution",
+    "name",
+    "table"
+  ],
+  "additionalProperties": false
+}
