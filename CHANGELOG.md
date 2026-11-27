@@ -13,6 +13,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 - **MCP: list totals are the real totals.** `inspect_solution` and `inspect_ui` lists cut by `top` now report how many components match in all, not how many were returned.
 - **MCP: form tabs keep their names.** When `form_apply` matches a tab or section that has no name (such as the first tab of a new table's main form), it gives it the name from the layout, so `inspect_ui` reads it back by that name. Form fields read back with lower-case logical names, and a field without its own label shows no empty label.
 - **MCP: clearer dependency messages.** When `remove` is blocked because other components depend on the target, the message names them (for example form "Information" on account) instead of showing type numbers and ids, and the blocked step is marked destructive.
+- **MCP: clearer message when an agent cannot reach Dyno.** When the connector finds a discovery file left by a Dyno that is no longer running (often a development build), or reads a different file than the installed app writes, the message the agent gets says so and names the installed app's file. The message now points to Settings > Agents (MCP).
+- **MCP: connection names without the middle dot.** An agent can name a connection as "PL400 dev", "pl400-dev" or "PL400 / dev" for "PL400 · dev". An exact name still wins, and a name that fits two connections is refused with the list of names.
 
 ## [2.0.0] - 2026-11-27
 
