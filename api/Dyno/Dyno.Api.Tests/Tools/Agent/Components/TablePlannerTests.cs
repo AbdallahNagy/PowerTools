@@ -95,6 +95,34 @@ public sealed class TablePlannerTests
     }
 
     [Fact]
+    public async Task A_new_date_only_column_without_a_behavior_is_date_only_and_a_date_and_time_column_is_user_local()
+    {
+        var spec = Spec(columns: [Col("new_Due", ColumnType.DateOnly), Col("new_Start", ColumnType.DateTime)]);
+
+        var plan = await world.PlanAsync(spec);
+        Assert.Contains("behavior dateOnly", plan.Steps.Single(s => s.Target == "new_due").Detail);
+        Assert.Contains("behavior userLocal", plan.Steps.Single(s => s.Target == "new_start").Detail);
+
+        var result = await world.ApplyAsync(spec);
+
+        Assert.Equal(ApplyOutcome.Applied, result.Outcome);
+        Assert.Equal("DateOnly", ((DateTimeAttributeMetadata)world.Column("new_project", "new_due")).DateTimeBehavior.Value);
+        Assert.Equal("UserLocal", ((DateTimeAttributeMetadata)world.Column("new_project", "new_start")).DateTimeBehavior.Value);
+        Assert.True((await world.PlanAsync(spec)).IsEmpty);
+    }
+
+    [Fact]
+    public async Task An_existing_user_local_date_only_column_is_left_alone_when_the_spec_gives_no_behavior()
+    {
+        world.AddTable("new_project", primary: "new_name");
+        world.AddColumn("new_project", new DateTimeAttributeMetadata(DateTimeFormat.DateOnly) { SchemaName = "new_Due", DateTimeBehavior = DateTimeBehavior.UserLocal });
+
+        var plan = await world.PlanAsync(Spec(new TableDefinition { SchemaName = "new_Project" }, [new() { SchemaName = "new_Due", Type = ColumnType.DateOnly }]));
+
+        Assert.True(plan.IsEmpty);
+    }
+
+    [Fact]
     public async Task A_new_table_carries_its_settings_and_the_solution()
     {
         var spec = Spec(new TableDefinition

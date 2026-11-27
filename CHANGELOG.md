@@ -8,6 +8,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and
 
 ### Fixed
 
+- **MCP: `process_apply` creates classic workflows and actions again.** Every new workflow or custom action failed with "Data at the root level is invalid. Line 1, position 1". Dyno now writes the workflow file without a byte order mark, as the classic designer's exports do.
+- **MCP: date-only columns keep the day.** A `dateonly` column that `table_apply` creates without a `behavior` is now Date only instead of User local, so its dates no longer shift across time zones. Existing columns are not changed.
 - **MCP: list totals are the real totals.** `inspect_solution` and `inspect_ui` lists cut by `top` now report how many components match in all, not how many were returned.
 - **MCP: form tabs keep their names.** When `form_apply` matches a tab or section that has no name (such as the first tab of a new table's main form), it gives it the name from the layout, so `inspect_ui` reads it back by that name. Form fields read back with lower-case logical names, and a field without its own label shows no empty label.
 - **MCP: clearer dependency messages.** When `remove` is blocked because other components depend on the target, the message names them (for example form "Information" on account) instead of showing type numbers and ids, and the blocked step is marked destructive.

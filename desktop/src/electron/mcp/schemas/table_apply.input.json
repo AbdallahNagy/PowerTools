@@ -142,7 +142,7 @@
             "type": "integer"
           },
           "behavior": {
-            "description": "datetime and dateonly. Can change only from userLocal, once.",
+            "description": "datetime and dateonly. New columns default to userLocal for datetime and dateOnly for dateonly. Can change only from userLocal, once; left out, an existing column keeps its behavior.",
             "enum": [
               "userLocal",
               "dateOnly",
