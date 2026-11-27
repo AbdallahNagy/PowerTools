@@ -1595,8 +1595,10 @@ h3 {
 }
 
 /* Tool tiles with the app's tool icons */
+/* Every row as tall as the tallest, so all tiles are the same size */
 .tile-grid {
   display: grid;
+  grid-auto-rows: 1fr;
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
   gap: 12px;
 }

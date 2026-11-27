@@ -76,7 +76,7 @@ describe("Welcome tool", () => {
     renderWithProviders(withTabs(openTool, <WelcomeTab />));
 
     for (const tool of PUBLIC_TOOLS) {
-      expect(screen.getByText(tool.description)).toBeInTheDocument();
+      expect(screen.getByText(tool.summary)).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: `Open ${tool.title}` }));
     }
 

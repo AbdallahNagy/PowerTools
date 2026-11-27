@@ -82,7 +82,7 @@ Activity-bar tools allow more than one tab by default. Set `allowMultipleInstanc
 
 Activity-bar tools appear on the welcome page and the website from one list: `desktop/src/ui/tools/publicCatalog.ts`.
 
-`PUBLIC_TOOLS` follows `ACTIVITY_BAR_TOOLS` in `desktop/src/ui/tools/registry.tsx`. Each entry uses that tool's id and title, plus the one-sentence description from `### UX`.
+`PUBLIC_TOOLS` follows `ACTIVITY_BAR_TOOLS` in `desktop/src/ui/tools/registry.tsx`. Each entry uses that tool's id and title, the one-sentence description from `### UX`, and a `summary` of at most 48 characters. The summary is what the tool tiles on the welcome page and the website home page show, so every tile stays the same size; the description is for the Tools tab and the tool's page.
 
 The welcome page, `website/src/pages/index.astro`, and the website's Tools tab (`website/src/pages/tools/index.astro`) render the catalog. Adding a tool means adding that catalog entry. It does not mean editing any screen's tool markup. Welcome is not a public tool.
 
@@ -95,6 +95,7 @@ A new tool reaches `main` before it reaches the installer people download. So a 
   id: "environment-variables-manager",
   title: "Environment Variables Manager",
   description: "...",
+  summary: "See and edit environment variables in one place.",
   unreleased: true,
 },
 ```

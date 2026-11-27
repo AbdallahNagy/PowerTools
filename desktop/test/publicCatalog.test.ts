@@ -21,6 +21,13 @@ describe("public tool catalog", () => {
 
     for (const tool of PUBLIC_TOOLS) {
       expect(tool.description.trim().length).toBeGreaterThan(0);
+      expect(tool.summary.trim().length).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps tile summaries short so every tile is the same size", () => {
+    for (const tool of PUBLIC_TOOLS) {
+      expect(tool.summary.length, `${tool.id} summary`).toBeLessThanOrEqual(48);
     }
   });
 
