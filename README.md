@@ -102,7 +102,7 @@ The interface calls Dataverse through a local ASP.NET Core API bound to `127.0.0
 ```mermaid
 flowchart LR
   app["Electron and React"] --> api["Local API on 127.0.0.1"]
-  agent["AI agent"] --> connector["MCP connector"] --> api
+  agent["AI agent"] --> connector["MCP connector"] --> app
   api --> dataverse["Your Dataverse environment"]
 ```
 
